@@ -43,9 +43,7 @@ const HeroSection = () => {
           </h1>
           
           <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
-            The ultimate platform for barber competitions, community, and grants. 
-            Where skills meet recognition.
-          </p>
+        </p>
 
           {/* Prize Pool Counter */}
           <div className="bg-card/50 backdrop-blur-sm rounded-2xl p-8 max-w-md mx-auto animate-glow">
