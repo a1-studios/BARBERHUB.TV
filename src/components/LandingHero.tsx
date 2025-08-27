@@ -179,10 +179,10 @@ const LandingHero = () => {
       {/* Main content - Add top padding to account for sticky header */}
       <div className="relative z-10 flex items-center justify-center min-h-screen pt-20">
         <div className="container mx-auto px-4 py-20">
-          <div className="grid lg:grid-cols-2 gap-12 items-center max-w-7xl mx-auto">
+          <div className="grid lg:grid-cols-2 gap-8 items-start max-w-6xl mx-auto">
             {/* Left side - Branding and content */}
-            <div className="space-y-8 text-center lg:text-left">
-              <div className="space-y-6">
+            <div className="space-y-6 text-center lg:text-left">
+              <div className="space-y-4">
                 <div className="flex items-center justify-center lg:justify-start space-x-3">
                   <img src="/lovable-uploads/c5bbb6c4-149e-41f8-9e68-1580ee1afdf8.png" alt="Barber Hub" className="w-12 h-12 animate-float" />
                   <h1 className="text-4xl md:text-5xl font-bold">
@@ -191,7 +191,7 @@ const LandingHero = () => {
                   </h1>
                 </div>
                 
-                <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl">
+                <p className="text-xl md:text-2xl text-white max-w-2xl">
                   where barbers become legends
                 </p>
                 
