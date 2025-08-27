@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,6 +7,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import BattlesPage from "./pages/BattlesPage";
+import CreateBattle from "./pages/CreateBattle";
+import BattleDetails from "./pages/BattleDetails";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,6 +24,9 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/battles" element={<BattlesPage />} />
+            <Route path="/battles/create" element={<CreateBattle />} />
+            <Route path="/battles/:id" element={<BattleDetails />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

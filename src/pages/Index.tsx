@@ -1,3 +1,4 @@
+
 import Header from "@/components/Header";
 import LandingHero from "@/components/LandingHero";
 import GrantsSection from "@/components/GrantsSection";
@@ -7,6 +8,8 @@ import Footer from "@/components/Footer";
 import { CreatorHub } from "@/components/creator/CreatorHub";
 import { useAuth } from "@/hooks/useAuth";
 import { FEATURES } from "@/config/features";
+import { AuthDialog } from "@/components/auth/AuthDialog";
+import { Button } from "@/components/ui/button";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -19,32 +22,37 @@ const Index = () => {
     );
   }
 
-  // Show landing page for unauthenticated users
-  if (!user) {
-    return (
-      <div className="min-h-screen">
-        <Header />
-        <LandingHero />
-        <main>
-          <BattlesSection />
-          {FEATURES.GRANTS_SECTION && <GrantsSection />}
-          {FEATURES.COMMUNITY_LEADERBOARD && <CommunitySection />}
-        </main>
-        <Footer />
-      </div>
-    );
-  }
-
-  // Show main app for authenticated users
   return (
     <div className="min-h-screen">
       <Header />
-      <main>
-        <BattlesSection />
-        {FEATURES.CREATOR_HUB_ENABLED && <CreatorHub />}
-        {FEATURES.GRANTS_SECTION && <GrantsSection />}
-        {FEATURES.COMMUNITY_LEADERBOARD && <CommunitySection />}
-      </main>
+      
+      {/* Content gated behind authentication */}
+      {user ? (
+        <main className="pt-20 sm:pt-24">
+          <BattlesSection />
+          {FEATURES.CREATOR_HUB_ENABLED && <CreatorHub />}
+          {FEATURES.GRANTS_SECTION && <GrantsSection />}
+          {FEATURES.COMMUNITY_LEADERBOARD && <CommunitySection />}
+        </main>
+      ) : (
+        <>
+          <LandingHero />
+          <div className="py-20 px-4">
+            <div className="container mx-auto max-w-2xl text-center">
+              <h2 className="text-3xl font-bold mb-6 text-white">Join the Barber Community</h2>
+              <p className="text-lg text-muted-foreground mb-8">
+                Sign in to access battles, compete with other barbers, and showcase your skills to the world.
+              </p>
+              <AuthDialog>
+                <Button size="lg" className="text-lg px-8">
+                  Get Started
+                </Button>
+              </AuthDialog>
+            </div>
+          </div>
+        </>
+      )}
+      
       <Footer />
     </div>
   );

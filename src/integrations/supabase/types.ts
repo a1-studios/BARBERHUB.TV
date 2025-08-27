@@ -14,6 +14,178 @@ export type Database = {
   }
   public: {
     Tables: {
+      battle_participants: {
+        Row: {
+          battle_id: string
+          id: string
+          joined_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          battle_id: string
+          id?: string
+          joined_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          battle_id?: string
+          id?: string
+          joined_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_participants_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battle_submissions: {
+        Row: {
+          battle_id: string
+          created_at: string
+          description: string | null
+          id: string
+          media_url: string
+          status: string
+          thumbnail_url: string | null
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          battle_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          media_url: string
+          status?: string
+          thumbnail_url?: string | null
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          battle_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          media_url?: string
+          status?: string
+          thumbnail_url?: string | null
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_submissions_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battle_votes: {
+        Row: {
+          battle_id: string
+          created_at: string
+          id: string
+          submission_id: string
+          voter_id: string
+        }
+        Insert: {
+          battle_id: string
+          created_at?: string
+          id?: string
+          submission_id: string
+          voter_id: string
+        }
+        Update: {
+          battle_id?: string
+          created_at?: string
+          id?: string
+          submission_id?: string
+          voter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_votes_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_votes_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "battle_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      battles: {
+        Row: {
+          category: string | null
+          cover_image_url: string | null
+          created_at: string
+          currency: string
+          description: string | null
+          ends_at: string | null
+          id: string
+          max_participants: number | null
+          organizer_id: string
+          prize_amount: number
+          rules: string | null
+          starts_at: string | null
+          status: string
+          title: string
+          updated_at: string
+          voting_ends_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          ends_at?: string | null
+          id?: string
+          max_participants?: number | null
+          organizer_id: string
+          prize_amount?: number
+          rules?: string | null
+          starts_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          voting_ends_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          ends_at?: string | null
+          id?: string
+          max_participants?: number | null
+          organizer_id?: string
+          prize_amount?: number
+          rules?: string | null
+          starts_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          voting_ends_at?: string | null
+        }
+        Relationships: []
+      }
       creator_content: {
         Row: {
           content_type: string

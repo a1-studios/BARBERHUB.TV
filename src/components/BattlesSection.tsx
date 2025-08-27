@@ -1,42 +1,109 @@
+
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Users, Clock, Vote } from "lucide-react";
+import { Trophy, Users, Clock, Vote, Plus } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
-const battles = [
-  {
-    id: 1,
-    title: "Best Fade Competition",
-    description: "Show us your cleanest fade technique and compete for the monthly crown",
-    status: "active",
-    participants: 24,
-    timeLeft: "3 days left",
-    prize: "$500",
-    category: "Technical Skills"
-  },
-  {
-    id: 2,
-    title: "Creative Color Challenge",
-    description: "Push the boundaries with innovative color combinations and artistic flair",
-    status: "upcoming",
-    participants: 18,
-    timeLeft: "Starting soon",
-    prize: "$750",
-    category: "Creativity"
-  },
-  {
-    id: 3,
-    title: "Speed Cut Championship",
-    description: "Precision meets speed in this ultimate barber showdown",
-    status: "voting",
-    participants: 32,
-    timeLeft: "Voting ends in 2 days",
-    prize: "$1000",
-    category: "Speed & Precision"
-  }
-];
+interface Battle {
+  id: string;
+  title: string;
+  description: string;
+  status: string;
+  participants: number;
+  prize_amount: number;
+  currency: string;
+  category: string;
+}
 
 const BattlesSection = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [battles, setBattles] = useState<Battle[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      fetchFeaturedBattles();
+    }
+  }, [user]);
+
+  const fetchFeaturedBattles = async () => {
+    try {
+      // Fetch latest battles with participant counts
+      const { data: battlesData, error } = await supabase
+        .from('battles')
+        .select(`
+          id,
+          title,
+          description,
+          status,
+          prize_amount,
+          currency,
+          category,
+          battle_participants(count)
+        `)
+        .in('status', ['upcoming', 'active', 'voting'])
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      if (error) throw error;
+
+      const formattedBattles: Battle[] = (battlesData || []).map(battle => ({
+        id: battle.id,
+        title: battle.title,
+        description: battle.description || '',
+        status: battle.status,
+        participants: battle.battle_participants?.length || 0,
+        prize_amount: battle.prize_amount,
+        currency: battle.currency,
+        category: battle.category || 'General'
+      }));
+
+      setBattles(formattedBattles);
+    } catch (error) {
+      console.error('Error fetching battles:', error);
+      // Fallback to static data if database fetch fails
+      setBattles([
+        {
+          id: "sample-1",
+          title: "Best Fade Competition",
+          description: "Show us your cleanest fade technique and compete for the monthly crown",
+          status: "active",
+          participants: 24,
+          prize_amount: 500,
+          currency: "USD",
+          category: "Technical Skills"
+        },
+        {
+          id: "sample-2",
+          title: "Creative Color Challenge",
+          description: "Push the boundaries with innovative color combinations and artistic flair",
+          status: "upcoming",
+          participants: 18,
+          prize_amount: 750,
+          currency: "USD",
+          category: "Creativity"
+        },
+        {
+          id: "sample-3",
+          title: "Speed Cut Championship",
+          description: "Precision meets speed in this ultimate barber showdown",
+          status: "voting",
+          participants: 32,
+          prize_amount: 1000,
+          currency: "USD",
+          category: "Speed & Precision"
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active": return "bg-green-500/20 text-green-400 border-green-500/30";
@@ -55,6 +122,27 @@ const BattlesSection = () => {
     }
   };
 
+  const getActionText = (status: string) => {
+    switch (status) {
+      case "active": return "Join Battle";
+      case "upcoming": return "Join Waitlist";
+      case "voting": return "View & Vote";
+      default: return "View Details";
+    }
+  };
+
+  if (loading) {
+    return (
+      <section id="battles" className="py-20 px-4">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center">
+            <div className="animate-pulse text-lg">Loading battles...</div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section id="battles" className="py-20 px-4">
       <div className="container mx-auto max-w-6xl">
@@ -69,51 +157,80 @@ const BattlesSection = () => {
           </p>
         </div>
 
-        {/* Battles Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {battles.map((battle) => (
-            <Card key={battle.id} className="border border-border/50 shadow-lg backdrop-blur-sm bg-card/50 transition-all duration-300 hover:shadow-[0_0_30px_hsl(24_100%_52%/0.5),inset_0_0_20px_hsl(24_100%_52%/0.15)] hover:border-primary/30" style={{ borderRadius: '1.5rem' }}>
-              <CardHeader>
-                <div className="flex items-center justify-between mb-2">
-                  <Badge className={`${getStatusColor(battle.status)} flex items-center gap-1`}>
-                    {getStatusIcon(battle.status)}
-                    {battle.status.charAt(0).toUpperCase() + battle.status.slice(1)}
-                  </Badge>
-                  <Badge variant="outline" className="text-primary border-primary/30">
-                    {battle.category}
-                  </Badge>
-                </div>
-                <CardTitle className="text-white">{battle.title}</CardTitle>
-                <CardDescription className="text-muted-foreground">
-                  {battle.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Users className="w-4 h-4" />
-                    {battle.participants} participants
-                  </div>
-                  <div className="text-primary font-semibold">
-                    {battle.prize}
-                  </div>
-                </div>
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Clock className="w-4 h-4" />
-                  {battle.timeLeft}
-                </div>
-                <Button 
-                  className="w-full"
-                  variant={battle.status === "voting" ? "outline" : "default"}
-                >
-                  {battle.status === "active" && "Enter Battle"}
-                  {battle.status === "upcoming" && "Join Waitlist"}
-                  {battle.status === "voting" && "Vote Now"}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+        {/* Quick Actions */}
+        <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12">
+          <Button 
+            size="lg" 
+            onClick={() => navigate('/battles')}
+            className="text-lg px-8"
+          >
+            <Trophy className="mr-2 h-5 w-5" />
+            View All Battles
+          </Button>
+          <Button 
+            size="lg" 
+            variant="outline"
+            onClick={() => navigate('/battles/create')}
+            className="text-lg px-8"
+          >
+            <Plus className="mr-2 h-5 w-5" />
+            Create Battle
+          </Button>
         </div>
+
+        {/* Featured Battles */}
+        {battles.length > 0 && (
+          <>
+            <h3 className="text-2xl font-bold text-white text-center mb-8">Featured Battles</h3>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+              {battles.map((battle) => (
+                <Card 
+                  key={battle.id} 
+                  className="border border-border/50 shadow-lg backdrop-blur-sm bg-card/50 transition-all duration-300 hover:shadow-[0_0_30px_hsl(24_100%_52%/0.5),inset_0_0_20px_hsl(24_100%_52%/0.15)] hover:border-primary/30 cursor-pointer" 
+                  style={{ borderRadius: '1.5rem' }}
+                  onClick={() => navigate(`/battles/${battle.id}`)}
+                >
+                  <CardHeader>
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge className={`${getStatusColor(battle.status)} flex items-center gap-1`}>
+                        {getStatusIcon(battle.status)}
+                        {battle.status.charAt(0).toUpperCase() + battle.status.slice(1)}
+                      </Badge>
+                      <Badge variant="outline" className="text-primary border-primary/30">
+                        {battle.category}
+                      </Badge>
+                    </div>
+                    <CardTitle className="text-white">{battle.title}</CardTitle>
+                    <CardDescription className="text-muted-foreground">
+                      {battle.description}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Users className="w-4 h-4" />
+                        {battle.participants} participants
+                      </div>
+                      <div className="text-primary font-semibold">
+                        {battle.prize_amount > 0 ? `$${battle.prize_amount}` : 'Free'}
+                      </div>
+                    </div>
+                    <Button 
+                      className="w-full"
+                      variant={battle.status === "voting" ? "outline" : "default"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/battles/${battle.id}`);
+                      }}
+                    >
+                      {getActionText(battle.status)}
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </>
+        )}
 
         {/* CTA Section */}
         <div className="text-center">
@@ -123,7 +240,11 @@ const BattlesSection = () => {
               Create your profile, showcase your skills, and compete with barbers from around the world. 
               Every battle is a chance to prove you're among the legends.
             </p>
-            <Button size="lg" className="text-lg px-8">
+            <Button 
+              size="lg" 
+              className="text-lg px-8"
+              onClick={() => navigate('/battles/create')}
+            >
               Start Your Journey
             </Button>
           </Card>
