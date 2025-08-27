@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Menu, X, Instagram } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,15 +11,14 @@ const Header = () => {
     <>
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16 rounded-3xl bg-card/50 px-6 mx-4 my-2 border border-border/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-glow hover:border-primary/30 hover:bg-card/70 cursor-pointer group">
-            {/* Left spacer for mobile */}
-            <div className="flex items-center md:flex-1">
-              <div className="md:hidden w-10"></div>
+          <div className="flex items-center justify-between h-16 rounded-[2rem] bg-card/50 px-6 mx-4 my-2 border border-border/50 shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-glow hover:border-primary/50 hover:bg-card/70 cursor-pointer group hover:shadow-[0_0_30px_hsl(24_100%_52%/0.5)]">
+            {/* Left Icon */}
+            <div className="flex items-center flex-1">
+              <img src="/lovable-uploads/c5bbb6c4-149e-41f8-9e68-1580ee1afdf8.png" alt="Barber Hub" className="w-8 h-8 animate-float group-hover:animate-glow" />
             </div>
 
-            {/* Centered Logo */}
+            {/* Centered BARBER-HUB Text */}
             <div className="flex items-center space-x-2 absolute left-1/2 transform -translate-x-1/2">
-              <img src="/lovable-uploads/c5bbb6c4-149e-41f8-9e68-1580ee1afdf8.png" alt="Barber Hub" className="w-8 h-8 animate-float group-hover:animate-glow" />
               <span className="text-xl font-bold">
                 <span className="text-white">BARBER</span>
                 <span className="text-primary group-hover:text-primary/90 transition-colors duration-300">-HUB</span>
@@ -34,7 +32,7 @@ const Header = () => {
             </nav>
 
             {/* Right Side Actions */}
-            <div className="flex items-center space-x-4 md:flex-1 justify-end">
+            <div className="flex items-center space-x-4 flex-1 justify-end">
               <Button variant="outline" size="sm" className="hidden sm:flex items-center space-x-2 btn-secondary">
                 <Instagram className="w-4 h-4" />
                 <span>Follow</span>
