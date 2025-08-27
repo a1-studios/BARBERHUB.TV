@@ -60,11 +60,12 @@ const LandingHero = () => {
         <button
           type="button"
           onClick={() => setSignUpData(prev => ({ ...prev, userType: "barber" }))}
-          className={`relative p-4 rounded-lg border-2 transition-all duration-200 group ${
+          className={`relative p-4 border transition-all duration-300 ${
             signUpData.userType === "barber" 
-              ? "border-primary bg-primary/5 shadow-glow" 
-              : "border-border hover:border-primary/50 bg-card"
+              ? "border-primary/50 bg-primary/5 shadow-[0_0_20px_hsl(24_100%_52%/0.3),inset_0_0_15px_hsl(24_100%_52%/0.1)]" 
+              : "border-border/50 bg-card/50 hover:border-primary/30 hover:shadow-[0_0_15px_hsl(24_100%_52%/0.2)]"
           }`}
+          style={{ borderRadius: '1rem' }}
         >
           <div className="flex flex-col items-center space-y-2">
             <div className={`p-2 rounded-full ${
@@ -87,11 +88,12 @@ const LandingHero = () => {
         <button
           type="button"
           onClick={() => setSignUpData(prev => ({ ...prev, userType: "creator" }))}
-          className={`relative p-4 rounded-lg border-2 transition-all duration-200 group ${
+          className={`relative p-4 border transition-all duration-300 ${
             signUpData.userType === "creator" 
-              ? "border-primary bg-primary/5 shadow-glow" 
-              : "border-border hover:border-primary/50 bg-card"
+              ? "border-primary/50 bg-primary/5 shadow-[0_0_20px_hsl(24_100%_52%/0.3),inset_0_0_15px_hsl(24_100%_52%/0.1)]" 
+              : "border-border/50 bg-card/50 hover:border-primary/30 hover:shadow-[0_0_15px_hsl(24_100%_52%/0.2)]"
           }`}
+          style={{ borderRadius: '1rem' }}
         >
           <div className="flex flex-col items-center space-y-2">
             <div className={`p-2 rounded-full ${
@@ -114,11 +116,12 @@ const LandingHero = () => {
         <button
           type="button"
           onClick={() => setSignUpData(prev => ({ ...prev, userType: "fan" }))}
-          className={`relative p-4 rounded-lg border-2 transition-all duration-200 group ${
+          className={`relative p-4 border transition-all duration-300 ${
             signUpData.userType === "fan" 
-              ? "border-primary bg-primary/5 shadow-glow" 
-              : "border-border hover:border-primary/50 bg-card"
+              ? "border-primary/50 bg-primary/5 shadow-[0_0_20px_hsl(24_100%_52%/0.3),inset_0_0_15px_hsl(24_100%_52%/0.1)]" 
+              : "border-border/50 bg-card/50 hover:border-primary/30 hover:shadow-[0_0_15px_hsl(24_100%_52%/0.2)]"
           }`}
+          style={{ borderRadius: '1rem' }}
         >
           <div className="flex flex-col items-center space-y-2">
             <div className={`p-2 rounded-full ${
@@ -141,11 +144,12 @@ const LandingHero = () => {
         <button
           type="button"
           onClick={() => setSignUpData(prev => ({ ...prev, userType: "client" }))}
-          className={`relative p-4 rounded-lg border-2 transition-all duration-200 group ${
+          className={`relative p-4 border transition-all duration-300 ${
             signUpData.userType === "client" 
-              ? "border-primary bg-primary/5 shadow-glow" 
-              : "border-border hover:border-primary/50 bg-card"
+              ? "border-primary/50 bg-primary/5 shadow-[0_0_20px_hsl(24_100%_52%/0.3),inset_0_0_15px_hsl(24_100%_52%/0.1)]" 
+              : "border-border/50 bg-card/50 hover:border-primary/30 hover:shadow-[0_0_15px_hsl(24_100%_52%/0.2)]"
           }`}
+          style={{ borderRadius: '1rem' }}
         >
           <div className="flex flex-col items-center space-y-2">
             <div className={`p-2 rounded-full ${
@@ -169,65 +173,53 @@ const LandingHero = () => {
   );
 
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* 3D Globe Background */}
+    <section className="relative min-h-screen overflow-hidden bg-gradient-to-br from-background via-background/95 to-primary/5">
       <Globe3D />
       
-      {/* Background Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background/80" />
-
-      <div className="container mx-auto px-4 relative z-10">
-        <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left Side - Branding & Info */}
-          <div className="text-center lg:text-left space-y-8">
-            <div className="space-y-6">
-              <div className="flex items-center justify-center lg:justify-start gap-3">
-                <Scissors className="w-10 h-10 text-primary" />
-                <h1 className="text-4xl lg:text-6xl font-bold text-gradient">
-                  BARBER-HUB
-                </h1>
-              </div>
-              
-              <p className="text-xl lg:text-2xl max-w-lg">
-                <span className="text-muted-foreground">Where </span>
-                <span className="text-primary font-semibold">Barbers</span>
-                <span className="text-muted-foreground"> become </span>
-                <span className="text-primary font-semibold">Legends</span>
-              </p>
-
-              <p className="text-muted-foreground max-w-md">
-                Join the ultimate platform for barbers, creators, and the community that celebrates exceptional grooming artistry.
-              </p>
-            </div>
-
-            {/* Stats Preview */}
-            <div className="grid grid-cols-3 gap-4 max-w-md mx-auto lg:mx-0">
-              <div className="bg-card/30 backdrop-blur-sm rounded-xl p-4 card-gradient">
-                <div className="text-2xl font-bold text-primary">5K+</div>
-                <div className="text-xs text-muted-foreground">Barbers</div>
-              </div>
-              <div className="bg-card/30 backdrop-blur-sm rounded-xl p-4 card-gradient">
-                <div className="text-2xl font-bold text-primary">100K+</div>
-                <div className="text-xs text-muted-foreground">Votes</div>
-              </div>
-              <div className="bg-card/30 backdrop-blur-sm rounded-xl p-4 card-gradient">
-                <div className="text-2xl font-bold text-primary">$50K+</div>
-                <div className="text-xs text-muted-foreground">Grants</div>
+      {/* Main content - Add top padding to account for sticky header */}
+      <div className="relative z-10 flex items-center justify-center min-h-screen pt-20">
+        <div className="container mx-auto px-4 py-20">
+          <div className="grid lg:grid-cols-2 gap-12 items-center max-w-7xl mx-auto">
+            {/* Left side - Branding and content */}
+            <div className="space-y-8 text-center lg:text-left">
+              <div className="space-y-6">
+                <div className="flex items-center justify-center lg:justify-start space-x-3">
+                  <img src="/lovable-uploads/c5bbb6c4-149e-41f8-9e68-1580ee1afdf8.png" alt="Barber Hub" className="w-12 h-12 animate-float" />
+                  <h1 className="text-4xl md:text-5xl font-bold">
+                    <span className="text-white">BARBER</span>
+                    <span className="text-primary">-HUB</span>
+                  </h1>
+                </div>
+                
+                <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl">
+                  Connect with talented barbers, discover amazing content creators, and join a thriving community of style enthusiasts.
+                </p>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                  <div>
+                    <div className="text-2xl md:text-3xl font-bold text-primary">500+</div>
+                    <div className="text-sm text-muted-foreground">Barbers</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl md:text-3xl font-bold text-primary">1.2k+</div>
+                    <div className="text-sm text-muted-foreground">Creators</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl md:text-3xl font-bold text-primary">5k+</div>
+                    <div className="text-sm text-muted-foreground">Community</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl md:text-3xl font-bold text-primary">98%</div>
+                    <div className="text-sm text-muted-foreground">Satisfaction</div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Right Side - Auth Forms */}
-          <div className="flex justify-center lg:justify-end">
-            <Card className="w-full max-w-md bg-card/80 backdrop-blur-md border-border/50 shadow-2xl">
-              <CardHeader className="text-center">
-                <CardTitle className="text-2xl font-bold">Join the Community</CardTitle>
-                <CardDescription>
-                  Start your journey in the world of professional barbering
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            {/* Right side - Authentication */}
+            <div className="w-full max-w-md mx-auto lg:mx-0 lg:ml-auto">
+              <Card className="p-6 border border-border/50 shadow-lg backdrop-blur-sm bg-card/50 transition-all duration-300 hover:shadow-[0_0_30px_hsl(24_100%_52%/0.5),inset_0_0_20px_hsl(24_100%_52%/0.15)] hover:border-primary/30" style={{ borderRadius: '1.5rem' }}>
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="signin">Sign In</TabsTrigger>
                     <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -260,7 +252,7 @@ const LandingHero = () => {
                       <Button 
                         type="submit" 
                         disabled={loading} 
-                        className="w-full btn-primary shadow-glow"
+                        className="w-full"
                       >
                         {loading ? (
                           <>
@@ -314,7 +306,7 @@ const LandingHero = () => {
                       <Button 
                         type="submit" 
                         disabled={loading} 
-                        className="w-full btn-primary shadow-glow"
+                        className="w-full"
                       >
                         {loading ? (
                           <>
@@ -328,8 +320,8 @@ const LandingHero = () => {
                     </form>
                   </TabsContent>
                 </Tabs>
-              </CardContent>
-            </Card>
+              </Card>
+            </div>
           </div>
         </div>
       </div>

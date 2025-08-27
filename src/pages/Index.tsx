@@ -22,6 +22,7 @@ const Index = () => {
   if (!user) {
     return (
       <div className="min-h-screen">
+        <Header />
         <LandingHero />
       </div>
     );
