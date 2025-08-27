@@ -25,65 +25,12 @@ const Header = () => {
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-2 border-primary/30 rounded-xl mx-4 mt-2">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">
-          {/* Brand */}
+          {/* Hamburger Menu Button */}
           <button
-            onClick={handleBrandClick}
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-          >
-            <Scissors className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-            <span className="text-xl sm:text-2xl font-bold text-gradient">BARBER HUB</span>
-          </button>
-
-          {/* Desktop Navigation */}
-          {user && (
-            <nav className="hidden md:flex items-center gap-6">
-              <Link
-                to="/battles"
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Trophy className="h-4 w-4" />
-                Battles
-              </Link>
-              <Link
-                to="/battles/create"
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <Plus className="h-4 w-4" />
-                Create Battle
-              </Link>
-            </nav>
-          )}
-
-          {/* Desktop Auth */}
-          <div className="hidden md:flex items-center gap-4">
-            {user ? (
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">
-                  Welcome back!
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSignOut}
-                  className="flex items-center gap-2"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Sign Out
-                </Button>
-              </div>
-            ) : (
-              <AuthDialog>
-                <Button size="sm">Sign In</Button>
-              </AuthDialog>
-            )}
-          </div>
-
-          {/* Mobile Menu Button */}
-          <button
-            className="md:hidden p-2 -mr-2"
+            className="p-2 -ml-2"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle menu"
           >
@@ -93,11 +40,26 @@ const Header = () => {
               <Menu className="h-6 w-6" />
             )}
           </button>
+
+          {/* Centered Brand */}
+          <button
+            onClick={handleBrandClick}
+            className="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-2 hover:opacity-80 transition-opacity"
+          >
+            <Scissors className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+            <span className="text-xl sm:text-2xl font-bold">
+              <span className="text-white">BARBER</span>
+              <span className="text-primary">-HUB</span>
+            </span>
+          </button>
+
+          {/* Spacer for layout balance */}
+          <div className="w-10"></div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Hamburger Menu Dropdown */}
         {mobileMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 right-0 bg-background/95 backdrop-blur border-b border-border shadow-lg">
+          <div className="absolute top-full left-4 right-4 bg-background/95 backdrop-blur border-2 border-primary/30 rounded-xl shadow-lg mt-2">
             <div className="px-4 py-6 space-y-4">
               {user ? (
                 <>
