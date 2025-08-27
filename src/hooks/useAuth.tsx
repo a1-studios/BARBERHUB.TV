@@ -15,6 +15,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  console.log('AuthProvider rendering...');
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -101,8 +102,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export function useAuth() {
+  console.log('useAuth called, context:', useContext(AuthContext));
   const context = useContext(AuthContext);
   if (context === undefined) {
+    console.error('AuthContext is undefined! AuthProvider may not be wrapping this component.');
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

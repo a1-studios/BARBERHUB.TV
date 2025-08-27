@@ -7,8 +7,11 @@ import { AuthDialog } from "@/components/auth/AuthDialog";
 import { FEATURES } from "@/config/features";
 
 const Header = () => {
+  console.log('Header component rendering...');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  console.log('About to call useAuth...');
   const { user, signOut, loading } = useAuth();
+  console.log('useAuth returned:', { user, loading });
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
 
