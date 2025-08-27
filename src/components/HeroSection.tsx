@@ -1,10 +1,13 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Trophy, Users, DollarSign } from "lucide-react";
 import Globe3D from "@/components/Globe3D";
+
 const HeroSection = () => {
   const [prizeAmount, setPrizeAmount] = useState(0);
   const targetAmount = 25000;
+
   useEffect(() => {
     const duration = 2000; // 2 seconds
     const increment = targetAmount / (duration / 50);
@@ -20,7 +23,9 @@ const HeroSection = () => {
     }, 50);
     return () => clearInterval(timer);
   }, []);
-  return <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden">
+
+  return (
+    <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden">
       {/* 3D Globe Background */}
       <Globe3D />
       
@@ -32,11 +37,15 @@ const HeroSection = () => {
           {/* Main Headline */}
           <h1 className="text-4xl lg:text-7xl leading-tight md:text-2xl text-slate-50 font-bold">
             Welcome to{" "}
-            <span className="text-gradient"></span>
+            <span className="text-gradient">BARBER-HUB</span>
           </h1>
           
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
-        </p>
+          <p className="text-xl md:text-2xl max-w-2xl mx-auto">
+            <span className="text-white">Where </span>
+            <span className="text-primary font-semibold">Barbers</span>
+            <span className="text-white"> become </span>
+            <span className="text-primary font-semibold">Legends</span>
+          </p>
 
           {/* Prize Pool Counter */}
           <div className="bg-card/50 backdrop-blur-sm rounded-2xl p-8 max-w-md mx-auto animate-glow">
@@ -78,6 +87,8 @@ const HeroSection = () => {
           </div>
         </div>
       </div>
-    </section>;
+    </section>
+  );
 };
+
 export default HeroSection;
