@@ -179,45 +179,9 @@ const LandingHero = () => {
       {/* Main content - Add top padding to account for sticky header */}
       <div className="relative z-10 flex items-center justify-center min-h-screen pt-20">
         <div className="container mx-auto px-4 py-20">
-          <div className="grid lg:grid-cols-2 gap-8 items-start max-w-6xl mx-auto">
-            {/* Left side - Branding and content */}
-            <div className="space-y-6 text-center lg:text-left">
-              <div className="space-y-4">
-                <div className="flex items-center justify-center lg:justify-start space-x-3">
-                  <img src="/lovable-uploads/c5bbb6c4-149e-41f8-9e68-1580ee1afdf8.png" alt="Barber Hub" className="w-12 h-12 animate-float" />
-                  <h1 className="text-4xl md:text-5xl font-bold">
-                    <span className="text-white">BARBER</span>
-                    <span className="text-primary">-HUB</span>
-                  </h1>
-                </div>
-                
-                <p className="text-xl md:text-2xl text-white max-w-2xl">
-                  where barbers become legends
-                </p>
-                
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                  <div>
-                    <div className="text-2xl md:text-3xl font-bold text-primary">500+</div>
-                    <div className="text-sm text-muted-foreground">Barbers</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl md:text-3xl font-bold text-primary">1.2k+</div>
-                    <div className="text-sm text-muted-foreground">Creators</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl md:text-3xl font-bold text-primary">5k+</div>
-                    <div className="text-sm text-muted-foreground">Community</div>
-                  </div>
-                  <div>
-                    <div className="text-2xl md:text-3xl font-bold text-primary">98%</div>
-                    <div className="text-sm text-muted-foreground">Satisfaction</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right side - Authentication */}
-            <div className="w-full max-w-md mx-auto lg:mx-0 lg:ml-auto">
+          <div className="max-w-6xl mx-auto space-y-8">
+            {/* Sign up section - Top position */}
+            <div className="w-full max-w-md mx-auto">
               <Card className="p-6 border border-border/50 shadow-lg backdrop-blur-sm bg-card/50 transition-all duration-300 hover:shadow-[0_0_30px_hsl(24_100%_52%/0.5),inset_0_0_20px_hsl(24_100%_52%/0.15)] hover:border-primary/30" style={{ borderRadius: '1.5rem' }}>
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
@@ -321,6 +285,40 @@ const LandingHero = () => {
                   </TabsContent>
                 </Tabs>
               </Card>
+            </div>
+
+            {/* Branding section - Below sign up */}
+            <div className="text-center space-y-4">
+              <div className="flex items-center justify-center space-x-3">
+                <img src="/lovable-uploads/c5bbb6c4-149e-41f8-9e68-1580ee1afdf8.png" alt="Barber Hub" className="w-12 h-12 animate-float" />
+                <h1 className="text-4xl md:text-5xl font-bold">
+                  <span className="text-white">BARBER</span>
+                  <span className="text-primary">-HUB</span>
+                </h1>
+              </div>
+              
+              <p className="text-xl md:text-2xl text-white max-w-2xl mx-auto">
+                where barbers become legends
+              </p>
+                
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center max-w-2xl mx-auto">
+                <div>
+                  <div className="text-2xl md:text-3xl font-bold text-primary">500+</div>
+                  <div className="text-sm text-muted-foreground">Barbers</div>
+                </div>
+                <div>
+                  <div className="text-2xl md:text-3xl font-bold text-primary">1.2k+</div>
+                  <div className="text-sm text-muted-foreground">Creators</div>
+                </div>
+                <div>
+                  <div className="text-2xl md:text-3xl font-bold text-primary">5k+</div>
+                  <div className="text-sm text-muted-foreground">Community</div>
+                </div>
+                <div>
+                  <div className="text-2xl md:text-3xl font-bold text-primary">98%</div>
+                  <div className="text-sm text-muted-foreground">Satisfaction</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
