@@ -1,93 +1,147 @@
-import { Button } from "@/components/ui/button";
-import { Scissors, Menu, X, Instagram, User, LogOut } from "lucide-react";
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
-import { AuthDialog } from "@/components/auth/AuthDialog";
-import { FEATURES } from "@/config/features";
+
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { AuthDialog } from '@/components/auth/AuthDialog';
+import { useAuth } from '@/hooks/useAuth';
+import { Scissors, Menu, X, Trophy, Plus, User, LogOut } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+
 const Header = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const {
-    user,
-    signOut,
-    loading
-  } = useAuth();
-  const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-  return <>
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="container mx-auto px-4">
-          <div className="relative flex items-center justify-between h-16 px-6 mx-4 my-2 border border-border/50 shadow-lg backdrop-blur-sm bg-card/50 transition-all duration-300 hover:shadow-[0_0_30px_hsl(24_100%_52%/0.5),inset_0_0_20px_hsl(24_100%_52%/0.15)] hover:border-primary/30" style={{
-          borderRadius: '2.4rem'
-        }}>
-            {/* Left side - Icon */}
-            <div className="flex items-center space-x-2">
-              <img src="/lovable-uploads/c5bbb6c4-149e-41f8-9e68-1580ee1afdf8.png" alt="Barber Hub" className="w-8 h-8 animate-float" />
-            </div>
+  const { user, signOut } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
-            {/* Center - BARBER-HUB (absolutely centered) */}
-            <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-              <Link to="/" className="text-xl font-bold whitespace-nowrap hover:opacity-80 transition-opacity">
-                <span className="text-white">BARBER</span>
-                <span className="text-primary">-HUB</span>
+  const handleSignOut = async () => {
+    await signOut();
+    setMobileMenuOpen(false);
+    navigate('/');
+  };
+
+  const handleBrandClick = () => {
+    navigate('/');
+    setMobileMenuOpen(false);
+  };
+
+  const closeMobileMenu = () => setMobileMenuOpen(false);
+
+  return (
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16 sm:h-20">
+          {/* Brand */}
+          <button
+            onClick={handleBrandClick}
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          >
+            <Scissors className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+            <span className="text-xl sm:text-2xl font-bold text-gradient">BARBER HUB</span>
+          </button>
+
+          {/* Desktop Navigation */}
+          {user && (
+            <nav className="hidden md:flex items-center gap-6">
+              <Link
+                to="/battles"
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Trophy className="h-4 w-4" />
+                Battles
               </Link>
-            </div>
+              <Link
+                to="/battles/create"
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Create Battle
+              </Link>
+            </nav>
+          )}
 
-            {/* Right Side Actions */}
-            <div className="flex items-center space-x-4">
-              {/* Menu Button - Always visible */}
-              <Button variant="ghost" size="sm" onClick={toggleMenu}>
-                {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Hamburger menu - Always visible when open */}
-      {isMenuOpen && <div className="fixed top-16 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border shadow-lg z-40">
-          <div className="container mx-auto px-4 py-4 space-y-4">
-            {/* Category Sections */}
-            <div className="space-y-3">
-              <h3 className="text-sm font-semibold text-primary">Categories</h3>
-              <a href="#barbers" className="block nav-link">Barbers</a>
-              <a href="#creators" className="block nav-link">Creators</a>
-              <a href="#fans" className="block nav-link">Fans</a>
-              <a href="#clients" className="block nav-link">Clients</a>
-            </div>
-            
-            {/* Separator */}
-            <div className="border-t border-border"></div>
-            
-            {/* Main Navigation */}
-            <div className="space-y-3">
-              <a href="#battles" className="block nav-link text-orange-500">Battles</a>
-              <a href="#services" className="block nav-link">Services</a>
-              <a href="#community" className="block nav-link">Community</a>
-              <a href="#contact" className="block nav-link">Contact</a>
-            </div>
-            
-            {FEATURES.HEADER_INSTAGRAM_FOLLOW && <>
-                <div className="border-t border-border"></div>
-                <Button variant="outline" size="sm" className="w-full flex items-center justify-center gap-2" onClick={() => window.open('https://instagram.com', '_blank')}>
-                  <Instagram size={16} />
-                  Follow on Instagram
+          {/* Desktop Auth */}
+          <div className="hidden md:flex items-center gap-4">
+            {user ? (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground">
+                  Welcome back!
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleSignOut}
+                  className="flex items-center gap-2"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
                 </Button>
-              </>}
-            
-            {!loading && <>
-                <div className="border-t border-border"></div>
-                {user ? <Button variant="outline" size="sm" className="w-full" onClick={signOut}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign Out
-                  </Button> : <AuthDialog>
-                    <Button size="sm" className="w-full">
-                      <User className="mr-2 h-4 w-4" />
-                      Join Hub
-                    </Button>
-                  </AuthDialog>}
-              </>}
+              </div>
+            ) : (
+              <AuthDialog>
+                <Button size="sm">Sign In</Button>
+              </AuthDialog>
+            )}
           </div>
-        </div>}
-    </>;
+
+          {/* Mobile Menu Button */}
+          <button
+            className="md:hidden p-2 -mr-2"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? (
+              <X className="h-6 w-6" />
+            ) : (
+              <Menu className="h-6 w-6" />
+            )}
+          </button>
+        </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden absolute top-full left-0 right-0 bg-background/95 backdrop-blur border-b border-border shadow-lg">
+            <div className="px-4 py-6 space-y-4">
+              {user ? (
+                <>
+                  <Link
+                    to="/battles"
+                    className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
+                    onClick={closeMobileMenu}
+                  >
+                    <Trophy className="h-5 w-5" />
+                    View Battles
+                  </Link>
+                  <Link
+                    to="/battles/create"
+                    className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
+                    onClick={closeMobileMenu}
+                  >
+                    <Plus className="h-5 w-5" />
+                    Create Battle
+                  </Link>
+                  <div className="border-t border-border pt-4">
+                    <button
+                      onClick={handleSignOut}
+                      className="flex items-center gap-3 py-2 text-muted-foreground hover:text-foreground transition-colors w-full text-left"
+                    >
+                      <LogOut className="h-5 w-5" />
+                      Sign Out
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="pt-2">
+                  <AuthDialog>
+                    <Button className="w-full" onClick={closeMobileMenu}>
+                      Sign In
+                    </Button>
+                  </AuthDialog>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </header>
+  );
 };
+
 export default Header;
