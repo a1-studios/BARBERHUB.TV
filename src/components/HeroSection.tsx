@@ -30,9 +30,9 @@ const HeroSection = () => {
       <div className="container mx-auto px-4 text-center relative z-10">
         <div className="max-w-4xl mx-auto space-y-8">
           {/* Main Headline */}
-          <h1 className="text-4xl lg:text-7xl font-bold leading-tight md:text-2xl">
+          <h1 className="text-4xl lg:text-7xl leading-tight md:text-2xl text-slate-50 font-bold">
             Welcome to{" "}
-            <span className="text-gradient">BARBER-HUB</span>
+            <span className="text-gradient"></span>
           </h1>
           
           <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
