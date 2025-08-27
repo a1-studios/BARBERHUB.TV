@@ -32,9 +32,7 @@ const Header = () => {
                 <span>Follow</span>
               </Button>
               
-              <Button variant="outline" size="sm" className="btn-secondary">
-                Sign In
-              </Button>
+              
               
               <Button size="sm" className="btn-primary">
                 Sign Up

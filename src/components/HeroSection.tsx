@@ -1,16 +1,13 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Trophy, Users, DollarSign } from "lucide-react";
-
 const HeroSection = () => {
   const [prizeAmount, setPrizeAmount] = useState(0);
   const targetAmount = 25000;
-
   useEffect(() => {
     const duration = 2000; // 2 seconds
     const increment = targetAmount / (duration / 50);
     let current = 0;
-    
     const timer = setInterval(() => {
       current += increment;
       if (current >= targetAmount) {
@@ -20,26 +17,27 @@ const HeroSection = () => {
         setPrizeAmount(Math.floor(current));
       }
     }, 50);
-
     return () => clearInterval(timer);
   }, []);
-
-  return (
-    <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden">
+  return <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden">
       {/* Background Gradient */}
       <div className="absolute inset-0 bg-gradient-hero" />
       
       {/* Animated Background Elements */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-20 left-10 w-20 h-20 bg-primary rounded-full animate-float" />
-        <div className="absolute top-40 right-20 w-16 h-16 bg-primary rounded-full animate-float" style={{ animationDelay: '1s' }} />
-        <div className="absolute bottom-20 left-1/4 w-12 h-12 bg-primary rounded-full animate-float" style={{ animationDelay: '2s' }} />
+        <div className="absolute top-40 right-20 w-16 h-16 bg-primary rounded-full animate-float" style={{
+        animationDelay: '1s'
+      }} />
+        <div className="absolute bottom-20 left-1/4 w-12 h-12 bg-primary rounded-full animate-float" style={{
+        animationDelay: '2s'
+      }} />
       </div>
 
       <div className="container mx-auto px-4 text-center relative z-10">
         <div className="max-w-4xl mx-auto space-y-8">
           {/* Main Headline */}
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold leading-tight">
+          <h1 className="text-4xl lg:text-7xl font-bold leading-tight md:text-2xl">
             Welcome to{" "}
             <span className="text-gradient">BARBER-HUB</span>
           </h1>
@@ -89,8 +87,6 @@ const HeroSection = () => {
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default HeroSection;
