@@ -1,24 +1,16 @@
 import { useState } from "react";
 import { Menu, X, Instagram } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-
-  return (
-    <>
+  return <>
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <div className="flex items-center space-x-2">
-              <img 
-                src="/lovable-uploads/c5bbb6c4-149e-41f8-9e68-1580ee1afdf8.png" 
-                alt="Barber Hub" 
-                className="w-8 h-8 animate-float"
-              />
+              <img src="/lovable-uploads/c5bbb6c4-149e-41f8-9e68-1580ee1afdf8.png" alt="Barber Hub" className="w-8 h-8 animate-float" />
               <span className="text-xl font-bold">
                 <span className="text-white">BARBER</span>
                 <span className="text-primary">-HUB</span>
@@ -29,8 +21,8 @@ const Header = () => {
             <nav className="hidden md:flex items-center space-x-8">
               <a href="#competition" className="nav-link">Competition</a>
               <a href="#community" className="nav-link">Community</a>
-              <a href="#grants" className="nav-link">Barber Grants</a>
-              <a href="#dashboard" className="nav-link">My Dashboard</a>
+              
+              
             </nav>
 
             {/* Right Side Actions */}
@@ -49,12 +41,7 @@ const Header = () => {
               </Button>
 
               {/* Mobile Menu Button */}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="md:hidden"
-                onClick={toggleMenu}
-              >
+              <Button variant="ghost" size="sm" className="md:hidden" onClick={toggleMenu}>
                 {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </Button>
             </div>
@@ -63,8 +50,7 @@ const Header = () => {
       </header>
 
       {/* Mobile Quick Menu Overlay */}
-      {isMenuOpen && (
-        <div className="fixed inset-0 z-40 md:hidden">
+      {isMenuOpen && <div className="fixed inset-0 z-40 md:hidden">
           <div className="fixed inset-0 bg-black/50" onClick={toggleMenu} />
           <div className="fixed right-0 top-16 bottom-0 w-80 bg-card border-l border-border animate-slide-in-right">
             <div className="p-6 space-y-6">
@@ -99,10 +85,7 @@ const Header = () => {
               </div>
             </div>
           </div>
-        </div>
-      )}
-    </>
-  );
+        </div>}
+    </>;
 };
-
 export default Header;
