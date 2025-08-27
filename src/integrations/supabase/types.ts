@@ -14,13 +14,251 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      creator_content: {
+        Row: {
+          content_type: string
+          created_at: string
+          creator_id: string
+          description: string | null
+          earnings: number | null
+          id: string
+          likes: number | null
+          media_url: string | null
+          shares: number | null
+          status: string | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          views: number | null
+        }
+        Insert: {
+          content_type: string
+          created_at?: string
+          creator_id: string
+          description?: string | null
+          earnings?: number | null
+          id?: string
+          likes?: number | null
+          media_url?: string | null
+          shares?: number | null
+          status?: string | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          views?: number | null
+        }
+        Update: {
+          content_type?: string
+          created_at?: string
+          creator_id?: string
+          description?: string | null
+          earnings?: number | null
+          id?: string
+          likes?: number | null
+          media_url?: string | null
+          shares?: number | null
+          status?: string | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          views?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_content_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      creator_milestones: {
+        Row: {
+          achieved_at: string
+          creator_id: string
+          id: string
+          milestone_type: string
+          milestone_value: number | null
+          reward_amount: number
+        }
+        Insert: {
+          achieved_at?: string
+          creator_id: string
+          id?: string
+          milestone_type: string
+          milestone_value?: number | null
+          reward_amount: number
+        }
+        Update: {
+          achieved_at?: string
+          creator_id?: string
+          id?: string
+          milestone_type?: string
+          milestone_value?: number | null
+          reward_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_milestones_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      earning_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          reference_id: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "earning_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          barber_bucks: number | null
+          bio: string | null
+          created_at: string
+          creator_level: string | null
+          display_name: string | null
+          id: string
+          is_creator: boolean | null
+          referral_code: string | null
+          referred_by: string | null
+          total_earnings: number | null
+          updated_at: string
+          user_id: string
+          username: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          barber_bucks?: number | null
+          bio?: string | null
+          created_at?: string
+          creator_level?: string | null
+          display_name?: string | null
+          id?: string
+          is_creator?: boolean | null
+          referral_code?: string | null
+          referred_by?: string | null
+          total_earnings?: number | null
+          updated_at?: string
+          user_id: string
+          username?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          barber_bucks?: number | null
+          bio?: string | null
+          created_at?: string
+          creator_level?: string | null
+          display_name?: string | null
+          id?: string
+          is_creator?: boolean | null
+          referral_code?: string | null
+          referred_by?: string | null
+          total_earnings?: number | null
+          updated_at?: string
+          user_id?: string
+          username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      referral_tracking: {
+        Row: {
+          bonus_earned: number | null
+          created_at: string
+          id: string
+          referral_code: string
+          referred_id: string
+          referrer_id: string
+          status: string | null
+        }
+        Insert: {
+          bonus_earned?: number | null
+          created_at?: string
+          id?: string
+          referral_code: string
+          referred_id: string
+          referrer_id: string
+          status?: string | null
+        }
+        Update: {
+          bonus_earned?: number | null
+          created_at?: string
+          id?: string
+          referral_code?: string
+          referred_id?: string
+          referrer_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referral_tracking_referred_id_fkey"
+            columns: ["referred_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "referral_tracking_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_referral_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
