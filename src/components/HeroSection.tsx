@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Trophy, Users, DollarSign } from "lucide-react";
+import Globe3D from "@/components/Globe3D";
 const HeroSection = () => {
   const [prizeAmount, setPrizeAmount] = useState(0);
   const targetAmount = 25000;
@@ -20,19 +21,11 @@ const HeroSection = () => {
     return () => clearInterval(timer);
   }, []);
   return <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden">
-      {/* Background Gradient */}
-      <div className="absolute inset-0 bg-gradient-hero" />
+      {/* 3D Globe Background */}
+      <Globe3D />
       
-      {/* Animated Background Elements */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute top-20 left-10 w-20 h-20 bg-primary rounded-full animate-float" />
-        <div className="absolute top-40 right-20 w-16 h-16 bg-primary rounded-full animate-float" style={{
-        animationDelay: '1s'
-      }} />
-        <div className="absolute bottom-20 left-1/4 w-12 h-12 bg-primary rounded-full animate-float" style={{
-        animationDelay: '2s'
-      }} />
-      </div>
+      {/* Background Gradient Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background/80" />
 
       <div className="container mx-auto px-4 text-center relative z-10">
         <div className="max-w-4xl mx-auto space-y-8">
