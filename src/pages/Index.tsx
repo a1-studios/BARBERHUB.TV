@@ -3,6 +3,8 @@ import HeroSection from "@/components/HeroSection";
 import GrantsSection from "@/components/GrantsSection";
 import CommunitySection from "@/components/CommunitySection";
 import Footer from "@/components/Footer";
+import { CreatorHub } from "@/components/creator/CreatorHub";
+import { FEATURES } from "@/config/features";
 
 const Index = () => {
   return (
@@ -10,8 +12,9 @@ const Index = () => {
       <Header />
       <main>
         <HeroSection />
-        <GrantsSection />
-        <CommunitySection />
+        {FEATURES.CREATOR_HUB_ENABLED && <CreatorHub />}
+        {FEATURES.GRANTS_SECTION && <GrantsSection />}
+        {FEATURES.COMMUNITY_LEADERBOARD && <CommunitySection />}
       </main>
       <Footer />
     </div>
