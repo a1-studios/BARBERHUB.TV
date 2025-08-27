@@ -44,6 +44,20 @@ export type Database = {
             referencedRelation: "battles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_battle_participants_battle_id"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_battle_participants_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       battle_submissions: {
@@ -88,6 +102,20 @@ export type Database = {
             referencedRelation: "battles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_battle_submissions_battle_id"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_battle_submissions_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       battle_votes: {
@@ -126,6 +154,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "battle_submissions"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_battle_votes_battle_id"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_battle_votes_submission_id"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "battle_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_battle_votes_voter_id"
+            columns: ["voter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }

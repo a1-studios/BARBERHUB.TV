@@ -42,10 +42,10 @@ interface Participant {
   id: string;
   user_id: string;
   joined_at: string;
-  profiles?: {
+  profiles: {
     display_name: string;
     avatar_url?: string;
-  };
+  } | null;
 }
 
 interface Submission {
@@ -57,10 +57,10 @@ interface Submission {
   description?: string;
   created_at: string;
   vote_count?: number;
-  profiles?: {
+  profiles: {
     display_name: string;
     avatar_url?: string;
-  };
+  } | null;
 }
 
 const BattleDetails = () => {
@@ -113,44 +113,79 @@ const BattleDetails = () => {
       if (battleError) throw battleError;
       setBattle(battleData);
 
-      // Fetch participants
+      // Fetch participants with profiles using manual join
       const { data: participantsData, error: participantsError } = await supabase
         .from('battle_participants')
         .select(`
-          *,
-          profiles(display_name, avatar_url)
+          id,
+          user_id,
+          joined_at,
+          battle_id,
+          status
         `)
         .eq('battle_id', id);
 
       if (participantsError) throw participantsError;
-      setParticipants(participantsData || []);
+
+      // Manually fetch profiles for participants
+      const participantsWithProfiles = await Promise.all(
+        (participantsData || []).map(async (participant) => {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('display_name, avatar_url')
+            .eq('user_id', participant.user_id)
+            .single();
+          
+          return {
+            ...participant,
+            profiles: profile
+          };
+        })
+      );
+
+      setParticipants(participantsWithProfiles);
 
       // Check if current user is participating
-      const userParticipant = participantsData?.find(p => p.user_id === user.id);
+      const userParticipant = participantsWithProfiles?.find(p => p.user_id === user.id);
       setUserParticipation(userParticipant || null);
 
-      // Fetch submissions
+      // Fetch submissions with profiles using manual join
       const { data: submissionsData, error: submissionsError } = await supabase
         .from('battle_submissions')
         .select(`
-          *,
-          profiles(display_name, avatar_url)
+          id,
+          user_id,
+          battle_id,
+          media_url,
+          thumbnail_url,
+          title,
+          description,
+          status,
+          created_at
         `)
         .eq('battle_id', id);
 
       if (submissionsError) throw submissionsError;
 
-      // Get vote counts for each submission
+      // Manually fetch profiles for submissions and get vote counts
       const submissionsWithVotes = await Promise.all(
         (submissionsData || []).map(async (submission) => {
-          const { count } = await supabase
-            .from('battle_votes')
-            .select('*', { count: 'exact', head: true })
-            .eq('submission_id', submission.id);
+          const [profileResult, voteResult] = await Promise.all([
+            supabase
+              .from('profiles')
+              .select('display_name, avatar_url')
+              .eq('user_id', submission.user_id)
+              .single(),
+            supabase
+              .from('battle_votes')
+              .select('*', { count: 'exact', head: true })
+              .eq('submission_id', submission.id)
+          ]);
           
           return {
             ...submission,
-            vote_count: count || 0
+            profiles: profileResult.data,
+            vote_count: voteResult.count || 0
           };
         })
       );
@@ -167,7 +202,7 @@ const BattleDetails = () => {
         .select('submission_id')
         .eq('battle_id', id)
         .eq('voter_id', user.id)
-        .single();
+        .maybeSingle();
 
       setUserVote(voteData?.submission_id || null);
 

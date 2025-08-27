@@ -96,7 +96,12 @@ const CreateBattle = () => {
       setSubmitting(true);
 
       const battleData = {
-        ...data,
+        title: data.title,
+        description: data.description || null,
+        category: data.category || null,
+        prize_amount: data.prize_amount || 0,
+        currency: data.currency || 'USD',
+        rules: data.rules || null,
         organizer_id: user.id,
         status: 'upcoming',
         cover_image_url: data.cover_image_url || null,
@@ -108,7 +113,7 @@ const CreateBattle = () => {
 
       const { data: battle, error } = await supabase
         .from('battles')
-        .insert([battleData])
+        .insert(battleData)
         .select()
         .single();
 
