@@ -1,195 +1,90 @@
-import { useRef, useEffect, useState, useMemo } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, Sphere, Instances, Instance } from "@react-three/drei";
+import { useRef, useEffect, useState } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { OrbitControls, Sphere } from "@react-three/drei";
 import * as THREE from "three";
 
-interface TacticalDot {
+interface CountryDot {
   id: number;
   position: [number, number, number];
-  intensity: number;
-  pulseSpeed: number;
-  isHighlighted: boolean;
-  highlightTime: number;
+  opacity: number;
+  scale: number;
+  color: string;
 }
-
-const TacticalDotField = ({ dots }: { dots: TacticalDot[] }) => {
-  const instancesRef = useRef<THREE.InstancedMesh>(null);
-  const highlightRef = useRef<THREE.InstancedMesh>(null);
-  
-  useFrame((state) => {
-    if (!instancesRef.current || !highlightRef.current) return;
-    
-    const time = state.clock.getElapsedTime();
-    
-    dots.forEach((dot, i) => {
-      // Base dot pulsing
-      const pulse = Math.sin(time * dot.pulseSpeed) * 0.3 + 0.7;
-      const scale = dot.intensity * pulse * 0.8;
-      
-      const matrix = new THREE.Matrix4();
-      matrix.setPosition(...dot.position);
-      matrix.scale(new THREE.Vector3(scale, scale, scale));
-      instancesRef.current?.setMatrixAt(i, matrix);
-      
-      // Highlighted dots with expanding rings
-      if (dot.isHighlighted) {
-        const highlightPulse = Math.sin(time * 4) * 0.5 + 0.5;
-        const ringScale = (1 + highlightPulse * 2) * scale;
-        
-        const highlightMatrix = new THREE.Matrix4();
-        highlightMatrix.setPosition(...dot.position);
-        highlightMatrix.scale(new THREE.Vector3(ringScale, ringScale, ringScale));
-        highlightRef.current?.setMatrixAt(i, highlightMatrix);
-      } else {
-        const emptyMatrix = new THREE.Matrix4();
-        emptyMatrix.scale(new THREE.Vector3(0, 0, 0));
-        highlightRef.current?.setMatrixAt(i, emptyMatrix);
-      }
-    });
-    
-    instancesRef.current.instanceMatrix.needsUpdate = true;
-    highlightRef.current.instanceMatrix.needsUpdate = true;
-  });
-
-  return (
-    <>
-      {/* Base tactical dots */}
-      <Instances limit={dots.length} ref={instancesRef}>
-        <sphereGeometry args={[0.08, 8, 8]} />
-        <meshStandardMaterial
-          color="#00ff88"
-          emissive="#00ff88"
-          emissiveIntensity={0.4}
-          transparent
-          opacity={0.8}
-        />
-        {dots.map((_, i) => (
-          <Instance key={i} />
-        ))}
-      </Instances>
-      
-      {/* Highlight rings */}
-      <Instances limit={dots.length} ref={highlightRef}>
-        <ringGeometry args={[0.05, 0.15, 16]} />
-        <meshBasicMaterial
-          color="#ff6600"
-          transparent
-          opacity={0.3}
-          side={THREE.DoubleSide}
-        />
-        {dots.map((_, i) => (
-          <Instance key={i} />
-        ))}
-      </Instances>
-    </>
-  );
-};
 
 const EarthGlobe = () => {
   const earthRef = useRef<THREE.Mesh>(null);
-  const groupRef = useRef<THREE.Group>(null);
-  const [dots, setDots] = useState<TacticalDot[]>([]);
-  const [highlightedDot, setHighlightedDot] = useState<number | null>(null);
-  const { mouse } = useThree();
-  
-  // Generate persistent tactical dot field
-  const tacticalDots = useMemo(() => {
-    const newDots: TacticalDot[] = [];
-    for (let i = 0; i < 24; i++) {
-      const phi = Math.acos(-1 + (2 * Math.random()));
-      const theta = Math.random() * Math.PI * 2;
-      const radius = 2.08;
-      
-      const x = radius * Math.sin(phi) * Math.cos(theta);
-      const y = radius * Math.cos(phi);
-      const z = radius * Math.sin(phi) * Math.sin(theta);
-      
-      newDots.push({
-        id: i,
-        position: [x, y, z],
-        intensity: Math.random() * 0.8 + 0.4,
-        pulseSpeed: Math.random() * 2 + 1,
-        isHighlighted: false,
-        highlightTime: 0,
-      });
-    }
-    return newDots;
-  }, []);
+  const [dots, setDots] = useState<CountryDot[]>([]);
 
-  // Update dots with highlighting
-  useEffect(() => {
-    const updateDots = () => {
-      const updatedDots = tacticalDots.map((dot, index) => ({
-        ...dot,
-        isHighlighted: index === highlightedDot,
-      }));
-      setDots(updatedDots);
-    };
-    updateDots();
-  }, [tacticalDots, highlightedDot]);
-
-  // Random spotlight highlighting
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (Math.random() > 0.3) {
-        const randomIndex = Math.floor(Math.random() * tacticalDots.length);
-        setHighlightedDot(randomIndex);
-        
-        setTimeout(() => {
-          setHighlightedDot(null);
-        }, 2000 + Math.random() * 3000);
-      }
-    }, 1500 + Math.random() * 2000);
-    
-    return () => clearInterval(interval);
-  }, [tacticalDots.length]);
-
-  // Enhanced rotation with mouse interaction
+  // Slow rotation animation
   useFrame((state) => {
-    if (earthRef.current && groupRef.current) {
-      // Base slow rotation
-      earthRef.current.rotation.y += 0.003;
+    if (earthRef.current) {
+      earthRef.current.rotation.y += 0.002;
       earthRef.current.rotation.x += 0.001;
-      
-      // Subtle mouse interaction
-      const mouseInfluence = 0.1;
-      groupRef.current.rotation.y += (mouse.x * mouseInfluence - groupRef.current.rotation.y) * 0.02;
-      groupRef.current.rotation.x += (mouse.y * mouseInfluence - groupRef.current.rotation.x) * 0.02;
     }
   });
 
+  // Generate random country dots
+  useEffect(() => {
+    const generateDots = () => {
+      const newDots: CountryDot[] = [];
+      for (let i = 0; i < 12; i++) {
+        // Random spherical coordinates
+        const phi = Math.acos(-1 + (2 * Math.random()));
+        const theta = Math.random() * Math.PI * 2;
+        const radius = 2.02; // Slightly above sphere surface
+        
+        const x = radius * Math.sin(phi) * Math.cos(theta);
+        const y = radius * Math.cos(phi);
+        const z = radius * Math.sin(phi) * Math.sin(theta);
+        
+        newDots.push({
+          id: i,
+          position: [x, y, z],
+          opacity: Math.random() * 0.8 + 0.2,
+          scale: Math.random() * 0.5 + 0.5,
+          color: i % 3 === 0 ? "#FF6B00" : i % 3 === 1 ? "#00C853" : "#FFFFFF"
+        });
+      }
+      setDots(newDots);
+    };
+
+    generateDots();
+    const interval = setInterval(generateDots, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <group ref={groupRef}>
-      {/* Enhanced Earth with tactical styling */}
+    <group>
+      {/* Earth Sphere */}
       <Sphere ref={earthRef} args={[2, 64, 64]}>
         <meshPhongMaterial
-          color="#0a2818"
-          emissive="#061a0f"
-          shininess={200}
+          color="#1a4d3a"
+          emissive="#0a1a0f"
+          shininess={100}
           transparent
-          opacity={0.85}
+          opacity={0.9}
         />
       </Sphere>
 
-      {/* Tactical dot field */}
-      <TacticalDotField dots={dots} />
+      {/* Country highlighting dots */}
+      {dots.map((dot) => (
+        <Sphere key={dot.id} position={dot.position} args={[0.05 * dot.scale, 16, 16]}>
+          <meshStandardMaterial
+            color={dot.color}
+            transparent
+            opacity={dot.opacity}
+            emissive={dot.color}
+            emissiveIntensity={0.3}
+          />
+        </Sphere>
+      ))}
 
-      {/* Enhanced atmosphere with neon glow */}
-      <Sphere args={[2.15, 64, 64]}>
+      {/* Atmosphere glow */}
+      <Sphere args={[2.1, 64, 64]}>
         <meshBasicMaterial
-          color="#00ff88"
+          color="#4a90e2"
           transparent
-          opacity={0.08}
-          side={THREE.BackSide}
-        />
-      </Sphere>
-      
-      {/* Outer tactical glow */}
-      <Sphere args={[2.25, 32, 32]}>
-        <meshBasicMaterial
-          color="#004422"
-          transparent
-          opacity={0.05}
+          opacity={0.1}
           side={THREE.BackSide}
         />
       </Sphere>
