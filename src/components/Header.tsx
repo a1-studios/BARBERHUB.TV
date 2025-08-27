@@ -32,47 +32,10 @@ const Header = () => {
               </span>
             </div>
 
-            {/* Desktop Navigation - Hidden on mobile */}
-            <div className="hidden md:flex items-center gap-6">
-              <a href="#services" className="nav-link">Services</a>
-              <a href="#community" className="nav-link">Community</a>
-              <a href="#contact" className="nav-link">Contact</a>
-              
-              {FEATURES.HEADER_INSTAGRAM_FOLLOW && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex items-center gap-2 hover:bg-primary hover:text-primary-foreground transition-colors"
-                  onClick={() => window.open('https://instagram.com', '_blank')}
-                >
-                  <Instagram size={16} />
-                  Follow
-                </Button>
-              )}
-              
-              {!loading && (
-                user ? (
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={signOut}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sign Out
-                    </Button>
-                  </div>
-                ) : (
-                  <AuthDialog>
-                    <Button size="sm">
-                      <User className="mr-2 h-4 w-4" />
-                      Join Hub
-                    </Button>
-                  </AuthDialog>
-                )
-              )}
-            </div>
-
             {/* Right Side Actions */}
             <div className="flex items-center space-x-4">
-              {/* Mobile Menu Button */}
-              <Button variant="ghost" size="sm" className="md:hidden" onClick={toggleMenu}>
+              {/* Menu Button - Always visible */}
+              <Button variant="ghost" size="sm" onClick={toggleMenu}>
                 {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </Button>
             </div>
@@ -80,45 +43,66 @@ const Header = () => {
         </div>
       </header>
 
-      {/* Mobile menu */}
-      {FEATURES.HEADER_MOBILE_QUICK_MENU && isMenuOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border shadow-lg">
+      {/* Hamburger menu - Always visible when open */}
+      {isMenuOpen && (
+        <div className="absolute top-full left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border shadow-lg z-40">
           <div className="container mx-auto px-4 py-4 space-y-4">
-            <a href="#services" className="block nav-link">Services</a>
-            <a href="#community" className="block nav-link">Community</a>
-            <a href="#contact" className="block nav-link">Contact</a>
+            {/* Category Sections */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold text-primary">Categories</h3>
+              <a href="#barbers" className="block nav-link">Barbers</a>
+              <a href="#creators" className="block nav-link">Creators</a>
+              <a href="#fans" className="block nav-link">Fans</a>
+              <a href="#clients" className="block nav-link">Clients</a>
+            </div>
+            
+            {/* Separator */}
+            <div className="border-t border-border"></div>
+            
+            {/* Main Navigation */}
+            <div className="space-y-3">
+              <a href="#services" className="block nav-link">Services</a>
+              <a href="#community" className="block nav-link">Community</a>
+              <a href="#contact" className="block nav-link">Contact</a>
+            </div>
             
             {FEATURES.HEADER_INSTAGRAM_FOLLOW && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full flex items-center justify-center gap-2"
-                onClick={() => window.open('https://instagram.com', '_blank')}
-              >
-                <Instagram size={16} />
-                Follow on Instagram
-              </Button>
-            )}
-            
-            {!loading && (
-              user ? (
+              <>
+                <div className="border-t border-border"></div>
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="w-full"
-                  onClick={signOut}
+                  className="w-full flex items-center justify-center gap-2"
+                  onClick={() => window.open('https://instagram.com', '_blank')}
                 >
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Sign Out
+                  <Instagram size={16} />
+                  Follow on Instagram
                 </Button>
-              ) : (
-                <AuthDialog>
-                  <Button size="sm" className="w-full">
-                    <User className="mr-2 h-4 w-4" />
-                    Join Hub
+              </>
+            )}
+            
+            {!loading && (
+              <>
+                <div className="border-t border-border"></div>
+                {user ? (
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full"
+                    onClick={signOut}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign Out
                   </Button>
-                </AuthDialog>
-              )
+                ) : (
+                  <AuthDialog>
+                    <Button size="sm" className="w-full">
+                      <User className="mr-2 h-4 w-4" />
+                      Join Hub
+                    </Button>
+                  </AuthDialog>
+                )}
+              </>
             )}
           </div>
         </div>

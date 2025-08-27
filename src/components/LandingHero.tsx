@@ -192,7 +192,7 @@ const LandingHero = () => {
                 </div>
                 
                 <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl">
-                  Connect with talented barbers, discover amazing content creators, and join a thriving community of style enthusiasts.
+                  where barbers become legends
                 </p>
                 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
