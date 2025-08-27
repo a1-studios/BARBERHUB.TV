@@ -2,6 +2,7 @@ import Header from "@/components/Header";
 import LandingHero from "@/components/LandingHero";
 import GrantsSection from "@/components/GrantsSection";
 import CommunitySection from "@/components/CommunitySection";
+import BattlesSection from "@/components/BattlesSection";
 import Footer from "@/components/Footer";
 import { CreatorHub } from "@/components/creator/CreatorHub";
 import { useAuth } from "@/hooks/useAuth";
@@ -24,6 +25,12 @@ const Index = () => {
       <div className="min-h-screen">
         <Header />
         <LandingHero />
+        <main>
+          <BattlesSection />
+          {FEATURES.GRANTS_SECTION && <GrantsSection />}
+          {FEATURES.COMMUNITY_LEADERBOARD && <CommunitySection />}
+        </main>
+        <Footer />
       </div>
     );
   }
@@ -33,6 +40,7 @@ const Index = () => {
     <div className="min-h-screen">
       <Header />
       <main>
+        <BattlesSection />
         {FEATURES.CREATOR_HUB_ENABLED && <CreatorHub />}
         {FEATURES.GRANTS_SECTION && <GrantsSection />}
         {FEATURES.COMMUNITY_LEADERBOARD && <CommunitySection />}

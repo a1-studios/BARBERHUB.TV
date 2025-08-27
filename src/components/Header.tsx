@@ -26,10 +26,10 @@ const Header = () => {
 
             {/* Center - BARBER-HUB (absolutely centered) */}
             <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-              <span className="text-xl font-bold whitespace-nowrap">
+              <Link to="/" className="text-xl font-bold whitespace-nowrap hover:opacity-80 transition-opacity">
                 <span className="text-white">BARBER</span>
                 <span className="text-primary">-HUB</span>
-              </span>
+              </Link>
             </div>
 
             {/* Right Side Actions */}
@@ -45,7 +45,7 @@ const Header = () => {
 
       {/* Hamburger menu - Always visible when open */}
       {isMenuOpen && (
-        <div className="absolute top-full left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border shadow-lg z-40">
+        <div className="fixed top-16 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border shadow-lg z-40">
           <div className="container mx-auto px-4 py-4 space-y-4">
             {/* Category Sections */}
             <div className="space-y-3">
@@ -61,6 +61,7 @@ const Header = () => {
             
             {/* Main Navigation */}
             <div className="space-y-3">
+              <a href="#battles" className="block nav-link">Battles</a>
               <a href="#services" className="block nav-link">Services</a>
               <a href="#community" className="block nav-link">Community</a>
               <a href="#contact" className="block nav-link">Contact</a>

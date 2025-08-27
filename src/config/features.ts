@@ -5,8 +5,8 @@ export const FEATURES = {
   HEADER_MOBILE_QUICK_MENU: false,
   
   // Main sections
-  GRANTS_SECTION: false,
-  COMMUNITY_LEADERBOARD: false,
+  GRANTS_SECTION: true,
+  COMMUNITY_LEADERBOARD: true,
   
   // Creator system
   CREATOR_HUB_ENABLED: true,
