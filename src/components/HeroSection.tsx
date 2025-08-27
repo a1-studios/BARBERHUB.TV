@@ -55,7 +55,7 @@ const HeroSection = () => {
               <Trophy className="w-8 h-8 text-primary" />
               <span className="text-lg font-semibold">Current Prize Pool</span>
             </div>
-            <div className="text-5xl md:text-6xl font-bold text-gradient animate-counter-up">
+            <div className="text-2xl md:text-3xl font-bold text-gradient animate-counter-up">
               ${prizeAmount.toLocaleString()}
             </div>
           </div>

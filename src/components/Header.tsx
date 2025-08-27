@@ -19,7 +19,10 @@ const Header = () => {
                 alt="Barber Hub" 
                 className="w-8 h-8 animate-float"
               />
-              <span className="text-xl font-bold text-gradient">BARBER-HUB</span>
+              <span className="text-xl font-bold">
+                <span className="text-white">BARBER</span>
+                <span className="text-primary">-HUB</span>
+              </span>
             </div>
 
             {/* Desktop Navigation */}
