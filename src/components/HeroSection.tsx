@@ -64,11 +64,11 @@ const HeroSection = () => {
           {/* Stats Row */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-12 max-w-2xl mx-auto">
             <div className="bg-card/30 backdrop-blur-sm rounded-xl p-6 card-gradient">
-              <div className="text-3xl font-bold text-primary">500+</div>
+              <div className="text-3xl font-bold text-primary bg-transparent">5000+</div>
               <div className="text-sm text-muted-foreground">Active Barbers</div>
             </div>
             <div className="bg-card/30 backdrop-blur-sm rounded-xl p-6 card-gradient">
-              <div className="text-3xl font-bold text-primary">10K+</div>
+              <div className="text-3xl font-bold text-primary">100K+</div>
               <div className="text-sm text-muted-foreground">Community Votes</div>
             </div>
             <div className="bg-card/30 backdrop-blur-sm rounded-xl p-6 card-gradient">
