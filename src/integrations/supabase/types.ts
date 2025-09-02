@@ -494,6 +494,15 @@ export type Database = {
           weighted_votes: number
         }[]
       }
+      get_public_profile_info: {
+        Args: { profile_user_id: string }
+        Returns: {
+          avatar_url: string
+          display_name: string
+          user_id: string
+          user_type: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
