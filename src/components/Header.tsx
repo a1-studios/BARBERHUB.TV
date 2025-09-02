@@ -1,15 +1,36 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { AuthDialog } from '@/components/auth/AuthDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { Scissors, Menu, X, Trophy, Plus, User, LogOut, Sparkles } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
+import { Badge } from '@/components/ui/badge';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const Header = () => {
   const { user, signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+
+  // Fetch user profile for role badge
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id
+  });
+
+  const isBarber = profile?.user_type === 'barber';
 
   const handleSignOut = async () => {
     await signOut();
@@ -40,6 +61,11 @@ const Header = () => {
               <span className="text-white">BARBER</span>
               <span className="text-primary">-HUB</span>
             </span>
+            {user && profile && (
+              <Badge variant="secondary" className="ml-2 text-xs">
+                {profile.user_type === 'barber' ? '✂️ Barber' : '👥 Fan'}
+              </Badge>
+            )}
           </button>
 
           {/* Hamburger Menu Button */}
@@ -70,14 +96,16 @@ const Header = () => {
                     <Trophy className="h-5 w-5" />
                     View Battles
                   </Link>
-                  <Link
-                    to="/battles/create"
-                    className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
-                    onClick={closeMobileMenu}
-                  >
-                    <Plus className="h-5 w-5" />
-                    Create Battle
-                  </Link>
+                  {isBarber && (
+                    <Link
+                      to="/battles/create"
+                      className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
+                      onClick={closeMobileMenu}
+                    >
+                      <Plus className="h-5 w-5" />
+                      Create Battle
+                    </Link>
+                  )}
                   <Link
                     to="/haircut-advisor"
                     className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
@@ -98,11 +126,15 @@ const Header = () => {
                 </>
               ) : (
                 <div className="pt-2">
-                  <AuthDialog>
-                    <Button className="w-full" onClick={closeMobileMenu}>
-                      Sign In
-                    </Button>
-                  </AuthDialog>
+                  <Button 
+                    className="w-full" 
+                    onClick={() => {
+                      closeMobileMenu();
+                      navigate('/');
+                    }}
+                  >
+                    Sign In
+                  </Button>
                 </div>
               )}
             </div>

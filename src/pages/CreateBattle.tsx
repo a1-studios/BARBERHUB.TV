@@ -1,8 +1,10 @@
 
+import { BackButton } from '@/components/ui/BackButton';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -69,6 +71,23 @@ const CreateBattle = () => {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
 
+  // Check user profile and role
+  const { data: profile, isLoading: profileLoading } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id
+  });
+
   const form = useForm<BattleFormData>({
     resolver: zodResolver(battleSchema),
     defaultValues: {
@@ -84,10 +103,15 @@ const CreateBattle = () => {
   });
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth');
+    if (!loading && !profileLoading) {
+      if (!user) {
+        navigate('/');
+      } else if (profile && profile.user_type !== 'barber') {
+        navigate('/battles');
+        toast.error('Only barbers can create battles');
+      }
     }
-  }, [user, loading, navigate]);
+  }, [user, profile, loading, profileLoading, navigate]);
 
   const onSubmit = async (data: BattleFormData) => {
     if (!user) return;
@@ -146,6 +170,7 @@ const CreateBattle = () => {
       
       <main className="pt-24 pb-20 px-4">
         <div className="container mx-auto max-w-2xl">
+          <BackButton to="/battles" />
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-2 mb-4">
               <Trophy className="h-8 w-8 text-primary" />

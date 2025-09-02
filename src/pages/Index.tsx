@@ -8,8 +8,7 @@ import Footer from "@/components/Footer";
 import { CreatorHub } from "@/components/creator/CreatorHub";
 import { useAuth } from "@/hooks/useAuth";
 import { FEATURES } from "@/config/features";
-import { AuthDialog } from "@/components/auth/AuthDialog";
-import { Button } from "@/components/ui/button";
+import { RoleSelector } from "@/components/auth/RoleSelector";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -39,15 +38,7 @@ const Index = () => {
           <LandingHero />
           <div className="py-20 px-4">
             <div className="container mx-auto max-w-2xl text-center">
-              <h2 className="text-3xl font-bold mb-6 text-white">Join the Barber Community</h2>
-              <p className="text-lg text-muted-foreground mb-8">
-                Sign in to access battles, compete with other barbers, and showcase your skills to the world.
-              </p>
-              <AuthDialog>
-                <Button size="lg" className="text-lg px-8">
-                  Get Started
-                </Button>
-              </AuthDialog>
+              <RoleSelector />
             </div>
           </div>
         </>

@@ -1,4 +1,5 @@
 
+import { BackButton } from '@/components/ui/BackButton';
 import { useParams, Navigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -230,6 +231,7 @@ const BattleDetails = () => {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <BackButton to="/battles" />
       {/* Battle Header */}
       <div className="mb-8">
         <div className="flex flex-col lg:flex-row gap-6">

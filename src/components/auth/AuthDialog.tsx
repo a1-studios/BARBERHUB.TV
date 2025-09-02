@@ -9,9 +9,10 @@ import { Loader2, User } from 'lucide-react';
 
 interface AuthDialogProps {
   children: React.ReactNode;
+  initialRole?: 'barber' | 'fan';
 }
 
-export function AuthDialog({ children }: AuthDialogProps) {
+export function AuthDialog({ children, initialRole = 'fan' }: AuthDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
@@ -45,7 +46,7 @@ export function AuthDialog({ children }: AuthDialogProps) {
     e.preventDefault();
     setLoading(true);
     
-    const { error } = await signUp(signUpData.email, signUpData.password, signUpData.displayName);
+    const { error } = await signUp(signUpData.email, signUpData.password, signUpData.displayName, initialRole);
     
     if (!error) {
       setOpen(false);

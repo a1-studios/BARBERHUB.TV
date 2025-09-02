@@ -1,3 +1,4 @@
+import { BackButton } from '@/components/ui/BackButton';
 import { useState, useRef } from 'react';
 import { Camera, Upload, RotateCcw, Sparkles, Scissors } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -147,6 +148,7 @@ const HaircutAdvisor = () => {
       
       <main className="pt-24 pb-20 px-4">
         <div className="container mx-auto max-w-4xl">
+          <BackButton to="/" />
           {/* Header Section */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-2 mb-4">

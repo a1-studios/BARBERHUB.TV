@@ -1,4 +1,5 @@
 
+import { BackButton } from '@/components/ui/BackButton';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -84,6 +85,7 @@ const BattlesPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
+      <BackButton to="/" />
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
@@ -110,24 +112,6 @@ const BattlesPage = () => {
       </div>
 
       {/* Role-specific Information */}
-      {!user && (
-        <Card className="mb-8 bg-primary/5 border-primary/20">
-          <CardContent className="p-6">
-            <div className="text-center">
-              <h3 className="text-lg font-semibold text-white mb-2">
-                Join the Battle Arena
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Sign up to vote in battles, follow barbers, and be part of the community
-              </p>
-              <Button asChild>
-                <Link to="/auth">Get Started</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {isFan && user && (
         <Card className="mb-8 bg-blue-500/5 border-blue-500/20">
           <CardContent className="p-6">
