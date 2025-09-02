@@ -3,49 +3,42 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Crown, Heart, MessageCircle, Star, TrendingUp } from "lucide-react";
-
-const topBarbers = [
-  {
-    id: 1,
-    name: "Marcus Thompson",
-    shop: "Elite Cuts Studio",
-    location: "Atlanta, GA",
-    rank: 1,
-    votes: 2847,
-    subscribers: 15200,
-    specialties: ["Fades", "Beard Styling"],
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-    barberBucks: 1250
-  },
-  {
-    id: 2,
-    name: "Carlos Rivera",
-    shop: "The Barber Lounge",
-    location: "Miami, FL",
-    rank: 2,
-    votes: 2635,
-    subscribers: 12800,
-    specialties: ["Classic Cuts", "Hot Towel"],
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-    barberBucks: 980
-  },
-  {
-    id: 3,
-    name: "DeShawn Williams",
-    shop: "Crown Barbershop",
-    location: "Chicago, IL",
-    rank: 3,
-    votes: 2401,
-    subscribers: 11500,
-    specialties: ["Line-ups", "Designs"],
-    avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face",
-    barberBucks: 875
-  }
-];
-
+const topBarbers = [{
+  id: 1,
+  name: "Marcus Thompson",
+  shop: "Elite Cuts Studio",
+  location: "Atlanta, GA",
+  rank: 1,
+  votes: 2847,
+  subscribers: 15200,
+  specialties: ["Fades", "Beard Styling"],
+  avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+  barberBucks: 1250
+}, {
+  id: 2,
+  name: "Carlos Rivera",
+  shop: "The Barber Lounge",
+  location: "Miami, FL",
+  rank: 2,
+  votes: 2635,
+  subscribers: 12800,
+  specialties: ["Classic Cuts", "Hot Towel"],
+  avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
+  barberBucks: 980
+}, {
+  id: 3,
+  name: "DeShawn Williams",
+  shop: "Crown Barbershop",
+  location: "Chicago, IL",
+  rank: 3,
+  votes: 2401,
+  subscribers: 11500,
+  specialties: ["Line-ups", "Designs"],
+  avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face",
+  barberBucks: 875
+}];
 const CommunitySection = () => {
-  return (
-    <section id="community" className="py-20 bg-muted/30">
+  return <section id="community" className="py-20 bg-muted/30">
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
@@ -60,16 +53,10 @@ const CommunitySection = () => {
 
         {/* Leaderboard */}
         <div className="max-w-4xl mx-auto space-y-6">
-          {topBarbers.map((barber, index) => (
-            <Card key={barber.id} className="card-gradient relative overflow-hidden">
+          {topBarbers.map((barber, index) => <Card key={barber.id} className="card-gradient relative overflow-hidden">
               {/* Rank Badge */}
               <div className="absolute top-6 left-6">
-                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${
-                  barber.rank === 1 ? 'bg-yellow-500 text-black' :
-                  barber.rank === 2 ? 'bg-gray-400 text-black' :
-                  barber.rank === 3 ? 'bg-amber-600 text-white' :
-                  'bg-muted text-foreground'
-                }`}>
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${barber.rank === 1 ? 'bg-yellow-500 text-black' : barber.rank === 2 ? 'bg-gray-400 text-black' : barber.rank === 3 ? 'bg-amber-600 text-white' : 'bg-muted text-foreground'}`}>
                   {barber.rank === 1 && <Crown className="w-6 h-6" />}
                   {barber.rank !== 1 && barber.rank}
                 </div>
@@ -93,11 +80,9 @@ const CommunitySection = () => {
                       
                       {/* Specialties */}
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {barber.specialties.map((specialty, idx) => (
-                          <Badge key={idx} variant="outline" className="text-xs">
+                        {barber.specialties.map((specialty, idx) => <Badge key={idx} variant="outline" className="text-xs">
                             {specialty}
-                          </Badge>
-                        ))}
+                          </Badge>)}
                       </div>
                     </div>
                   </div>
@@ -125,8 +110,7 @@ const CommunitySection = () => {
                   </div>
                 </div>
               </CardContent>
-            </Card>
-          ))}
+            </Card>)}
         </div>
 
         {/* Community Stats */}
@@ -158,26 +142,9 @@ const CommunitySection = () => {
 
         {/* Join Community CTA */}
         <div className="text-center mt-16">
-          <div className="bg-card/50 backdrop-blur-sm rounded-2xl p-8 max-w-2xl mx-auto">
-            <h3 className="text-2xl font-bold mb-4">
-              Join the Community
-            </h3>
-            <p className="text-muted-foreground mb-6">
-              Connect with barbers nationwide, share your work, and participate in monthly competitions.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button className="btn-primary">
-                Join as Barber
-              </Button>
-              <Button variant="outline" className="btn-secondary">
-                Join as Fan
-              </Button>
-            </div>
-          </div>
+          
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
-
 export default CommunitySection;
