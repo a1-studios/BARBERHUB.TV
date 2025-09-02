@@ -13,14 +13,14 @@ const Header = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
 
-  // Fetch user profile for role badge
+  // Fetch user profile for navigation permissions
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
       const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select('user_type')
         .eq('user_id', user.id)
         .single();
       
@@ -61,11 +61,6 @@ const Header = () => {
               <span className="text-white">BARBER</span>
               <span className="text-primary">-HUB</span>
             </span>
-            {user && profile && (
-              <Badge variant="secondary" className="ml-2 text-xs">
-                {profile.user_type === 'barber' ? '✂️ Barber' : '👥 Fan'}
-              </Badge>
-            )}
           </button>
 
           {/* Hamburger Menu Button */}
@@ -113,6 +108,14 @@ const Header = () => {
                   >
                     <Sparkles className="h-5 w-5" />
                     Haircut Advisor
+                  </Link>
+                  <Link
+                    to="/profile"
+                    className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
+                    onClick={closeMobileMenu}
+                  >
+                    <User className="h-5 w-5" />
+                    Profile
                   </Link>
                   <div className="border-t border-border pt-4">
                     <button

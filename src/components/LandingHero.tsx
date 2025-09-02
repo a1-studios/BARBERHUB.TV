@@ -25,7 +25,7 @@ const LandingHero = () => {
     email: "",
     password: "",
     displayName: "",
-    userType: "fan" as "barber" | "creator" | "fan" | "client",
+    userType: "fan" as "barber" | "fan",
   });
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -87,34 +87,6 @@ const LandingHero = () => {
 
         <button
           type="button"
-          onClick={() => setSignUpData(prev => ({ ...prev, userType: "creator" }))}
-          className={`relative p-4 border transition-all duration-300 ${
-            signUpData.userType === "creator" 
-              ? "border-primary/50 bg-primary/5 shadow-[0_0_20px_hsl(24_100%_52%/0.3),inset_0_0_15px_hsl(24_100%_52%/0.1)]" 
-              : "border-border/50 bg-card/50 hover:border-primary/30 hover:shadow-[0_0_15px_hsl(24_100%_52%/0.2)]"
-          }`}
-          style={{ borderRadius: '1rem' }}
-        >
-          <div className="flex flex-col items-center space-y-2">
-            <div className={`p-2 rounded-full ${
-              signUpData.userType === "creator" ? "bg-primary text-primary-foreground" : "bg-muted"
-            }`}>
-              <Star className="w-5 h-5" />
-            </div>
-            <div className="text-center">
-              <div className="font-semibold text-sm">CREATOR</div>
-              <div className="text-xs text-muted-foreground">Content & Influence</div>
-            </div>
-          </div>
-          {signUpData.userType === "creator" && (
-            <div className="absolute -top-1 -right-1">
-              <Badge variant="default" className="text-xs">Selected</Badge>
-            </div>
-          )}
-        </button>
-
-        <button
-          type="button"
           onClick={() => setSignUpData(prev => ({ ...prev, userType: "fan" }))}
           className={`relative p-4 border transition-all duration-300 ${
             signUpData.userType === "fan" 
@@ -135,34 +107,6 @@ const LandingHero = () => {
             </div>
           </div>
           {signUpData.userType === "fan" && (
-            <div className="absolute -top-1 -right-1">
-              <Badge variant="default" className="text-xs">Selected</Badge>
-            </div>
-          )}
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setSignUpData(prev => ({ ...prev, userType: "client" }))}
-          className={`relative p-4 border transition-all duration-300 ${
-            signUpData.userType === "client" 
-              ? "border-primary/50 bg-primary/5 shadow-[0_0_20px_hsl(24_100%_52%/0.3),inset_0_0_15px_hsl(24_100%_52%/0.1)]" 
-              : "border-border/50 bg-card/50 hover:border-primary/30 hover:shadow-[0_0_15px_hsl(24_100%_52%/0.2)]"
-          }`}
-          style={{ borderRadius: '1rem' }}
-        >
-          <div className="flex flex-col items-center space-y-2">
-            <div className={`p-2 rounded-full ${
-              signUpData.userType === "client" ? "bg-primary text-primary-foreground" : "bg-muted"
-            }`}>
-              <TrendingUp className="w-5 h-5" />
-            </div>
-            <div className="text-center">
-              <div className="font-semibold text-sm">CLIENT</div>
-              <div className="text-xs text-muted-foreground">Service Seeker</div>
-            </div>
-          </div>
-          {signUpData.userType === "client" && (
             <div className="absolute -top-1 -right-1">
               <Badge variant="default" className="text-xs">Selected</Badge>
             </div>

@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import Index from "./pages/Index";
+import Profile from "./pages/Profile";
 import BattlesPage from "./pages/BattlesPage";
 import CreateBattle from "./pages/CreateBattle";
 import BattleDetails from "./pages/BattleDetails";
@@ -25,6 +26,14 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Navigate to="/" replace />} />
+            <Route 
+              path="/profile" 
+              element={
+                <AuthGuard>
+                  <Profile />
+                </AuthGuard>
+              } 
+            />
             <Route 
               path="/battles" 
               element={

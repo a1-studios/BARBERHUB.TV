@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
-import { Loader2, User } from 'lucide-react';
+import { Loader2, User, Scissors, Users } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface AuthDialogProps {
   children: React.ReactNode;
@@ -26,6 +27,7 @@ export function AuthDialog({ children, initialRole = 'fan' }: AuthDialogProps) {
     email: '',
     password: '',
     displayName: '',
+    userType: initialRole,
   });
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -46,11 +48,11 @@ export function AuthDialog({ children, initialRole = 'fan' }: AuthDialogProps) {
     e.preventDefault();
     setLoading(true);
     
-    const { error } = await signUp(signUpData.email, signUpData.password, signUpData.displayName, initialRole);
+    const { error } = await signUp(signUpData.email, signUpData.password, signUpData.displayName, signUpData.userType);
     
     if (!error) {
       setOpen(false);
-      setSignUpData({ email: '', password: '', displayName: '' });
+      setSignUpData({ email: '', password: '', displayName: '', userType: initialRole });
     }
     
     setLoading(false);
@@ -107,6 +109,51 @@ export function AuthDialog({ children, initialRole = 'fan' }: AuthDialogProps) {
           
           <TabsContent value="signup" className="space-y-4">
             <form onSubmit={handleSignUp} className="space-y-4">
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">I am a:</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSignUpData(prev => ({ ...prev, userType: "barber" }))}
+                    className={`relative p-3 border transition-all duration-300 rounded-lg ${
+                      signUpData.userType === "barber" 
+                        ? "border-primary bg-primary/10" 
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <div className="flex flex-col items-center space-y-1">
+                      <Scissors className="w-4 h-4" />
+                      <span className="text-xs font-medium">BARBER</span>
+                    </div>
+                    {signUpData.userType === "barber" && (
+                      <div className="absolute -top-1 -right-1">
+                        <Badge variant="default" className="text-xs px-1 py-0">✓</Badge>
+                      </div>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSignUpData(prev => ({ ...prev, userType: "fan" }))}
+                    className={`relative p-3 border transition-all duration-300 rounded-lg ${
+                      signUpData.userType === "fan" 
+                        ? "border-primary bg-primary/10" 
+                        : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <div className="flex flex-col items-center space-y-1">
+                      <Users className="w-4 h-4" />
+                      <span className="text-xs font-medium">FAN</span>
+                    </div>
+                    {signUpData.userType === "fan" && (
+                      <div className="absolute -top-1 -right-1">
+                        <Badge variant="default" className="text-xs px-1 py-0">✓</Badge>
+                      </div>
+                    )}
+                  </button>
+                </div>
+              </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="signup-name">Display Name</Label>
                 <Input
