@@ -45,6 +45,7 @@ const Index = () => {
       {/* Content gated behind authentication */}
       {user ? <main className="pt-20 sm:pt-24">
           <BattlesSection />
+          {FEATURES.CREATOR_HUB_ENABLED && profile?.user_type === 'barber' && <CreatorHub />}
           {FEATURES.GRANTS_SECTION && profile?.user_type === 'fan' && <GrantsSection />}
           {FEATURES.COMMUNITY_LEADERBOARD && <CommunitySection />}
         </main> : <>
