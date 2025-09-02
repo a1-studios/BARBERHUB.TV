@@ -5,6 +5,7 @@ import CommunitySection from "@/components/CommunitySection";
 import BattlesSection from "@/components/BattlesSection";
 import Footer from "@/components/Footer";
 import { CreatorHub } from "@/components/creator/CreatorHub";
+import { HaircutAdvisorSection } from "@/components/HaircutAdvisorSection";
 import { useAuth } from "@/hooks/useAuth";
 import { FEATURES } from "@/config/features";
 import { RoleSelector } from "@/components/auth/RoleSelector";
@@ -20,6 +21,9 @@ const Index = () => {
   }
   return <div className="min-h-screen">
       <Header />
+      
+      {/* AI Haircut Advisor - Available for everyone */}
+      <HaircutAdvisorSection />
       
       {/* Content gated behind authentication */}
       {user ? <main className="pt-20 sm:pt-24">

@@ -1,1 +1,24 @@
 project_id = "msuepyfssovvkjzpfjzu"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[auth]
+enabled = true
+port = 54324
+site_url = "https://lovable.app"
+additional_redirect_urls = ["https://lovable.app"]
+jwt_expiry = 3600
+
+[db]
+enabled = true
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[functions.analyze-haircut]
+verify_jwt = false

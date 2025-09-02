@@ -27,7 +27,7 @@ serve(async (req) => {
   }
 
   try {
-    const { image_data } = await req.json()
+    const { image_data, preferences = {} } = await req.json()
     
     if (!image_data) {
       throw new Error('No image data provided')
@@ -58,7 +58,12 @@ Please analyze:
 2. Hair texture (if visible: straight, wavy, curly, coily)
 3. Facial features that influence haircut choices
 
-Provide 3-4 specific haircut suggestions that would complement their face shape and features.
+${preferences.length ? `User preferences: ${preferences.length} length` : ''}
+${preferences.vibe ? `Desired vibe: ${preferences.vibe}` : ''}
+${preferences.maintenance ? `Maintenance level: ${preferences.maintenance}` : ''}
+${preferences.look ? `Desired look: ${preferences.look}` : ''}
+
+Provide 3-4 specific haircut suggestions that would complement their face shape and features, considering the user's preferences if provided.
 
 Respond in this exact JSON format:
 {
