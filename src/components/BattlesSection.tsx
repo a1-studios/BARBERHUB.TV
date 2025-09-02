@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Users, Clock, Vote, Plus } from "lucide-react";
+import { Trophy, Users, Clock, Vote, Plus, Scissors } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { HaircutAdvisorModal } from "./HaircutAdvisorModal";
 interface Battle {
   id: string;
   title: string;
@@ -23,6 +24,7 @@ const BattlesSection = () => {
   const navigate = useNavigate();
   const [battles, setBattles] = useState<Battle[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isHaircutModalOpen, setIsHaircutModalOpen] = useState(false);
   useEffect(() => {
     if (user) {
       fetchFeaturedBattles();
@@ -161,6 +163,14 @@ const BattlesSection = () => {
             <Plus className="mr-2 h-5 w-5" />
             Create Battle
           </Button>
+          <Button 
+            size="lg" 
+            onClick={() => setIsHaircutModalOpen(true)}
+            className="text-lg px-8 bg-gradient-to-r from-primary to-orange-500 hover:from-orange-500 hover:to-primary shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+          >
+            <Scissors className="mr-2 h-5 w-5" />
+            AI Haircut Advisor
+          </Button>
         </div>
 
         {/* Featured Battles */}
@@ -222,6 +232,11 @@ const BattlesSection = () => {
           </Card>
         </div>
       </div>
+      
+      <HaircutAdvisorModal 
+        isOpen={isHaircutModalOpen} 
+        onClose={() => setIsHaircutModalOpen(false)} 
+      />
     </section>;
 };
 export default BattlesSection;

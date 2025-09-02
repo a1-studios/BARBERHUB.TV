@@ -22,9 +22,6 @@ const Index = () => {
   return <div className="min-h-screen">
       <Header />
       
-      {/* AI Haircut Advisor - Available for everyone */}
-      <HaircutAdvisorSection />
-      
       {/* Content gated behind authentication */}
       {user ? <main className="pt-20 sm:pt-24">
           <BattlesSection />
