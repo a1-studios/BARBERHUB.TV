@@ -294,6 +294,48 @@ export type Database = {
           },
         ]
       }
+      creator_follows: {
+        Row: {
+          created_at: string
+          creator_id: string
+          follower_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          creator_id: string
+          follower_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string
+          follower_id?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      creator_likes: {
+        Row: {
+          created_at: string
+          creator_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          creator_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       creator_milestones: {
         Row: {
           achieved_at: string
@@ -328,6 +370,63 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      creator_subscriptions: {
+        Row: {
+          created_at: string
+          creator_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          creator_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      donations: {
+        Row: {
+          amount_cents: number
+          created_at: string
+          creator_id: string
+          currency: string
+          fan_id: string
+          id: string
+          message: string | null
+          status: string
+          stripe_session_id: string | null
+        }
+        Insert: {
+          amount_cents: number
+          created_at?: string
+          creator_id: string
+          currency?: string
+          fan_id: string
+          id?: string
+          message?: string | null
+          status?: string
+          stripe_session_id?: string | null
+        }
+        Update: {
+          amount_cents?: number
+          created_at?: string
+          creator_id?: string
+          currency?: string
+          fan_id?: string
+          id?: string
+          message?: string | null
+          status?: string
+          stripe_session_id?: string | null
+        }
+        Relationships: []
       }
       earning_transactions: {
         Row: {
@@ -372,9 +471,11 @@ export type Database = {
           avatar_url: string | null
           barber_bucks: number | null
           bio: string | null
+          country_code: string | null
           created_at: string
           creator_level: string | null
           display_name: string | null
+          favorite_creator_id: string | null
           id: string
           is_creator: boolean | null
           referral_code: string | null
@@ -389,9 +490,11 @@ export type Database = {
           avatar_url?: string | null
           barber_bucks?: number | null
           bio?: string | null
+          country_code?: string | null
           created_at?: string
           creator_level?: string | null
           display_name?: string | null
+          favorite_creator_id?: string | null
           id?: string
           is_creator?: boolean | null
           referral_code?: string | null
@@ -406,9 +509,11 @@ export type Database = {
           avatar_url?: string | null
           barber_bucks?: number | null
           bio?: string | null
+          country_code?: string | null
           created_at?: string
           creator_level?: string | null
           display_name?: string | null
+          favorite_creator_id?: string | null
           id?: string
           is_creator?: boolean | null
           referral_code?: string | null
@@ -492,6 +597,29 @@ export type Database = {
         Returns: {
           submission_id: string
           weighted_votes: number
+        }[]
+      }
+      get_creator_summary: {
+        Args: { _creator_id: string }
+        Returns: {
+          follower_count: number
+          like_count: number
+          subscription_count: number
+          total_donated_cents: number
+        }[]
+      }
+      get_public_creator_profiles: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          avatar_url: string
+          bio: string
+          country_code: string
+          display_name: string
+          follower_count: number
+          like_count: number
+          subscription_count: number
+          user_id: string
+          username: string
         }[]
       }
       get_public_profile_info: {
