@@ -7,7 +7,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, displayName?: string, userType?: string) => Promise<{ error: AuthError | null }>;
+  signUp: (email: string, password: string, displayName?: string, userType?: string, countryCode?: string) => Promise<{ error: AuthError | null }>;
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
 }
@@ -39,28 +39,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, displayName?: string, userType?: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          display_name: displayName,
-          user_type: userType || 'fan',
+  const signUp = async (email: string, password: string, displayName?: string, userType?: string, countryCode?: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            display_name: displayName || email.split('@')[0],
+            user_type: userType || 'fan',
+            country_code: countryCode
+          }
+        }
+      });
+
+      if (error) {
+        console.error('Sign up error:', error);
+        toast.error(error.message);
+        return { error };
+      }
+
+      if (data.user && countryCode) {
+        // Update the profile with country code after successful sign up
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ country_code: countryCode })
+          .eq('user_id', data.user.id);
+
+        if (profileError) {
+          console.error('Profile update error:', profileError);
         }
       }
-    });
 
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success('Check your email to confirm your account!');
+      if (data.user) {
+        toast.success('Check your email to confirm your account!');
+      }
+
+      return { error: null };
+    } catch (error) {
+      console.error('Sign up error:', error);
+      const authError = error as AuthError;
+      toast.error(authError.message || "An unexpected error occurred");
+      return { error: authError };
     }
-
-    return { error };
   };
 
   const signIn = async (email: string, password: string) => {

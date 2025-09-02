@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,9 +10,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { BackButton } from '@/components/ui/BackButton';
-import { Scissors, Users, Trophy, Plus, User, Loader2 } from 'lucide-react';
+import { Scissors, Users, Trophy, Plus, User, Loader2, Globe } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Header from '@/components/Header';
+import { CountrySelector } from '@/components/CountrySelector';
 
 const Profile = () => {
   const { user } = useAuth();
@@ -40,18 +41,20 @@ const Profile = () => {
     display_name: '',
     bio: '',
     username: '',
+    country_code: null as string | null,
   });
 
   // Update form data when profile loads
-  useState(() => {
+  useEffect(() => {
     if (profile) {
       setFormData({
         display_name: profile.display_name || '',
         bio: profile.bio || '',
         username: profile.username || '',
+        country_code: profile.country_code || null,
       });
     }
-  });
+  }, [profile]);
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
@@ -60,7 +63,12 @@ const Profile = () => {
       
       const { error } = await supabase
         .from('profiles')
-        .update(data)
+        .update({
+          display_name: data.display_name,
+          bio: data.bio,
+          username: data.username,
+          country_code: data.country_code,
+        })
         .eq('user_id', user.id);
       
       if (error) throw error;
@@ -86,6 +94,7 @@ const Profile = () => {
         display_name: profile.display_name || '',
         bio: profile.bio || '',
         username: profile.username || '',
+        country_code: profile.country_code || null,
       });
     }
     setIsEditing(false);
@@ -144,6 +153,16 @@ const Profile = () => {
                         onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
                         disabled={!isEditing}
                         placeholder="@username"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Country</Label>
+                      <CountrySelector
+                        value={formData.country_code}
+                        onChange={(country_code) => setFormData(prev => ({ ...prev, country_code }))}
+                        placeholder="Select your country"
+                        disabled={!isEditing}
                       />
                     </div>
 

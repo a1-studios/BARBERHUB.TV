@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { Loader2, User, Scissors, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { CountrySelector } from '@/components/CountrySelector';
 
 interface AuthDialogProps {
   children: React.ReactNode;
@@ -28,6 +29,7 @@ export function AuthDialog({ children, initialRole = 'fan' }: AuthDialogProps) {
     password: '',
     displayName: '',
     userType: initialRole,
+    countryCode: null as string | null,
   });
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -48,11 +50,11 @@ export function AuthDialog({ children, initialRole = 'fan' }: AuthDialogProps) {
     e.preventDefault();
     setLoading(true);
     
-    const { error } = await signUp(signUpData.email, signUpData.password, signUpData.displayName, signUpData.userType);
+    const { error } = await signUp(signUpData.email, signUpData.password, signUpData.displayName, signUpData.userType, signUpData.countryCode || undefined);
     
     if (!error) {
       setOpen(false);
-      setSignUpData({ email: '', password: '', displayName: '', userType: initialRole });
+      setSignUpData({ email: '', password: '', displayName: '', userType: initialRole, countryCode: null });
     }
     
     setLoading(false);
@@ -162,6 +164,14 @@ export function AuthDialog({ children, initialRole = 'fan' }: AuthDialogProps) {
                   placeholder="Your Name"
                   value={signUpData.displayName}
                   onChange={(e) => setSignUpData(prev => ({ ...prev, displayName: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Country</Label>
+                <CountrySelector
+                  value={signUpData.countryCode}
+                  onChange={(countryCode) => setSignUpData(prev => ({ ...prev, countryCode }))}
+                  placeholder="Select your country"
                 />
               </div>
               <div className="space-y-2">

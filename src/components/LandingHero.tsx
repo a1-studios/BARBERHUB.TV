@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { Scissors, Users, Star, TrendingUp, Loader2 } from "lucide-react";
 import Globe3D from "@/components/Globe3D";
+import { CountrySelector } from "@/components/CountrySelector";
 
 const LandingHero = () => {
   const { signUp, signIn } = useAuth();
@@ -26,6 +27,7 @@ const LandingHero = () => {
     password: "",
     displayName: "",
     userType: "fan" as "barber" | "fan",
+    countryCode: null as string | null,
   });
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -45,7 +47,8 @@ const LandingHero = () => {
       signUpData.email,
       signUpData.password,
       signUpData.displayName,
-      signUpData.userType
+      signUpData.userType,
+      signUpData.countryCode || undefined
     );
     setLoading(false);
     if (!error) {
@@ -187,6 +190,14 @@ const LandingHero = () => {
                           onChange={(e) => setSignUpData(prev => ({ ...prev, displayName: e.target.value }))}
                           required
                           className="bg-background/50"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Country</Label>
+                        <CountrySelector
+                          value={signUpData.countryCode}
+                          onChange={(countryCode) => setSignUpData(prev => ({ ...prev, countryCode }))}
+                          placeholder="Select your country"
                         />
                       </div>
                       <div className="space-y-2">
