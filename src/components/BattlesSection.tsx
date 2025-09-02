@@ -182,10 +182,16 @@ const BattlesSection = () => {
           </Button>
           {/* Only show barber-specific buttons to barbers */}
           {user && profile?.user_type === 'barber' && (
-            <Button size="lg" variant="outline" onClick={() => navigate('/battles/create')} className="text-lg px-8">
-              <Plus className="mr-2 h-5 w-5" />
-              Create Battle
-            </Button>
+            <>
+              <Button size="lg" variant="outline" onClick={() => navigate('/battles/create')} className="text-lg px-8">
+                <Plus className="mr-2 h-5 w-5" />
+                Create Battle
+              </Button>
+              <Button size="lg" variant="outline" onClick={() => navigate('/creator-hub')} className="text-lg px-8">
+                <Scissors className="mr-2 h-5 w-5" />
+                Creator Hub
+              </Button>
+            </>
           )}
           <Button 
             size="lg" 
