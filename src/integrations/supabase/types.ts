@@ -483,6 +483,17 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_battle_vote_results: {
+        Args: {
+          _barber_weight?: number
+          _battle_id: string
+          _fan_weight?: number
+        }
+        Returns: {
+          submission_id: string
+          weighted_votes: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

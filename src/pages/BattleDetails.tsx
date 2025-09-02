@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import VotingCard from '@/components/VotingCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { 
   Trophy, Users, Clock, Calendar, DollarSign, 
   UserPlus, UserMinus, Upload, Vote, 
-  Image as ImageIcon, Loader2 
+  Image as ImageIcon, Loader2, AlertCircle 
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -76,7 +77,9 @@ const BattleDetails = () => {
   const [userVote, setUserVote] = useState<string | null>(null);
   const [pageLoading, setPageLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  
+  const [voteResults, setVoteResults] = useState<{ submission_id: string; weighted_votes: number }[]>([]);
+  const [totalWeightedVotes, setTotalWeightedVotes] = useState(0);
+
   // Submission form state
   const [submissionDialog, setSubmissionDialog] = useState(false);
   const [submissionForm, setSubmissionForm] = useState({
@@ -113,7 +116,7 @@ const BattleDetails = () => {
       if (battleError) throw battleError;
       setBattle(battleData);
 
-      // Fetch participants with profiles using manual join
+      // Fetch participants with profiles using the safe function
       const { data: participantsData, error: participantsError } = await supabase
         .from('battle_participants')
         .select(`
@@ -127,18 +130,19 @@ const BattleDetails = () => {
 
       if (participantsError) throw participantsError;
 
-      // Manually fetch profiles for participants - only display_name and avatar_url for public display
+      // Fetch safe profile info for participants
       const participantsWithProfiles = await Promise.all(
         (participantsData || []).map(async (participant) => {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('display_name, avatar_url')
-            .eq('user_id', participant.user_id)
-            .single();
+          const { data: profile } = await supabase.rpc('get_public_profile', {
+            profile_user_id: participant.user_id
+          });
           
           return {
             ...participant,
-            profiles: profile || { display_name: 'Anonymous', avatar_url: null }
+            profiles: profile?.[0] ? {
+              display_name: profile[0].display_name || 'Anonymous',
+              avatar_url: profile[0].avatar_url
+            } : { display_name: 'Anonymous', avatar_url: null }
           };
         })
       );
@@ -149,7 +153,7 @@ const BattleDetails = () => {
       const userParticipant = participantsWithProfiles?.find(p => p.user_id === user.id);
       setUserParticipation(userParticipant || null);
 
-      // Fetch submissions with profiles using manual join
+      // Fetch submissions with profiles
       const { data: submissionsData, error: submissionsError } = await supabase
         .from('battle_submissions')
         .select(`
@@ -167,33 +171,27 @@ const BattleDetails = () => {
 
       if (submissionsError) throw submissionsError;
 
-      // Manually fetch profiles for submissions and get vote counts - only public display info
-      const submissionsWithVotes = await Promise.all(
+      // Fetch safe profile info for submissions
+      const submissionsWithProfiles = await Promise.all(
         (submissionsData || []).map(async (submission) => {
-          const [profileResult, voteResult] = await Promise.all([
-            supabase
-              .from('profiles')
-              .select('display_name, avatar_url')
-              .eq('user_id', submission.user_id)
-              .single(),
-            supabase
-              .from('battle_votes')
-              .select('*', { count: 'exact', head: true })
-              .eq('submission_id', submission.id)
-          ]);
+          const { data: profile } = await supabase.rpc('get_public_profile', {
+            profile_user_id: submission.user_id
+          });
           
           return {
             ...submission,
-            profiles: profileResult.data,
-            vote_count: voteResult.count || 0
+            profiles: profile?.[0] ? {
+              display_name: profile[0].display_name || 'Anonymous',
+              avatar_url: profile[0].avatar_url
+            } : { display_name: 'Anonymous', avatar_url: null }
           };
         })
       );
 
-      setSubmissions(submissionsWithVotes);
+      setSubmissions(submissionsWithProfiles);
 
       // Check if user has submitted
-      const userSub = submissionsWithVotes.find(s => s.user_id === user.id);
+      const userSub = submissionsWithProfiles.find(s => s.user_id === user.id);
       setUserSubmission(userSub || null);
 
       // Check if user has voted
@@ -206,12 +204,35 @@ const BattleDetails = () => {
 
       setUserVote(voteData?.submission_id || null);
 
+      // Fetch vote results if battle is in voting state
+      if (battleData.status === 'voting') {
+        await fetchVoteResults();
+      }
+
     } catch (error) {
       console.error('Error fetching battle data:', error);
       toast.error('Failed to load battle details');
       navigate('/battles');
     } finally {
       setPageLoading(false);
+    }
+  };
+
+  const fetchVoteResults = async () => {
+    if (!id) return;
+
+    try {
+      const { data: results, error } = await supabase.rpc('get_battle_vote_results', {
+        _battle_id: id
+      });
+
+      if (error) throw error;
+
+      setVoteResults(results || []);
+      const total = (results || []).reduce((sum, result) => sum + result.weighted_votes, 0);
+      setTotalWeightedVotes(total);
+    } catch (error) {
+      console.error('Error fetching vote results:', error);
     }
   };
 
@@ -309,37 +330,36 @@ const BattleDetails = () => {
           .eq('voter_id', user.id);
 
         if (error) throw error;
+        setUserVote(null);
         toast.success('Vote removed');
       } else {
-        // Add or change vote
-        if (userVote) {
-          // Update existing vote
-          const { error } = await supabase
-            .from('battle_votes')
-            .update({ submission_id: submissionId })
-            .eq('battle_id', battle.id)
-            .eq('voter_id', user.id);
+        // Add or change vote using upsert
+        const { error } = await supabase
+          .from('battle_votes')
+          .upsert({
+            battle_id: battle.id,
+            submission_id: submissionId,
+            voter_id: user.id
+          }, {
+            onConflict: 'battle_id,voter_id'
+          });
 
-          if (error) throw error;
-        } else {
-          // Insert new vote
-          const { error } = await supabase
-            .from('battle_votes')
-            .insert([{
-              battle_id: battle.id,
-              submission_id: submissionId,
-              voter_id: user.id
-            }]);
-
-          if (error) throw error;
-        }
-        toast.success('Vote cast successfully!');
+        if (error) throw error;
+        setUserVote(submissionId);
+        toast.success(userVote ? 'Vote changed successfully!' : 'Vote cast successfully!');
       }
 
-      fetchBattleData();
+      // Refresh vote results
+      await fetchVoteResults();
     } catch (error: any) {
       console.error('Error voting:', error);
-      toast.error(error.message || 'Failed to cast vote');
+      if (error.message?.includes('Voting is not allowed')) {
+        toast.error('Voting is not allowed at this time');
+      } else if (error.message?.includes('Voting period has ended')) {
+        toast.error('Voting period has ended');
+      } else {
+        toast.error(error.message || 'Failed to cast vote');
+      }
     } finally {
       setActionLoading(false);
     }
@@ -464,10 +484,28 @@ const BattleDetails = () => {
                       <p className="text-muted-foreground whitespace-pre-wrap">{battle.rules}</p>
                     </div>
                   )}
+
+                  {/* Voting Stats for voting battles */}
+                  {battle.status === 'voting' && totalWeightedVotes > 0 && (
+                    <div className="border-t pt-4">
+                      <h4 className="font-medium mb-2 flex items-center gap-2">
+                        <Vote className="w-4 h-4" />
+                        Voting Results
+                      </h4>
+                      <div className="text-sm text-muted-foreground">
+                        <p>Total weighted votes: {totalWeightedVotes}</p>
+                        <p className="text-xs mt-1">
+                          <AlertCircle className="w-3 h-3 inline mr-1" />
+                          Barber votes count 3x more than fan votes
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
 
+            {/* Actions Panel */}
             <div>
               <Card className="border border-border/50 shadow-lg backdrop-blur-sm bg-card/50" style={{ borderRadius: '1.5rem' }}>
                 <CardHeader>
@@ -602,6 +640,20 @@ const BattleDetails = () => {
                       </p>
                     </div>
                   )}
+
+                  {/* Voting Status */}
+                  {battle.status === 'voting' && (
+                    <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                      <p className="text-sm text-blue-400 text-center">
+                        🗳️ Voting is now open!
+                      </p>
+                      {battle.voting_ends_at && (
+                        <p className="text-xs text-muted-foreground text-center mt-1">
+                          Ends: {format(new Date(battle.voting_ends_at), 'PPP p')}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -614,7 +666,7 @@ const BattleDetails = () => {
                 Participants ({participants.length})
               </TabsTrigger>
               <TabsTrigger value="submissions">
-                Submissions ({submissions.length})
+                {battle.status === 'voting' ? 'Vote Now' : 'Submissions'} ({submissions.length})
               </TabsTrigger>
             </TabsList>
 
@@ -670,7 +722,35 @@ const BattleDetails = () => {
                     }
                   </p>
                 </div>
+              ) : battle.status === 'voting' ? (
+                /* Instagram-style voting grid */
+                <div>
+                  {userVote === null && (
+                    <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-lg text-center">
+                      <h3 className="font-semibold text-primary mb-2">Cast Your Vote!</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Choose your favorite submission. You can change your vote anytime during the voting period.
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {submissions.map((submission) => (
+                      <VotingCard
+                        key={submission.id}
+                        submission={submission}
+                        voteResults={voteResults}
+                        userVote={userVote}
+                        totalWeightedVotes={totalWeightedVotes}
+                        canVote={canVote}
+                        isVoting={actionLoading}
+                        onVote={handleVote}
+                      />
+                    ))}
+                  </div>
+                </div>
               ) : (
+                /* Regular submissions grid for non-voting battles */
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {submissions.map((submission) => (
                     <Card key={submission.id} className="border border-border/50 overflow-hidden">
@@ -709,28 +789,6 @@ const BattleDetails = () => {
                             {submission.description}
                           </p>
                         )}
-
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm text-muted-foreground">
-                            {submission.vote_count} votes
-                          </span>
-                          
-                          {canVote && (
-                            <Button
-                              size="sm"
-                              variant={userVote === submission.id ? "default" : "outline"}
-                              onClick={() => handleVote(submission.id)}
-                              disabled={actionLoading}
-                            >
-                              {actionLoading ? (
-                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                              ) : (
-                                <Vote className="mr-1 h-3 w-3" />
-                              )}
-                              {userVote === submission.id ? 'Voted' : 'Vote'}
-                            </Button>
-                          )}
-                        </div>
                       </CardContent>
                     </Card>
                   ))}
