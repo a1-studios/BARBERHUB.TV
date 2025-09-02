@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
 import RoleSelection from './RoleSelection';
+import { CountrySelector } from '@/components/CountrySelector';
 
 interface SignUpFormProps {
   onSuccess?: () => void;
@@ -22,7 +23,8 @@ const SignUpForm = ({ onSuccess, onSwitchToSignIn }: SignUpFormProps) => {
     email: '',
     password: '',
     displayName: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    countryCode: null as string | null
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -73,7 +75,8 @@ const SignUpForm = ({ onSuccess, onSwitchToSignIn }: SignUpFormProps) => {
         options: {
           data: {
             display_name: formData.displayName,
-            user_type: role
+            user_type: role,
+            country_code: formData.countryCode
           }
         }
       });
@@ -284,6 +287,17 @@ const SignUpForm = ({ onSuccess, onSwitchToSignIn }: SignUpFormProps) => {
                 )}
               </Button>
             </div>
+          </div>
+
+          {/* Country Selection */}
+          <div className="space-y-2">
+            <Label htmlFor="country">Country (optional)</Label>
+            <CountrySelector
+              value={formData.countryCode}
+              onChange={(countryCode) => setFormData(prev => ({ ...prev, countryCode }))}
+              placeholder="Select your country"
+              disabled={isLoading}
+            />
           </div>
 
           <Button type="submit" className="w-full" disabled={isLoading}>

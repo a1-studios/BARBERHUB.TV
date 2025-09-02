@@ -1,18 +1,21 @@
 
 import { BackButton } from '@/components/ui/BackButton';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trophy, Users, Calendar, MapPin } from 'lucide-react';
+import { Plus, Trophy, Users, Calendar, User, Star } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
+import { FeaturedCreatorCard } from '@/components/FeaturedCreatorCard';
+import { toast } from 'sonner';
 
 const BattlesPage = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   // Fetch user profile
   const { data: profile } = useQuery({
@@ -29,6 +32,37 @@ const BattlesPage = () => {
       return data;
     },
     enabled: !!user?.id
+  });
+
+  // Fetch creators for fan experience
+  const { data: creators } = useQuery({
+    queryKey: ['creators'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_public_creator_profiles');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Set favorite creator mutation
+  const setFavoriteMutation = useMutation({
+    mutationFn: async (creatorId: string) => {
+      if (!user?.id) throw new Error('Not authenticated');
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ favorite_creator_id: creatorId })
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+      toast.success('Favorite creator updated!');
+    },
+    onError: (error) => {
+      toast.error(`Failed to update favorite: ${error.message}`);
+    }
   });
 
   // Fetch battles with real-time updates
@@ -69,6 +103,26 @@ const BattlesPage = () => {
 
   const isBarber = profile?.user_type === 'barber';
   const isFan = profile?.user_type === 'fan' || !profile?.user_type;
+
+  // Get featured creator for fans
+  const getFeaturedCreator = () => {
+    if (!creators || creators.length === 0) return null;
+    
+    // Use user's favorite if set
+    if (profile?.favorite_creator_id) {
+      const favoriteCreator = creators.find(c => c.user_id === profile.favorite_creator_id);
+      if (favoriteCreator) return { creator: favoriteCreator, isFavorite: true };
+    }
+    
+    // Otherwise, show the creator with most followers
+    const topCreator = creators.reduce((prev, current) => 
+      (current.follower_count > prev.follower_count) ? current : prev
+    );
+    
+    return { creator: topCreator, isFavorite: false };
+  };
+
+  const featuredCreator = getFeaturedCreator();
 
   if (isLoading) {
     return (
@@ -111,8 +165,34 @@ const BattlesPage = () => {
         )}
       </div>
 
-      {/* Role-specific Information */}
-      {isFan && user && (
+      {/* Fan Experience - Featured Creator */}
+      {isFan && user && featuredCreator && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-2xl font-bold text-white">Featured Creator</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                // Show profile link
+                toast.success('Navigate to your profile to manage your favorite creator');
+              }}
+              className="text-primary hover:text-primary/80"
+            >
+              <User className="w-4 h-4 mr-2" />
+              View Profile
+            </Button>
+          </div>
+          <FeaturedCreatorCard
+            creator={featuredCreator.creator}
+            isFavorite={featuredCreator.isFavorite}
+            onSetFavorite={(creatorId) => setFavoriteMutation.mutate(creatorId)}
+          />
+        </div>
+      )}
+
+      {/* Barber Info Card */}
+      {isBarber && user && (
         <Card className="mb-8 bg-blue-500/5 border-blue-500/20">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
@@ -120,9 +200,9 @@ const BattlesPage = () => {
                 <Trophy className="w-6 h-6 text-blue-400" />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-white">Fan Zone</h3>
+                <h3 className="text-lg font-semibold text-white">Barber Dashboard</h3>
                 <p className="text-muted-foreground">
-                  Your votes matter! Help decide who wins each battle and discover amazing barbers.
+                  Create battles, join competitions, and showcase your skills to the world.
                 </p>
               </div>
             </div>
@@ -132,117 +212,133 @@ const BattlesPage = () => {
 
       {/* Battles Grid */}
       {battles && battles.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {battles.map((battle) => (
-            <Card key={battle.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-              <div className="aspect-video relative">
-                {battle.cover_image_url ? (
-                  <img
-                    src={battle.cover_image_url}
-                    alt={battle.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                    <Trophy className="w-12 h-12 text-primary/50" />
-                  </div>
-                )}
-                <div className="absolute top-4 left-4">
-                  <Badge variant={
-                    battle.status === 'upcoming' ? 'secondary' :
-                    battle.status === 'active' ? 'default' :
-                    battle.status === 'voting' ? 'destructive' :
-                    'outline'
-                  }>
-                    {battle.status.toUpperCase()}
-                  </Badge>
-                </div>
-                {battle.category && (
-                  <div className="absolute top-4 right-4">
-                    <Badge variant="outline">{battle.category}</Badge>
-                  </div>
-                )}
-              </div>
-
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg text-white line-clamp-1">
-                  {battle.title}
-                </CardTitle>
-                {battle.description && (
-                  <CardDescription className="line-clamp-2">
-                    {battle.description}
-                  </CardDescription>
-                )}
-              </CardHeader>
-
-              <CardContent className="space-y-4">
-                {/* Battle Info */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Users className="w-4 h-4" />
-                    <span>{battle.battle_participants?.[0]?.count || 0} participants</span>
-                    {battle.max_participants && (
-                      <span>/ {battle.max_participants} max</span>
-                    )}
-                  </div>
-
-                  {battle.starts_at && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Calendar className="w-4 h-4" />
-                      <span>Starts {format(new Date(battle.starts_at), 'MMM d, yyyy')}</span>
+        <>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-white">
+              {isFan ? 'Featured Battles' : 'All Battles'}
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {battles.map((battle) => (
+              <Card key={battle.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                <div className="aspect-video relative">
+                  {battle.cover_image_url ? (
+                    <img
+                      src={battle.cover_image_url}
+                      alt={battle.title}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                      <Trophy className="w-12 h-12 text-primary/50" />
                     </div>
                   )}
-
-                  {battle.prize_amount > 0 && (
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Trophy className="w-4 h-4" />
-                      <span>Prize: {battle.currency} {battle.prize_amount}</span>
+                  <div className="absolute top-4 left-4">
+                    <Badge variant={
+                      battle.status === 'upcoming' ? 'secondary' :
+                      battle.status === 'active' ? 'default' :
+                      battle.status === 'voting' ? 'destructive' :
+                      'outline'
+                    }>
+                      {battle.status.toUpperCase()}
+                    </Badge>
+                  </div>
+                  {battle.category && (
+                    <div className="absolute top-4 right-4">
+                      <Badge variant="outline">{battle.category}</Badge>
                     </div>
                   )}
                 </div>
 
-                {/* Organizer */}
-                {battle.profiles && battle.profiles.length > 0 && (
-                  <div className="flex items-center gap-2">
-                    {battle.profiles[0]?.avatar_url ? (
-                      <img
-                        src={battle.profiles[0].avatar_url}
-                        alt={battle.profiles[0]?.display_name || 'Organizer'}
-                        className="w-6 h-6 rounded-full"
-                      />
-                    ) : (
-                      <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
-                        <Users className="w-3 h-3 text-primary" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg text-white line-clamp-1">
+                    {battle.title}
+                  </CardTitle>
+                  {battle.description && (
+                    <CardDescription className="line-clamp-2">
+                      {battle.description}
+                    </CardDescription>
+                  )}
+                </CardHeader>
+
+                <CardContent className="space-y-4">
+                  {/* Battle Info */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Users className="w-4 h-4" />
+                      <span>{battle.battle_participants?.[0]?.count || 0} participants</span>
+                      {battle.max_participants && (
+                        <span>/ {battle.max_participants} max</span>
+                      )}
+                    </div>
+
+                    {battle.starts_at && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="w-4 h-4" />
+                        <span>Starts {format(new Date(battle.starts_at), 'MMM d, yyyy')}</span>
                       </div>
                     )}
-                    <span className="text-sm text-muted-foreground">
-                      by {battle.profiles[0]?.display_name || 'Anonymous'}
-                    </span>
-                  </div>
-                )}
 
-                {/* Action Button */}
-                <Button asChild className="w-full">
-                  <Link to={`/battles/${battle.id}`}>
-                    {battle.status === 'voting' ? (
-                      <>
-                        <Trophy className="w-4 h-4 mr-2" />
-                        {isFan ? 'Vote Now' : 'View Results'}
-                      </>
-                    ) : battle.status === 'active' ? (
-                      <>
-                        <Users className="w-4 h-4 mr-2" />
-                        {isBarber ? 'Join Battle' : 'Watch Battle'}
-                      </>
-                    ) : (
-                      'View Details'
+                    {battle.prize_amount > 0 && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Trophy className="w-4 h-4" />
+                        <span>Prize: {battle.currency} {battle.prize_amount}</span>
+                      </div>
                     )}
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  </div>
+
+                  {/* Organizer */}
+                  {battle.profiles && battle.profiles.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      {battle.profiles[0]?.avatar_url ? (
+                        <img
+                          src={battle.profiles[0].avatar_url}
+                          alt={battle.profiles[0]?.display_name || 'Organizer'}
+                          className="w-6 h-6 rounded-full"
+                        />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
+                          <Users className="w-3 h-3 text-primary" />
+                        </div>
+                      )}
+                      <span className="text-sm text-muted-foreground">
+                        by {battle.profiles[0]?.display_name || 'Anonymous'}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Action Button - Fan only sees Watch, Vote, Donate */}
+                  <Button asChild className="w-full">
+                    <Link to={`/battles/${battle.id}`}>
+                      {battle.status === 'voting' ? (
+                        <>
+                          <Trophy className="w-4 h-4 mr-2" />
+                          {isFan ? 'Vote Now' : 'View Results'}
+                        </>
+                      ) : battle.status === 'active' ? (
+                        <>
+                          {isFan ? (
+                            <>
+                              <Users className="w-4 h-4 mr-2" />
+                              Watch Battle
+                            </>
+                          ) : (
+                            <>
+                              <Users className="w-4 h-4 mr-2" />
+                              Join Battle
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        'View Details'
+                      )}
+                    </Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </>
       ) : (
         <div className="text-center py-12">
           <Trophy className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />

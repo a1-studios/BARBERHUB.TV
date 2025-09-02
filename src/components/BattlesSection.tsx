@@ -7,6 +7,7 @@ import { Trophy, Users, Clock, Vote, Plus, Scissors } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { HaircutAdvisorModal } from "./HaircutAdvisorModal";
+import { useQuery } from "@tanstack/react-query";
 interface Battle {
   id: string;
   title: string;
@@ -18,13 +19,28 @@ interface Battle {
   category: string;
 }
 const BattlesSection = () => {
-  const {
-    user
-  } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [battles, setBattles] = useState<Battle[]>([]);
   const [loading, setLoading] = useState(true);
   const [isHaircutModalOpen, setIsHaircutModalOpen] = useState(false);
+
+  // Fetch user profile
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id
+  });
   useEffect(() => {
     if (user) {
       fetchFeaturedBattles();
@@ -153,16 +169,19 @@ const BattlesSection = () => {
           </p>
         </div>
 
-        {/* Quick Actions */}
+        {/* Hide barber actions for fans - Remove Create Battle, Join Battle, Join Waitlist, Start Your Journey */}
         <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12">
           <Button size="lg" onClick={() => navigate('/battles')} className="text-lg px-8">
             <Trophy className="mr-2 h-5 w-5" />
             View All Battles
           </Button>
-          <Button size="lg" variant="outline" onClick={() => navigate('/battles/create')} className="text-lg px-8">
-            <Plus className="mr-2 h-5 w-5" />
-            Create Battle
-          </Button>
+          {/* Only show barber-specific buttons to barbers */}
+          {user && profile?.user_type === 'barber' && (
+            <Button size="lg" variant="outline" onClick={() => navigate('/battles/create')} className="text-lg px-8">
+              <Plus className="mr-2 h-5 w-5" />
+              Create Battle
+            </Button>
+          )}
           <Button 
             size="lg" 
             onClick={() => setIsHaircutModalOpen(true)}
@@ -216,21 +235,23 @@ const BattlesSection = () => {
             </div>
           </>}
 
-        {/* CTA Section */}
-        <div className="text-center">
-          <Card className="p-8 border border-border/50 shadow-lg backdrop-blur-sm bg-card/50 transition-all duration-300 hover:shadow-[0_0_30px_hsl(24_100%_52%/0.5),inset_0_0_20px_hsl(24_100%_52%/0.15)] hover:border-primary/30" style={{
-          borderRadius: '1.5rem'
-        }}>
-            <h3 className="text-2xl font-bold text-white mb-4">Ready to Join the Battle?</h3>
-            <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-              Create your profile, showcase your skills, and compete with barbers from around the world. 
-              Every battle is a chance to prove you're among the legends.
-            </p>
-            <Button size="lg" className="text-lg px-8" onClick={() => navigate('/battles/create')}>
-              Start Your Journey
-            </Button>
-          </Card>
-        </div>
+        {/* CTA Section - Hide "Start Your Journey" for fans */}
+        {user && profile?.user_type === 'barber' && (
+          <div className="text-center">
+            <Card className="p-8 border border-border/50 shadow-lg backdrop-blur-sm bg-card/50 transition-all duration-300 hover:shadow-[0_0_30px_hsl(24_100%_52%/0.5),inset_0_0_20px_hsl(24_100%_52%/0.15)] hover:border-primary/30" style={{
+              borderRadius: '1.5rem'
+            }}>
+              <h3 className="text-2xl font-bold text-white mb-4">Ready to Join the Battle?</h3>
+              <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
+                Create your profile, showcase your skills, and compete with barbers from around the world. 
+                Every battle is a chance to prove you're among the legends.
+              </p>
+              <Button size="lg" className="text-lg px-8" onClick={() => navigate('/battles/create')}>
+                Start Your Journey
+              </Button>
+            </Card>
+          </div>
+        )}
       </div>
       
       <HaircutAdvisorModal 

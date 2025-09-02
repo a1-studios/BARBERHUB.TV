@@ -22,3 +22,6 @@ major_version = 15
 
 [functions.analyze-haircut]
 verify_jwt = false
+
+[functions.create-donation]
+verify_jwt = true
