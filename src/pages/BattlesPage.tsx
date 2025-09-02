@@ -11,7 +11,24 @@ import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
 
 const BattlesPage = () => {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
+
+  // Fetch user profile
+  const { data: profile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id
+  });
 
   // Fetch battles with real-time updates
   const { data: battles, isLoading, refetch } = useQuery({
@@ -201,12 +218,12 @@ const BattlesPage = () => {
                 </div>
 
                 {/* Organizer */}
-                {battle.profiles && (
+                {battle.profiles && battle.profiles.length > 0 && (
                   <div className="flex items-center gap-2">
-                    {battle.profiles.avatar_url ? (
+                    {battle.profiles[0]?.avatar_url ? (
                       <img
-                        src={battle.profiles.avatar_url}
-                        alt={battle.profiles.display_name || 'Organizer'}
+                        src={battle.profiles[0].avatar_url}
+                        alt={battle.profiles[0]?.display_name || 'Organizer'}
                         className="w-6 h-6 rounded-full"
                       />
                     ) : (
@@ -215,7 +232,7 @@ const BattlesPage = () => {
                       </div>
                     )}
                     <span className="text-sm text-muted-foreground">
-                      by {battle.profiles.display_name || 'Anonymous'}
+                      by {battle.profiles[0]?.display_name || 'Anonymous'}
                     </span>
                   </div>
                 )}
