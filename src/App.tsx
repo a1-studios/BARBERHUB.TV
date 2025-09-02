@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import BattlesPage from "./pages/BattlesPage";
 import CreateBattle from "./pages/CreateBattle";
 import BattleDetails from "./pages/BattleDetails";
+import HaircutAdvisor from "./pages/HaircutAdvisor";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
             <Route path="/battles" element={<BattlesPage />} />
             <Route path="/battles/create" element={<CreateBattle />} />
             <Route path="/battles/:id" element={<BattleDetails />} />
+            <Route path="/haircut-advisor" element={<HaircutAdvisor />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

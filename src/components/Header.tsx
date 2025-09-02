@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { AuthDialog } from '@/components/auth/AuthDialog';
 import { useAuth } from '@/hooks/useAuth';
-import { Scissors, Menu, X, Trophy, Plus, User, LogOut } from 'lucide-react';
+import { Scissors, Menu, X, Trophy, Plus, User, LogOut, Sparkles } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 
 const Header = () => {
@@ -77,6 +77,14 @@ const Header = () => {
                   >
                     <Plus className="h-5 w-5" />
                     Create Battle
+                  </Link>
+                  <Link
+                    to="/haircut-advisor"
+                    className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
+                    onClick={closeMobileMenu}
+                  >
+                    <Sparkles className="h-5 w-5" />
+                    Haircut Advisor
                   </Link>
                   <div className="border-t border-border pt-4">
                     <button
