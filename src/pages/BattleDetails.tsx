@@ -1,17 +1,22 @@
-import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+
+import { useParams, Navigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trophy, Users, Calendar, MapPin, Vote, Heart } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { toast } from 'sonner';
+import { Calendar, MapPin, Trophy, Users, Upload, Vote } from 'lucide-react';
 import { format } from 'date-fns';
-import { BackButton } from '@/components/ui/back-button';
+import VotingCard from '@/components/VotingCard';
+import { useEffect } from 'react';
 
 const BattleDetails = () => {
   const { id } = useParams();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   // Fetch user profile
   const { data: profile } = useQuery({
@@ -30,353 +35,422 @@ const BattleDetails = () => {
     enabled: !!user?.id
   });
 
+  if (!id) {
+    return <Navigate to="/battles" replace />;
+  }
+
   // Fetch battle details
-  const { data: battle, isLoading, error } = useQuery({
+  const { data: battle, isLoading: battleLoading } = useQuery({
     queryKey: ['battle', id],
     queryFn: async () => {
-      if (!id) throw new Error('Battle ID is required');
-      
       const { data, error } = await supabase
         .from('battles')
-        .select(`
-          *,
-          battle_participants(
-            id,
-            user_id,
-            status,
-            joined_at,
-            profiles(display_name, avatar_url)
-          ),
-          battle_submissions(
-            id,
-            title,
-            description,
-            media_url,
-            thumbnail_url,
-            created_at,
-            user_id,
-            profiles(display_name, avatar_url)
-          ),
-          profiles!battles_organizer_id_fkey(display_name, avatar_url)
-        `)
+        .select('*')
         .eq('id', id)
         .single();
       
       if (error) throw error;
       return data;
-    },
-    enabled: !!id
+    }
   });
 
-  const isBarber = profile?.user_type === 'barber';
-  const isFan = profile?.user_type === 'fan' || !profile?.user_type;
+  // Fetch participants
+  const { data: participants } = useQuery({
+    queryKey: ['battle-participants', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('battle_participants')
+        .select('*, profiles(display_name, avatar_url, user_type)')
+        .eq('battle_id', id);
+      
+      if (error) throw error;
+      return data;
+    }
+  });
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <BackButton />
-        <div className="flex justify-center items-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading battle details...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Fetch submissions
+  const { data: submissions } = useQuery({
+    queryKey: ['battle-submissions', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('battle_submissions')
+        .select('*, profiles(display_name, avatar_url)')
+        .eq('battle_id', id);
+      
+      if (error) throw error;
+      return data;
+    }
+  });
 
-  if (error) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <BackButton />
-        <Card>
-          <CardContent className="p-8 text-center">
-            <h2 className="text-xl font-semibold mb-2">Error loading battle</h2>
-            <p className="text-muted-foreground">{error.message}</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  // Fetch vote results
+  const { data: voteResults } = useQuery({
+    queryKey: ['battle-vote-results', id],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_battle_vote_results', {
+        _battle_id: id
+      });
+      
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // Fetch user's vote
+  const { data: userVote } = useQuery({
+    queryKey: ['user-vote', id, user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      
+      const { data, error } = await supabase
+        .from('battle_votes')
+        .select('submission_id')
+        .eq('battle_id', id)
+        .eq('voter_id', user.id)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      return data?.submission_id || null;
+    },
+    enabled: !!user?.id
+  });
+
+  // Join battle mutation (barbers only)
+  const joinBattleMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('battle_participants')
+        .insert({
+          battle_id: id,
+          user_id: user!.id
+        });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Successfully joined the battle!');
+      queryClient.invalidateQueries({ queryKey: ['battle-participants', id] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to join battle');
+    }
+  });
+
+  // Vote mutation
+  const voteMutation = useMutation({
+    mutationFn: async (submissionId: string) => {
+      // Delete existing vote if any
+      if (userVote) {
+        await supabase
+          .from('battle_votes')
+          .delete()
+          .eq('battle_id', id)
+          .eq('voter_id', user!.id);
+      }
+
+      // Insert new vote
+      const { error } = await supabase
+        .from('battle_votes')
+        .insert({
+          battle_id: id,
+          submission_id: submissionId,
+          voter_id: user!.id
+        });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Vote cast successfully!');
+      queryClient.invalidateQueries({ queryKey: ['user-vote', id, user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['battle-vote-results', id] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to cast vote');
+    }
+  });
+
+  // Real-time updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('battle-updates')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'battles',
+        filter: `id=eq.${id}`
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['battle', id] });
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'battle_participants',
+        filter: `battle_id=eq.${id}`
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['battle-participants', id] });
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'battle_submissions',
+        filter: `battle_id=eq.${id}`
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['battle-submissions', id] });
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'battle_votes',
+        filter: `battle_id=eq.${id}`
+      }, () => {
+        queryClient.invalidateQueries({ queryKey: ['user-vote', id, user?.id] });
+        queryClient.invalidateQueries({ queryKey: ['battle-vote-results', id] });
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, user?.id, queryClient]);
+
+  if (battleLoading) {
+    return <div className="flex justify-center items-center min-h-screen">Loading...</div>;
   }
 
   if (!battle) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <BackButton />
-        <Card>
-          <CardContent className="p-8 text-center">
-            <h2 className="text-xl font-semibold mb-2">Battle not found</h2>
-            <p className="text-muted-foreground">The battle you're looking for doesn't exist.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    return <Navigate to="/battles" replace />;
   }
 
+  const isBarber = profile?.user_type === 'barber';
+  const isFan = profile?.user_type === 'fan' || !profile?.user_type;
+  const isParticipant = participants?.some(p => p.user_id === user?.id);
+  const isOrganizer = battle.organizer_id === user?.id;
+  const canJoin = isBarber && !isParticipant && battle.status === 'upcoming';
+  const canVote = user && battle.status === 'voting';
+  const totalWeightedVotes = voteResults?.reduce((sum, result) => sum + result.weighted_votes, 0) || 0;
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <BackButton />
-      
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
       {/* Battle Header */}
       <div className="mb-8">
-        <div className="flex items-center gap-4 mb-4">
-          <Badge variant={
-            battle.status === 'upcoming' ? 'secondary' :
-            battle.status === 'active' ? 'default' :
-            battle.status === 'voting' ? 'destructive' :
-            'outline'
-          }>
-            {battle.status.toUpperCase()}
-          </Badge>
-          {battle.category && (
-            <Badge variant="outline">{battle.category}</Badge>
-          )}
-        </div>
-
-        <h1 className="text-3xl font-bold text-white mb-4">{battle.title}</h1>
-        
-        {battle.description && (
-          <p className="text-muted-foreground text-lg mb-4">{battle.description}</p>
-        )}
-
-        {/* Battle Actions - Role-based */}
-        <div className="flex gap-4">
-          {battle.status === 'voting' && (
-            <Button size="lg">
-              <Vote className="w-4 h-4 mr-2" />
-              {isFan ? 'Vote Now' : 'View Voting'}
-            </Button>
+        <div className="flex flex-col lg:flex-row gap-6">
+          {battle.cover_image_url && (
+            <div className="lg:w-1/3">
+              <img
+                src={battle.cover_image_url}
+                alt={battle.title}
+                className="w-full h-64 lg:h-80 object-cover rounded-lg"
+              />
+            </div>
           )}
           
-          {battle.status === 'active' && isBarber && (
-            <Button size="lg">
-              <Users className="w-4 h-4 mr-2" />
-              Join Battle
-            </Button>
-          )}
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-4">
+              <Badge variant={
+                battle.status === 'upcoming' ? 'secondary' :
+                battle.status === 'active' ? 'default' :
+                battle.status === 'voting' ? 'destructive' :
+                'outline'
+              }>
+                {battle.status.toUpperCase()}
+              </Badge>
+              {battle.category && (
+                <Badge variant="outline">{battle.category}</Badge>
+              )}
+            </div>
 
-          {isFan && (
-            <Button variant="outline" size="lg">
-              <Heart className="w-4 h-4 mr-2" />
-              Support Barbers
-            </Button>
-          )}
+            <h1 className="text-3xl lg:text-4xl font-bold text-white mb-4">
+              {battle.title}
+            </h1>
+
+            {battle.description && (
+              <p className="text-muted-foreground mb-6 text-lg">
+                {battle.description}
+              </p>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              {battle.starts_at && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="w-4 h-4" />
+                  <span>Starts: {format(new Date(battle.starts_at), 'PPP')}</span>
+                </div>
+              )}
+              
+              {battle.ends_at && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="w-4 h-4" />
+                  <span>Ends: {format(new Date(battle.ends_at), 'PPP')}</span>
+                </div>
+              )}
+
+              {battle.voting_ends_at && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Vote className="w-4 h-4" />
+                  <span>Voting ends: {format(new Date(battle.voting_ends_at), 'PPP')}</span>
+                </div>
+              )}
+
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Users className="w-4 h-4" />
+                <span>{participants?.length || 0} participants</span>
+                {battle.max_participants && (
+                  <span>/ {battle.max_participants} max</span>
+                )}
+              </div>
+
+              {battle.prize_amount > 0 && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Trophy className="w-4 h-4" />
+                  <span>Prize: {battle.currency} {battle.prize_amount}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Role-based Actions */}
+            <div className="flex gap-4">
+              {/* Barber Actions */}
+              {isBarber && (
+                <>
+                  {canJoin && (
+                    <Button
+                      onClick={() => joinBattleMutation.mutate()}
+                      disabled={joinBattleMutation.isPending}
+                      size="lg"
+                    >
+                      <Users className="w-4 h-4 mr-2" />
+                      Join Battle
+                    </Button>
+                  )}
+                  
+                  {isParticipant && battle.status === 'active' && (
+                    <Button size="lg" asChild>
+                      <a href={`/battles/${id}/submit`}>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Submit Entry
+                      </a>
+                    </Button>
+                  )}
+                </>
+              )}
+
+              {/* Fan Message */}
+              {isFan && battle.status === 'upcoming' && (
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <p className="text-sm text-muted-foreground">
+                    🎬 Get ready to vote! This battle will open for voting once entries are submitted.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Battle Cover Image */}
-      {battle.cover_image_url && (
-        <div className="mb-8">
-          <img
-            src={battle.cover_image_url}
-            alt={battle.title}
-            className="w-full h-64 object-cover rounded-lg"
-          />
-        </div>
-      )}
+      <Separator className="my-8" />
 
+      {/* Battle Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Battle Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Battle Information</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm">
-                    {battle.battle_participants?.length || 0} participants
-                    {battle.max_participants && ` / ${battle.max_participants} max`}
-                  </span>
-                </div>
-
-                {battle.starts_at && (
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      Starts {format(new Date(battle.starts_at), 'MMM d, yyyy')}
-                    </span>
-                  </div>
-                )}
-
-                {battle.ends_at && (
-                  <div className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      Ends {format(new Date(battle.ends_at), 'MMM d, yyyy')}
-                    </span>
-                  </div>
-                )}
-
-                {battle.prize_amount > 0 && (
-                  <div className="flex items-center gap-2">
-                    <Trophy className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      Prize: {battle.currency} {battle.prize_amount}
-                    </span>
+        <div className="lg:col-span-2">
+          {/* Submissions & Voting */}
+          {submissions && submissions.length > 0 ? (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-white">
+                  {battle.status === 'voting' ? 'Vote for Your Favorite' : 'Submissions'}
+                </h2>
+                {battle.status === 'voting' && totalWeightedVotes > 0 && (
+                  <div className="text-sm text-muted-foreground">
+                    {totalWeightedVotes} total weighted votes
                   </div>
                 )}
               </div>
 
-              {battle.rules && (
-                <div>
-                  <h4 className="font-semibold mb-2">Rules</h4>
-                  <p className="text-sm text-muted-foreground">{battle.rules}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Battle Submissions */}
-          {battle.battle_submissions && battle.battle_submissions.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Submissions</CardTitle>
-                <CardDescription>
-                  {battle.battle_submissions.length} submission(s) in this battle
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {battle.battle_submissions.map((submission) => (
-                    <Card key={submission.id} className="overflow-hidden">
-                      {submission.thumbnail_url && (
-                        <div className="aspect-video">
-                          <img
-                            src={submission.thumbnail_url}
-                            alt={submission.title || 'Submission'}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      )}
-                      <CardContent className="p-4">
-                        {submission.title && (
-                          <h4 className="font-semibold mb-2">{submission.title}</h4>
-                        )}
-                        {submission.description && (
-                          <p className="text-sm text-muted-foreground mb-2">
-                            {submission.description}
-                          </p>
-                        )}
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>by {submission.profiles?.display_name || 'Anonymous'}</span>
-                          <span>•</span>
-                          <span>{format(new Date(submission.created_at), 'MMM d')}</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {submissions.map((submission) => (
+                  <VotingCard
+                    key={submission.id}
+                    submission={submission}
+                    voteResults={voteResults || []}
+                    userVote={userVote}
+                    totalWeightedVotes={totalWeightedVotes}
+                    canVote={!!canVote}
+                    isVoting={voteMutation.isPending}
+                    onVote={(submissionId) => voteMutation.mutate(submissionId)}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Upload className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-xl font-semibold text-white mb-2">No submissions yet</h3>
+              <p className="text-muted-foreground">
+                {isParticipant && battle.status === 'active' 
+                  ? "Be the first to submit your entry!"
+                  : "Participants will submit their entries soon."
+                }
+              </p>
+            </div>
           )}
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Organizer */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Organizer</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-3">
-                {battle.profiles?.avatar_url ? (
-                  <img
-                    src={battle.profiles.avatar_url}
-                    alt={battle.profiles.display_name || 'Organizer'}
-                    className="w-10 h-10 rounded-full"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                    <Users className="w-5 h-5 text-primary" />
-                  </div>
-                )}
-                <div>
-                  <p className="font-medium">
-                    {battle.profiles?.display_name || 'Anonymous'}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Battle Organizer</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Participants */}
-          {battle.battle_participants && battle.battle_participants.length > 0 && (
+          {/* Rules */}
+          {battle.rules && (
             <Card>
               <CardHeader>
-                <CardTitle>Participants</CardTitle>
-                <CardDescription>
-                  {battle.battle_participants.length} barber(s) joined
-                </CardDescription>
+                <CardTitle className="text-lg">Rules</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                {battle.battle_participants.map((participant) => (
-                  <div key={participant.id} className="flex items-center gap-3">
-                    {participant.profiles?.avatar_url ? (
-                      <img
-                        src={participant.profiles.avatar_url}
-                        alt={participant.profiles.display_name || 'Participant'}
-                        className="w-8 h-8 rounded-full"
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                        <Users className="w-4 h-4 text-primary" />
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">
-                        {participant.profiles?.display_name || 'Anonymous'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Joined {format(new Date(participant.joined_at), 'MMM d')}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="text-xs">
-                      {participant.status}
-                    </Badge>
-                  </div>
-                ))}
+              <CardContent>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                  {battle.rules}
+                </p>
               </CardContent>
             </Card>
           )}
 
-          {/* Battle Stats */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Battle Stats</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Created</span>
-                <span className="text-sm">
-                  {format(new Date(battle.created_at), 'MMM d, yyyy')}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Status</span>
-                <Badge variant="outline" className="text-xs">
-                  {battle.status}
-                </Badge>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Participants</span>
-                <span className="text-sm">
-                  {battle.battle_participants?.length || 0}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-sm text-muted-foreground">Submissions</span>
-                <span className="text-sm">
-                  {battle.battle_submissions?.length || 0}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Participants */}
+          {participants && participants.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Participants</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {participants.map((participant) => (
+                    <div key={participant.id} className="flex items-center gap-3">
+                      {participant.profiles?.avatar_url ? (
+                        <img
+                          src={participant.profiles.avatar_url}
+                          alt={participant.profiles?.display_name || 'Participant'}
+                          className="w-8 h-8 rounded-full"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                          <Users className="w-4 h-4 text-primary" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">
+                          {participant.profiles?.display_name || 'Anonymous Barber'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Joined {format(new Date(participant.joined_at), 'MMM d')}
+                        </p>
+                      </div>
+                      {participant.profiles?.user_type === 'barber' && (
+                        <Badge variant="outline" className="text-xs">
+                          Barber
+                        </Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

@@ -1,3 +1,4 @@
+
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -8,7 +9,6 @@ import { Plus, Trophy, Users, Calendar, MapPin } from 'lucide-react';
 import { format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { useEffect } from 'react';
-import { BackButton } from '@/components/ui/back-button';
 
 const BattlesPage = () => {
   const { user } = useAuth();
@@ -72,7 +72,6 @@ const BattlesPage = () => {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <BackButton />
         <div className="flex justify-center items-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
@@ -85,8 +84,6 @@ const BattlesPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <BackButton />
-      
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
@@ -112,8 +109,26 @@ const BattlesPage = () => {
         )}
       </div>
 
-      {/* Fan-specific Information */}
-      {isFan && (
+      {/* Role-specific Information */}
+      {!user && (
+        <Card className="mb-8 bg-primary/5 border-primary/20">
+          <CardContent className="p-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-white mb-2">
+                Join the Battle Arena
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Sign up to vote in battles, follow barbers, and be part of the community
+              </p>
+              <Button asChild>
+                <Link to="/auth">Get Started</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isFan && user && (
         <Card className="mb-8 bg-blue-500/5 border-blue-500/20">
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
@@ -222,7 +237,7 @@ const BattlesPage = () => {
                   </div>
                 )}
 
-                {/* Action Button - role-based */}
+                {/* Action Button */}
                 <Button asChild className="w-full">
                   <Link to={`/battles/${battle.id}`}>
                     {battle.status === 'voting' ? (
