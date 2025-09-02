@@ -127,7 +127,7 @@ const BattleDetails = () => {
 
       if (participantsError) throw participantsError;
 
-      // Manually fetch profiles for participants
+      // Manually fetch profiles for participants - only display_name and avatar_url for public display
       const participantsWithProfiles = await Promise.all(
         (participantsData || []).map(async (participant) => {
           const { data: profile } = await supabase
@@ -138,7 +138,7 @@ const BattleDetails = () => {
           
           return {
             ...participant,
-            profiles: profile
+            profiles: profile || { display_name: 'Anonymous', avatar_url: null }
           };
         })
       );
@@ -167,7 +167,7 @@ const BattleDetails = () => {
 
       if (submissionsError) throw submissionsError;
 
-      // Manually fetch profiles for submissions and get vote counts
+      // Manually fetch profiles for submissions and get vote counts - only public display info
       const submissionsWithVotes = await Promise.all(
         (submissionsData || []).map(async (submission) => {
           const [profileResult, voteResult] = await Promise.all([
