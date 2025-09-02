@@ -136,11 +136,13 @@ const BattlesSection = () => {
     }
   };
   const getActionText = (status: string) => {
+    const isBarber = profile?.user_type === 'barber';
+    
     switch (status) {
       case "active":
-        return "Join Battle";
+        return isBarber ? "Join Battle" : "Watch Battle";
       case "upcoming":
-        return "Join Waitlist";
+        return isBarber ? "Join Waitlist" : "Watch Later";
       case "voting":
         return "View & Vote";
       default:
@@ -165,7 +167,10 @@ const BattlesSection = () => {
             <span className="text-primary">Arena</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Compete with the best barbers worldwide. Show your skills, win prizes, and earn legendary status.
+            {profile?.user_type === 'barber' 
+              ? "Compete with the best barbers worldwide. Show your skills, win prizes, and earn legendary status."
+              : "Watch epic barber battles from around the world. Vote for your favorites and support the community."
+            }
           </p>
         </div>
 
