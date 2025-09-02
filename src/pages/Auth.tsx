@@ -3,17 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthDialog } from '@/components/auth/AuthDialog';
 import { Button } from '@/components/ui/button';
-import { BackButton } from '@/components/ui/back-button';
-import { Scissors } from 'lucide-react';
+import { Scissors, ArrowLeft } from 'lucide-react';
 
 export default function Auth() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Redirect authenticated users to battles page
+    // Redirect authenticated users to home
     if (user && !loading) {
-      navigate('/battles');
+      navigate('/');
     }
   }, [user, loading, navigate]);
 
@@ -32,8 +31,15 @@ export default function Auth() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-8">
-        <BackButton fallbackPath="/" />
         <div className="text-center space-y-4">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/')}
+            className="mb-4"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Home
+          </Button>
           
           <div className="flex items-center justify-center gap-2">
             <Scissors className="h-8 w-8 text-primary" />

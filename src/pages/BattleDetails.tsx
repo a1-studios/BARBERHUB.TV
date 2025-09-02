@@ -284,10 +284,10 @@ const BattleDetails = () => {
             </CardHeader>
             <CardContent>
               <div className="flex items-center gap-3">
-                {battle.profiles && battle.profiles.length > 0 && battle.profiles[0]?.avatar_url ? (
+                {battle.profiles?.avatar_url ? (
                   <img
-                    src={battle.profiles[0].avatar_url}
-                    alt={battle.profiles[0]?.display_name || 'Organizer'}
+                    src={battle.profiles.avatar_url}
+                    alt={battle.profiles.display_name || 'Organizer'}
                     className="w-10 h-10 rounded-full"
                   />
                 ) : (
@@ -297,7 +297,7 @@ const BattleDetails = () => {
                 )}
                 <div>
                   <p className="font-medium">
-                    {battle.profiles && battle.profiles.length > 0 ? battle.profiles[0]?.display_name : 'Anonymous'}
+                    {battle.profiles?.display_name || 'Anonymous'}
                   </p>
                   <p className="text-sm text-muted-foreground">Battle Organizer</p>
                 </div>

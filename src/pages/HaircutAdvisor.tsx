@@ -1,15 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useRef } from 'react';
 import { Camera, Upload, RotateCcw, Sparkles, Scissors } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useQuery } from '@tanstack/react-query';
-import { RoleBasedNavigation } from '@/components/RoleBasedNavigation';
-import { BackButton } from '@/components/ui/back-button';
+import Header from '@/components/Header';
 
 interface HaircutSuggestion {
   name: string;
@@ -27,8 +23,6 @@ interface AnalysisResult {
 }
 
 const HaircutAdvisor = () => {
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
@@ -40,30 +34,6 @@ const HaircutAdvisor = () => {
   const streamRef = useRef<MediaStream | null>(null);
   
   const { toast } = useToast();
-
-  // Fetch user profile to check if user is fan
-  const { data: profile } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id
-  });
-
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate('/');
-    }
-    // Allow both fans and barbers to use haircut advisor
-  }, [user, loading, navigate]);
 
   const startCamera = async () => {
     try {
@@ -171,24 +141,12 @@ const HaircutAdvisor = () => {
     stopCamera();
   };
 
-  if (loading || !profile) {
-    return (
-      <div className="min-h-screen">
-        <RoleBasedNavigation />
-        <div className="pt-24 flex items-center justify-center">
-          <div className="animate-pulse text-lg">Loading...</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen">
-      <RoleBasedNavigation />
+      <Header />
       
       <main className="pt-24 pb-20 px-4">
         <div className="container mx-auto max-w-4xl">
-          <BackButton fallbackPath="/battles" />
           {/* Header Section */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-2 mb-4">

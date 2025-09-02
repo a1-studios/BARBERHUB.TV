@@ -6,9 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { RoleBasedNavigation } from '@/components/RoleBasedNavigation';
-import { BackButton } from '@/components/ui/back-button';
-import { useQuery } from '@tanstack/react-query';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -70,23 +69,6 @@ const CreateBattle = () => {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
 
-  // Fetch user profile to check if user is barber
-  const { data: profile } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id
-  });
-
   const form = useForm<BattleFormData>({
     resolver: zodResolver(battleSchema),
     defaultValues: {
@@ -103,13 +85,9 @@ const CreateBattle = () => {
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate('/');
+      navigate('/auth');
     }
-    // Redirect non-barbers away from create battle page
-    if (profile && profile.user_type !== 'barber') {
-      navigate('/battles');
-    }
-  }, [user, loading, profile, navigate]);
+  }, [user, loading, navigate]);
 
   const onSubmit = async (data: BattleFormData) => {
     if (!user) return;
@@ -151,10 +129,10 @@ const CreateBattle = () => {
     }
   };
 
-  if (loading || !profile) {
+  if (loading) {
     return (
       <div className="min-h-screen">
-        <RoleBasedNavigation />
+        <Header />
         <div className="pt-24 flex items-center justify-center">
           <div className="animate-pulse text-lg">Loading...</div>
         </div>
@@ -162,18 +140,12 @@ const CreateBattle = () => {
     );
   }
 
-  // Only allow barbers to access this page
-  if (profile.user_type !== 'barber') {
-    return null; // Will redirect in useEffect
-  }
-
   return (
     <div className="min-h-screen">
-      <RoleBasedNavigation />
+      <Header />
       
       <main className="pt-24 pb-20 px-4">
         <div className="container mx-auto max-w-2xl">
-          <BackButton fallbackPath="/battles" />
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-2 mb-4">
               <Trophy className="h-8 w-8 text-primary" />
@@ -503,6 +475,8 @@ const CreateBattle = () => {
           </Card>
         </div>
       </main>
+      
+      <Footer />
     </div>
   );
 };
