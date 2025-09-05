@@ -12,6 +12,7 @@ import BattlesPage from "./pages/BattlesPage";
 import CreateBattle from "./pages/CreateBattle";
 import BattleDetails from "./pages/BattleDetails";
 import HaircutAdvisor from "./pages/HaircutAdvisor";
+import Grants from "./pages/Grants";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -66,6 +67,7 @@ const App = () => (
                 </AuthGuard>
               } 
             />
+            <Route path="/grants" element={<Grants />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

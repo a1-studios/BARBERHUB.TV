@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Users, Clock, Vote, Plus, Scissors } from "lucide-react";
+import { Trophy, Users, Clock, Vote, Plus, Scissors, Gift } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { HaircutAdvisorModal } from "./HaircutAdvisorModal";
@@ -194,6 +194,15 @@ const BattlesSection = () => {
           >
             <Scissors className="mr-2 h-5 w-5" />
             AI Haircut Advisor
+          </Button>
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={() => navigate('/grants')}
+            className="text-lg px-8"
+          >
+            <Gift className="mr-2 h-5 w-5" />
+            Barber Grants
           </Button>
         </div>
 
