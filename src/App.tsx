@@ -12,6 +12,9 @@ import BattlesPage from "./pages/BattlesPage";
 import CreateBattle from "./pages/CreateBattle";
 import BattleDetails from "./pages/BattleDetails";
 import HaircutAdvisor from "./pages/HaircutAdvisor";
+import Portal from "./pages/Portal";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentCanceled from "./pages/PaymentCanceled";
 import Grants from "./pages/Grants";
 import NotFound from "./pages/NotFound";
 
@@ -67,6 +70,16 @@ const App = () => (
                 </AuthGuard>
               } 
             />
+            <Route 
+              path="/portal" 
+              element={
+                <AuthGuard>
+                  <Portal />
+                </AuthGuard>
+              } 
+            />
+            <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route path="/payment-canceled" element={<PaymentCanceled />} />
             <Route path="/grants" element={<Grants />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

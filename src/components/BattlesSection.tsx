@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Users, Clock, Vote, Plus, Scissors, Gift } from "lucide-react";
+import { Trophy, Users, Clock, Vote, Plus, Scissors, Gift, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { HaircutAdvisorModal } from "./HaircutAdvisorModal";
@@ -203,6 +203,14 @@ const BattlesSection = () => {
           >
             <Gift className="mr-2 h-5 w-5" />
             Barber Grants
+          </Button>
+          <Button
+            size="lg"
+            onClick={() => navigate('/portal')}
+            className="text-lg px-8 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
+          >
+            <Zap className="mr-2 h-5 w-5" />
+            Battle Portal
           </Button>
         </div>
 
