@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      barber_profiles: {
+        Row: {
+          bio: string | null
+          created_at: string
+          id: string
+          location: string | null
+          name: string
+          portfolio_url: string | null
+          rating: number | null
+          specialty: string | null
+          updated_at: string
+          user_id: string
+          years_experience: number | null
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string
+          id?: string
+          location?: string | null
+          name: string
+          portfolio_url?: string | null
+          rating?: number | null
+          specialty?: string | null
+          updated_at?: string
+          user_id: string
+          years_experience?: number | null
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string
+          id?: string
+          location?: string | null
+          name?: string
+          portfolio_url?: string | null
+          rating?: number | null
+          specialty?: string | null
+          updated_at?: string
+          user_id?: string
+          years_experience?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "barber_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       battle_participants: {
         Row: {
           battle_id: string
@@ -180,9 +230,13 @@ export type Database = {
       }
       battles: {
         Row: {
+          barber1_id: string | null
+          barber2_id: string | null
           category: string | null
           cover_image_url: string | null
           created_at: string
+          creation1_id: string | null
+          creation2_id: string | null
           currency: string
           description: string | null
           ends_at: string | null
@@ -195,12 +249,18 @@ export type Database = {
           status: string
           title: string
           updated_at: string
+          vote_count1: number | null
+          vote_count2: number | null
           voting_ends_at: string | null
         }
         Insert: {
+          barber1_id?: string | null
+          barber2_id?: string | null
           category?: string | null
           cover_image_url?: string | null
           created_at?: string
+          creation1_id?: string | null
+          creation2_id?: string | null
           currency?: string
           description?: string | null
           ends_at?: string | null
@@ -213,12 +273,18 @@ export type Database = {
           status?: string
           title: string
           updated_at?: string
+          vote_count1?: number | null
+          vote_count2?: number | null
           voting_ends_at?: string | null
         }
         Update: {
+          barber1_id?: string | null
+          barber2_id?: string | null
           category?: string | null
           cover_image_url?: string | null
           created_at?: string
+          creation1_id?: string | null
+          creation2_id?: string | null
           currency?: string
           description?: string | null
           ends_at?: string | null
@@ -231,9 +297,125 @@ export type Database = {
           status?: string
           title?: string
           updated_at?: string
+          vote_count1?: number | null
+          vote_count2?: number | null
           voting_ends_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "battles_barber1_id_fkey"
+            columns: ["barber1_id"]
+            isOneToOne: false
+            referencedRelation: "barber_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battles_barber2_id_fkey"
+            columns: ["barber2_id"]
+            isOneToOne: false
+            referencedRelation: "barber_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battles_creation1_id_fkey"
+            columns: ["creation1_id"]
+            isOneToOne: false
+            referencedRelation: "creations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battles_creation2_id_fkey"
+            columns: ["creation2_id"]
+            isOneToOne: false
+            referencedRelation: "creations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          total_votes_cast: number | null
+          updated_at: string
+          user_id: string
+          username: string
+          voting_power: number | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          total_votes_cast?: number | null
+          updated_at?: string
+          user_id: string
+          username: string
+          voting_power?: number | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          total_votes_cast?: number | null
+          updated_at?: string
+          user_id?: string
+          username?: string
+          voting_power?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      creations: {
+        Row: {
+          barber_id: string
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          media_url: string
+          thumbnail_url: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          barber_id: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          media_url: string
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          barber_id?: string
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          media_url?: string
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creations_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barber_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       creator_content: {
         Row: {
@@ -517,6 +699,7 @@ export type Database = {
           favorite_creator_id: string | null
           id: string
           is_creator: boolean | null
+          profile_id: string | null
           referral_code: string | null
           referred_by: string | null
           total_earnings: number | null
@@ -536,6 +719,7 @@ export type Database = {
           favorite_creator_id?: string | null
           id?: string
           is_creator?: boolean | null
+          profile_id?: string | null
           referral_code?: string | null
           referred_by?: string | null
           total_earnings?: number | null
@@ -555,6 +739,7 @@ export type Database = {
           favorite_creator_id?: string | null
           id?: string
           is_creator?: boolean | null
+          profile_id?: string | null
           referral_code?: string | null
           referred_by?: string | null
           total_earnings?: number | null
@@ -623,6 +808,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_battle_results: {
+        Args: { battle_id_param: string }
+        Returns: {
+          creation1_votes: number
+          creation2_votes: number
+          winner_creation_id: string
+        }[]
+      }
+      check_vote_eligibility: {
+        Args: { battle_id_param: string; creation_id_param: string }
+        Returns: boolean
+      }
       generate_referral_code: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -669,6 +866,10 @@ export type Database = {
           user_id: string
           user_type: string
         }[]
+      }
+      validate_user_action: {
+        Args: { action_type: string; target_user_type: string }
+        Returns: boolean
       }
     }
     Enums: {
