@@ -189,9 +189,9 @@ export const DynamicBattleHero = () => {
     const barber2Photo = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800&h=800&fit=crop&crop=face";
 
     return (
-      <div className="pt-24 lg:pt-28 pb-8 px-4 max-w-6xl mx-auto">
-        {/* Main Battle Card - 20% smaller */}
-        <div className="w-full max-w-4xl mx-auto aspect-[16/10] bg-card rounded-2xl shadow-2xl border-2 border-primary/50 animate-glow overflow-hidden relative transform-gpu will-change-transform">
+      <div className="pt-24 lg:pt-28 pb-8 px-2 sm:px-4 max-w-5xl mx-auto">
+        {/* Main Battle Card - 30% smaller */}
+        <div className="w-full max-w-3xl mx-auto aspect-[16/9] sm:aspect-[16/10] bg-card rounded-xl sm:rounded-2xl shadow-2xl border-2 border-primary/50 animate-glow overflow-hidden relative transform-gpu will-change-transform">
           <div className="h-full flex">
             {/* Barber 1 Side */}
             <div 
@@ -207,19 +207,19 @@ export const DynamicBattleHero = () => {
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/20 to-black/60" />
               
               {/* Vote Percentage */}
-              <div className="absolute top-6 left-6 z-10">
-                <div className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5">
-                  <span className="text-white font-bold text-xl">{syntheticPercentages.barber1}%</span>
+              <div className="absolute top-3 sm:top-6 left-3 sm:left-6 z-10">
+                <div className="bg-white/20 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1 sm:py-1.5">
+                  <span className="text-white font-bold text-sm sm:text-lg lg:text-xl">{syntheticPercentages.barber1}%</span>
                 </div>
               </div>
 
               {/* Barber Info */}
-              <div className="absolute bottom-20 left-6 z-10 text-white">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-2xl">{getCountryFlag('mx')}</span>
-                  <h3 className="text-xl lg:text-2xl font-bold">{syntheticBarbers[0].name}</h3>
+              <div className="absolute bottom-12 sm:bottom-20 left-3 sm:left-6 z-10 text-white">
+                <div className="flex items-center gap-1 sm:gap-2 mb-1">
+                  <span className="text-lg sm:text-2xl">{getCountryFlag('mx')}</span>
+                  <h3 className="text-sm sm:text-lg lg:text-xl xl:text-2xl font-bold leading-tight">{syntheticBarbers[0].name}</h3>
                 </div>
-                <p className="text-white/80 text-sm">Click to vote</p>
+                <p className="text-white/80 text-xs sm:text-sm">Click to vote</p>
               </div>
 
               {/* Hover Effect */}
@@ -228,9 +228,9 @@ export const DynamicBattleHero = () => {
 
             {/* VS Center */}
             <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
-              <div className="bg-white rounded-full w-16 h-16 lg:w-20 lg:h-20 flex items-center justify-center shadow-2xl border-4 border-primary">
+              <div className="bg-white rounded-full w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 flex items-center justify-center shadow-2xl border-4 border-primary">
                 <div className="text-center">
-                  <Play className="w-5 h-5 lg:w-6 lg:h-6 text-primary mx-auto mb-0.5" />
+                  <Play className="w-3 h-3 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-primary mx-auto mb-0.5" />
                   <span className="text-xs font-bold text-primary">VS</span>
                 </div>
               </div>
@@ -250,19 +250,19 @@ export const DynamicBattleHero = () => {
               <div className="absolute inset-0 bg-gradient-to-l from-transparent via-black/20 to-black/60" />
               
               {/* Vote Percentage */}
-              <div className="absolute top-6 right-6 z-10">
-                <div className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5">
-                  <span className="text-white font-bold text-xl">{syntheticPercentages.barber2}%</span>
+              <div className="absolute top-3 sm:top-6 right-3 sm:right-6 z-10">
+                <div className="bg-white/20 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1 sm:py-1.5">
+                  <span className="text-white font-bold text-sm sm:text-lg lg:text-xl">{syntheticPercentages.barber2}%</span>
                 </div>
               </div>
 
               {/* Barber Info */}
-              <div className="absolute bottom-20 right-6 z-10 text-white text-right">
-                <div className="flex items-center gap-2 mb-1 justify-end">
-                  <h3 className="text-xl lg:text-2xl font-bold">{syntheticBarbers[1].name}</h3>
-                  <span className="text-2xl">{getCountryFlag('us')}</span>
+              <div className="absolute bottom-12 sm:bottom-20 right-3 sm:right-6 z-10 text-white text-right">
+                <div className="flex items-center gap-1 sm:gap-2 mb-1 justify-end">
+                  <h3 className="text-sm sm:text-lg lg:text-xl xl:text-2xl font-bold leading-tight">{syntheticBarbers[1].name}</h3>
+                  <span className="text-lg sm:text-2xl">{getCountryFlag('us')}</span>
                 </div>
-                <p className="text-white/80 text-sm">Click to vote</p>
+                <p className="text-white/80 text-xs sm:text-sm">Click to vote</p>
               </div>
 
               {/* Hover Effect */}
@@ -271,7 +271,7 @@ export const DynamicBattleHero = () => {
           </div>
 
           {/* Action Buttons - Bottom Left */}
-          <div className="absolute bottom-6 left-6 z-10 flex gap-2">
+          <div className="absolute bottom-3 sm:bottom-6 left-3 sm:left-6 z-10 flex gap-1 sm:gap-2">
             <Button
               variant="secondary"
               size="sm"
@@ -279,10 +279,10 @@ export const DynamicBattleHero = () => {
                 e.stopPropagation();
                 handleDonate('synthetic-barber-1', syntheticBarbers[0].name);
               }}
-              className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30"
+              className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30 text-xs sm:text-sm px-2 sm:px-3"
             >
-              <Heart className="w-4 h-4 mr-1" />
-              Donate
+              <Heart className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+              <span className="hidden xs:inline">Donate</span>
             </Button>
             <Button
               variant="secondary"
@@ -291,10 +291,10 @@ export const DynamicBattleHero = () => {
                 e.stopPropagation();
                 handleShare();
               }}
-              className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30"
+              className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30 text-xs sm:text-sm px-2 sm:px-3"
             >
-              <Share2 className="w-4 h-4 mr-1" />
-              Share
+              <Share2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+              <span className="hidden xs:inline">Share</span>
             </Button>
           </div>
         </div>
@@ -327,11 +327,11 @@ export const DynamicBattleHero = () => {
   const barber2Photo = "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=800&h=800&fit=crop&crop=face";
 
   return (
-    <div className="pt-24 lg:pt-28 pb-8 px-4 max-w-6xl mx-auto">
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Main Battle Card - 20% smaller */}
-        <div className="flex-1 max-w-4xl mx-auto lg:mx-0">
-          <div className="w-full aspect-[16/10] bg-card rounded-2xl shadow-2xl border-2 border-primary/50 animate-glow overflow-hidden relative transform-gpu will-change-transform">
+    <div className="pt-24 lg:pt-28 pb-8 px-2 sm:px-4 max-w-5xl mx-auto">
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+        {/* Main Battle Card - 30% smaller */}
+        <div className="flex-1 max-w-3xl mx-auto lg:mx-0">
+          <div className="w-full aspect-[16/9] sm:aspect-[16/10] bg-card rounded-xl sm:rounded-2xl shadow-2xl border-2 border-primary/50 animate-glow overflow-hidden relative transform-gpu will-change-transform">
             <div className="h-full flex">
               {/* Barber 1 Side */}
               <div 
@@ -347,19 +347,19 @@ export const DynamicBattleHero = () => {
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/20 to-black/60" />
                 
                 {/* Vote Percentage */}
-                <div className="absolute top-6 left-6 z-10">
-                  <div className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5">
-                    <span className="text-white font-bold text-xl">{percentages.barber1}%</span>
+                <div className="absolute top-3 sm:top-6 left-3 sm:left-6 z-10">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1 sm:py-1.5">
+                    <span className="text-white font-bold text-sm sm:text-lg lg:text-xl">{percentages.barber1}%</span>
                   </div>
                 </div>
 
                 {/* Barber Info */}
-                <div className="absolute bottom-20 left-6 z-10 text-white">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-2xl">{getCountryFlag('us')}</span>
-                    <h3 className="text-xl lg:text-2xl font-bold">{barber1?.name}</h3>
+                <div className="absolute bottom-12 sm:bottom-20 left-3 sm:left-6 z-10 text-white">
+                  <div className="flex items-center gap-1 sm:gap-2 mb-1">
+                    <span className="text-lg sm:text-2xl">{getCountryFlag('us')}</span>
+                    <h3 className="text-sm sm:text-lg lg:text-xl xl:text-2xl font-bold leading-tight">{barber1?.name}</h3>
                   </div>
-                  <p className="text-white/80 text-sm">Click to vote</p>
+                  <p className="text-white/80 text-xs sm:text-sm">Click to vote</p>
                 </div>
 
                 {/* Hover Effect */}
@@ -368,9 +368,9 @@ export const DynamicBattleHero = () => {
 
               {/* VS Center */}
               <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
-                <div className="bg-white rounded-full w-16 h-16 lg:w-20 lg:h-20 flex items-center justify-center shadow-2xl border-4 border-primary">
+                <div className="bg-white rounded-full w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 flex items-center justify-center shadow-2xl border-4 border-primary">
                   <div className="text-center">
-                    <Play className="w-5 h-5 lg:w-6 lg:h-6 text-primary mx-auto mb-0.5" />
+                    <Play className="w-3 h-3 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-primary mx-auto mb-0.5" />
                     <span className="text-xs font-bold text-primary">VS</span>
                   </div>
                 </div>
@@ -390,19 +390,19 @@ export const DynamicBattleHero = () => {
                 <div className="absolute inset-0 bg-gradient-to-l from-transparent via-black/20 to-black/60" />
                 
                 {/* Vote Percentage */}
-                <div className="absolute top-6 right-6 z-10">
-                  <div className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1.5">
-                    <span className="text-white font-bold text-xl">{percentages.barber2}%</span>
+                <div className="absolute top-3 sm:top-6 right-3 sm:right-6 z-10">
+                  <div className="bg-white/20 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1 sm:py-1.5">
+                    <span className="text-white font-bold text-sm sm:text-lg lg:text-xl">{percentages.barber2}%</span>
                   </div>
                 </div>
 
                 {/* Barber Info */}
-                <div className="absolute bottom-20 right-6 z-10 text-white text-right">
-                  <div className="flex items-center gap-2 mb-1 justify-end">
-                    <h3 className="text-xl lg:text-2xl font-bold">{barber2?.name}</h3>
-                    <span className="text-2xl">{getCountryFlag('ca')}</span>
+                <div className="absolute bottom-12 sm:bottom-20 right-3 sm:right-6 z-10 text-white text-right">
+                  <div className="flex items-center gap-1 sm:gap-2 mb-1 justify-end">
+                    <h3 className="text-sm sm:text-lg lg:text-xl xl:text-2xl font-bold leading-tight">{barber2?.name}</h3>
+                    <span className="text-lg sm:text-2xl">{getCountryFlag('ca')}</span>
                   </div>
-                  <p className="text-white/80 text-sm">Click to vote</p>
+                  <p className="text-white/80 text-xs sm:text-sm">Click to vote</p>
                 </div>
 
                 {/* Hover Effect */}
@@ -411,7 +411,7 @@ export const DynamicBattleHero = () => {
             </div>
 
             {/* Action Buttons - Bottom Left */}
-            <div className="absolute bottom-6 left-6 z-10 flex gap-2">
+            <div className="absolute bottom-3 sm:bottom-6 left-3 sm:left-6 z-10 flex gap-1 sm:gap-2">
               <Button
                 variant="secondary"
                 size="sm"
@@ -419,10 +419,10 @@ export const DynamicBattleHero = () => {
                   e.stopPropagation();
                   handleDonate(barber1?.user_id || '', barber1?.name || '');
                 }}
-                className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30"
+                className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30 text-xs sm:text-sm px-2 sm:px-3"
               >
-                <Heart className="w-4 h-4 mr-1" />
-                Donate
+                <Heart className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                <span className="hidden xs:inline">Donate</span>
               </Button>
               <Button
                 variant="secondary"
@@ -431,10 +431,10 @@ export const DynamicBattleHero = () => {
                   e.stopPropagation();
                   handleShare();
                 }}
-                className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30"
+                className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30 text-xs sm:text-sm px-2 sm:px-3"
               >
-                <Share2 className="w-4 h-4 mr-1" />
-                Share
+                <Share2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                <span className="hidden xs:inline">Share</span>
               </Button>
             </div>
           </div>
