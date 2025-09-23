@@ -165,8 +165,8 @@ const BattlesSection = () => {
         {/* Header */}
         <div className="text-center mb-12">
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            <span className="text-white">Battles </span>
-            <span className="text-primary">Arena</span>
+            <span className="text-white">play </span>
+            <span className="text-primary">ground </span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             {profile?.user_type === 'barber' ? "Compete with the best barbers worldwide. Show your skills, win prizes, and earn legendary status." : "Watch epic barber battles from around the world. Vote for your favorites and support the community."}
