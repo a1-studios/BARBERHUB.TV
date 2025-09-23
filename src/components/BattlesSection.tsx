@@ -175,18 +175,12 @@ const BattlesSection = () => {
 
         {/* Hide barber actions for fans - Remove Create Battle, Join Battle, Join Waitlist, Start Your Journey */}
         <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12">
-          <Button size="lg" onClick={() => navigate('/battles')} className="text-lg px-8">
-            <Trophy className="mr-2 h-5 w-5" />
-            View All Battles
-          </Button>
+          
           <Button size="lg" onClick={() => setIsHaircutModalOpen(true)} className="text-lg px-8 bg-gradient-to-r from-primary to-orange-500 hover:from-orange-500 hover:to-primary shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
             <Scissors className="mr-2 h-5 w-5" />
             AI Haircut Advisor
           </Button>
-          <Button size="lg" variant="outline" onClick={() => navigate('/grants')} className="text-lg px-8">
-            <Gift className="mr-2 h-5 w-5" />
-            Barber Grants
-          </Button>
+          
           <Button size="lg" onClick={() => navigate('/portal')} className="text-lg px-8 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90">
             <Zap className="mr-2 h-5 w-5" />
             Battle Portal
