@@ -5,14 +5,16 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { HaircutAdvisorModal } from './HaircutAdvisorModal';
+import DigitalGrove3D from './DigitalGrove3D';
 
 export const VirtualHaircutTryOn = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
     <>
-      <section className="py-20 px-4">
-        <div className="container mx-auto max-w-6xl">
+      <section className="relative py-20 px-4 overflow-hidden">
+        <DigitalGrove3D />
+        <div className="container mx-auto max-w-6xl relative z-10">
           {/* Header */}
           <div className="text-center mb-12">
             <div className="flex items-center justify-center gap-3 mb-6">
