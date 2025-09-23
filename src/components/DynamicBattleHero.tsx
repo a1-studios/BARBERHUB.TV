@@ -189,9 +189,9 @@ export const DynamicBattleHero = () => {
     const barber2Photo = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800&h=800&fit=crop&crop=face";
 
     return (
-      <div className="pt-24 lg:pt-28 pb-8 px-4 max-w-7xl mx-auto">
-        {/* Main Battle Card */}
-        <div className="aspect-video bg-card rounded-2xl shadow-2xl border-2 border-primary/50 animate-glow overflow-hidden relative">
+      <div className="pt-24 lg:pt-28 pb-8 px-4 max-w-6xl mx-auto">
+        {/* Main Battle Card - 20% smaller */}
+        <div className="w-full max-w-4xl mx-auto aspect-[16/10] bg-card rounded-2xl shadow-2xl border-2 border-primary/50 animate-glow overflow-hidden relative transform-gpu will-change-transform">
           <div className="h-full flex">
             {/* Barber 1 Side */}
             <div 
@@ -327,11 +327,11 @@ export const DynamicBattleHero = () => {
   const barber2Photo = "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=800&h=800&fit=crop&crop=face";
 
   return (
-    <div className="pt-24 lg:pt-28 pb-8 px-4 max-w-7xl mx-auto">
+    <div className="pt-24 lg:pt-28 pb-8 px-4 max-w-6xl mx-auto">
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Main Battle Card */}
-        <div className="flex-1">
-          <div className="aspect-video bg-card rounded-2xl shadow-2xl border-2 border-primary/50 animate-glow overflow-hidden relative">
+        {/* Main Battle Card - 20% smaller */}
+        <div className="flex-1 max-w-4xl mx-auto lg:mx-0">
+          <div className="w-full aspect-[16/10] bg-card rounded-2xl shadow-2xl border-2 border-primary/50 animate-glow overflow-hidden relative transform-gpu will-change-transform">
             <div className="h-full flex">
               {/* Barber 1 Side */}
               <div 
