@@ -40,16 +40,35 @@ export const DynamicBattleHero = () => {
   const { data: battle, isLoading: battleLoading } = useQuery({
     queryKey: ['activeBattle'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First try to find a voting battle
+      let { data, error } = await supabase
         .from('battles')
         .select('*')
         .eq('status', 'voting')
+        .not('barber1_id', 'is', null)
+        .not('barber2_id', 'is', null)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
+      
+      // If no voting battle, try upcoming battles
+      if (!data) {
+        const upcomingResult = await supabase
+          .from('battles')
+          .select('*')
+          .eq('status', 'upcoming')
+          .not('barber1_id', 'is', null)
+          .not('barber2_id', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        data = upcomingResult.data;
+        error = upcomingResult.error;
+      }
       
       if (error) throw error;
-      return data as Battle;
+      return data as Battle | null;
     },
     refetchInterval: 5000 // Refresh every 5 seconds for live updates
   });
@@ -150,10 +169,47 @@ export const DynamicBattleHero = () => {
 
   if (!battle || !barbers || barbers.length < 2) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">No Active Battles</h2>
-          <p className="text-muted-foreground">Check back soon for new battles!</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20" />
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/5 rounded-full blur-3xl" />
+        </div>
+        
+        <div className="text-center space-y-6 z-10">
+          <div className="flex items-center justify-center gap-4 mb-8">
+            <div className="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center">
+              <Play className="w-12 h-12 text-primary" />
+            </div>
+          </div>
+          
+          <h2 className="text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            No Active Battles
+          </h2>
+          <p className="text-muted-foreground text-lg max-w-md mx-auto">
+            Battles are coming soon! Get ready for epic head-to-head barber competitions.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
+            <Button 
+              className="bg-primary hover:bg-primary/90"
+              onClick={() => window.location.href = '/create-battle'}
+            >
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Create Battle
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => window.location.href = '/battles'}
+            >
+              View All Battles
+            </Button>
+          </div>
+          
+          <div className="mt-12 text-sm text-muted-foreground">
+            <p>Join the community and be part of the barbering revolution</p>
+          </div>
         </div>
       </div>
     );
