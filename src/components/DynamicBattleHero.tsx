@@ -202,9 +202,35 @@ export const DynamicBattleHero = () => {
               <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
 
-            {/* VS Center */}
+            {/* Barber Pole Stats Center */}
             <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
-              
+              <div className="bg-white rounded-full w-16 h-32 sm:w-20 sm:h-40 lg:w-24 lg:h-48 flex flex-col items-center justify-center shadow-2xl border-4 border-primary relative overflow-hidden">
+                {/* Barber Pole Stripes */}
+                <div className="absolute inset-0 bg-gradient-to-br from-red-500 via-white to-blue-500 opacity-20"></div>
+                <div className="absolute inset-0" style={{
+                  background: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(239, 68, 68, 0.3) 4px, rgba(239, 68, 68, 0.3) 8px)'
+                }}></div>
+                
+                {/* Stats Content */}
+                <div className="relative z-10 text-center w-full px-1">
+                  {/* Barber 1 Stats */}
+                  <div className="text-primary mb-2">
+                    <div className="text-xs font-bold">{syntheticPercentages.barber1}%</div>
+                    <div className="text-[10px] opacity-80">68 votes</div>
+                    <div className="text-[10px] opacity-80">2.1k followers</div>
+                  </div>
+                  
+                  {/* VS Divider */}
+                  <div className="text-[10px] sm:text-xs font-black text-primary my-1 border-t border-b border-primary/30 py-1">VS</div>
+                  
+                  {/* Barber 2 Stats */}
+                  <div className="text-primary mt-2">
+                    <div className="text-xs font-bold">{syntheticPercentages.barber2}%</div>
+                    <div className="text-[10px] opacity-80">32 votes</div>
+                    <div className="text-[10px] opacity-80">1.8k followers</div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Barber 2 Side */}
@@ -309,12 +335,33 @@ export const DynamicBattleHero = () => {
                 <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>
 
-              {/* VS Center */}
+              {/* Barber Pole Stats Center */}
               <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
-                <div className="bg-white rounded-full w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 flex items-center justify-center shadow-2xl border-4 border-primary">
-                  <div className="text-center">
-                    <Play className="w-3 h-3 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-primary mx-auto mb-0.5" />
-                    <span className="text-xs font-bold text-primary">VS</span>
+                <div className="bg-white rounded-full w-16 h-32 sm:w-20 sm:h-40 lg:w-24 lg:h-48 flex flex-col items-center justify-center shadow-2xl border-4 border-primary relative overflow-hidden">
+                  {/* Barber Pole Stripes */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-red-500 via-white to-blue-500 opacity-20"></div>
+                  <div className="absolute inset-0" style={{
+                    background: 'repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(239, 68, 68, 0.3) 4px, rgba(239, 68, 68, 0.3) 8px)'
+                  }}></div>
+                  
+                  {/* Stats Content */}
+                  <div className="relative z-10 text-center w-full px-1">
+                    {/* Barber 1 Stats */}
+                    <div className="text-primary mb-2">
+                      <div className="text-xs font-bold">{percentages.barber1}%</div>
+                      <div className="text-[10px] opacity-80">{battle.vote_count1} votes</div>
+                      <div className="text-[10px] opacity-80">2.1k followers</div>
+                    </div>
+                    
+                    {/* VS Divider */}
+                    <div className="text-[10px] sm:text-xs font-black text-primary my-1 border-t border-b border-primary/30 py-1">VS</div>
+                    
+                    {/* Barber 2 Stats */}
+                    <div className="text-primary mt-2">
+                      <div className="text-xs font-bold">{percentages.barber2}%</div>
+                      <div className="text-[10px] opacity-80">{battle.vote_count2} votes</div>
+                      <div className="text-[10px] opacity-80">1.8k followers</div>
+                    </div>
                   </div>
                 </div>
               </div>
