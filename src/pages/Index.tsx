@@ -2,7 +2,6 @@ import Header from "@/components/Header";
 import LandingHero from "@/components/LandingHero";
 import CommunitySection from "@/components/CommunitySection";
 import BattlesSection from "@/components/BattlesSection";
-import DynamicBattleHero from "@/components/DynamicBattleHero";
 import Footer from "@/components/Footer";
 import { CreatorHub } from "@/components/creator/CreatorHub";
 import { HaircutAdvisorSection } from "@/components/HaircutAdvisorSection";
@@ -44,7 +43,6 @@ const Index = () => {
       
       {/* Content gated behind authentication */}
       {user ? <main className="pt-20 sm:pt-24">
-          <DynamicBattleHero />
           <BattlesSection />
           {FEATURES.CREATOR_HUB_ENABLED && profile?.user_type === 'barber' && <CreatorHub />}
           {FEATURES.COMMUNITY_LEADERBOARD && <CommunitySection />}
