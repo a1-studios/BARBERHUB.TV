@@ -6,6 +6,7 @@ import BattlesSection from "@/components/BattlesSection";
 import Footer from "@/components/Footer";
 import { CreatorHub } from "@/components/creator/CreatorHub";
 import GrantsSection from "@/components/GrantsSection";
+import { VirtualHaircutTryOn } from "@/components/VirtualHaircutTryOn";
 import { useAuth } from "@/hooks/useAuth";
 import { FEATURES } from "@/config/features";
 import { useQuery } from "@tanstack/react-query";
@@ -55,6 +56,9 @@ const Index = () => {
           {/* Main Battles Section with all navigation and features */}
           <BattlesSection />
           
+          {/* AI Haircut Coach - Available to all users */}
+          <VirtualHaircutTryOn />
+          
           {/* Creator Hub for Barbers */}
           {FEATURES.CREATOR_HUB_ENABLED && profile?.user_type === 'barber' && (
             <CreatorHub />
@@ -73,6 +77,8 @@ const Index = () => {
       ) : (
         <>
           <LandingHero />
+          {/* AI Haircut Coach - Available to all users */}
+          <VirtualHaircutTryOn />
         </>
       )}
       

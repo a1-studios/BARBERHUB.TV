@@ -16,11 +16,18 @@ interface HaircutSuggestion {
   face_shape_reason: string;
 }
 
+interface HaircutMockup {
+  name: string;
+  image_url: string;
+  description: string;
+}
+
 interface AnalysisResult {
   face_shape: string;
   hair_texture: string;
   suggestions: HaircutSuggestion[];
   general_tips: string[];
+  mockups?: HaircutMockup[];
 }
 
 const HaircutAdvisor = () => {
@@ -311,9 +318,35 @@ const HaircutAdvisor = () => {
                 </CardContent>
               </Card>
 
-              {/* Haircut Suggestions */}
+              {/* Visual Mockups */}
+              {analysis.mockups && analysis.mockups.length > 0 && (
+                <div className="space-y-4">
+                  <h3 className="text-xl font-bold text-white">Your Virtual Try-On</h3>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {analysis.mockups.map((mockup, index) => (
+                      <Card key={index} className="border-2 border-primary/50 hover:border-primary transition-colors overflow-hidden">
+                        <div className="aspect-square relative">
+                          <img
+                            src={mockup.image_url}
+                            alt={mockup.name}
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                          <div className="absolute bottom-3 left-3 right-3">
+                            <h4 className="font-bold text-white text-sm leading-tight">
+                              {mockup.name}
+                            </h4>
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Detailed Recommendations */}
               <div className="space-y-4">
-                <h3 className="text-xl font-bold text-white">Recommended Haircuts</h3>
+                <h3 className="text-xl font-bold text-white">Detailed Recommendations</h3>
                 {analysis.suggestions.map((suggestion, index) => (
                   <Card key={index} className="border-primary/20">
                     <CardHeader>

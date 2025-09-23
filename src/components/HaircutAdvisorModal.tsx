@@ -16,11 +16,18 @@ interface HaircutSuggestion {
   face_shape_reason: string;
 }
 
+interface HaircutMockup {
+  name: string;
+  image_url: string;
+  description: string;
+}
+
 interface AnalysisResult {
   face_shape: string;
   hair_texture: string;
   suggestions: HaircutSuggestion[];
   general_tips: string[];
+  mockups?: HaircutMockup[];
 }
 
 interface UserPreferences {
@@ -391,9 +398,37 @@ export const HaircutAdvisorModal = ({ isOpen, onClose }: HaircutAdvisorModalProp
                 </CardContent>
               </Card>
 
-              {/* Haircut Suggestions */}
+              {/* Visual Mockups */}
+              {analysis.mockups && analysis.mockups.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-white">Your Virtual Try-On</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {analysis.mockups.map((mockup, index) => (
+                      <Card key={index} className="border-2 border-primary/50 hover:border-primary transition-colors">
+                        <CardContent className="p-3">
+                          <div className="aspect-square relative overflow-hidden rounded-lg mb-2">
+                            <img
+                              src={mockup.image_url}
+                              alt={mockup.name}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                            <div className="absolute bottom-2 left-2 right-2">
+                              <h4 className="font-semibold text-white text-xs leading-tight">
+                                {mockup.name}
+                              </h4>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Text Recommendations */}
               <div className="space-y-3">
-                <h3 className="font-semibold text-white">Your Recommendations</h3>
+                <h3 className="font-semibold text-white">Detailed Recommendations</h3>
                 {analysis.suggestions.slice(0, 3).map((suggestion, index) => (
                   <Card key={index} className="border-primary/20">
                     <CardHeader className="pb-2">
