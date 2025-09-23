@@ -17,10 +17,12 @@ export type Database = {
       barber_profiles: {
         Row: {
           bio: string | null
+          country_code: string | null
           created_at: string
           id: string
           location: string | null
           name: string
+          nickname: string | null
           portfolio_url: string | null
           rating: number | null
           specialty: string | null
@@ -30,10 +32,12 @@ export type Database = {
         }
         Insert: {
           bio?: string | null
+          country_code?: string | null
           created_at?: string
           id?: string
           location?: string | null
           name: string
+          nickname?: string | null
           portfolio_url?: string | null
           rating?: number | null
           specialty?: string | null
@@ -43,10 +47,12 @@ export type Database = {
         }
         Update: {
           bio?: string | null
+          country_code?: string | null
           created_at?: string
           id?: string
           location?: string | null
           name?: string
+          nickname?: string | null
           portfolio_url?: string | null
           rating?: number | null
           specialty?: string | null
@@ -241,12 +247,14 @@ export type Database = {
           description: string | null
           ends_at: string | null
           id: string
+          live_viewers: number | null
           max_participants: number | null
           organizer_id: string
           prize_amount: number
           rules: string | null
           starts_at: string | null
           status: string
+          stream_url: string | null
           title: string
           updated_at: string
           vote_count1: number | null
@@ -265,12 +273,14 @@ export type Database = {
           description?: string | null
           ends_at?: string | null
           id?: string
+          live_viewers?: number | null
           max_participants?: number | null
           organizer_id: string
           prize_amount?: number
           rules?: string | null
           starts_at?: string | null
           status?: string
+          stream_url?: string | null
           title: string
           updated_at?: string
           vote_count1?: number | null
@@ -289,12 +299,14 @@ export type Database = {
           description?: string | null
           ends_at?: string | null
           id?: string
+          live_viewers?: number | null
           max_participants?: number | null
           organizer_id?: string
           prize_amount?: number
           rules?: string | null
           starts_at?: string | null
           status?: string
+          stream_url?: string | null
           title?: string
           updated_at?: string
           vote_count1?: number | null
