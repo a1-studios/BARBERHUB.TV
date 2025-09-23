@@ -19,23 +19,25 @@ interface Battle {
   category: string;
 }
 const BattlesSection = () => {
-  const { user } = useAuth();
+  const {
+    user
+  } = useAuth();
   const navigate = useNavigate();
   const [battles, setBattles] = useState<Battle[]>([]);
   const [loading, setLoading] = useState(true);
   const [isHaircutModalOpen, setIsHaircutModalOpen] = useState(false);
 
   // Fetch user profile
-  const { data: profile } = useQuery({
+  const {
+    data: profile
+  } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-      
+      const {
+        data,
+        error
+      } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
       if (error) throw error;
       return data;
     },
@@ -70,7 +72,8 @@ const BattlesSection = () => {
         title: battle.title,
         description: battle.description || '',
         status: battle.status,
-        participants: Math.floor(Math.random() * 30) + 10, // Random participants for display
+        participants: Math.floor(Math.random() * 30) + 10,
+        // Random participants for display
         prize_amount: battle.prize_amount,
         currency: battle.currency,
         category: battle.category || 'General'
@@ -137,7 +140,6 @@ const BattlesSection = () => {
   };
   const getActionText = (status: string) => {
     const isBarber = profile?.user_type === 'barber';
-    
     switch (status) {
       case "active":
         return isBarber ? "Join Battle" : "Watch Battle";
@@ -158,7 +160,7 @@ const BattlesSection = () => {
         </div>
       </section>;
   }
-  return <section id="battles" className="py-20 px-4">
+  return <section id="battles" className="px-0 py-0">
       <div className="container mx-auto max-w-6xl">
         {/* Header */}
         <div className="text-center mb-12">
@@ -167,10 +169,7 @@ const BattlesSection = () => {
             <span className="text-primary">Arena</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            {profile?.user_type === 'barber' 
-              ? "Compete with the best barbers worldwide. Show your skills, win prizes, and earn legendary status."
-              : "Watch epic barber battles from around the world. Vote for your favorites and support the community."
-            }
+            {profile?.user_type === 'barber' ? "Compete with the best barbers worldwide. Show your skills, win prizes, and earn legendary status." : "Watch epic barber battles from around the world. Vote for your favorites and support the community."}
           </p>
         </div>
 
@@ -180,28 +179,15 @@ const BattlesSection = () => {
             <Trophy className="mr-2 h-5 w-5" />
             View All Battles
           </Button>
-          <Button 
-            size="lg" 
-            onClick={() => setIsHaircutModalOpen(true)}
-            className="text-lg px-8 bg-gradient-to-r from-primary to-orange-500 hover:from-orange-500 hover:to-primary shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-          >
+          <Button size="lg" onClick={() => setIsHaircutModalOpen(true)} className="text-lg px-8 bg-gradient-to-r from-primary to-orange-500 hover:from-orange-500 hover:to-primary shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
             <Scissors className="mr-2 h-5 w-5" />
             AI Haircut Advisor
           </Button>
-          <Button
-            size="lg"
-            variant="outline"
-            onClick={() => navigate('/grants')}
-            className="text-lg px-8"
-          >
+          <Button size="lg" variant="outline" onClick={() => navigate('/grants')} className="text-lg px-8">
             <Gift className="mr-2 h-5 w-5" />
             Barber Grants
           </Button>
-          <Button
-            size="lg"
-            onClick={() => navigate('/portal')}
-            className="text-lg px-8 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
-          >
+          <Button size="lg" onClick={() => navigate('/portal')} className="text-lg px-8 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90">
             <Zap className="mr-2 h-5 w-5" />
             Battle Portal
           </Button>
@@ -253,10 +239,7 @@ const BattlesSection = () => {
         {/* CTA Section - Removed for all users to keep main page focused on viewing battles */}
       </div>
       
-      <HaircutAdvisorModal 
-        isOpen={isHaircutModalOpen} 
-        onClose={() => setIsHaircutModalOpen(false)} 
-      />
+      <HaircutAdvisorModal isOpen={isHaircutModalOpen} onClose={() => setIsHaircutModalOpen(false)} />
     </section>;
 };
 export default BattlesSection;
