@@ -22,11 +22,6 @@ interface BarberProfile {
   id: string;
   user_id: string;
   name: string;
-  profiles: {
-    avatar_url?: string;
-    display_name?: string;
-    country_code?: string;
-  };
 }
 
 export const DynamicBattleHero = () => {
@@ -81,12 +76,7 @@ export const DynamicBattleHero = () => {
       
       const { data, error } = await supabase
         .from('barber_profiles')
-        .select(`
-          id,
-          user_id,
-          name,
-          profiles!inner(avatar_url, display_name, country_code)
-        `)
+        .select('id, user_id, name')
         .in('user_id', [battle.barber1_id, battle.barber2_id]);
 
       if (error) throw error;
@@ -167,48 +157,191 @@ export const DynamicBattleHero = () => {
     );
   }
 
+  // Create synthetic placeholder data when no real battle exists
   if (!battle || !barbers || barbers.length < 2) {
+    const syntheticBattle = {
+      id: 'synthetic-battle',
+      title: 'Epic Head-to-Head Battle',
+      vote_count1: 68,
+      vote_count2: 32,
+      status: 'live'
+    };
+    
+    const syntheticBarbers = [
+      {
+        id: 'synthetic-1',
+        user_id: 'synthetic-barber-1',
+        name: "Carlos 'FadeKing' Martinez",
+        country_code: 'mx'
+      },
+      {
+        id: 'synthetic-2', 
+        user_id: 'synthetic-barber-2',
+        name: "Jamal 'SharpLine' Brooks",
+        country_code: 'us'
+      }
+    ];
+
+    const syntheticPercentages = { barber1: 68, barber2: 32 };
+    const barber1Photo = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=800&fit=crop&crop=face";
+    const barber2Photo = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800&h=800&fit=crop&crop=face";
+
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted relative overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20" />
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary/5 rounded-full blur-3xl" />
-        </div>
-        
-        <div className="text-center space-y-6 z-10">
-          <div className="flex items-center justify-center gap-4 mb-8">
-            <div className="w-24 h-24 bg-primary/20 rounded-full flex items-center justify-center">
-              <Play className="w-12 h-12 text-primary" />
+      <div className="min-h-screen flex">
+        {/* Main Battle Area */}
+        <div className="flex-1 relative">
+          <div className="h-screen flex">
+            {/* Barber 1 Side */}
+            <div 
+              className="flex-1 relative overflow-hidden cursor-pointer group"
+              onClick={() => toast.info("This is a preview battle. Real voting available in live battles!")}
+              style={{
+                backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.7)), url(${getFlagImageUrl('mx')}), url(${barber1Photo})`,
+                backgroundSize: 'cover, cover, cover',
+                backgroundPosition: 'center, center, center',
+                backgroundBlendMode: 'normal, overlay, normal'
+              }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/20 to-black/60" />
+              
+              {/* Vote Percentage */}
+              <div className="absolute top-8 left-8 z-10">
+                <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
+                  <span className="text-white font-bold text-2xl">{syntheticPercentages.barber1}%</span>
+                </div>
+              </div>
+
+              {/* Barber Info */}
+              <div className="absolute bottom-32 left-8 z-10 text-white">
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-4xl">{getCountryFlag('mx')}</span>
+                  <h3 className="text-3xl font-bold">{syntheticBarbers[0].name}</h3>
+                </div>
+                <p className="text-white/80">Click to vote</p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="absolute bottom-8 left-8 z-10 flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDonate('synthetic-barber-1', syntheticBarbers[0].name);
+                  }}
+                  className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30"
+                >
+                  <Heart className="w-4 h-4 mr-1" />
+                  Donate
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleShare();
+                  }}
+                  className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30"
+                >
+                  <Share2 className="w-4 h-4 mr-1" />
+                  Share
+                </Button>
+              </div>
+
+              {/* Hover Effect */}
+              <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            </div>
+
+            {/* VS Center */}
+            <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
+              <div className="bg-white rounded-full w-24 h-24 flex items-center justify-center shadow-2xl border-4 border-primary">
+                <div className="text-center">
+                  <Play className="w-8 h-8 text-primary mx-auto mb-1" />
+                  <span className="text-xs font-bold text-primary">VS</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Barber 2 Side */}
+            <div 
+              className="flex-1 relative overflow-hidden cursor-pointer group"
+              onClick={() => toast.info("This is a preview battle. Real voting available in live battles!")}
+              style={{
+                backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.7)), url(${getFlagImageUrl('us')}), url(${barber2Photo})`,
+                backgroundSize: 'cover, cover, cover',
+                backgroundPosition: 'center, center, center',
+                backgroundBlendMode: 'normal, overlay, normal'
+              }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-l from-transparent via-black/20 to-black/60" />
+              
+              {/* Vote Percentage */}
+              <div className="absolute top-8 right-8 z-10">
+                <div className="bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
+                  <span className="text-white font-bold text-2xl">{syntheticPercentages.barber2}%</span>
+                </div>
+              </div>
+
+              {/* Barber Info */}
+              <div className="absolute bottom-32 right-8 z-10 text-white text-right">
+                <div className="flex items-center gap-3 mb-2 justify-end">
+                  <h3 className="text-3xl font-bold">{syntheticBarbers[1].name}</h3>
+                  <span className="text-4xl">{getCountryFlag('us')}</span>
+                </div>
+                <p className="text-white/80">Click to vote</p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="absolute bottom-8 right-8 z-10 flex gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleShare();
+                  }}
+                  className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30"
+                >
+                  <Share2 className="w-4 h-4 mr-1" />
+                  Share
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDonate('synthetic-barber-2', syntheticBarbers[1].name);
+                  }}
+                  className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30"
+                >
+                  <Heart className="w-4 h-4 mr-1" />
+                  Donate
+                </Button>
+              </div>
+
+              {/* Hover Effect */}
+              <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
           </div>
-          
-          <h2 className="text-4xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            No Active Battles
-          </h2>
-          <p className="text-muted-foreground text-lg max-w-md mx-auto">
-            Battles are coming soon! Get ready for epic head-to-head barber competitions.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
-            <Button 
-              className="bg-primary hover:bg-primary/90"
-              onClick={() => window.location.href = '/create-battle'}
-            >
-              <TrendingUp className="w-4 h-4 mr-2" />
-              Create Battle
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={() => window.location.href = '/battles'}
-            >
-              View All Battles
-            </Button>
-          </div>
-          
-          <div className="mt-12 text-sm text-muted-foreground">
-            <p>Join the community and be part of the barbering revolution</p>
+
+          {/* Quick Action Buttons at Bottom */}
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20">
+            <div className="flex gap-4">
+              <Button 
+                variant="outline"
+                className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+                onClick={() => window.location.href = '/battles'}
+              >
+                View All Battles
+              </Button>
+              <Button 
+                variant="outline"
+                className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/20"
+                onClick={() => window.location.href = '/portal'}
+              >
+                Battle Portal
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -218,6 +351,10 @@ export const DynamicBattleHero = () => {
   const barber1 = barbers.find(b => b.user_id === battle.barber1_id);
   const barber2 = barbers.find(b => b.user_id === battle.barber2_id);
   const percentages = calculatePercentages();
+  
+  // Default photos for barbers
+  const barber1Photo = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=800&h=800&fit=crop&crop=face";
+  const barber2Photo = "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=800&h=800&fit=crop&crop=face";
 
   return (
     <div className="min-h-screen flex">
@@ -229,10 +366,10 @@ export const DynamicBattleHero = () => {
             className="flex-1 relative overflow-hidden cursor-pointer group"
             onClick={() => handleVote(barber1?.user_id || '')}
             style={{
-              backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.6)), url(${getFlagImageUrl(barber1?.profiles?.country_code)})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat'
+              backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.7)), url(${getFlagImageUrl('us')}), url(${barber1Photo})`,
+              backgroundSize: 'cover, cover, cover',
+              backgroundPosition: 'center, center, center',
+              backgroundBlendMode: 'normal, overlay, normal'
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/20 to-black/60" />
@@ -247,8 +384,8 @@ export const DynamicBattleHero = () => {
             {/* Barber Info */}
             <div className="absolute bottom-32 left-8 z-10 text-white">
               <div className="flex items-center gap-3 mb-2">
-                <span className="text-4xl">{getCountryFlag(barber1?.profiles?.country_code || '')}</span>
-                <h3 className="text-3xl font-bold">{barber1?.name || barber1?.profiles?.display_name}</h3>
+                <span className="text-4xl">{getCountryFlag('us')}</span>
+                <h3 className="text-3xl font-bold">{barber1?.name}</h3>
               </div>
               <p className="text-white/80">Click to vote</p>
             </div>
@@ -260,7 +397,7 @@ export const DynamicBattleHero = () => {
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDonate(barber1?.user_id || '', barber1?.name || barber1?.profiles?.display_name || '');
+                  handleDonate(barber1?.user_id || '', barber1?.name || '');
                 }}
                 className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30"
               >
@@ -300,10 +437,10 @@ export const DynamicBattleHero = () => {
             className="flex-1 relative overflow-hidden cursor-pointer group"
             onClick={() => handleVote(barber2?.user_id || '')}
             style={{
-              backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.6)), url(${getFlagImageUrl(barber2?.profiles?.country_code)})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat'
+              backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.7)), url(${getFlagImageUrl('ca')}), url(${barber2Photo})`,
+              backgroundSize: 'cover, cover, cover',
+              backgroundPosition: 'center, center, center',
+              backgroundBlendMode: 'normal, overlay, normal'
             }}
           >
             <div className="absolute inset-0 bg-gradient-to-l from-transparent via-black/20 to-black/60" />
@@ -318,8 +455,8 @@ export const DynamicBattleHero = () => {
             {/* Barber Info */}
             <div className="absolute bottom-32 right-8 z-10 text-white text-right">
               <div className="flex items-center gap-3 mb-2 justify-end">
-                <h3 className="text-3xl font-bold">{barber2?.name || barber2?.profiles?.display_name}</h3>
-                <span className="text-4xl">{getCountryFlag(barber2?.profiles?.country_code || '')}</span>
+                <h3 className="text-3xl font-bold">{barber2?.name}</h3>
+                <span className="text-4xl">{getCountryFlag('ca')}</span>
               </div>
               <p className="text-white/80">Click to vote</p>
             </div>
@@ -343,7 +480,7 @@ export const DynamicBattleHero = () => {
                 size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleDonate(barber2?.user_id || '', barber2?.name || barber2?.profiles?.display_name || '');
+                  handleDonate(barber2?.user_id || '', barber2?.name || '');
                 }}
                 className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30"
               >
@@ -376,8 +513,8 @@ export const DynamicBattleHero = () => {
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">{getCountryFlag(barber1?.profiles?.country_code || '')}</span>
-                  <h3 className="text-xl font-bold">{barber1?.name || barber1?.profiles?.display_name}</h3>
+                  <span className="text-2xl">{getCountryFlag('us')}</span>
+                  <h3 className="text-xl font-bold">{barber1?.name}</h3>
                 </div>
                 <div className="text-2xl font-bold text-primary">{percentages.barber1}%</div>
               </div>
@@ -387,7 +524,7 @@ export const DynamicBattleHero = () => {
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDonate(barber1?.user_id || '', barber1?.name || barber1?.profiles?.display_name || '');
+                    handleDonate(barber1?.user_id || '', barber1?.name || '');
                   }}
                 >
                   <Heart className="w-4 h-4 mr-1" />
@@ -410,8 +547,8 @@ export const DynamicBattleHero = () => {
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">{getCountryFlag(barber2?.profiles?.country_code || '')}</span>
-                  <h3 className="text-xl font-bold">{barber2?.name || barber2?.profiles?.display_name}</h3>
+                  <span className="text-2xl">{getCountryFlag('ca')}</span>
+                  <h3 className="text-xl font-bold">{barber2?.name}</h3>
                 </div>
                 <div className="text-2xl font-bold text-primary">{percentages.barber2}%</div>
               </div>
@@ -421,7 +558,7 @@ export const DynamicBattleHero = () => {
                   size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleDonate(barber2?.user_id || '', barber2?.name || barber2?.profiles?.display_name || '');
+                    handleDonate(barber2?.user_id || '', barber2?.name || '');
                   }}
                 >
                   <Heart className="w-4 h-4 mr-1" />

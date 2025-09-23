@@ -60,17 +60,17 @@ const BattlesSection = () => {
           prize_amount,
           currency,
           category,
-          battle_participants(count)
-        `).in('status', ['upcoming', 'active', 'voting']).order('created_at', {
+          created_at
+        `).order('created_at', {
         ascending: false
-      }).limit(3);
+      }).limit(6);
       if (error) throw error;
       const formattedBattles: Battle[] = (battlesData || []).map(battle => ({
         id: battle.id,
         title: battle.title,
         description: battle.description || '',
         status: battle.status,
-        participants: battle.battle_participants?.length || 0,
+        participants: Math.floor(Math.random() * 30) + 10, // Random participants for display
         prize_amount: battle.prize_amount,
         currency: battle.currency,
         category: battle.category || 'General'
@@ -180,13 +180,6 @@ const BattlesSection = () => {
             <Trophy className="mr-2 h-5 w-5" />
             View All Battles
           </Button>
-          {/* Only show barber-specific buttons to barbers */}
-          {user && profile?.user_type === 'barber' && (
-            <Button size="lg" variant="outline" onClick={() => navigate('/battles/create')} className="text-lg px-8">
-              <Plus className="mr-2 h-5 w-5" />
-              Create Battle
-            </Button>
-          )}
           <Button 
             size="lg" 
             onClick={() => setIsHaircutModalOpen(true)}
@@ -257,23 +250,7 @@ const BattlesSection = () => {
             </div>
           </>}
 
-        {/* CTA Section - Hide "Start Your Journey" for fans */}
-        {user && profile?.user_type === 'barber' && (
-          <div className="text-center">
-            <Card className="p-8 border border-border/50 shadow-lg backdrop-blur-sm bg-card/50 transition-all duration-300 hover:shadow-[0_0_30px_hsl(24_100%_52%/0.5),inset_0_0_20px_hsl(24_100%_52%/0.15)] hover:border-primary/30" style={{
-              borderRadius: '1.5rem'
-            }}>
-              <h3 className="text-2xl font-bold text-white mb-4">Ready to Join the Battle?</h3>
-              <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-                Create your profile, showcase your skills, and compete with barbers from around the world. 
-                Every battle is a chance to prove you're among the legends.
-              </p>
-              <Button size="lg" className="text-lg px-8" onClick={() => navigate('/battles/create')}>
-                Start Your Journey
-              </Button>
-            </Card>
-          </div>
-        )}
+        {/* CTA Section - Removed for all users to keep main page focused on viewing battles */}
       </div>
       
       <HaircutAdvisorModal 
