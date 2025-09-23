@@ -151,8 +151,8 @@ export const DynamicBattleHero = () => {
 
   if (battleLoading || barbersLoading) {
     return (
-      <div className="py-8 px-4 max-w-7xl mx-auto">
-        <div className="aspect-video bg-card rounded-2xl shadow-2xl flex items-center justify-center">
+      <div className="pt-24 lg:pt-28 pb-8 px-4 max-w-7xl mx-auto">
+        <div className="aspect-video bg-card rounded-2xl shadow-2xl border-2 border-primary/50 animate-glow flex items-center justify-center">
           <div className="animate-pulse text-lg text-muted-foreground">Loading battle...</div>
         </div>
       </div>
@@ -189,9 +189,9 @@ export const DynamicBattleHero = () => {
     const barber2Photo = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=800&h=800&fit=crop&crop=face";
 
     return (
-      <div className="py-8 px-4 max-w-7xl mx-auto">
+      <div className="pt-24 lg:pt-28 pb-8 px-4 max-w-7xl mx-auto">
         {/* Main Battle Card */}
-        <div className="aspect-video bg-card rounded-2xl shadow-2xl overflow-hidden relative">
+        <div className="aspect-video bg-card rounded-2xl shadow-2xl border-2 border-primary/50 animate-glow overflow-hidden relative">
           <div className="h-full flex">
             {/* Barber 1 Side */}
             <div 
@@ -327,11 +327,11 @@ export const DynamicBattleHero = () => {
   const barber2Photo = "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=800&h=800&fit=crop&crop=face";
 
   return (
-    <div className="py-8 px-4 max-w-7xl mx-auto">
+    <div className="pt-24 lg:pt-28 pb-8 px-4 max-w-7xl mx-auto">
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Main Battle Card */}
         <div className="flex-1">
-          <div className="aspect-video bg-card rounded-2xl shadow-2xl overflow-hidden relative">
+          <div className="aspect-video bg-card rounded-2xl shadow-2xl border-2 border-primary/50 animate-glow overflow-hidden relative">
             <div className="h-full flex">
               {/* Barber 1 Side */}
               <div 
