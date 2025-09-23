@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Trophy, Users, Heart, Coins, Zap } from "lucide-react";
+import { Play, Trophy, Users, Heart, Coins, Zap, Gift, Share2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
+import { DonationModal } from "@/components/DonationModal";
+import { BattleCommentsPanel } from "@/components/BattleCommentsPanel";
 
 interface BattleData {
   id: string;
@@ -34,6 +36,9 @@ const DynamicBattleHero = () => {
   const navigate = useNavigate();
   const [battle, setBattle] = useState<BattleData | null>(null);
   const [userBarberBucks, setUserBarberBucks] = useState(0);
+  const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
+  const [selectedBarberForDonation, setSelectedBarberForDonation] = useState<{id: string, name: string} | null>(null);
+  const [isCommentsPanelOpen, setIsCommentsPanelOpen] = useState(false);
 
   // Fetch user profile for barber bucks
   const { data: profile } = useQuery({
@@ -180,12 +185,37 @@ const DynamicBattleHero = () => {
     navigate(`/battles/${battle?.id}`);
   };
 
-  const handleDonate = () => {
+  const handleDonate = (barberName: string, barberId: string) => {
     if (!user) {
       navigate('/auth');
       return;
     }
-    // TODO: Implement donation modal
+    setSelectedBarberForDonation({ id: barberId, name: barberName });
+    setIsDonationModalOpen(true);
+  };
+
+  const handleShare = () => {
+    if (navigator.share) {
+      navigator.share({
+        title: battle?.title || 'Barber Battle',
+        text: 'Check out this epic barber battle!',
+        url: window.location.href,
+      });
+    } else {
+      navigator.clipboard.writeText(window.location.href);
+      // Could add toast notification here
+    }
+  };
+
+  const getTotalVotes = () => {
+    if (!battle) return 0;
+    return battle.barber1.votes + battle.barber2.votes;
+  };
+
+  const getVotePercentage = (votes: number) => {
+    const total = getTotalVotes();
+    if (total === 0) return 0;
+    return Math.round((votes / total) * 100);
   };
 
   if (!battle) {
@@ -204,9 +234,11 @@ const DynamicBattleHero = () => {
       <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900/95 to-black" />
       
       {/* Main Battle Display */}
-      <div className="relative h-full flex flex-col lg:flex-row">{/* Left Barber */}
-        {/* Left Barber */}
-        <div className="flex-1 relative group cursor-pointer order-1 hover:scale-105 transition-transform duration-300" onClick={() => handleVote('barber1')}>
+      <div className="relative h-full flex">
+        {/* Left and Right Barbers Container */}
+        <div className="flex-1 flex flex-col lg:flex-row">
+          {/* Left Barber */}
+          <div className="flex-1 relative group cursor-pointer order-1 hover:scale-105 transition-transform duration-300" onClick={() => handleVote('barber1')}>
           {/* Flag Background */}
           <div className="absolute inset-0 opacity-60 lg:opacity-50">
             {battle.barber1.country_code ? (
@@ -262,13 +294,18 @@ const DynamicBattleHero = () => {
               </p>
             )}
             
-            {/* Vote Count */}
-            <div className="flex items-center gap-2 mb-3 lg:mb-4">
-              <Trophy className="w-4 h-4 lg:w-6 lg:h-6 text-orange-400" />
-              <span className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-white drop-shadow-lg">
-                {battle.barber1.votes.toLocaleString()}
-              </span>
-              <span className="text-gray-300 text-sm lg:text-base">votes</span>
+            {/* Vote Count and Percentage */}
+            <div className="flex flex-col gap-2 mb-3 lg:mb-4">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 lg:w-6 lg:h-6 text-orange-400" />
+                <span className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-white drop-shadow-lg">
+                  {battle.barber1.votes.toLocaleString()}
+                </span>
+                <span className="text-gray-300 text-sm lg:text-base">votes</span>
+              </div>
+              <div className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-orange-400 drop-shadow-lg">
+                {getVotePercentage(battle.barber1.votes)}%
+              </div>
             </div>
             
             {/* Vote Button - Hidden on mobile, shown on desktop */}
@@ -382,13 +419,18 @@ const DynamicBattleHero = () => {
               </p>
             )}
             
-            {/* Vote Count */}
-            <div className="flex items-center gap-2 mb-3 lg:mb-4">
-              <Trophy className="w-4 h-4 lg:w-6 lg:h-6 text-orange-400" />
-              <span className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-white drop-shadow-lg">
-                {battle.barber2.votes.toLocaleString()}
-              </span>
-              <span className="text-gray-300 text-sm lg:text-base">votes</span>
+            {/* Vote Count and Percentage */}
+            <div className="flex flex-col gap-2 mb-3 lg:mb-4">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 lg:w-6 lg:h-6 text-orange-400" />
+                <span className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-white drop-shadow-lg">
+                  {battle.barber2.votes.toLocaleString()}
+                </span>
+                <span className="text-gray-300 text-sm lg:text-base">votes</span>
+              </div>
+              <div className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-orange-400 drop-shadow-lg">
+                {getVotePercentage(battle.barber2.votes)}%
+              </div>
             </div>
             
             {/* Vote Button - Hidden on mobile, shown on desktop */}
@@ -402,6 +444,16 @@ const DynamicBattleHero = () => {
               </Button>
             )}
           </div>
+        </div>
+
+        </div>
+
+        {/* Right Side Comments Panel - Desktop Only */}
+        <div className="hidden xl:block w-80 border-l border-gray-700 bg-black/50">
+          <BattleCommentsPanel 
+            battleId={battle?.id || ""} 
+            onToggle={() => setIsCommentsPanelOpen(!isCommentsPanelOpen)}
+          />
         </div>
       </div>
 
@@ -420,62 +472,110 @@ const DynamicBattleHero = () => {
             </div>
             
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-center gap-2 lg:gap-4 w-full lg:w-auto">
+            <div className="flex flex-col sm:flex-row items-center gap-2 lg:gap-3 w-full lg:w-auto">
               {/* Barber Bucks Display */}
               {user && (
-                <div className="flex items-center gap-2 bg-orange-500/20 border border-orange-500/30 px-3 py-2 lg:px-4 lg:py-2 rounded-lg">
-                  <Coins className="w-4 h-4 lg:w-5 lg:h-5 text-orange-400" />
-                  <span className="font-semibold text-white text-sm lg:text-base">BB {userBarberBucks}</span>
+                <div className="flex items-center gap-2 bg-orange-500/20 border border-orange-500/30 px-3 py-2 rounded-lg">
+                  <Coins className="w-4 h-4 text-orange-400" />
+                  <span className="font-semibold text-white text-sm">BB {userBarberBucks}</span>
                 </div>
+              )}
+              
+              {/* Donate Button */}
+              {user && (
+                <Button 
+                  size="sm" 
+                  onClick={() => handleDonate(battle.barber1.name, "barber1_id")}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 text-sm hover:scale-105 transition-transform"
+                >
+                  <Gift className="w-4 h-4 mr-2" />
+                  DONATE
+                </Button>
               )}
               
               {/* Main Action Button */}
               {user ? (
                 <Button 
-                  size="lg" 
+                  size="sm" 
                   onClick={() => navigate(`/battles/${battle.id}`)}
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 lg:px-8 w-full sm:w-auto text-sm lg:text-base hover:scale-105 transition-transform"
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 w-full sm:w-auto text-sm hover:scale-105 transition-transform"
                 >
                   {battle.status === 'voting' ? (
                     <>
-                      <Heart className="w-4 h-4 lg:w-5 lg:h-5 mr-2" />
-                      <span className="hidden sm:inline">VOTE NOW FOR YOUR FAVORITE!</span>
-                      <span className="sm:hidden">VOTE NOW!</span>
+                      <Heart className="w-4 h-4 mr-2" />
+                      <span className="hidden sm:inline">VOTE</span>
+                      <span className="sm:hidden">VOTE</span>
                     </>
                   ) : (
                     <>
-                      <Play className="w-4 h-4 lg:w-5 lg:h-5 mr-2" />
-                      <span className="hidden sm:inline">WATCH LIVE BATTLE</span>
-                      <span className="sm:hidden">WATCH LIVE</span>
+                      <Play className="w-4 h-4 mr-2" />
+                      <span className="hidden sm:inline">WATCH</span>
+                      <span className="sm:hidden">WATCH</span>
                     </>
                   )}
                 </Button>
               ) : (
                 <Button 
-                  size="lg" 
+                  size="sm" 
                   onClick={() => navigate('/auth')}
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 lg:px-8 w-full sm:w-auto text-sm lg:text-base hover:scale-105 transition-transform"
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 w-full sm:w-auto text-sm hover:scale-105 transition-transform"
                 >
-                  <Zap className="w-4 h-4 lg:w-5 lg:h-5 mr-2" />
-                  JOIN THE BATTLE!
+                  <Zap className="w-4 h-4 mr-2" />
+                  JOIN!
                 </Button>
               )}
               
-              {/* View Barber Profile Button - Hidden on mobile */}
-              {user && (
-                <Button 
-                  size="lg" 
-                  variant="outline"
-                  onClick={() => navigate(`/profile`)}
-                  className="border-orange-500 text-orange-400 hover:bg-orange-500 hover:text-white hidden lg:flex text-sm lg:text-base hover:scale-105 transition-transform"
-                >
-                  View Barber Profile
-                </Button>
-              )}
+              {/* Share Button */}
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={handleShare}
+                className="border-orange-500 text-orange-400 hover:bg-orange-500 hover:text-white text-sm hover:scale-105 transition-transform"
+              >
+                <Share2 className="w-4 h-4 mr-2" />
+                SHARE
+              </Button>
+
+              {/* Comments Toggle - Mobile Only */}
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => setIsCommentsPanelOpen(!isCommentsPanelOpen)}
+                className="border-orange-500 text-orange-400 hover:bg-orange-500 hover:text-white xl:hidden text-sm hover:scale-105 transition-transform"
+              >
+                <Users className="w-4 h-4 mr-2" />
+                CHAT
+              </Button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Mobile Comments Panel Overlay */}
+      {isCommentsPanelOpen && (
+        <div className="xl:hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm">
+          <div className="absolute right-0 top-0 h-full w-full max-w-sm bg-black border-l border-gray-700">
+            <BattleCommentsPanel 
+              battleId={battle?.id || ""} 
+              onToggle={() => setIsCommentsPanelOpen(false)}
+              isMobile={true}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Donation Modal */}
+      {selectedBarberForDonation && (
+        <DonationModal
+          isOpen={isDonationModalOpen}
+          onClose={() => {
+            setIsDonationModalOpen(false);
+            setSelectedBarberForDonation(null);
+          }}
+          creatorId={selectedBarberForDonation.id}
+          creatorName={selectedBarberForDonation.name}
+        />
+      )}
     </section>
   );
 };
