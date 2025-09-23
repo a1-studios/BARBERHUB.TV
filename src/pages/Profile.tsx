@@ -18,6 +18,7 @@ import { CountrySelector } from '@/components/CountrySelector';
 import { BarberProfileForm } from '@/components/profiles/BarberProfileForm';
 import { ClientProfileForm } from '@/components/profiles/ClientProfileForm';
 import { CreationUpload } from '@/components/creations/CreationUpload';
+import BarberDashboard from '@/components/barber/BarberDashboard';
 
 const Profile = () => {
   const { user } = useAuth();
@@ -195,6 +196,18 @@ const Profile = () => {
               />
             )}
           </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Show barber dashboard for barber users
+  if (isBarber && barberProfile) {
+    return (
+      <div className="min-h-screen">
+        <Header />
+        <main className="pt-20">
+          <BarberDashboard />
         </main>
       </div>
     );
