@@ -199,16 +199,16 @@ const DynamicBattleHero = () => {
   }
 
   return (
-    <section className="relative min-h-[80vh] lg:h-[80vh] overflow-hidden">
+    <section className="relative min-h-[80vh] lg:h-[80vh] overflow-hidden bg-black">
       {/* Background Pattern */}
-      <div className="absolute inset-0 bg-gradient-to-br from-background via-background/95 to-primary/5" />
+      <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900/95 to-black" />
       
       {/* Main Battle Display */}
-      <div className="relative h-full flex flex-col lg:flex-row">
+      <div className="relative h-full flex flex-col lg:flex-row">{/* Left Barber */}
         {/* Left Barber */}
-        <div className="flex-1 relative group cursor-pointer order-1" onClick={() => handleVote('barber1')}>
+        <div className="flex-1 relative group cursor-pointer order-1 hover:scale-105 transition-transform duration-300" onClick={() => handleVote('barber1')}>
           {/* Flag Background */}
-          <div className="absolute inset-0 opacity-50 lg:opacity-40">
+          <div className="absolute inset-0 opacity-60 lg:opacity-50">
             {battle.barber1.country_code ? (
               <img 
                 src={getCountryFlag(battle.barber1.country_code)}
@@ -220,48 +220,62 @@ const DynamicBattleHero = () => {
                 }}
               />
             ) : null}
-            <div className={`w-full h-full bg-gradient-to-br from-primary/20 to-primary/30 ${battle.barber1.country_code ? 'hidden' : ''}`} />
+            <div className={`w-full h-full bg-gradient-to-br from-blue-600/60 to-red-600/60 ${battle.barber1.country_code ? 'hidden' : ''}`} />
           </div>
           
-          {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-background/90 via-background/50 to-background/30 lg:to-transparent" />
+          {/* Dark Overlay for better text contrast */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/30 lg:to-transparent" />
           
-          {/* Content */}
-          <div className="relative h-full min-h-[40vh] lg:min-h-0 flex flex-col justify-center p-4 sm:p-6 lg:p-8 xl:p-12">
+          {/* Barber Portrait */}
+          <div className="absolute inset-0 flex items-center justify-center lg:justify-start">
+            <div className="w-48 h-48 sm:w-64 sm:h-64 lg:w-80 lg:h-80 xl:w-96 xl:h-96 rounded-lg overflow-hidden shadow-2xl ml-0 lg:ml-8 xl:ml-12">
+              <img 
+                src={battle.barber1.avatar_url || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face"}
+                alt={battle.barber1.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face";
+                }}
+              />
+            </div>
+          </div>
+          
+          {/* Content Overlay */}
+          <div className="relative z-10 h-full min-h-[40vh] lg:min-h-0 flex flex-col justify-end p-4 sm:p-6 lg:p-8 xl:p-12">
             {/* Country Badge */}
             {battle.barber1.country_code && (
-              <Badge className="w-fit mb-2 lg:mb-4 bg-primary/20 text-primary border-primary/30 text-xs sm:text-sm">
+              <Badge className="w-fit mb-2 lg:mb-4 bg-black/70 text-white border-white/30 text-xs sm:text-sm">
                 <span className="text-base mr-1">{getFlagEmoji(battle.barber1.country_code)}</span>
                 {battle.barber1.country_code.toUpperCase()}
               </Badge>
             )}
             
             {/* Barber Name */}
-            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-5xl font-bold text-foreground mb-1 lg:mb-2 leading-tight">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-white mb-1 lg:mb-2 leading-tight drop-shadow-lg">
               {battle.barber1.name}
             </h2>
             
             {/* Nickname */}
             {battle.barber1.nickname && (
-              <p className="text-sm sm:text-lg lg:text-xl xl:text-2xl text-primary mb-3 lg:mb-6">
+              <p className="text-sm sm:text-lg lg:text-xl xl:text-2xl text-orange-400 mb-3 lg:mb-6 drop-shadow-lg">
                 "{battle.barber1.nickname}"
               </p>
             )}
             
             {/* Vote Count */}
             <div className="flex items-center gap-2 mb-3 lg:mb-4">
-              <Trophy className="w-4 h-4 lg:w-6 lg:h-6 text-primary" />
-              <span className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-foreground">
+              <Trophy className="w-4 h-4 lg:w-6 lg:h-6 text-orange-400" />
+              <span className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-white drop-shadow-lg">
                 {battle.barber1.votes.toLocaleString()}
               </span>
-              <span className="text-muted-foreground text-sm lg:text-base">votes</span>
+              <span className="text-gray-300 text-sm lg:text-base">votes</span>
             </div>
             
             {/* Vote Button - Hidden on mobile, shown on desktop */}
             {user && profile?.user_type === 'fan' && (
               <Button 
                 size="sm"
-                className="w-fit bg-primary hover:bg-primary/90 text-primary-foreground group-hover:scale-105 transition-transform hidden lg:flex lg:size-default"
+                className="w-fit bg-orange-500 hover:bg-orange-600 text-white group-hover:scale-105 transition-transform hidden lg:flex lg:size-default"
               >
                 <Heart className="w-4 h-4 lg:w-5 lg:h-5 mr-2" />
                 <span className="text-xs lg:text-sm xl:text-base">VOTE FOR {(battle.barber1.nickname || battle.barber1.name.split(' ')[0]).toUpperCase()}</span>
@@ -271,25 +285,25 @@ const DynamicBattleHero = () => {
         </div>
 
         {/* Center VS Section */}
-        <div className="order-2 flex-shrink-0 lg:absolute lg:left-1/2 lg:top-1/2 lg:transform lg:-translate-x-1/2 lg:-translate-y-1/2 lg:z-20">
+        <div className="order-2 flex-shrink-0 lg:absolute lg:left-1/2 lg:top-1/2 lg:transform lg:-translate-x-1/2 lg:-translate-y-1/2 lg:z-30">
           <div className="text-center py-4 lg:py-0">
             {/* Battle Title */}
             <div className="mb-3 lg:mb-6">
-              <Badge className="bg-primary text-primary-foreground px-3 py-1 lg:px-4 lg:py-2 text-xs lg:text-sm font-semibold mb-1 lg:mb-2">
+              <Badge className="bg-orange-500 text-white px-3 py-1 lg:px-4 lg:py-2 text-xs lg:text-sm font-semibold mb-1 lg:mb-2 animate-pulse">
                 {battle.status === 'voting' ? 'VOTING NOW' : 'LIVE BATTLE'}
               </Badge>
-              <h1 className="text-sm sm:text-base lg:text-xl xl:text-2xl font-bold text-foreground px-4 lg:px-0">
+              <h1 className="text-sm sm:text-base lg:text-xl xl:text-2xl font-bold text-white px-4 lg:px-0 drop-shadow-lg">
                 {battle.title}
               </h1>
             </div>
             
             {/* VS Circle */}
             <div className="relative mb-3 lg:mb-6">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 xl:w-32 xl:h-32 mx-auto rounded-full bg-background border-2 lg:border-4 border-primary flex items-center justify-center shadow-lg">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-32 lg:h-32 xl:w-40 xl:h-40 mx-auto rounded-full bg-black/80 border-4 border-orange-500 flex items-center justify-center shadow-2xl hover:scale-110 transition-transform duration-300">
                 {battle.stream_url ? (
-                  <Play className="w-6 h-6 sm:w-8 sm:h-8 lg:w-8 lg:h-8 xl:w-12 xl:h-12 text-primary" />
+                  <Play className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 xl:w-16 xl:h-16 text-orange-500" />
                 ) : (
-                  <span className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-primary">VS</span>
+                  <span className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-orange-500">VS</span>
                 )}
               </div>
               
@@ -304,7 +318,7 @@ const DynamicBattleHero = () => {
             </div>
             
             {/* Viewer Count */}
-            <div className="flex items-center justify-center gap-1 lg:gap-2 text-muted-foreground">
+            <div className="flex items-center justify-center gap-1 lg:gap-2 text-gray-300">
               <Users className="w-3 h-3 lg:w-4 lg:h-4" />
               <span className="text-xs lg:text-sm">{battle.live_viewers.toLocaleString()} watching</span>
             </div>
@@ -312,9 +326,9 @@ const DynamicBattleHero = () => {
         </div>
 
         {/* Right Barber */}
-        <div className="flex-1 relative group cursor-pointer order-3" onClick={() => handleVote('barber2')}>
+        <div className="flex-1 relative group cursor-pointer order-3 hover:scale-105 transition-transform duration-300" onClick={() => handleVote('barber2')}>
           {/* Flag Background */}
-          <div className="absolute inset-0 opacity-50 lg:opacity-40">
+          <div className="absolute inset-0 opacity-60 lg:opacity-50">
             {battle.barber2.country_code ? (
               <img 
                 src={getCountryFlag(battle.barber2.country_code)}
@@ -326,48 +340,62 @@ const DynamicBattleHero = () => {
                 }}
               />
             ) : null}
-            <div className={`w-full h-full bg-gradient-to-bl from-secondary/20 to-secondary/30 ${battle.barber2.country_code ? 'hidden' : ''}`} />
+            <div className={`w-full h-full bg-gradient-to-bl from-green-600/60 to-red-600/60 ${battle.barber2.country_code ? 'hidden' : ''}`} />
           </div>
           
-          {/* Gradient Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-l from-background/90 via-background/50 to-background/30 lg:to-transparent" />
+          {/* Dark Overlay for better text contrast */}
+          <div className="absolute inset-0 bg-gradient-to-l from-black/80 via-black/50 to-black/30 lg:to-transparent" />
           
-          {/* Content */}
-          <div className="relative h-full min-h-[40vh] lg:min-h-0 flex flex-col justify-center items-start lg:items-end text-left lg:text-right p-4 sm:p-6 lg:p-8 xl:p-12">
+          {/* Barber Portrait */}
+          <div className="absolute inset-0 flex items-center justify-center lg:justify-end">
+            <div className="w-48 h-48 sm:w-64 sm:h-64 lg:w-80 lg:h-80 xl:w-96 xl:h-96 rounded-lg overflow-hidden shadow-2xl mr-0 lg:mr-8 xl:mr-12">
+              <img 
+                src={battle.barber2.avatar_url || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face"}
+                alt={battle.barber2.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face";
+                }}
+              />
+            </div>
+          </div>
+          
+          {/* Content Overlay */}
+          <div className="relative z-10 h-full min-h-[40vh] lg:min-h-0 flex flex-col justify-end items-start lg:items-end text-left lg:text-right p-4 sm:p-6 lg:p-8 xl:p-12">
             {/* Country Badge */}
             {battle.barber2.country_code && (
-              <Badge className="w-fit mb-2 lg:mb-4 bg-primary/20 text-primary border-primary/30 text-xs sm:text-sm">
+              <Badge className="w-fit mb-2 lg:mb-4 bg-black/70 text-white border-white/30 text-xs sm:text-sm">
                 <span className="text-base mr-1">{getFlagEmoji(battle.barber2.country_code)}</span>
                 {battle.barber2.country_code.toUpperCase()}
               </Badge>
             )}
             
             {/* Barber Name */}
-            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-5xl font-bold text-foreground mb-1 lg:mb-2 leading-tight">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-bold text-white mb-1 lg:mb-2 leading-tight drop-shadow-lg">
               {battle.barber2.name}
             </h2>
             
             {/* Nickname */}
             {battle.barber2.nickname && (
-              <p className="text-sm sm:text-lg lg:text-xl xl:text-2xl text-primary mb-3 lg:mb-6">
+              <p className="text-sm sm:text-lg lg:text-xl xl:text-2xl text-orange-400 mb-3 lg:mb-6 drop-shadow-lg">
                 "{battle.barber2.nickname}"
               </p>
             )}
             
             {/* Vote Count */}
             <div className="flex items-center gap-2 mb-3 lg:mb-4">
-              <Trophy className="w-4 h-4 lg:w-6 lg:h-6 text-primary" />
-              <span className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-foreground">
+              <Trophy className="w-4 h-4 lg:w-6 lg:h-6 text-orange-400" />
+              <span className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-white drop-shadow-lg">
                 {battle.barber2.votes.toLocaleString()}
               </span>
-              <span className="text-muted-foreground text-sm lg:text-base">votes</span>
+              <span className="text-gray-300 text-sm lg:text-base">votes</span>
             </div>
             
             {/* Vote Button - Hidden on mobile, shown on desktop */}
             {user && profile?.user_type === 'fan' && (
               <Button 
                 size="sm"
-                className="w-fit bg-primary hover:bg-primary/90 text-primary-foreground group-hover:scale-105 transition-transform hidden lg:flex lg:size-default"
+                className="w-fit bg-orange-500 hover:bg-orange-600 text-white group-hover:scale-105 transition-transform hidden lg:flex lg:size-default"
               >
                 <Heart className="w-4 h-4 lg:w-5 lg:h-5 mr-2" />
                 <span className="text-xs lg:text-sm xl:text-base">VOTE FOR {(battle.barber2.nickname || battle.barber2.name.split(' ')[0]).toUpperCase()}</span>
@@ -378,15 +406,15 @@ const DynamicBattleHero = () => {
       </div>
 
       {/* Bottom Action Bar */}
-      <div className="lg:absolute lg:bottom-0 left-0 right-0 bg-background/95 backdrop-blur-sm border-t border-border">
+      <div className="lg:absolute lg:bottom-0 left-0 right-0 bg-black/90 backdrop-blur-sm border-t border-gray-700">
         <div className="container mx-auto px-4 py-4 lg:py-6">
           <div className="flex flex-col lg:flex-row items-center justify-between gap-3 lg:gap-4">
             {/* Next Battle Message */}
             <div className="text-center lg:text-left">
-              <h3 className="text-lg lg:text-xl font-bold text-foreground mb-1">
+              <h3 className="text-lg lg:text-xl font-bold text-white mb-1">
                 NEXT BATTLE: YOUR ARENA AWAITS
               </h3>
-              <p className="text-sm lg:text-base text-muted-foreground">
+              <p className="text-sm lg:text-base text-gray-300">
                 {battle.status === 'voting' ? 'Vote now and support your favorite!' : 'Join the live battle experience'}
               </p>
             </div>
@@ -395,9 +423,9 @@ const DynamicBattleHero = () => {
             <div className="flex flex-col sm:flex-row items-center gap-2 lg:gap-4 w-full lg:w-auto">
               {/* Barber Bucks Display */}
               {user && (
-                <div className="flex items-center gap-2 bg-primary/10 px-3 py-2 lg:px-4 lg:py-2 rounded-lg">
-                  <Coins className="w-4 h-4 lg:w-5 lg:h-5 text-primary" />
-                  <span className="font-semibold text-foreground text-sm lg:text-base">BB {userBarberBucks}</span>
+                <div className="flex items-center gap-2 bg-orange-500/20 border border-orange-500/30 px-3 py-2 lg:px-4 lg:py-2 rounded-lg">
+                  <Coins className="w-4 h-4 lg:w-5 lg:h-5 text-orange-400" />
+                  <span className="font-semibold text-white text-sm lg:text-base">BB {userBarberBucks}</span>
                 </div>
               )}
               
@@ -406,7 +434,7 @@ const DynamicBattleHero = () => {
                 <Button 
                   size="lg" 
                   onClick={() => navigate(`/battles/${battle.id}`)}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 lg:px-8 w-full sm:w-auto text-sm lg:text-base"
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 lg:px-8 w-full sm:w-auto text-sm lg:text-base hover:scale-105 transition-transform"
                 >
                   {battle.status === 'voting' ? (
                     <>
@@ -426,23 +454,22 @@ const DynamicBattleHero = () => {
                 <Button 
                   size="lg" 
                   onClick={() => navigate('/auth')}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground px-4 lg:px-8 w-full sm:w-auto text-sm lg:text-base"
+                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 lg:px-8 w-full sm:w-auto text-sm lg:text-base hover:scale-105 transition-transform"
                 >
                   <Zap className="w-4 h-4 lg:w-5 lg:h-5 mr-2" />
                   JOIN THE BATTLE!
                 </Button>
               )}
               
-              {/* Donate Button - Hidden on mobile */}
+              {/* View Barber Profile Button - Hidden on mobile */}
               {user && (
                 <Button 
                   size="lg" 
                   variant="outline"
-                  onClick={handleDonate}
-                  className="border-primary text-primary hover:bg-primary hover:text-primary-foreground hidden lg:flex text-sm lg:text-base"
+                  onClick={() => navigate(`/profile`)}
+                  className="border-orange-500 text-orange-400 hover:bg-orange-500 hover:text-white hidden lg:flex text-sm lg:text-base hover:scale-105 transition-transform"
                 >
-                  <Heart className="w-4 h-4 lg:w-5 lg:h-5 mr-2" />
-                  DONATE & CHEER
+                  View Barber Profile
                 </Button>
               )}
             </div>
