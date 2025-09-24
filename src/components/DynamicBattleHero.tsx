@@ -183,8 +183,8 @@ export const DynamicBattleHero = () => {
                 opacity: 0.3
               }} />
               
-              {/* Barber Photo - Smaller and Clearer */}
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
+              {/* Barber Photo - Higher position in upper third */}
+              <div className="absolute top-16 sm:top-20 left-1/2 transform -translate-x-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
                 <img 
                   src={barber1Photo} 
                   alt={syntheticBarbers[0].name}
@@ -201,24 +201,44 @@ export const DynamicBattleHero = () => {
                 </div>
               </div>
 
-              {/* Vertical Stats Bar */}
-              <div className="absolute left-3 sm:left-6 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-2 bg-black/60 backdrop-blur-sm rounded-lg p-2">
-                <div className="flex items-center gap-1 text-white text-xs">
-                  <TrendingUp className="w-3 h-3" />
-                  <span>#12</span>
-                </div>
-                <div className="flex items-center gap-1 text-white text-xs">
-                  <Heart className="w-3 h-3" />
-                  <span>2.1k</span>
-                </div>
-                <div className="flex items-center gap-1 text-white text-xs">
-                  <Users className="w-3 h-3" />
-                  <span>890</span>
-                </div>
-                <div className="flex items-center gap-1 text-white text-xs">
-                  <DollarSign className="w-3 h-3" />
-                  <span>$450</span>
-                </div>
+              {/* Vertical Action Buttons - Below percentage */}
+              <div className="absolute left-3 sm:left-6 top-20 sm:top-24 z-10 flex flex-col gap-2">
+                <button 
+                  className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_15px_rgba(255,165,0,0.5)] hover:shadow-[0_0_20px_rgba(255,165,0,0.8)]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleVote(syntheticBarbers[0].id);
+                  }}
+                >
+                  <Heart className="w-3 h-3 sm:w-4 sm:h-4" />
+                </button>
+                <button 
+                  className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_15px_rgba(255,165,0,0.5)] hover:shadow-[0_0_20px_rgba(255,165,0,0.8)]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleShare();
+                  }}
+                >
+                  <Share2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                </button>
+                <button 
+                  className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_15px_rgba(255,165,0,0.5)] hover:shadow-[0_0_20px_rgba(255,165,0,0.8)]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDonate(syntheticBarbers[0].id, syntheticBarbers[0].name);
+                  }}
+                >
+                  <DollarSign className="w-3 h-3 sm:w-4 sm:h-4" />
+                </button>
+                <button 
+                  className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_15px_rgba(255,165,0,0.5)] hover:shadow-[0_0_20px_rgba(255,165,0,0.8)]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toast.info("Feature coming soon!");
+                  }}
+                >
+                  <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
+                </button>
               </div>
 
               {/* Barber Info */}
@@ -288,8 +308,8 @@ export const DynamicBattleHero = () => {
                 opacity: 0.3
               }} />
               
-              {/* Barber Photo - Smaller and Clearer */}
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
+              {/* Barber Photo - Higher position in upper third */}
+              <div className="absolute top-16 sm:top-20 right-1/2 transform translate-x-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
                 <img 
                   src={barber2Photo} 
                   alt={syntheticBarbers[1].name}
@@ -306,24 +326,44 @@ export const DynamicBattleHero = () => {
                 </div>
               </div>
 
-              {/* Vertical Stats Bar */}
-              <div className="absolute right-3 sm:right-6 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-2 bg-black/60 backdrop-blur-sm rounded-lg p-2">
-                <div className="flex items-center gap-1 text-white text-xs">
-                  <TrendingUp className="w-3 h-3" />
-                  <span>#8</span>
-                </div>
-                <div className="flex items-center gap-1 text-white text-xs">
-                  <Heart className="w-3 h-3" />
-                  <span>3.2k</span>
-                </div>
-                <div className="flex items-center gap-1 text-white text-xs">
-                  <Users className="w-3 h-3" />
-                  <span>1.5k</span>
-                </div>
-                <div className="flex items-center gap-1 text-white text-xs">
-                  <DollarSign className="w-3 h-3" />
-                  <span>$680</span>
-                </div>
+              {/* Vertical Action Buttons - Below percentage */}
+              <div className="absolute right-3 sm:right-6 top-20 sm:top-24 z-10 flex flex-col gap-2">
+                <button 
+                  className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_15px_rgba(255,165,0,0.5)] hover:shadow-[0_0_20px_rgba(255,165,0,0.8)]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleVote(syntheticBarbers[1].id);
+                  }}
+                >
+                  <Heart className="w-3 h-3 sm:w-4 sm:h-4" />
+                </button>
+                <button 
+                  className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_15px_rgba(255,165,0,0.5)] hover:shadow-[0_0_20px_rgba(255,165,0,0.8)]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleShare();
+                  }}
+                >
+                  <Share2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                </button>
+                <button 
+                  className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_15px_rgba(255,165,0,0.5)] hover:shadow-[0_0_20px_rgba(255,165,0,0.8)]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDonate(syntheticBarbers[1].id, syntheticBarbers[1].name);
+                  }}
+                >
+                  <DollarSign className="w-3 h-3 sm:w-4 sm:h-4" />
+                </button>
+                <button 
+                  className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_15px_rgba(255,165,0,0.5)] hover:shadow-[0_0_20px_rgba(255,165,0,0.8)]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toast.info("Feature coming soon!");
+                  }}
+                >
+                  <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
+                </button>
               </div>
 
               {/* Barber Info */}
