@@ -5,12 +5,21 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { HaircutAdvisorModal } from './HaircutAdvisorModal';
-import DigitalGrove3D from './DigitalGrove3D';
+import globeBackground from '@/assets/globe-background.png';
 export const VirtualHaircutTryOn = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   return <>
       <section className="relative py-20 px-4 overflow-hidden">
-        <DigitalGrove3D />
+        {/* Globe Background */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30"
+          style={{
+            backgroundImage: `url(${globeBackground})`,
+            backgroundSize: 'contain',
+            backgroundPosition: 'center'
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background/80" />
         <div className="container mx-auto max-w-6xl relative z-10">
           {/* Header */}
           <div className="text-center mb-12">
