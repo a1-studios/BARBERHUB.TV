@@ -6,26 +6,9 @@ import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  Trophy, 
-  Users, 
-  Target, 
-  DollarSign, 
-  Upload, 
-  Eye, 
-  TrendingUp, 
-  Award, 
-  Calendar,
-  Zap,
-  Crown,
-  ShoppingBag,
-  FileText,
-  BarChart3,
-  X
-} from 'lucide-react';
+import { Trophy, Users, Target, DollarSign, Upload, Eye, TrendingUp, Award, Calendar, Zap, Crown, ShoppingBag, FileText, BarChart3, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CreationUpload } from '@/components/creations/CreationUpload';
-
 interface BarberStats {
   battles_created: number;
   battles_won: number;
@@ -37,38 +20,38 @@ interface BarberStats {
   follower_count: number;
   win_rate: number;
 }
-
 const BarberDashboard = () => {
-  const { user } = useAuth();
+  const {
+    user
+  } = useAuth();
   const [showCreationUpload, setShowCreationUpload] = useState(false);
 
   // Fetch barber profile and stats
-  const { data: barberProfile } = useQuery({
+  const {
+    data: barberProfile
+  } = useQuery({
     queryKey: ['barberProfile', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data, error } = await supabase
-        .from('barber_profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-      
+      const {
+        data,
+        error
+      } = await supabase.from('barber_profiles').select('*').eq('user_id', user.id).single();
       if (error) throw error;
       return data;
     },
     enabled: !!user?.id
   });
-
-  const { data: userProfile } = useQuery({
+  const {
+    data: userProfile
+  } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-      
+      const {
+        data,
+        error
+      } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
       if (error) throw error;
       return data;
     },
@@ -87,7 +70,6 @@ const BarberDashboard = () => {
     follower_count: 892,
     win_rate: 67
   };
-
   const getProgressToNextLevel = () => {
     const currentLevel = userProfile?.creator_level || 'Bronze';
     const levelProgress = {
@@ -99,10 +81,8 @@ const BarberDashboard = () => {
     };
     return levelProgress[currentLevel as keyof typeof levelProgress] || 25;
   };
-
-  return (
-    <div className="min-h-screen bg-gradient-primary p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
+  return <div className="min-h-screen bg-gradient-primary p-4 py-0">
+      <div className="max-w-7xl mx-auto space-y-6 px-[44px] my-0">
         
         {/* Header */}
         <div className="text-center mb-8">
@@ -253,10 +233,7 @@ const BarberDashboard = () => {
               </div>
 
               <div className="space-y-2">
-                <Button 
-                  className="w-full btn-primary"
-                  onClick={() => setShowCreationUpload(true)}
-                >
+                <Button className="w-full btn-primary" onClick={() => setShowCreationUpload(true)}>
                   <Upload className="h-4 w-4 mr-2" />
                   UPLOAD NEW PRODUCTS
                 </Button>
@@ -359,30 +336,19 @@ const BarberDashboard = () => {
       </div>
 
       {/* Creation Upload Modal */}
-      {showCreationUpload && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      {showCreationUpload && <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-background rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-4 border-b">
               <h2 className="text-xl font-semibold">Upload New Creation</h2>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowCreationUpload(false)}
-              >
+              <Button variant="ghost" size="sm" onClick={() => setShowCreationUpload(false)}>
                 <X className="h-4 w-4" />
               </Button>
             </div>
             <div className="p-4">
-              <CreationUpload 
-                onCreationUploaded={() => setShowCreationUpload(false)}
-                barberProfileId={barberProfile?.id}
-              />
+              <CreationUpload onCreationUploaded={() => setShowCreationUpload(false)} barberProfileId={barberProfile?.id} />
             </div>
           </div>
-        </div>
-      )}
-    </div>
-  );
+        </div>}
+    </div>;
 };
-
 export default BarberDashboard;
