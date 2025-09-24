@@ -336,7 +336,7 @@ export const DynamicBattleHero = () => {
                   <h3 className="text-[10px] xs:text-xs sm:text-sm lg:text-lg xl:text-xl font-bold leading-tight truncate max-w-[15ch] sm:max-w-none">{syntheticBarbers[1].name}</h3>
                   
                 </div>
-                <p className="text-white/80 text-[8px] xs:text-[10px] sm:text-xs">Click to vote</p>
+                
               </div>
 
               {/* Hover Effect */}
