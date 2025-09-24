@@ -6,12 +6,9 @@ import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { HaircutAdvisorModal } from './HaircutAdvisorModal';
 import DigitalGrove3D from './DigitalGrove3D';
-
 export const VirtualHaircutTryOn = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  return (
-    <>
+  return <>
       <section className="relative py-20 px-4 overflow-hidden">
         <DigitalGrove3D />
         <div className="container mx-auto max-w-6xl relative z-10">
@@ -28,23 +25,22 @@ export const VirtualHaircutTryOn = () => {
 
           {/* Example Mockups Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
-            {[
-              { name: "High-Fade Pompadour", style: "Professional & Sharp" },
-              { name: "Asymmetric Undercut", style: "Modern & Edgy" },
-              { name: "Textured Crop", style: "Casual & Trendy" },
-              { name: "Classic Side Part", style: "Timeless & Elegant" }
-            ].map((style, index) => (
-              <Card key={index} className="border-2 border-primary/30 overflow-hidden hover:border-primary/60 transition-colors">
+            {[{
+            name: "High-Fade Pompadour",
+            style: "Professional & Sharp"
+          }, {
+            name: "Asymmetric Undercut",
+            style: "Modern & Edgy"
+          }, {
+            name: "Textured Crop",
+            style: "Casual & Trendy"
+          }, {
+            name: "Classic Side Part",
+            style: "Timeless & Elegant"
+          }].map((style, index) => <Card key={index} className="border-2 border-primary/30 overflow-hidden hover:border-primary/60 transition-colors">
                 <div className="aspect-square relative bg-gradient-to-br from-primary/20 to-transparent">
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center p-4">
-                      <div className="w-12 h-12 bg-primary/30 rounded-full flex items-center justify-center mb-3 mx-auto">
-                        <Sparkles className="h-6 w-6 text-primary" />
-                      </div>
-                      <div className="text-xs text-muted-foreground">Preview</div>
-                    </div>
-                  </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                  
+                  
                   <div className="absolute bottom-3 left-3 right-3">
                     <h4 className="font-bold text-white text-sm leading-tight mb-1">
                       {style.name}
@@ -52,8 +48,7 @@ export const VirtualHaircutTryOn = () => {
                     <p className="text-xs text-primary/80">{style.style}</p>
                   </div>
                 </div>
-              </Card>
-            ))}
+              </Card>)}
           </div>
 
           {/* CTA Section */}
@@ -70,11 +65,7 @@ export const VirtualHaircutTryOn = () => {
                   </p>
                 </div>
                 
-                <Button 
-                  onClick={() => setIsModalOpen(true)}
-                  size="lg" 
-                  className="w-full mb-3"
-                >
+                <Button onClick={() => setIsModalOpen(true)} size="lg" className="w-full mb-3">
                   <Camera className="h-4 w-4 mr-2" />
                   Take a Selfie or Upload Photo
                 </Button>
@@ -88,10 +79,6 @@ export const VirtualHaircutTryOn = () => {
         </div>
       </section>
 
-      <HaircutAdvisorModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-      />
-    </>
-  );
+      <HaircutAdvisorModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+    </>;
 };
