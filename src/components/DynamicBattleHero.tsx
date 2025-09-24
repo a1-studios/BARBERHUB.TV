@@ -174,7 +174,7 @@ export const DynamicBattleHero = () => {
         <div className="w-full portrait:aspect-[3/4] sm:portrait:aspect-[4/5] landscape:aspect-[16/10] lg:landscape:aspect-[16/9] bg-card rounded-lg sm:rounded-xl lg:rounded-2xl shadow-xl sm:shadow-2xl border border-primary/30 sm:border-2 sm:border-primary/50 animate-glow overflow-hidden relative transform-gpu will-change-transform mx-0 my-[24px] py-0 px-0">
           <div className="h-full flex">
             {/* Barber 1 Side */}
-            <div className="flex-1 relative overflow-hidden cursor-pointer group" onClick={() => toast.info("This is a preview battle. Real voting available in live battles!")}>
+            <div className="flex-1 relative overflow-hidden" onClick={() => toast.info("This is a preview battle. Real voting available in live battles!")}>
               {/* Flag Background */}
               <div className="absolute inset-0" style={{
               backgroundImage: `url(${getFlagImageUrl('mx')})`,
@@ -188,10 +188,15 @@ export const DynamicBattleHero = () => {
                 <img src={barber1Photo} alt={syntheticBarbers[0].name} className="w-full h-full object-cover" />
               </div>
 
+              {/* Barber Name - Under profile photo */}
+              <div className="absolute top-[32%] left-1/2 transform -translate-x-1/2 text-center z-10">
+                <h3 className="text-white text-[8px] xs:text-[10px] sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">{syntheticBarbers[0].name}</h3>
+              </div>
+
               {/* Video Box */}
-              <div className="absolute top-[45%] left-1/2 transform -translate-x-1/2 w-[35vw] h-[35vw] max-w-[140px] max-h-[140px] sm:max-w-[200px] sm:max-h-[200px] lg:max-w-[260px] lg:max-h-[260px] bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg">
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
-                  <Play className="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white/60" />
+              <div className="absolute top-[45%] left-1/2 transform -translate-x-1/2 w-[35vw] h-[35vw] max-w-[140px] max-h-[140px] sm:max-w-[200px] sm:max-h-[200px] lg:max-w-[260px] lg:max-h-[260px] bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg cursor-pointer group hover:bg-primary/20 transition-all duration-300">
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 group-hover:from-primary/20 group-hover:to-primary/40 transition-all duration-300">
+                  <Play className="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white/60 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
                 </div>
               </div>
               
@@ -232,17 +237,6 @@ export const DynamicBattleHero = () => {
                 </button>
               </div>
 
-              {/* Barber Info - Responsive text */}
-              <div className="absolute bottom-2 sm:bottom-4 lg:bottom-6 left-1 sm:left-2 lg:left-3 z-10 text-white">
-                <div className="flex items-center gap-0.5 sm:gap-1 lg:gap-2 mb-0.5 sm:mb-1">
-                  
-                  <h3 className="text-[10px] xs:text-xs sm:text-sm lg:text-lg xl:text-xl font-bold leading-tight truncate max-w-[15ch] sm:max-w-none">{syntheticBarbers[0].name}</h3>
-                </div>
-                
-              </div>
-
-              {/* Hover Effect */}
-              <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
 
             {/* Vertical Advertisement Bar - Mobile optimized */}
@@ -286,7 +280,7 @@ export const DynamicBattleHero = () => {
             </div>
 
             {/* Barber 2 Side */}
-            <div className="flex-1 relative overflow-hidden cursor-pointer group" onClick={() => toast.info("This is a preview battle. Real voting available in live battles!")}>
+            <div className="flex-1 relative overflow-hidden" onClick={() => toast.info("This is a preview battle. Real voting available in live battles!")}>
               {/* Flag Background */}
               <div className="absolute inset-0" style={{
               backgroundImage: `url(${getFlagImageUrl('us')})`,
@@ -300,10 +294,15 @@ export const DynamicBattleHero = () => {
                 <img src={barber2Photo} alt={syntheticBarbers[1].name} className="w-full h-full object-cover" />
               </div>
 
+              {/* Barber Name - Under profile photo */}
+              <div className="absolute top-[32%] right-1/2 transform translate-x-1/2 text-center z-10">
+                <h3 className="text-white text-[8px] xs:text-[10px] sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">{syntheticBarbers[1].name}</h3>
+              </div>
+
               {/* Video Box */}
-              <div className="absolute top-[45%] right-1/2 transform translate-x-1/2 w-[35vw] h-[35vw] max-w-[140px] max-h-[140px] sm:max-w-[200px] sm:max-h-[200px] lg:max-w-[260px] lg:max-h-[260px] bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg">
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
-                  <Play className="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white/60" />
+              <div className="absolute top-[45%] right-1/2 transform translate-x-1/2 w-[35vw] h-[35vw] max-w-[140px] max-h-[140px] sm:max-w-[200px] sm:max-h-[200px] lg:max-w-[260px] lg:max-h-[260px] bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg cursor-pointer group hover:bg-primary/20 transition-all duration-300">
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 group-hover:from-primary/20 group-hover:to-primary/40 transition-all duration-300">
+                  <Play className="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white/60 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
                 </div>
               </div>
               
@@ -381,7 +380,7 @@ export const DynamicBattleHero = () => {
           <div className="w-full aspect-[16/9] sm:aspect-[16/10] bg-card rounded-xl sm:rounded-2xl shadow-2xl border-2 border-primary/50 animate-glow overflow-hidden relative transform-gpu will-change-transform">
             <div className="h-full flex">
               {/* Barber 1 Side */}
-              <div className="flex-1 relative overflow-hidden cursor-pointer group" onClick={() => handleVote(barber1?.user_id || '')}>
+              <div className="flex-1 relative overflow-hidden" onClick={() => handleVote(barber1?.user_id || '')}>
                 {/* Flag Background */}
                 <div className="absolute inset-0" style={{
                 backgroundImage: `url(${getFlagImageUrl('us')})`,
@@ -391,8 +390,20 @@ export const DynamicBattleHero = () => {
               }} />
                 
                 {/* Barber Photo - Smaller and Clearer */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
+                <div className="absolute top-[25%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
                   <img src={barber1Photo} alt={barber1?.name} className="w-full h-full object-cover" />
+                </div>
+
+                {/* Barber Name - Under profile photo */}
+                <div className="absolute top-[40%] left-1/2 transform -translate-x-1/2 text-center z-10">
+                  <h3 className="text-white text-xs sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">{barber1?.name}</h3>
+                </div>
+
+                {/* Video Placeholder */}
+                <div className="absolute top-[55%] left-1/2 transform -translate-x-1/2 w-32 h-20 sm:w-40 sm:h-24 lg:w-48 lg:h-28 bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg cursor-pointer group hover:bg-primary/20 transition-all duration-300">
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 group-hover:from-primary/20 group-hover:to-primary/40 transition-all duration-300">
+                    <Play className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-white/60 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
+                  </div>
                 </div>
                 
                 <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/60" />
@@ -424,17 +435,6 @@ export const DynamicBattleHero = () => {
                   </div>
                 </div>
 
-                {/* Barber Info */}
-                <div className="absolute bottom-12 sm:bottom-20 left-3 sm:left-6 z-10 text-white">
-                  <div className="flex items-center gap-1 sm:gap-2 mb-1">
-                    <span className="text-lg sm:text-2xl">{getCountryFlag('us')}</span>
-                    <h3 className="text-sm sm:text-lg lg:text-xl xl:text-2xl font-bold leading-tight">{barber1?.name}</h3>
-                  </div>
-                  <p className="text-white/80 text-xs sm:text-sm">Click to vote</p>
-                </div>
-
-                {/* Hover Effect */}
-                <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>
 
               {/* Vertical Advertisement Bar */}
@@ -482,7 +482,7 @@ export const DynamicBattleHero = () => {
               </div>
 
               {/* Barber 2 Side */}
-              <div className="flex-1 relative overflow-hidden cursor-pointer group" onClick={() => handleVote(barber2?.user_id || '')}>
+              <div className="flex-1 relative overflow-hidden" onClick={() => handleVote(barber2?.user_id || '')}>
                 {/* Flag Background */}
                 <div className="absolute inset-0" style={{
                 backgroundImage: `url(${getFlagImageUrl('ca')})`,
@@ -492,8 +492,20 @@ export const DynamicBattleHero = () => {
               }} />
                 
                 {/* Barber Photo - Smaller and Clearer */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
+                <div className="absolute top-[25%] right-1/2 transform translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
                   <img src={barber2Photo} alt={barber2?.name} className="w-full h-full object-cover" />
+                </div>
+
+                {/* Barber Name - Under profile photo */}
+                <div className="absolute top-[40%] right-1/2 transform translate-x-1/2 text-center z-10">
+                  <h3 className="text-white text-xs sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">{barber2?.name}</h3>
+                </div>
+
+                {/* Video Placeholder */}
+                <div className="absolute top-[55%] right-1/2 transform translate-x-1/2 w-32 h-20 sm:w-40 sm:h-24 lg:w-48 lg:h-28 bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg cursor-pointer group hover:bg-primary/20 transition-all duration-300">
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 group-hover:from-primary/20 group-hover:to-primary/40 transition-all duration-300">
+                    <Play className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-white/60 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
+                  </div>
                 </div>
                 
                 <div className="absolute inset-0 bg-gradient-to-l from-black/60 via-black/40 to-black/60" />
@@ -525,17 +537,6 @@ export const DynamicBattleHero = () => {
                   </div>
                 </div>
 
-                {/* Barber Info */}
-                <div className="absolute bottom-12 sm:bottom-20 right-3 sm:right-6 z-10 text-white text-right">
-                  <div className="flex items-center gap-1 sm:gap-2 mb-1 justify-end">
-                    <h3 className="text-sm sm:text-lg lg:text-xl xl:text-2xl font-bold leading-tight">{barber2?.name}</h3>
-                    <span className="text-lg sm:text-2xl">{getCountryFlag('ca')}</span>
-                  </div>
-                  <p className="text-white/80 text-xs sm:text-sm">Click to vote</p>
-                </div>
-
-                {/* Hover Effect */}
-                <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>
             </div>
 
