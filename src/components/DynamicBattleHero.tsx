@@ -250,11 +250,7 @@ export const DynamicBattleHero = () => {
                 </div>
                 
                 {/* VS Center - Mobile optimized */}
-                <div className="h-12 sm:h-16 lg:h-20 flex items-center justify-center bg-white/10">
-                  <div className="bg-white rounded-full w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 flex items-center justify-center shadow-xl sm:shadow-2xl border border-primary sm:border-2">
-                    <span className="text-[10px] sm:text-xs lg:text-sm font-bold text-primary">VS</span>
-                  </div>
-                </div>
+                
                 
                 {/* Ad Spot 2 */}
                 <div className="flex-1 border-b border-white/20 flex items-center justify-center group hover:bg-white/10 transition-colors cursor-pointer">
