@@ -12,9 +12,5 @@ export const VirtualHaircutTryOn = () => {
   if (!user) {
     return null;
   }
-  return <section className="relative py-10 px-4">
-      <div className="container mx-auto max-w-6xl relative z-10">
-        
-      </div>
-    </section>;
+  return;
 };
