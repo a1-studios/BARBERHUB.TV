@@ -1,9 +1,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { AuthDialog } from '@/components/auth/AuthDialog';
-import { CreatorDashboard } from './CreatorDashboard';
+import { useNavigate } from 'react-router-dom';
 import { EarningSystem } from './EarningSystem';
 import { ReferralProgram } from './ReferralProgram';
 import { 
@@ -19,6 +17,7 @@ import {
 
 export function CreatorHub() {
   const { user, loading } = useAuth();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -34,7 +33,10 @@ export function CreatorHub() {
     return (
       <section className="py-20 px-4 bg-gradient-to-br from-background to-muted/20">
       <div className="container mx-auto">
-        <button className="w-full bg-background/95 backdrop-blur border-2 border-primary/30 rounded-xl p-8 hover:border-primary/50 transition-all duration-300 shadow-[0_0_30px_rgba(255,107,5,0.3)] hover:shadow-[0_0_50px_rgba(255,107,5,0.5)]">
+        <button 
+          onClick={() => navigate('/creator-hub')}
+          className="w-full bg-background/95 backdrop-blur border-2 border-primary/30 rounded-xl p-8 hover:border-primary/50 transition-all duration-300 shadow-[0_0_30px_rgba(255,107,5,0.3)] hover:shadow-[0_0_50px_rgba(255,107,5,0.5)]"
+        >
           <div className="flex items-center justify-center gap-3">
             <Crown className="h-10 w-10 text-primary" />
             <span className="text-3xl font-bold">
@@ -54,138 +56,21 @@ export function CreatorHub() {
   return (
     <section className="py-20 px-4 bg-gradient-to-br from-background to-muted/20">
       <div className="container mx-auto">
-        <div className="text-center space-y-6 mb-16">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Crown className="h-8 w-8 text-primary" />
-            <h2 className="text-4xl font-bold text-gradient">Become a Creator</h2>
+        <button 
+          onClick={() => navigate('/creator-hub')}
+          className="w-full bg-background/95 backdrop-blur border-2 border-primary/30 rounded-xl p-8 hover:border-primary/50 transition-all duration-300 shadow-[0_0_30px_rgba(255,107,5,0.3)] hover:shadow-[0_0_50px_rgba(255,107,5,0.5)]"
+        >
+          <div className="flex items-center justify-center gap-3">
+            <Crown className="h-10 w-10 text-primary" />
+            <span className="text-3xl font-bold">
+              <span className="text-white">CREATOR</span>
+              <span className="text-primary">-HUB</span>
+            </span>
           </div>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+          <p className="text-lg text-muted-foreground mt-4 max-w-2xl mx-auto">
             Join thousands of barbers earning Barber Bucks by sharing techniques, tutorials, and building the community.
           </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-          <Card className="card-gradient">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <DollarSign className="h-6 w-6 text-success" />
-                <CardTitle>Earn Barber Bucks</CardTitle>
-              </div>
-              <CardDescription>
-                Get rewarded for every view, like, and share on your content
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span>Content Views</span>
-                  <Badge variant="success">+2 BB each</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>Content Likes</span>
-                  <Badge variant="success">+5 BB each</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>Content Shares</span>
-                  <Badge variant="success">+10 BB each</Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="card-gradient">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Users className="h-6 w-6 text-primary" />
-                <CardTitle>Referral Rewards</CardTitle>
-              </div>
-              <CardDescription>
-                Invite friends and earn bonus Barber Bucks for every signup
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span>Friend Joins</span>
-                  <Badge variant="default">+50 BB</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>Friend's 1st Content</span>
-                  <Badge variant="default">+25 BB</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span>Milestone Bonuses</span>
-                  <Badge variant="default">Up to 500 BB</Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="card-gradient">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <Trophy className="h-6 w-6 text-warning" />
-                <CardTitle>Creator Levels</CardTitle>
-              </div>
-              <CardDescription>
-                Progress through levels and unlock exclusive rewards
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-amber-600"></div>
-                    Bronze
-                  </span>
-                  <span className="text-sm text-muted-foreground">0+ BB</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-gray-400"></div>
-                    Silver
-                  </span>
-                  <span className="text-sm text-muted-foreground">1,000+ BB</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                    Gold
-                  </span>
-                  <span className="text-sm text-muted-foreground">5,000+ BB</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="text-center space-y-6">
-          <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              <span>Track your progress</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Star className="h-4 w-4" />
-              <span>Build your reputation</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Gift className="h-4 w-4" />
-              <span>Unlock exclusive rewards</span>
-            </div>
-          </div>
-          
-          <AuthDialog>
-            <Button size="lg" className="btn-primary">
-              <Scissors className="mr-2 h-5 w-5" />
-              Start Creating Today
-            </Button>
-          </AuthDialog>
-          
-          <p className="text-sm text-muted-foreground">
-            Join the community • Share your skills • Earn rewards
-          </p>
-        </div>
+        </button>
       </div>
     </section>
   );

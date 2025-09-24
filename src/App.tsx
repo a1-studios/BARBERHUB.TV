@@ -16,6 +16,7 @@ import Portal from "./pages/Portal";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCanceled from "./pages/PaymentCanceled";
 import Grants from "./pages/Grants";
+import CreatorHub from "./pages/CreatorHub";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -81,6 +82,7 @@ const App = () => (
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/payment-canceled" element={<PaymentCanceled />} />
             <Route path="/grants" element={<Grants />} />
+            <Route path="/creator-hub" element={<CreatorHub />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
