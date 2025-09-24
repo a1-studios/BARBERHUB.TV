@@ -350,13 +350,7 @@ export const DynamicBattleHero = () => {
 
           {/* Action Buttons - Bottom Left */}
           <div className="absolute bottom-3 sm:bottom-6 left-3 sm:left-6 z-10 flex gap-1 sm:gap-2">
-            <Button variant="secondary" size="sm" onClick={e => {
-            e.stopPropagation();
-            handleDonate('synthetic-barber-1', syntheticBarbers[0].name);
-          }} className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30 text-xs sm:text-sm px-2 sm:px-3">
-              <Heart className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-              <span className="hidden xs:inline">Donate</span>
-            </Button>
+            
             
           </div>
         </div>
