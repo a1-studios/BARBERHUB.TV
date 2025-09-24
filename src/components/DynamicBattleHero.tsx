@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Share2, Play, Heart, TrendingUp } from "lucide-react";
+import { Share2, Play, Heart, TrendingUp, Users, DollarSign } from "lucide-react";
 import { BattleCommentsPanel } from "./BattleCommentsPanel";
 import { DonationModal } from "./DonationModal";
 import { useAuth } from "@/hooks/useAuth";
@@ -174,18 +174,50 @@ export const DynamicBattleHero = () => {
         <div className="w-full max-w-3xl mx-auto aspect-[16/9] sm:aspect-[16/10] bg-card rounded-xl sm:rounded-2xl shadow-2xl border-2 border-primary/50 animate-glow overflow-hidden relative transform-gpu will-change-transform">
           <div className="h-full flex">
             {/* Barber 1 Side */}
-            <div className="flex-1 relative overflow-hidden cursor-pointer group" onClick={() => toast.info("This is a preview battle. Real voting available in live battles!")} style={{
-            backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.7)), url(${getFlagImageUrl('mx')}), url(${barber1Photo})`,
-            backgroundSize: 'cover, cover, cover',
-            backgroundPosition: 'center, center, center',
-            backgroundBlendMode: 'normal, overlay, normal'
-          }}>
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/20 to-black/60" />
+            <div className="flex-1 relative overflow-hidden cursor-pointer group" onClick={() => toast.info("This is a preview battle. Real voting available in live battles!")}>
+              {/* Flag Background */}
+              <div className="absolute inset-0" style={{
+                backgroundImage: `url(${getFlagImageUrl('mx')})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                opacity: 0.3
+              }} />
+              
+              {/* Barber Photo - Smaller and Clearer */}
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
+                <img 
+                  src={barber1Photo} 
+                  alt={syntheticBarbers[0].name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              
+              <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/60" />
               
               {/* Vote Percentage */}
               <div className="absolute top-3 sm:top-6 left-3 sm:left-6 z-10">
                 <div className="bg-white/20 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1 sm:py-1.5">
                   <span className="text-white font-bold text-sm sm:text-lg lg:text-xl">{syntheticPercentages.barber1}%</span>
+                </div>
+              </div>
+
+              {/* Vertical Stats Bar */}
+              <div className="absolute left-3 sm:left-6 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-2 bg-black/60 backdrop-blur-sm rounded-lg p-2">
+                <div className="flex items-center gap-1 text-white text-xs">
+                  <TrendingUp className="w-3 h-3" />
+                  <span>#12</span>
+                </div>
+                <div className="flex items-center gap-1 text-white text-xs">
+                  <Heart className="w-3 h-3" />
+                  <span>2.1k</span>
+                </div>
+                <div className="flex items-center gap-1 text-white text-xs">
+                  <Users className="w-3 h-3" />
+                  <span>890</span>
+                </div>
+                <div className="flex items-center gap-1 text-white text-xs">
+                  <DollarSign className="w-3 h-3" />
+                  <span>$450</span>
                 </div>
               </div>
 
@@ -208,18 +240,50 @@ export const DynamicBattleHero = () => {
             </div>
 
             {/* Barber 2 Side */}
-            <div className="flex-1 relative overflow-hidden cursor-pointer group" onClick={() => toast.info("This is a preview battle. Real voting available in live battles!")} style={{
-            backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.7)), url(${getFlagImageUrl('us')}), url(${barber2Photo})`,
-            backgroundSize: 'cover, cover, cover',
-            backgroundPosition: 'center, center, center',
-            backgroundBlendMode: 'normal, overlay, normal'
-          }}>
-              <div className="absolute inset-0 bg-gradient-to-l from-transparent via-black/20 to-black/60" />
+            <div className="flex-1 relative overflow-hidden cursor-pointer group" onClick={() => toast.info("This is a preview battle. Real voting available in live battles!")}>
+              {/* Flag Background */}
+              <div className="absolute inset-0" style={{
+                backgroundImage: `url(${getFlagImageUrl('us')})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                opacity: 0.3
+              }} />
+              
+              {/* Barber Photo - Smaller and Clearer */}
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
+                <img 
+                  src={barber2Photo} 
+                  alt={syntheticBarbers[1].name}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              
+              <div className="absolute inset-0 bg-gradient-to-l from-black/60 via-black/40 to-black/60" />
               
               {/* Vote Percentage */}
               <div className="absolute top-3 sm:top-6 right-3 sm:right-6 z-10">
                 <div className="bg-white/20 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1 sm:py-1.5">
                   <span className="text-white font-bold text-sm sm:text-lg lg:text-xl">{syntheticPercentages.barber2}%</span>
+                </div>
+              </div>
+
+              {/* Vertical Stats Bar */}
+              <div className="absolute right-3 sm:right-6 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-2 bg-black/60 backdrop-blur-sm rounded-lg p-2">
+                <div className="flex items-center gap-1 text-white text-xs">
+                  <TrendingUp className="w-3 h-3" />
+                  <span>#8</span>
+                </div>
+                <div className="flex items-center gap-1 text-white text-xs">
+                  <Heart className="w-3 h-3" />
+                  <span>3.2k</span>
+                </div>
+                <div className="flex items-center gap-1 text-white text-xs">
+                  <Users className="w-3 h-3" />
+                  <span>1.5k</span>
+                </div>
+                <div className="flex items-center gap-1 text-white text-xs">
+                  <DollarSign className="w-3 h-3" />
+                  <span>$680</span>
                 </div>
               </div>
 
@@ -281,18 +345,50 @@ export const DynamicBattleHero = () => {
           <div className="w-full aspect-[16/9] sm:aspect-[16/10] bg-card rounded-xl sm:rounded-2xl shadow-2xl border-2 border-primary/50 animate-glow overflow-hidden relative transform-gpu will-change-transform">
             <div className="h-full flex">
               {/* Barber 1 Side */}
-              <div className="flex-1 relative overflow-hidden cursor-pointer group" onClick={() => handleVote(barber1?.user_id || '')} style={{
-              backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.7)), url(${getFlagImageUrl('us')}), url(${barber1Photo})`,
-              backgroundSize: 'cover, cover, cover',
-              backgroundPosition: 'center, center, center',
-              backgroundBlendMode: 'normal, overlay, normal'
-            }}>
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/20 to-black/60" />
+              <div className="flex-1 relative overflow-hidden cursor-pointer group" onClick={() => handleVote(barber1?.user_id || '')}>
+                {/* Flag Background */}
+                <div className="absolute inset-0" style={{
+                  backgroundImage: `url(${getFlagImageUrl('us')})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  opacity: 0.3
+                }} />
+                
+                {/* Barber Photo - Smaller and Clearer */}
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
+                  <img 
+                    src={barber1Photo} 
+                    alt={barber1?.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                
+                <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/60" />
                 
                 {/* Vote Percentage */}
                 <div className="absolute top-3 sm:top-6 left-3 sm:left-6 z-10">
                   <div className="bg-white/20 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1 sm:py-1.5">
                     <span className="text-white font-bold text-sm sm:text-lg lg:text-xl">{percentages.barber1}%</span>
+                  </div>
+                </div>
+
+                {/* Vertical Stats Bar */}
+                <div className="absolute left-3 sm:left-6 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-2 bg-black/60 backdrop-blur-sm rounded-lg p-2">
+                  <div className="flex items-center gap-1 text-white text-xs">
+                    <TrendingUp className="w-3 h-3" />
+                    <span>#5</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-white text-xs">
+                    <Heart className="w-3 h-3" />
+                    <span>{battle.vote_count1}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-white text-xs">
+                    <Users className="w-3 h-3" />
+                    <span>1.2k</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-white text-xs">
+                    <DollarSign className="w-3 h-3" />
+                    <span>$320</span>
                   </div>
                 </div>
 
@@ -320,18 +416,50 @@ export const DynamicBattleHero = () => {
               </div>
 
               {/* Barber 2 Side */}
-              <div className="flex-1 relative overflow-hidden cursor-pointer group" onClick={() => handleVote(barber2?.user_id || '')} style={{
-              backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.7)), url(${getFlagImageUrl('ca')}), url(${barber2Photo})`,
-              backgroundSize: 'cover, cover, cover',
-              backgroundPosition: 'center, center, center',
-              backgroundBlendMode: 'normal, overlay, normal'
-            }}>
-                <div className="absolute inset-0 bg-gradient-to-l from-transparent via-black/20 to-black/60" />
+              <div className="flex-1 relative overflow-hidden cursor-pointer group" onClick={() => handleVote(barber2?.user_id || '')}>
+                {/* Flag Background */}
+                <div className="absolute inset-0" style={{
+                  backgroundImage: `url(${getFlagImageUrl('ca')})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  opacity: 0.3
+                }} />
+                
+                {/* Barber Photo - Smaller and Clearer */}
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
+                  <img 
+                    src={barber2Photo} 
+                    alt={barber2?.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                
+                <div className="absolute inset-0 bg-gradient-to-l from-black/60 via-black/40 to-black/60" />
                 
                 {/* Vote Percentage */}
                 <div className="absolute top-3 sm:top-6 right-3 sm:right-6 z-10">
                   <div className="bg-white/20 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1 sm:py-1.5">
                     <span className="text-white font-bold text-sm sm:text-lg lg:text-xl">{percentages.barber2}%</span>
+                  </div>
+                </div>
+
+                {/* Vertical Stats Bar */}
+                <div className="absolute right-3 sm:right-6 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-2 bg-black/60 backdrop-blur-sm rounded-lg p-2">
+                  <div className="flex items-center gap-1 text-white text-xs">
+                    <TrendingUp className="w-3 h-3" />
+                    <span>#3</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-white text-xs">
+                    <Heart className="w-3 h-3" />
+                    <span>{battle.vote_count2}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-white text-xs">
+                    <Users className="w-3 h-3" />
+                    <span>2.1k</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-white text-xs">
+                    <DollarSign className="w-3 h-3" />
+                    <span>$890</span>
                   </div>
                 </div>
 
