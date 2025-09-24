@@ -189,7 +189,7 @@ export const DynamicBattleHero = () => {
               </div>
 
               {/* Video Box */}
-              <div className="absolute top-[45%] left-1/2 transform -translate-x-1/2 w-[35vw] h-[20vw] max-w-[140px] max-h-[80px] sm:max-w-[200px] sm:max-h-[112px] lg:max-w-[260px] lg:max-h-[146px] bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg">
+              <div className="absolute top-[45%] left-1/2 transform -translate-x-1/2 w-[35vw] h-[35vw] max-w-[140px] max-h-[140px] sm:max-w-[200px] sm:max-h-[200px] lg:max-w-[260px] lg:max-h-[260px] bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg">
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
                   <Play className="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white/60" />
                 </div>
@@ -301,7 +301,7 @@ export const DynamicBattleHero = () => {
               </div>
 
               {/* Video Box */}
-              <div className="absolute top-[45%] right-1/2 transform translate-x-1/2 w-[35vw] h-[20vw] max-w-[140px] max-h-[80px] sm:max-w-[200px] sm:max-h-[112px] lg:max-w-[260px] lg:max-h-[146px] bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg">
+              <div className="absolute top-[45%] right-1/2 transform translate-x-1/2 w-[35vw] h-[35vw] max-w-[140px] max-h-[140px] sm:max-w-[200px] sm:max-h-[200px] lg:max-w-[260px] lg:max-h-[260px] bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg">
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
                   <Play className="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white/60" />
                 </div>
