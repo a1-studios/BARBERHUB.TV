@@ -234,9 +234,48 @@ export const DynamicBattleHero = () => {
               <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </div>
 
-            {/* VS Center */}
-            <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
-              
+            {/* Vertical Advertisement Bar */}
+            <div className="absolute left-1/2 top-0 bottom-0 transform -translate-x-1/2 z-20 w-16 sm:w-20 lg:w-24">
+              <div className="h-full bg-gradient-to-b from-black/80 via-black/60 to-black/80 backdrop-blur-sm border-x-2 border-white/20 flex flex-col">
+                {/* Ad Spot 1 */}
+                <div className="flex-1 border-b border-white/20 flex items-center justify-center group hover:bg-white/10 transition-colors cursor-pointer">
+                  <div className="text-center">
+                    <div className="text-white/60 text-xs font-medium">AD</div>
+                    <div className="text-white/40 text-[10px]">SPOT 1</div>
+                  </div>
+                </div>
+                
+                {/* VS Center */}
+                <div className="h-16 sm:h-20 lg:h-24 flex items-center justify-center bg-white/10">
+                  <div className="bg-white rounded-full w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 flex items-center justify-center shadow-2xl border-2 border-primary">
+                    <span className="text-xs sm:text-sm font-bold text-primary">VS</span>
+                  </div>
+                </div>
+                
+                {/* Ad Spot 2 */}
+                <div className="flex-1 border-b border-white/20 flex items-center justify-center group hover:bg-white/10 transition-colors cursor-pointer">
+                  <div className="text-center">
+                    <div className="text-white/60 text-xs font-medium">AD</div>
+                    <div className="text-white/40 text-[10px]">SPOT 2</div>
+                  </div>
+                </div>
+                
+                {/* Ad Spot 3 */}
+                <div className="flex-1 border-b border-white/20 flex items-center justify-center group hover:bg-white/10 transition-colors cursor-pointer">
+                  <div className="text-center">
+                    <div className="text-white/60 text-xs font-medium">AD</div>
+                    <div className="text-white/40 text-[10px]">SPOT 3</div>
+                  </div>
+                </div>
+                
+                {/* Ad Spot 4 */}
+                <div className="flex-1 flex items-center justify-center group hover:bg-white/10 transition-colors cursor-pointer">
+                  <div className="text-center">
+                    <div className="text-white/60 text-xs font-medium">AD</div>
+                    <div className="text-white/40 text-[10px]">SPOT 4</div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Barber 2 Side */}
@@ -405,12 +444,46 @@ export const DynamicBattleHero = () => {
                 <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>
 
-              {/* VS Center */}
-              <div className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-20">
-                <div className="bg-white rounded-full w-12 h-12 sm:w-16 sm:h-16 lg:w-20 lg:h-20 flex items-center justify-center shadow-2xl border-4 border-primary">
-                  <div className="text-center">
-                    <Play className="w-3 h-3 sm:w-5 sm:h-5 lg:w-6 lg:h-6 text-primary mx-auto mb-0.5" />
-                    <span className="text-xs font-bold text-primary">VS</span>
+              {/* Vertical Advertisement Bar */}
+              <div className="absolute left-1/2 top-0 bottom-0 transform -translate-x-1/2 z-20 w-16 sm:w-20 lg:w-24">
+                <div className="h-full bg-gradient-to-b from-black/80 via-black/60 to-black/80 backdrop-blur-sm border-x-2 border-white/20 flex flex-col">
+                  {/* Ad Spot 1 */}
+                  <div className="flex-1 border-b border-white/20 flex items-center justify-center group hover:bg-white/10 transition-colors cursor-pointer">
+                    <div className="text-center">
+                      <div className="text-white/60 text-xs font-medium">AD</div>
+                      <div className="text-white/40 text-[10px]">SPOT 1</div>
+                    </div>
+                  </div>
+                  
+                  {/* VS Center */}
+                  <div className="h-16 sm:h-20 lg:h-24 flex items-center justify-center bg-white/10">
+                    <div className="bg-white rounded-full w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 flex items-center justify-center shadow-2xl border-2 border-primary">
+                      <span className="text-xs sm:text-sm font-bold text-primary">VS</span>
+                    </div>
+                  </div>
+                  
+                  {/* Ad Spot 2 */}
+                  <div className="flex-1 border-b border-white/20 flex items-center justify-center group hover:bg-white/10 transition-colors cursor-pointer">
+                    <div className="text-center">
+                      <div className="text-white/60 text-xs font-medium">AD</div>
+                      <div className="text-white/40 text-[10px]">SPOT 2</div>
+                    </div>
+                  </div>
+                  
+                  {/* Ad Spot 3 */}
+                  <div className="flex-1 border-b border-white/20 flex items-center justify-center group hover:bg-white/10 transition-colors cursor-pointer">
+                    <div className="text-center">
+                      <div className="text-white/60 text-xs font-medium">AD</div>
+                      <div className="text-white/40 text-[10px]">SPOT 3</div>
+                    </div>
+                  </div>
+                  
+                  {/* Ad Spot 4 */}
+                  <div className="flex-1 flex items-center justify-center group hover:bg-white/10 transition-colors cursor-pointer">
+                    <div className="text-center">
+                      <div className="text-white/60 text-xs font-medium">AD</div>
+                      <div className="text-white/40 text-[10px]">SPOT 4</div>
+                    </div>
                   </div>
                 </div>
               </div>
