@@ -163,15 +163,12 @@ const BattlesSection = () => {
   }
   return <section id="battles" className="relative px-0 py-20 overflow-hidden">
       {/* Globe Background */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
-        style={{
-          backgroundImage: `url(${globeBackground})`,
-          backgroundSize: 'contain',
-          backgroundPosition: 'center'
-        }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/70 to-background/90" />
+      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20" style={{
+      backgroundImage: `url(${globeBackground})`,
+      backgroundSize: 'contain',
+      backgroundPosition: 'center'
+    }} />
+      <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/70 to-background/90 mx-0 my-[50px]" />
       
       <div className="container mx-auto max-w-6xl relative z-10">
         {/* Action Buttons */}
