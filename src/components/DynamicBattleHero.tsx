@@ -184,8 +184,15 @@ export const DynamicBattleHero = () => {
             }} />
               
               {/* Barber Photo - Responsive sizing based on aspect ratio */}
-              <div className="absolute top-[15%] left-1/2 transform -translate-x-1/2 w-[20vw] h-[20vw] max-w-[80px] max-h-[80px] sm:max-w-[120px] sm:max-h-[120px] lg:max-w-[160px] lg:max-h-[160px] rounded-full overflow-hidden border-2 sm:border-4 border-white/80 shadow-xl sm:shadow-2xl">
+              <div className="absolute top-[12%] left-1/2 transform -translate-x-1/2 w-[20vw] h-[20vw] max-w-[80px] max-h-[80px] sm:max-w-[120px] sm:max-h-[120px] lg:max-w-[160px] lg:max-h-[160px] rounded-full overflow-hidden border-2 sm:border-4 border-white/80 shadow-xl sm:shadow-2xl">
                 <img src={barber1Photo} alt={syntheticBarbers[0].name} className="w-full h-full object-cover" />
+              </div>
+
+              {/* Video Box */}
+              <div className="absolute top-[45%] left-1/2 transform -translate-x-1/2 w-[35vw] h-[20vw] max-w-[140px] max-h-[80px] sm:max-w-[200px] sm:max-h-[112px] lg:max-w-[260px] lg:max-h-[146px] bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg">
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+                  <Play className="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white/60" />
+                </div>
               </div>
               
               <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/60" />
@@ -289,8 +296,15 @@ export const DynamicBattleHero = () => {
             }} />
               
               {/* Barber Photo - Responsive sizing based on aspect ratio */}
-              <div className="absolute top-[15%] right-1/2 transform translate-x-1/2 w-[20vw] h-[20vw] max-w-[80px] max-h-[80px] sm:max-w-[120px] sm:max-h-[120px] lg:max-w-[160px] lg:max-h-[160px] rounded-full overflow-hidden border-2 sm:border-4 border-white/80 shadow-xl sm:shadow-2xl">
+              <div className="absolute top-[12%] right-1/2 transform translate-x-1/2 w-[20vw] h-[20vw] max-w-[80px] max-h-[80px] sm:max-w-[120px] sm:max-h-[120px] lg:max-w-[160px] lg:max-h-[160px] rounded-full overflow-hidden border-2 sm:border-4 border-white/80 shadow-xl sm:shadow-2xl">
                 <img src={barber2Photo} alt={syntheticBarbers[1].name} className="w-full h-full object-cover" />
+              </div>
+
+              {/* Video Box */}
+              <div className="absolute top-[45%] right-1/2 transform translate-x-1/2 w-[35vw] h-[20vw] max-w-[140px] max-h-[80px] sm:max-w-[200px] sm:max-h-[112px] lg:max-w-[260px] lg:max-h-[146px] bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg">
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+                  <Play className="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white/60" />
+                </div>
               </div>
               
               <div className="absolute inset-0 bg-gradient-to-l from-black/60 via-black/40 to-black/60" />
