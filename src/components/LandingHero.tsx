@@ -244,9 +244,8 @@ const LandingHero = () => {
 
             {/* Branding section - Below sign up */}
             <div className="text-center space-y-4">
-              <div className="flex items-center justify-center space-x-3">
-                <img src="/lovable-uploads/c5bbb6c4-149e-41f8-9e68-1580ee1afdf8.png" alt="Barber Hub" className="w-12 h-12 animate-float" />
-                <h1 className="text-4xl md:text-5xl font-bold">
+              <div className="flex items-center justify-center">
+                <h1 className="text-3xl md:text-4xl font-bold">
                   <span className="text-white">BARBER</span>
                   <span className="text-primary">-HUB</span>
                 </h1>
