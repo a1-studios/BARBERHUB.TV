@@ -177,19 +177,15 @@ export const DynamicBattleHero = () => {
             <div className="flex-1 relative overflow-hidden cursor-pointer group" onClick={() => toast.info("This is a preview battle. Real voting available in live battles!")}>
               {/* Flag Background */}
               <div className="absolute inset-0" style={{
-                backgroundImage: `url(${getFlagImageUrl('mx')})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                opacity: 0.3
-              }} />
+              backgroundImage: `url(${getFlagImageUrl('mx')})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: 0.3
+            }} />
               
               {/* Barber Photo - Responsive sizing based on aspect ratio */}
               <div className="absolute top-[15%] left-1/2 transform -translate-x-1/2 w-[20vw] h-[20vw] max-w-[80px] max-h-[80px] sm:max-w-[120px] sm:max-h-[120px] lg:max-w-[160px] lg:max-h-[160px] rounded-full overflow-hidden border-2 sm:border-4 border-white/80 shadow-xl sm:shadow-2xl">
-                <img 
-                  src={barber1Photo} 
-                  alt={syntheticBarbers[0].name}
-                  className="w-full h-full object-cover"
-                />
+                <img src={barber1Photo} alt={syntheticBarbers[0].name} className="w-full h-full object-cover" />
               </div>
               
               <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/60" />
@@ -203,40 +199,28 @@ export const DynamicBattleHero = () => {
 
               {/* Vertical Action Buttons - Mobile optimized */}
               <div className="absolute left-1 sm:left-2 lg:left-3 top-[35%] sm:top-[30%] z-10 flex flex-col gap-1 sm:gap-2">
-                <button 
-                  className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleVote(syntheticBarbers[0].id);
-                  }}
-                >
+                <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
+                e.stopPropagation();
+                handleVote(syntheticBarbers[0].id);
+              }}>
                   <Heart className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                 </button>
-                <button 
-                  className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleShare();
-                  }}
-                >
+                <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
+                e.stopPropagation();
+                handleShare();
+              }}>
                   <Share2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                 </button>
-                <button 
-                  className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDonate(syntheticBarbers[0].id, syntheticBarbers[0].name);
-                  }}
-                >
+                <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
+                e.stopPropagation();
+                handleDonate(syntheticBarbers[0].id, syntheticBarbers[0].name);
+              }}>
                   <DollarSign className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                 </button>
-                <button 
-                  className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toast.info("Feature coming soon!");
-                  }}
-                >
+                <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
+                e.stopPropagation();
+                toast.info("Feature coming soon!");
+              }}>
                   <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                 </button>
               </div>
@@ -302,19 +286,15 @@ export const DynamicBattleHero = () => {
             <div className="flex-1 relative overflow-hidden cursor-pointer group" onClick={() => toast.info("This is a preview battle. Real voting available in live battles!")}>
               {/* Flag Background */}
               <div className="absolute inset-0" style={{
-                backgroundImage: `url(${getFlagImageUrl('us')})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                opacity: 0.3
-              }} />
+              backgroundImage: `url(${getFlagImageUrl('us')})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: 0.3
+            }} />
               
               {/* Barber Photo - Responsive sizing based on aspect ratio */}
               <div className="absolute top-[15%] right-1/2 transform translate-x-1/2 w-[20vw] h-[20vw] max-w-[80px] max-h-[80px] sm:max-w-[120px] sm:max-h-[120px] lg:max-w-[160px] lg:max-h-[160px] rounded-full overflow-hidden border-2 sm:border-4 border-white/80 shadow-xl sm:shadow-2xl">
-                <img 
-                  src={barber2Photo} 
-                  alt={syntheticBarbers[1].name}
-                  className="w-full h-full object-cover"
-                />
+                <img src={barber2Photo} alt={syntheticBarbers[1].name} className="w-full h-full object-cover" />
               </div>
               
               <div className="absolute inset-0 bg-gradient-to-l from-black/60 via-black/40 to-black/60" />
@@ -328,40 +308,28 @@ export const DynamicBattleHero = () => {
 
               {/* Vertical Action Buttons - Mobile optimized */}
               <div className="absolute right-1 sm:right-2 lg:right-3 top-[35%] sm:top-[30%] z-10 flex flex-col gap-1 sm:gap-2">
-                <button 
-                  className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleVote(syntheticBarbers[1].id);
-                  }}
-                >
+                <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
+                e.stopPropagation();
+                handleVote(syntheticBarbers[1].id);
+              }}>
                   <Heart className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                 </button>
-                <button 
-                  className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleShare();
-                  }}
-                >
+                <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
+                e.stopPropagation();
+                handleShare();
+              }}>
                   <Share2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                 </button>
-                <button 
-                  className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDonate(syntheticBarbers[1].id, syntheticBarbers[1].name);
-                  }}
-                >
+                <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
+                e.stopPropagation();
+                handleDonate(syntheticBarbers[1].id, syntheticBarbers[1].name);
+              }}>
                   <DollarSign className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                 </button>
-                <button 
-                  className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toast.info("Feature coming soon!");
-                  }}
-                >
+                <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
+                e.stopPropagation();
+                toast.info("Feature coming soon!");
+              }}>
                   <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                 </button>
               </div>
@@ -389,13 +357,7 @@ export const DynamicBattleHero = () => {
               <Heart className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
               <span className="hidden xs:inline">Donate</span>
             </Button>
-            <Button variant="secondary" size="sm" onClick={e => {
-            e.stopPropagation();
-            handleShare();
-          }} className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30 text-xs sm:text-sm px-2 sm:px-3">
-              <Share2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-              <span className="hidden xs:inline">Share</span>
-            </Button>
+            
           </div>
         </div>
         
@@ -418,19 +380,15 @@ export const DynamicBattleHero = () => {
               <div className="flex-1 relative overflow-hidden cursor-pointer group" onClick={() => handleVote(barber1?.user_id || '')}>
                 {/* Flag Background */}
                 <div className="absolute inset-0" style={{
-                  backgroundImage: `url(${getFlagImageUrl('us')})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  opacity: 0.3
-                }} />
+                backgroundImage: `url(${getFlagImageUrl('us')})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                opacity: 0.3
+              }} />
                 
                 {/* Barber Photo - Smaller and Clearer */}
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
-                  <img 
-                    src={barber1Photo} 
-                    alt={barber1?.name}
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={barber1Photo} alt={barber1?.name} className="w-full h-full object-cover" />
                 </div>
                 
                 <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/60" />
@@ -523,19 +481,15 @@ export const DynamicBattleHero = () => {
               <div className="flex-1 relative overflow-hidden cursor-pointer group" onClick={() => handleVote(barber2?.user_id || '')}>
                 {/* Flag Background */}
                 <div className="absolute inset-0" style={{
-                  backgroundImage: `url(${getFlagImageUrl('ca')})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  opacity: 0.3
-                }} />
+                backgroundImage: `url(${getFlagImageUrl('ca')})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                opacity: 0.3
+              }} />
                 
                 {/* Barber Photo - Smaller and Clearer */}
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
-                  <img 
-                    src={barber2Photo} 
-                    alt={barber2?.name}
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={barber2Photo} alt={barber2?.name} className="w-full h-full object-cover" />
                 </div>
                 
                 <div className="absolute inset-0 bg-gradient-to-l from-black/60 via-black/40 to-black/60" />
