@@ -174,18 +174,7 @@ const BattlesSection = () => {
       <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/70 to-background/90" />
       
       <div className="container mx-auto max-w-6xl relative z-10">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            <span className="text-white">play </span>
-            <span className="text-primary">ground </span>
-          </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            {profile?.user_type === 'barber' ? "Compete with the best barbers worldwide. Show your skills, win prizes, and earn legendary status." : "Watch epic barber battles from around the world. Vote for your favorites and support the community."}
-          </p>
-        </div>
-
-        {/* Hide barber actions for fans - Remove Create Battle, Join Battle, Join Waitlist, Start Your Journey */}
+        {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12">
           
           <Button size="lg" onClick={() => setIsHaircutModalOpen(true)} className="text-lg px-8 bg-gradient-to-r from-primary to-orange-500 hover:from-orange-500 hover:to-primary shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300">
@@ -198,6 +187,17 @@ const BattlesSection = () => {
             Battle Portal
           </Button>
         </div>
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            <span className="text-white">play </span>
+            <span className="text-primary">ground </span>
+          </h2>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            {profile?.user_type === 'barber' ? "Compete with the best barbers worldwide. Show your skills, win prizes, and earn legendary status." : "Watch epic barber battles from around the world. Vote for your favorites and support the community."}
+          </p>
+        </div>
+
 
         {/* Featured Battles */}
         {battles.length > 0 && <>
