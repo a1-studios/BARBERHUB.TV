@@ -2,10 +2,13 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Share2, Play, Heart, TrendingUp, Users, DollarSign } from "lucide-react";
+import { Share2, Play, Heart, TrendingUp, Users, DollarSign, Upload } from "lucide-react";
 import { BattleCommentsPanel } from "./BattleCommentsPanel";
 import { DonationModal } from "./DonationModal";
+import { VideoPlayer } from "./VideoPlayer";
+import { VideoUpload } from "./VideoUpload";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { toast } from "sonner";
 interface Battle {
   id: string;
@@ -21,14 +24,25 @@ interface BarberProfile {
   user_id: string;
   name: string;
 }
+
+interface BattleSubmission {
+  id: string;
+  user_id: string;
+  battle_id: string;
+  media_url: string;
+  thumbnail_url?: string;
+  title?: string;
+  description?: string;
+  status: string;
+}
 export const DynamicBattleHero = () => {
-  const {
-    user
-  } = useAuth();
+  const { user } = useAuth();
+  const { profile, isFan, isBarber } = useUserProfile();
   const [selectedBarberId, setSelectedBarberId] = useState<string | null>(null);
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const [selectedBarberName, setSelectedBarberName] = useState("");
   const [isPanelOpen, setIsPanelOpen] = useState(true);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   // Fetch active battle
   const {
@@ -60,39 +74,70 @@ export const DynamicBattleHero = () => {
   });
 
   // Fetch barber profiles for the battle
-  const {
-    data: barbers,
-    isLoading: barbersLoading
-  } = useQuery({
+  const { data: barbers, isLoading: barbersLoading } = useQuery({
     queryKey: ['battleBarbers', battle?.barber1_id, battle?.barber2_id],
     queryFn: async () => {
       if (!battle?.barber1_id || !battle?.barber2_id) return [];
-      const {
-        data,
-        error
-      } = await supabase.from('barber_profiles').select('id, user_id, name').in('user_id', [battle.barber1_id, battle.barber2_id]);
+      const { data, error } = await supabase
+        .from('barber_profiles')
+        .select('id, user_id, name')
+        .in('user_id', [battle.barber1_id, battle.barber2_id]);
       if (error) throw error;
       return data;
     },
     enabled: !!battle?.barber1_id && !!battle?.barber2_id
+  });
+
+  // Fetch battle submissions
+  const { data: submissions, refetch: refetchSubmissions } = useQuery({
+    queryKey: ['battleSubmissions', battle?.id],
+    queryFn: async () => {
+      if (!battle?.id) return [];
+      const { data, error } = await supabase
+        .from('battle_submissions')
+        .select('*')
+        .eq('battle_id', battle.id);
+      if (error) throw error;
+      return data as BattleSubmission[];
+    },
+    enabled: !!battle?.id
   });
   const handleVote = async (barberId: string) => {
     if (!user || !battle) {
       toast.error("Please sign in to vote");
       return;
     }
+
+    // Check if user is a fan
+    if (!isFan) {
+      toast.error("Only fans can vote in battles");
+      return;
+    }
+
     try {
-      const {
-        error
-      } = await supabase.from('battle_votes').insert({
-        battle_id: battle.id,
-        voter_id: user.id,
-        submission_id: barberId
-      });
+      // Find the submission for this barber
+      const barberSubmission = submissions?.find(sub => sub.user_id === barberId);
+      if (!barberSubmission) {
+        toast.error("No submission found for this barber");
+        return;
+      }
+
+      const { error } = await supabase
+        .from('battle_votes')
+        .insert({
+          battle_id: battle.id,
+          voter_id: user.id,
+          submission_id: barberSubmission.id
+        });
+      
       if (error) throw error;
       toast.success("Vote cast successfully!");
-    } catch (error) {
-      toast.error("Failed to cast vote");
+    } catch (error: any) {
+      if (error.code === '23505') {
+        toast.error("You have already voted in this battle");
+      } else {
+        toast.error("Failed to cast vote");
+      }
     }
   };
   const handleDonate = (barberId: string, barberName: string) => {
@@ -111,6 +156,26 @@ export const DynamicBattleHero = () => {
       navigator.clipboard.writeText(window.location.href);
       toast.success("Link copied to clipboard!");
     }
+  };
+
+  const handleVideoUpload = () => {
+    if (!user) {
+      toast.error("Please sign in to upload videos");
+      return;
+    }
+    if (!isBarber) {
+      toast.error("Only barbers can upload videos");
+      return;
+    }
+    setShowUploadModal(true);
+  };
+
+  const getBarberSubmission = (barberId: string) => {
+    return submissions?.find(sub => sub.user_id === barberId);
+  };
+
+  const canUserUpload = (barberId: string) => {
+    return user?.id === barberId && isBarber;
   };
   const getCountryFlag = (countryCode: string) => {
     if (!countryCode) return "🏳️";
@@ -195,9 +260,30 @@ export const DynamicBattleHero = () => {
 
               {/* Video Box */}
               <div className="absolute top-[45%] left-1/2 transform -translate-x-1/2 w-[35vw] h-[35vw] max-w-[140px] max-h-[140px] sm:max-w-[200px] sm:max-h-[200px] lg:max-w-[260px] lg:max-h-[260px] bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg cursor-pointer group hover:bg-primary/20 transition-all duration-300">
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 group-hover:from-primary/20 group-hover:to-primary/40 transition-all duration-300">
-                  <Play className="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white/60 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
-                </div>
+                {(() => {
+                  const submission = getBarberSubmission(syntheticBarbers[0].id);
+                  if (submission?.media_url) {
+                    return (
+                      <VideoPlayer 
+                        src={submission.media_url} 
+                        className="w-full h-full"
+                        muted={true}
+                      />
+                    );
+                  } else if (canUserUpload(syntheticBarbers[0].id)) {
+                    return (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 group-hover:from-primary/20 group-hover:to-primary/40 transition-all duration-300" onClick={handleVideoUpload}>
+                        <Upload className="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white/60 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 group-hover:from-primary/20 group-hover:to-primary/40 transition-all duration-300">
+                        <Play className="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white/60 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
+                      </div>
+                    );
+                  }
+                })()}
               </div>
               
               <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/60" />
@@ -301,9 +387,30 @@ export const DynamicBattleHero = () => {
 
               {/* Video Box */}
               <div className="absolute top-[45%] right-1/2 transform translate-x-1/2 w-[35vw] h-[35vw] max-w-[140px] max-h-[140px] sm:max-w-[200px] sm:max-h-[200px] lg:max-w-[260px] lg:max-h-[260px] bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg cursor-pointer group hover:bg-primary/20 transition-all duration-300">
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 group-hover:from-primary/20 group-hover:to-primary/40 transition-all duration-300">
-                  <Play className="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white/60 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
-                </div>
+                {(() => {
+                  const submission = getBarberSubmission(syntheticBarbers[1].id);
+                  if (submission?.media_url) {
+                    return (
+                      <VideoPlayer 
+                        src={submission.media_url} 
+                        className="w-full h-full"
+                        muted={true}
+                      />
+                    );
+                  } else if (canUserUpload(syntheticBarbers[1].id)) {
+                    return (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 group-hover:from-primary/20 group-hover:to-primary/40 transition-all duration-300" onClick={handleVideoUpload}>
+                        <Upload className="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white/60 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 group-hover:from-primary/20 group-hover:to-primary/40 transition-all duration-300">
+                        <Play className="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white/60 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
+                      </div>
+                    );
+                  }
+                })()}
               </div>
               
               <div className="absolute inset-0 bg-gradient-to-l from-black/60 via-black/40 to-black/60" />
@@ -567,5 +674,34 @@ export const DynamicBattleHero = () => {
 
       {/* Donation Modal */}
       <DonationModal isOpen={isDonationModalOpen} onClose={() => setIsDonationModalOpen(false)} creatorId={selectedBarberId || ''} creatorName={selectedBarberName} />
+      
+      {/* Upload Modal */}
+      {showUploadModal && battle && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+          <div className="bg-card rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b border-border flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-white">Upload Battle Video</h3>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowUploadModal(false)}
+                className="text-muted-foreground hover:text-white"
+              >
+                ✕
+              </Button>
+            </div>
+            <div className="p-4">
+              <VideoUpload 
+                battleId={battle.id}
+                onVideoUploaded={() => {
+                  setShowUploadModal(false);
+                  refetchSubmissions();
+                  toast.success('Video uploaded successfully!');
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>;
 };
