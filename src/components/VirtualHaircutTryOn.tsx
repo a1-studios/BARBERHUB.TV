@@ -5,11 +5,19 @@ import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { HaircutAdvisorModal } from './HaircutAdvisorModal';
+import { useAuth } from '@/hooks/useAuth';
 import globeBackground from '@/assets/globe-background.png';
 export const VirtualHaircutTryOn = () => {
+  const { user } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Only show to authenticated users
+  if (!user) {
+    return null;
+  }
+  
   return <>
-      <section className="relative py-20 px-4 overflow-hidden">
+      <section className="relative py-10 px-4 overflow-hidden">
         {/* Globe Background */}
         <div 
           className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30"
@@ -22,18 +30,18 @@ export const VirtualHaircutTryOn = () => {
         <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background/80" />
         <div className="container mx-auto max-w-6xl relative z-10">
           {/* Header */}
-          <div className="text-center mb-12">
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <Sparkles className="h-8 w-8 text-primary" />
-              <h2 className="text-4xl font-bold text-white">AI Haircut Coach</h2>
+          <div className="text-center mb-6">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <Sparkles className="h-6 w-6 text-primary" />
+              <h2 className="text-2xl font-bold text-white">AI Haircut Coach</h2>
             </div>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-4">
               Upload your photo and see how different haircuts would look on you with AI-powered virtual try-on technology
             </p>
           </div>
 
           {/* Example Mockups Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-6">
             {[{
             name: "High-Fade Pompadour",
             style: "Professional & Sharp"
@@ -63,12 +71,12 @@ export const VirtualHaircutTryOn = () => {
           {/* CTA Section */}
           <div className="text-center">
             <Card className="border-2 border-primary/30 bg-gradient-to-r from-primary/10 to-transparent max-w-md mx-auto">
-              <CardContent className="p-8">
-                <div className="mb-6">
-                  <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Camera className="h-8 w-8 text-primary" />
+              <CardContent className="p-4">
+                <div className="mb-4">
+                  <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <Camera className="h-6 w-6 text-primary" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Find Your Perfect Look</h3>
+                  <h3 className="text-lg font-bold text-white mb-2">Find Your Perfect Look</h3>
                   <p className="text-sm text-muted-foreground">
                     Upload a clear photo of your face for AI analysis and virtual haircut try-on
                   </p>
