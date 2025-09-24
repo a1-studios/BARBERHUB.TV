@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Users, Clock, Vote, Plus, Scissors, Gift, Zap } from "lucide-react";
+import globeBackground from '@/assets/globe-background.png';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { HaircutAdvisorModal } from "./HaircutAdvisorModal";
@@ -160,8 +161,19 @@ const BattlesSection = () => {
         </div>
       </section>;
   }
-  return <section id="battles" className="px-0 py-0">
-      <div className="container mx-auto max-w-6xl">
+  return <section id="battles" className="relative px-0 py-20 overflow-hidden">
+      {/* Globe Background */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-20"
+        style={{
+          backgroundImage: `url(${globeBackground})`,
+          backgroundSize: 'contain',
+          backgroundPosition: 'center'
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/70 to-background/90" />
+      
+      <div className="container mx-auto max-w-6xl relative z-10">
         {/* Header */}
         <div className="text-center mb-12">
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
