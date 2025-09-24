@@ -1,101 +1,34 @@
-import { useState } from 'react';
-import { Camera, Upload, Sparkles, RotateCcw } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import { HaircutAdvisorModal } from './HaircutAdvisorModal';
 import { useAuth } from '@/hooks/useAuth';
-import globeBackground from '@/assets/globe-background.png';
+import { useNavigate } from 'react-router-dom';
+
 export const VirtualHaircutTryOn = () => {
   const { user } = useAuth();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const navigate = useNavigate();
   
   // Only show to authenticated users
   if (!user) {
     return null;
   }
   
-  return <>
-      <section className="relative py-10 px-4 overflow-hidden">
-        {/* Globe Background */}
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30"
-          style={{
-            backgroundImage: `url(${globeBackground})`,
-            backgroundSize: 'contain',
-            backgroundPosition: 'center'
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/60 to-background/80" />
-        <div className="container mx-auto max-w-6xl relative z-10">
-          {/* Header */}
-          <div className="text-center mb-6">
-            <div className="flex items-center justify-center gap-2 mb-3">
-              <Sparkles className="h-6 w-6 text-primary" />
-              <h2 className="text-2xl font-bold text-white">AI Haircut Coach</h2>
-            </div>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-4">
-              Upload your photo and see how different haircuts would look on you with AI-powered virtual try-on technology
-            </p>
-          </div>
-
-          {/* Example Mockups Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-6">
-            {[{
-            name: "High-Fade Pompadour",
-            style: "Professional & Sharp"
-          }, {
-            name: "Asymmetric Undercut",
-            style: "Modern & Edgy"
-          }, {
-            name: "Textured Crop",
-            style: "Casual & Trendy"
-          }, {
-            name: "Classic Side Part",
-            style: "Timeless & Elegant"
-          }].map((style, index) => <Card key={index} className="border-2 border-primary/30 overflow-hidden hover:border-primary/60 transition-colors">
-                <div className="aspect-square relative bg-gradient-to-br from-primary/20 to-transparent">
-                  
-                  
-                  <div className="absolute bottom-3 left-3 right-3">
-                    <h4 className="font-bold text-white text-sm leading-tight mb-1">
-                      {style.name}
-                    </h4>
-                    <p className="text-xs text-primary/80">{style.style}</p>
-                  </div>
-                </div>
-              </Card>)}
-          </div>
-
-          {/* CTA Section */}
-          <div className="text-center">
-            <Card className="border-2 border-primary/30 bg-gradient-to-r from-primary/10 to-transparent max-w-md mx-auto">
-              <CardContent className="p-4">
-                <div className="mb-4">
-                  <div className="w-12 h-12 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Camera className="h-6 w-6 text-primary" />
-                  </div>
-                  <h3 className="text-lg font-bold text-white mb-2">Find Your Perfect Look</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Upload a clear photo of your face for AI analysis and virtual haircut try-on
-                  </p>
-                </div>
-                
-                <Button onClick={() => setIsModalOpen(true)} size="lg" className="w-full mb-3">
-                  <Camera className="h-4 w-4 mr-2" />
-                  Take a Selfie or Upload Photo
-                </Button>
-                
-                <p className="text-xs text-muted-foreground">
-                  Your privacy is important. Photos are used for analysis only.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+  return (
+    <section className="relative py-10 px-4">
+      <div className="container mx-auto max-w-6xl relative z-10">
+        <div className="text-center">
+          <Button 
+            onClick={() => navigate('/haircut-advisor')} 
+            size="lg" 
+            className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
+          >
+            <Sparkles className="h-5 w-5 mr-2" />
+            AI Haircut Advisor
+          </Button>
+          <p className="text-sm text-muted-foreground mt-2">
+            Get personalized haircut recommendations with AI
+          </p>
         </div>
-      </section>
-
-      <HaircutAdvisorModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-    </>;
+      </div>
+    </section>
+  );
 };
