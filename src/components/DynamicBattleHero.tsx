@@ -399,15 +399,6 @@ export const DynamicBattleHero = () => {
           </div>
         </div>
         
-        {/* Quick Action Buttons Below Card */}
-        <div className="flex justify-center mt-6 gap-4">
-          <Button variant="outline" onClick={() => window.location.href = '/battles'}>
-            View All Battles
-          </Button>
-          <Button variant="outline" onClick={() => window.location.href = '/portal'}>
-            Battle Portal
-          </Button>
-        </div>
       </div>;
   }
   const barber1 = barbers.find(b => b.user_id === battle.barber1_id);
