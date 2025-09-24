@@ -33,27 +33,20 @@ export function CreatorHub() {
   if (user) {
     return (
       <section className="py-20 px-4 bg-gradient-to-br from-background to-muted/20">
-        <div className="container mx-auto space-y-12">
-          <div className="text-center space-y-4">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Crown className="h-8 w-8 text-primary" />
-              <h2 className="text-4xl font-bold text-gradient">Creator Hub</h2>
-            </div>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Welcome back! Manage your content, track earnings, and grow your barbering empire.
-            </p>
+      <div className="container mx-auto">
+        <button className="w-full bg-background/95 backdrop-blur border-2 border-primary/30 rounded-xl p-8 hover:border-primary/50 transition-all duration-300 shadow-[0_0_30px_rgba(255,107,5,0.3)] hover:shadow-[0_0_50px_rgba(255,107,5,0.5)]">
+          <div className="flex items-center justify-center gap-3">
+            <Crown className="h-10 w-10 text-primary" />
+            <span className="text-3xl font-bold">
+              <span className="text-white">CREATOR</span>
+              <span className="text-primary">-HUB</span>
+            </span>
           </div>
-
-          <div className="grid lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-8">
-              <CreatorDashboard />
-              <EarningSystem />
-            </div>
-            <div className="space-y-8">
-              <ReferralProgram />
-            </div>
-          </div>
-        </div>
+          <p className="text-lg text-muted-foreground mt-4 max-w-2xl mx-auto">
+            Welcome back! Manage your content, track earnings, and grow your barbering empire.
+          </p>
+        </button>
+      </div>
       </section>
     );
   }
