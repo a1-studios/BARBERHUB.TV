@@ -82,7 +82,7 @@ const BarberDashboard = () => {
     return levelProgress[currentLevel as keyof typeof levelProgress] || 25;
   };
   return <div className="min-h-screen bg-gradient-primary p-4 py-0">
-      <div className="max-w-7xl mx-auto space-y-6 px-[44px] my-0">
+      <div className="max-w-7xl mx-auto space-y-6 my-0 px-[100px] py-[38px]">
         
         {/* Header */}
         <div className="text-center mb-8">
