@@ -344,13 +344,7 @@ export const DynamicBattleHero = () => {
               </div>
 
               {/* Barber Info - Responsive text */}
-              <div className="absolute bottom-2 sm:bottom-4 lg:bottom-6 right-1 sm:right-2 lg:right-3 z-10 text-white text-right">
-                <div className="flex items-center gap-0.5 sm:gap-1 lg:gap-2 mb-0.5 sm:mb-1 justify-end">
-                  <h3 className="text-[10px] xs:text-xs sm:text-sm lg:text-lg xl:text-xl font-bold leading-tight truncate max-w-[15ch] sm:max-w-none">{syntheticBarbers[1].name}</h3>
-                  
-                </div>
-                
-              </div>
+              
 
               {/* Hover Effect */}
               <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
