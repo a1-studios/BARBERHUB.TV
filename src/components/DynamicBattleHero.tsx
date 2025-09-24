@@ -177,19 +177,15 @@ export const DynamicBattleHero = () => {
             <div className="flex-1 relative overflow-hidden cursor-pointer group" onClick={() => toast.info("This is a preview battle. Real voting available in live battles!")}>
               {/* Flag Background */}
               <div className="absolute inset-0" style={{
-                backgroundImage: `url(${getFlagImageUrl('mx')})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                opacity: 0.3
-              }} />
+              backgroundImage: `url(${getFlagImageUrl('mx')})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: 0.3
+            }} />
               
-              {/* Barber Photo - Higher position in upper third */}
-              <div className="absolute top-16 sm:top-20 left-1/2 transform -translate-x-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
-                <img 
-                  src={barber1Photo} 
-                  alt={syntheticBarbers[0].name}
-                  className="w-full h-full object-cover"
-                />
+              {/* Barber Photo - Smaller and Clearer */}
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
+                <img src={barber1Photo} alt={syntheticBarbers[0].name} className="w-full h-full object-cover" />
               </div>
               
               <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/60" />
@@ -201,44 +197,24 @@ export const DynamicBattleHero = () => {
                 </div>
               </div>
 
-              {/* Vertical Action Buttons - Below percentage */}
-              <div className="absolute left-3 sm:left-6 top-20 sm:top-24 z-10 flex flex-col gap-2">
-                <button 
-                  className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_15px_rgba(255,165,0,0.5)] hover:shadow-[0_0_20px_rgba(255,165,0,0.8)]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleVote(syntheticBarbers[0].id);
-                  }}
-                >
-                  <Heart className="w-3 h-3 sm:w-4 sm:h-4" />
-                </button>
-                <button 
-                  className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_15px_rgba(255,165,0,0.5)] hover:shadow-[0_0_20px_rgba(255,165,0,0.8)]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleShare();
-                  }}
-                >
-                  <Share2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                </button>
-                <button 
-                  className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_15px_rgba(255,165,0,0.5)] hover:shadow-[0_0_20px_rgba(255,165,0,0.8)]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDonate(syntheticBarbers[0].id, syntheticBarbers[0].name);
-                  }}
-                >
-                  <DollarSign className="w-3 h-3 sm:w-4 sm:h-4" />
-                </button>
-                <button 
-                  className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_15px_rgba(255,165,0,0.5)] hover:shadow-[0_0_20px_rgba(255,165,0,0.8)]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toast.info("Feature coming soon!");
-                  }}
-                >
-                  <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
-                </button>
+              {/* Vertical Stats Bar */}
+              <div className="absolute left-3 sm:left-6 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-2 bg-black/60 backdrop-blur-sm rounded-lg p-2">
+                <div className="flex items-center gap-1 text-white text-xs">
+                  <TrendingUp className="w-3 h-3" />
+                  <span>#12</span>
+                </div>
+                <div className="flex items-center gap-1 text-white text-xs">
+                  <Heart className="w-3 h-3" />
+                  <span>2.1k</span>
+                </div>
+                <div className="flex items-center gap-1 text-white text-xs">
+                  <Users className="w-3 h-3" />
+                  <span>890</span>
+                </div>
+                <div className="flex items-center gap-1 text-white text-xs">
+                  <DollarSign className="w-3 h-3" />
+                  <span>$450</span>
+                </div>
               </div>
 
               {/* Barber Info */}
@@ -302,19 +278,15 @@ export const DynamicBattleHero = () => {
             <div className="flex-1 relative overflow-hidden cursor-pointer group" onClick={() => toast.info("This is a preview battle. Real voting available in live battles!")}>
               {/* Flag Background */}
               <div className="absolute inset-0" style={{
-                backgroundImage: `url(${getFlagImageUrl('us')})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                opacity: 0.3
-              }} />
+              backgroundImage: `url(${getFlagImageUrl('us')})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: 0.3
+            }} />
               
-              {/* Barber Photo - Higher position in upper third */}
-              <div className="absolute top-16 sm:top-20 right-1/2 transform translate-x-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
-                <img 
-                  src={barber2Photo} 
-                  alt={syntheticBarbers[1].name}
-                  className="w-full h-full object-cover"
-                />
+              {/* Barber Photo - Smaller and Clearer */}
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
+                <img src={barber2Photo} alt={syntheticBarbers[1].name} className="w-full h-full object-cover" />
               </div>
               
               <div className="absolute inset-0 bg-gradient-to-l from-black/60 via-black/40 to-black/60" />
@@ -326,44 +298,24 @@ export const DynamicBattleHero = () => {
                 </div>
               </div>
 
-              {/* Vertical Action Buttons - Below percentage */}
-              <div className="absolute right-3 sm:right-6 top-20 sm:top-24 z-10 flex flex-col gap-2">
-                <button 
-                  className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_15px_rgba(255,165,0,0.5)] hover:shadow-[0_0_20px_rgba(255,165,0,0.8)]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleVote(syntheticBarbers[1].id);
-                  }}
-                >
-                  <Heart className="w-3 h-3 sm:w-4 sm:h-4" />
-                </button>
-                <button 
-                  className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_15px_rgba(255,165,0,0.5)] hover:shadow-[0_0_20px_rgba(255,165,0,0.8)]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleShare();
-                  }}
-                >
-                  <Share2 className="w-3 h-3 sm:w-4 sm:h-4" />
-                </button>
-                <button 
-                  className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_15px_rgba(255,165,0,0.5)] hover:shadow-[0_0_20px_rgba(255,165,0,0.8)]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDonate(syntheticBarbers[1].id, syntheticBarbers[1].name);
-                  }}
-                >
-                  <DollarSign className="w-3 h-3 sm:w-4 sm:h-4" />
-                </button>
-                <button 
-                  className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_15px_rgba(255,165,0,0.5)] hover:shadow-[0_0_20px_rgba(255,165,0,0.8)]"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toast.info("Feature coming soon!");
-                  }}
-                >
-                  <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
-                </button>
+              {/* Vertical Stats Bar */}
+              <div className="absolute right-3 sm:right-6 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-2 bg-black/60 backdrop-blur-sm rounded-lg p-2">
+                <div className="flex items-center gap-1 text-white text-xs">
+                  <TrendingUp className="w-3 h-3" />
+                  <span>#8</span>
+                </div>
+                <div className="flex items-center gap-1 text-white text-xs">
+                  <Heart className="w-3 h-3" />
+                  <span>3.2k</span>
+                </div>
+                <div className="flex items-center gap-1 text-white text-xs">
+                  <Users className="w-3 h-3" />
+                  <span>1.5k</span>
+                </div>
+                <div className="flex items-center gap-1 text-white text-xs">
+                  <DollarSign className="w-3 h-3" />
+                  <span>$680</span>
+                </div>
               </div>
 
               {/* Barber Info */}
@@ -422,173 +374,7 @@ export const DynamicBattleHero = () => {
         {/* Main Battle Card - 30% smaller */}
         <div className="flex-1 max-w-3xl mx-auto lg:mx-0">
           <div className="w-full aspect-[16/9] sm:aspect-[16/10] bg-card rounded-xl sm:rounded-2xl shadow-2xl border-2 border-primary/50 animate-glow overflow-hidden relative transform-gpu will-change-transform">
-            <div className="h-full flex">
-              {/* Barber 1 Side */}
-              <div className="flex-1 relative overflow-hidden cursor-pointer group" onClick={() => handleVote(barber1?.user_id || '')}>
-                {/* Flag Background */}
-                <div className="absolute inset-0" style={{
-                  backgroundImage: `url(${getFlagImageUrl('us')})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  opacity: 0.3
-                }} />
-                
-                {/* Barber Photo - Smaller and Clearer */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
-                  <img 
-                    src={barber1Photo} 
-                    alt={barber1?.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                
-                <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/60" />
-                
-                {/* Vote Percentage */}
-                <div className="absolute top-3 sm:top-6 left-3 sm:left-6 z-10">
-                  <div className="bg-white/20 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1 sm:py-1.5">
-                    <span className="text-white font-bold text-sm sm:text-lg lg:text-xl">{percentages.barber1}%</span>
-                  </div>
-                </div>
-
-                {/* Vertical Stats Bar */}
-                <div className="absolute left-3 sm:left-6 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-2 bg-black/60 backdrop-blur-sm rounded-lg p-2">
-                  <div className="flex items-center gap-1 text-white text-xs">
-                    <TrendingUp className="w-3 h-3" />
-                    <span>#5</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-white text-xs">
-                    <Heart className="w-3 h-3" />
-                    <span>{battle.vote_count1}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-white text-xs">
-                    <Users className="w-3 h-3" />
-                    <span>1.2k</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-white text-xs">
-                    <DollarSign className="w-3 h-3" />
-                    <span>$320</span>
-                  </div>
-                </div>
-
-                {/* Barber Info */}
-                <div className="absolute bottom-12 sm:bottom-20 left-3 sm:left-6 z-10 text-white">
-                  <div className="flex items-center gap-1 sm:gap-2 mb-1">
-                    <span className="text-lg sm:text-2xl">{getCountryFlag('us')}</span>
-                    <h3 className="text-sm sm:text-lg lg:text-xl xl:text-2xl font-bold leading-tight">{barber1?.name}</h3>
-                  </div>
-                  <p className="text-white/80 text-xs sm:text-sm">Click to vote</p>
-                </div>
-
-                {/* Hover Effect */}
-                <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </div>
-
-              {/* Vertical Advertisement Bar */}
-              <div className="absolute left-1/2 top-0 bottom-0 transform -translate-x-1/2 z-20 w-16 sm:w-20 lg:w-24">
-                <div className="h-full bg-gradient-to-b from-black/80 via-black/60 to-black/80 backdrop-blur-sm border-x-2 border-white/20 flex flex-col">
-                  {/* Ad Spot 1 */}
-                  <div className="flex-1 border-b border-white/20 flex items-center justify-center group hover:bg-white/10 transition-colors cursor-pointer">
-                    <div className="text-center">
-                      <div className="text-white/60 text-xs font-medium">AD</div>
-                      <div className="text-white/40 text-[10px]">SPOT 1</div>
-                    </div>
-                  </div>
-                  
-                  {/* VS Center */}
-                  <div className="h-16 sm:h-20 lg:h-24 flex items-center justify-center bg-white/10">
-                    <div className="bg-white rounded-full w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 flex items-center justify-center shadow-2xl border-2 border-primary">
-                      <span className="text-xs sm:text-sm font-bold text-primary">VS</span>
-                    </div>
-                  </div>
-                  
-                  {/* Ad Spot 2 */}
-                  <div className="flex-1 border-b border-white/20 flex items-center justify-center group hover:bg-white/10 transition-colors cursor-pointer">
-                    <div className="text-center">
-                      <div className="text-white/60 text-xs font-medium">AD</div>
-                      <div className="text-white/40 text-[10px]">SPOT 2</div>
-                    </div>
-                  </div>
-                  
-                  {/* Ad Spot 3 */}
-                  <div className="flex-1 border-b border-white/20 flex items-center justify-center group hover:bg-white/10 transition-colors cursor-pointer">
-                    <div className="text-center">
-                      <div className="text-white/60 text-xs font-medium">AD</div>
-                      <div className="text-white/40 text-[10px]">SPOT 3</div>
-                    </div>
-                  </div>
-                  
-                  {/* Ad Spot 4 */}
-                  <div className="flex-1 flex items-center justify-center group hover:bg-white/10 transition-colors cursor-pointer">
-                    <div className="text-center">
-                      <div className="text-white/60 text-xs font-medium">AD</div>
-                      <div className="text-white/40 text-[10px]">SPOT 4</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Barber 2 Side */}
-              <div className="flex-1 relative overflow-hidden cursor-pointer group" onClick={() => handleVote(barber2?.user_id || '')}>
-                {/* Flag Background */}
-                <div className="absolute inset-0" style={{
-                  backgroundImage: `url(${getFlagImageUrl('ca')})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  opacity: 0.3
-                }} />
-                
-                {/* Barber Photo - Smaller and Clearer */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
-                  <img 
-                    src={barber2Photo} 
-                    alt={barber2?.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                
-                <div className="absolute inset-0 bg-gradient-to-l from-black/60 via-black/40 to-black/60" />
-                
-                {/* Vote Percentage */}
-                <div className="absolute top-3 sm:top-6 right-3 sm:right-6 z-10">
-                  <div className="bg-white/20 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1 sm:py-1.5">
-                    <span className="text-white font-bold text-sm sm:text-lg lg:text-xl">{percentages.barber2}%</span>
-                  </div>
-                </div>
-
-                {/* Vertical Stats Bar */}
-                <div className="absolute right-3 sm:right-6 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-2 bg-black/60 backdrop-blur-sm rounded-lg p-2">
-                  <div className="flex items-center gap-1 text-white text-xs">
-                    <TrendingUp className="w-3 h-3" />
-                    <span>#3</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-white text-xs">
-                    <Heart className="w-3 h-3" />
-                    <span>{battle.vote_count2}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-white text-xs">
-                    <Users className="w-3 h-3" />
-                    <span>2.1k</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-white text-xs">
-                    <DollarSign className="w-3 h-3" />
-                    <span>$890</span>
-                  </div>
-                </div>
-
-                {/* Barber Info */}
-                <div className="absolute bottom-12 sm:bottom-20 right-3 sm:right-6 z-10 text-white text-right">
-                  <div className="flex items-center gap-1 sm:gap-2 mb-1 justify-end">
-                    <h3 className="text-sm sm:text-lg lg:text-xl xl:text-2xl font-bold leading-tight">{barber2?.name}</h3>
-                    <span className="text-lg sm:text-2xl">{getCountryFlag('ca')}</span>
-                  </div>
-                  <p className="text-white/80 text-xs sm:text-sm">Click to vote</p>
-                </div>
-
-                {/* Hover Effect */}
-                <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </div>
-            </div>
+            
 
             {/* Action Buttons - Bottom Left */}
             <div className="absolute bottom-3 sm:bottom-6 left-3 sm:left-6 z-10 flex gap-1 sm:gap-2">
