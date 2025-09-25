@@ -3,41 +3,82 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Crown, Heart, MessageCircle, Star, TrendingUp } from "lucide-react";
-const topBarbers = [{
-  id: 1,
-  name: "Marcus Thompson",
-  shop: "Elite Cuts Studio",
-  location: "Atlanta, GA",
-  rank: 1,
-  votes: 2847,
-  subscribers: 15200,
-  specialties: ["Fades", "Beard Styling"],
-  avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
-  barberBucks: 1250
-}, {
-  id: 2,
-  name: "Carlos Rivera",
-  shop: "The Barber Lounge",
-  location: "Miami, FL",
-  rank: 2,
-  votes: 2635,
-  subscribers: 12800,
-  specialties: ["Classic Cuts", "Hot Towel"],
-  avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-  barberBucks: 980
-}, {
-  id: 3,
-  name: "DeShawn Williams",
-  shop: "Crown Barbershop",
-  location: "Chicago, IL",
-  rank: 3,
-  votes: 2401,
-  subscribers: 11500,
-  specialties: ["Line-ups", "Designs"],
-  avatar: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&h=150&fit=crop&crop=face",
-  barberBucks: 875
-}];
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 const CommunitySection = () => {
+  const { data: barberProfiles, isLoading } = useQuery({
+    queryKey: ['public-barber-profiles'],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_public_creator_profiles');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { data: barberDetails } = useQuery({
+    queryKey: ['barber-profiles-details'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('barber_profiles')
+        .select('user_id, name, specialty, location, country_code');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!barberProfiles?.length
+  });
+
+  // Combine profile data with barber details and sort by follower count
+  const topBarbers = barberProfiles
+    ?.map((profile) => {
+      const barberDetail = barberDetails?.find(b => b.user_id === profile.user_id);
+      return {
+        id: profile.user_id,
+        name: profile.display_name || barberDetail?.name || 'Unknown Barber',
+        shop: barberDetail?.name || 'Barber Shop',
+        location: barberDetail?.location || `${barberDetail?.country_code || 'Unknown'}`,
+        votes: profile.like_count || 0,
+        subscribers: profile.follower_count || 0,
+        specialties: barberDetail?.specialty ? [barberDetail.specialty] : ['General'],
+        avatar: profile.avatar_url || '',
+        barberBucks: profile.subscription_count * 10 || 0
+      };
+    })
+    .sort((a, b) => b.subscribers - a.subscribers)
+    .slice(0, 10) // Top 10 barbers
+    .map((barber, index) => ({ ...barber, rank: index + 1 })) || []; // Assign ranks after sorting
+
+  if (isLoading) {
+    return (
+      <section id="community" className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              <span className="text-gradient">Community</span> Leaderboard
+            </h2>
+            <p className="text-xl text-muted-foreground">Loading barber profiles...</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (!topBarbers.length) {
+    return (
+      <section id="community" className="py-20 bg-muted/30">
+        <div className="container mx-auto px-4">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">
+              <span className="text-gradient">Community</span> Leaderboard
+            </h2>
+            <p className="text-xl text-muted-foreground">
+              No barber profiles found. Be the first to join our community!
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   return <section id="community" className="py-20 bg-muted/30">
       <div className="container mx-auto px-4">
         {/* Header */}
@@ -94,7 +135,9 @@ const CommunitySection = () => {
                       <div className="text-xs text-muted-foreground">Votes</div>
                     </div>
                     <div>
-                      <div className="text-2xl font-bold text-primary">{(barber.subscribers / 1000).toFixed(1)}K</div>
+                      <div className="text-2xl font-bold text-primary">
+                        {barber.subscribers >= 1000 ? `${(barber.subscribers / 1000).toFixed(1)}K` : barber.subscribers}
+                      </div>
                       <div className="text-xs text-muted-foreground">Followers</div>
                     </div>
                     <div>
