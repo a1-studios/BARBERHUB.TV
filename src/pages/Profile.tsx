@@ -11,7 +11,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { BackButton } from '@/components/ui/BackButton';
-import { Scissors, Users, Trophy, Plus, User, Loader2, Globe, Edit3, X } from 'lucide-react';
+import { Scissors, Users, Trophy, Plus, User, Loader2, Globe, Edit3, X, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Header from '@/components/Header';
 import { CountrySelector } from '@/components/CountrySelector';
@@ -19,6 +19,7 @@ import { BarberProfileForm } from '@/components/profiles/BarberProfileForm';
 import { ClientProfileForm } from '@/components/profiles/ClientProfileForm';
 import { CreationUpload } from '@/components/creations/CreationUpload';
 import BarberDashboard from '@/components/barber/BarberDashboard';
+import { BarberSettings } from '@/components/profiles/BarberSettings';
 
 const Profile = () => {
   const { user } = useAuth();
@@ -26,6 +27,7 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [showProfileSetup, setShowProfileSetup] = useState(false);
   const [showCreationUpload, setShowCreationUpload] = useState(false);
+  const [showBarberSettings, setShowBarberSettings] = useState(false);
 
   const {
     userProfile,
@@ -201,6 +203,20 @@ const Profile = () => {
     );
   }
 
+  // Show barber settings if requested
+  if (showBarberSettings && isBarber) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5">
+        <Header />
+        <main className="pt-24 pb-12 px-4">
+          <div className="container mx-auto max-w-6xl">
+            <BarberSettings onBack={() => setShowBarberSettings(false)} />
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   // Show barber dashboard for barber users
   if (isBarber && barberProfile) {
     return (
@@ -235,16 +251,28 @@ const Profile = () => {
                         Manage your account details and preferences
                       </CardDescription>
                     </div>
-                    {(barberProfile || clientProfile) && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowProfileSetup(true)}
-                      >
-                        <Edit3 className="h-4 w-4 mr-2" />
-                        Edit {isBarber ? 'Barber' : 'Client'} Profile
-                      </Button>
-                    )}
+                    <div className="flex gap-2">
+                      {isBarber && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowBarberSettings(true)}
+                        >
+                          <Settings className="h-4 w-4 mr-2" />
+                          Barber Settings
+                        </Button>
+                      )}
+                      {(barberProfile || clientProfile) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setShowProfileSetup(true)}
+                        >
+                          <Edit3 className="h-4 w-4 mr-2" />
+                          Edit {isBarber ? 'Barber' : 'Client'} Profile
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
