@@ -48,7 +48,7 @@ export const DynamicBattleHero = () => {
     isBarber,
     isVerified
   } = useUserProfile();
-  const { toggleLike, hasUserLiked } = useLikes();
+  const { toggleLike } = useLikes();
   const { checkFunds, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
   
   const [selectedBarberId, setSelectedBarberId] = useState<string | null>(null);
@@ -56,6 +56,39 @@ export const DynamicBattleHero = () => {
   const [selectedBarberName, setSelectedBarberName] = useState("");
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
+
+  // Get like states for synthetic barbers
+  const barber1LikeQuery = useQuery({
+    queryKey: ['user_like', 'synthetic-barber-1', user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data, error } = await supabase
+        .from('creator_likes')
+        .select('id')
+        .eq('creator_id', 'synthetic-barber-1')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return !!data;
+    },
+    enabled: !!user
+  });
+
+  const barber2LikeQuery = useQuery({
+    queryKey: ['user_like', 'synthetic-barber-2', user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data, error } = await supabase
+        .from('creator_likes')
+        .select('id')
+        .eq('creator_id', 'synthetic-barber-2')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return !!data;
+    },
+    enabled: !!user
+  });
 
   // Fetch active battle
   const {
@@ -162,8 +195,12 @@ export const DynamicBattleHero = () => {
       return;
     }
 
-    const userLikedQuery = hasUserLiked(barberId);
-    const isLiked = userLikedQuery.data || false;
+    let isLiked = false;
+    if (barberId === 'synthetic-barber-1') {
+      isLiked = barber1LikeQuery.data || false;
+    } else if (barberId === 'synthetic-barber-2') {
+      isLiked = barber2LikeQuery.data || false;
+    }
     
     toggleLike.mutate({ creatorId: barberId, isLiked });
   };
@@ -183,16 +220,26 @@ export const DynamicBattleHero = () => {
     setSelectedBarberName(barberName);
     setIsDonationModalOpen(true);
   };
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: battle?.title || "Battle",
-        text: "Check out this barber battle!",
-        url: window.location.href
-      });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      toast.success("Link copied to clipboard!");
+  const handleShare = async () => {
+    try {
+      if (navigator.share && navigator.canShare) {
+        await navigator.share({
+          title: battle?.title || "Epic Barber Battle",
+          text: "Check out this amazing barber battle!",
+          url: window.location.href
+        });
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success("Link copied to clipboard!");
+      }
+    } catch (error) {
+      // Fallback to clipboard if share fails
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        toast.success("Link copied to clipboard!");
+      } catch (clipboardError) {
+        toast.error("Unable to share or copy link");
+      }
     }
   };
   const handleVideoUpload = () => {
@@ -322,11 +369,16 @@ export const DynamicBattleHero = () => {
 
               {/* Vertical Action Buttons - Mobile optimized */}
               <div className="absolute left-1 sm:left-2 lg:left-3 top-[35%] sm:top-[30%] z-10 flex flex-col gap-1 sm:gap-2 mx-[10px]">
-                <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
-                e.stopPropagation();
-                handleLike(syntheticBarbers[0].id);
-              }}>
-                  <Heart className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
+                <button 
+                  className={`w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)] ${
+                    barber1LikeQuery.data ? 'bg-red-500/80 text-white' : 'bg-white/20 text-white hover:bg-white/30'
+                  }`}
+                  onClick={e => {
+                    e.stopPropagation();
+                    handleLike('synthetic-barber-1');
+                  }}
+                >
+                  <Heart className={`w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4 ${barber1LikeQuery.data ? 'fill-current' : ''}`} />
                 </button>
                 <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
                 e.stopPropagation();
@@ -334,10 +386,13 @@ export const DynamicBattleHero = () => {
               }}>
                   <Share2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                 </button>
-                <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
-                e.stopPropagation();
-                handleDonate(syntheticBarbers[0].id, syntheticBarbers[0].name);
-              }}>
+                <button 
+                  className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-green-500/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-green-500/40 transition-all duration-300 shadow-[0_0_10px_rgba(34,197,94,0.4)] hover:shadow-[0_0_15px_rgba(34,197,94,0.7)]"
+                  onClick={e => {
+                    e.stopPropagation();
+                    handleDonate('synthetic-barber-1', "Carlos 'FadeKing' Martinez");
+                  }}
+                >
                   <DollarSign className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                 </button>
                 <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
@@ -439,11 +494,16 @@ export const DynamicBattleHero = () => {
 
               {/* Vertical Action Buttons - Mobile optimized */}
               <div className="absolute right-1 sm:right-2 lg:right-3 top-[35%] sm:top-[30%] z-10 flex flex-col gap-1 sm:gap-2 mx-[10px]">
-                <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
-                e.stopPropagation();
-                handleLike(syntheticBarbers[1].id);
-              }}>
-                  <Heart className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
+                <button 
+                  className={`w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)] ${
+                    barber2LikeQuery.data ? 'bg-red-500/80 text-white' : 'bg-white/20 text-white hover:bg-white/30'
+                  }`}
+                  onClick={e => {
+                    e.stopPropagation();
+                    handleLike('synthetic-barber-2');
+                  }}
+                >
+                  <Heart className={`w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4 ${barber2LikeQuery.data ? 'fill-current' : ''}`} />
                 </button>
                 <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
                 e.stopPropagation();
@@ -451,10 +511,13 @@ export const DynamicBattleHero = () => {
               }}>
                   <Share2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                 </button>
-                <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
-                e.stopPropagation();
-                handleDonate(syntheticBarbers[1].id, syntheticBarbers[1].name);
-              }}>
+                <button 
+                  className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-green-500/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-green-500/40 transition-all duration-300 shadow-[0_0_10px_rgba(34,197,94,0.4)] hover:shadow-[0_0_15px_rgba(34,197,94,0.7)]"
+                  onClick={e => {
+                    e.stopPropagation();
+                    handleDonate('synthetic-barber-2', "Jamal 'SharpLine' Brooks");
+                  }}
+                >
                   <DollarSign className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                 </button>
                 <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
