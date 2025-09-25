@@ -8,8 +8,11 @@ import { DonationModal } from "./DonationModal";
 import { VideoPlayer } from "./VideoPlayer";
 import { VideoUpload } from "./VideoUpload";
 import { VerificationBadge } from "./VerificationBadge";
+import { AddFundsModal } from "./AddFundsModal";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useLikes } from "@/hooks/useLikes";
+import { useBarberBucks } from "@/hooks/useBarberBucks";
 import { toast } from "sonner";
 interface Battle {
   id: string;
@@ -45,6 +48,9 @@ export const DynamicBattleHero = () => {
     isBarber,
     isVerified
   } = useUserProfile();
+  const { toggleLike, hasUserLiked } = useLikes();
+  const { checkFunds, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
+  
   const [selectedBarberId, setSelectedBarberId] = useState<string | null>(null);
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const [selectedBarberName, setSelectedBarberName] = useState("");
@@ -150,7 +156,29 @@ export const DynamicBattleHero = () => {
       }
     }
   };
+  const handleLike = async (barberId: string) => {
+    if (!user) {
+      toast.error("Please sign in to like barbers");
+      return;
+    }
+
+    const userLikedQuery = hasUserLiked(barberId);
+    const isLiked = userLikedQuery.data || false;
+    
+    toggleLike.mutate({ creatorId: barberId, isLiked });
+  };
+
   const handleDonate = (barberId: string, barberName: string) => {
+    if (!user) {
+      toast.error("Please sign in to donate");
+      return;
+    }
+    
+    // Check if user has funds (minimum 5 Barber Bucks for donation)
+    if (!checkFunds(5)) {
+      return; // checkFunds will handle the error message and show add funds modal
+    }
+    
     setSelectedBarberId(barberId);
     setSelectedBarberName(barberName);
     setIsDonationModalOpen(true);
@@ -296,7 +324,7 @@ export const DynamicBattleHero = () => {
               <div className="absolute left-1 sm:left-2 lg:left-3 top-[35%] sm:top-[30%] z-10 flex flex-col gap-1 sm:gap-2 mx-[10px]">
                 <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
                 e.stopPropagation();
-                handleVote(syntheticBarbers[0].id);
+                handleLike(syntheticBarbers[0].id);
               }}>
                   <Heart className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                 </button>
@@ -413,7 +441,7 @@ export const DynamicBattleHero = () => {
               <div className="absolute right-1 sm:right-2 lg:right-3 top-[35%] sm:top-[30%] z-10 flex flex-col gap-1 sm:gap-2 mx-[10px]">
                 <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
                 e.stopPropagation();
-                handleVote(syntheticBarbers[1].id);
+                handleLike(syntheticBarbers[1].id);
               }}>
                   <Heart className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
                 </button>
@@ -632,17 +660,17 @@ export const DynamicBattleHero = () => {
             <div className="absolute bottom-3 sm:bottom-6 left-3 sm:left-6 z-10 flex gap-1 sm:gap-2">
               <Button variant="secondary" size="sm" onClick={e => {
               e.stopPropagation();
-              handleDonate(barber1?.user_id || '', barber1?.name || '');
+              handleLike(barber1?.user_id || '');
             }} className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30 text-xs sm:text-sm px-2 sm:px-3">
                 <Heart className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                <span className="hidden xs:inline">Donate</span>
+                <span className="hidden xs:inline">Like</span>
               </Button>
               <Button variant="secondary" size="sm" onClick={e => {
               e.stopPropagation();
-              handleShare();
+              handleDonate(barber1?.user_id || '', barber1?.name || '');
             }} className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30 text-xs sm:text-sm px-2 sm:px-3">
-                <Share2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-                <span className="hidden xs:inline">Share</span>
+                <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                <span className="hidden xs:inline">Donate</span>
               </Button>
             </div>
           </div>
@@ -661,6 +689,9 @@ export const DynamicBattleHero = () => {
 
       {/* Donation Modal */}
       <DonationModal isOpen={isDonationModalOpen} onClose={() => setIsDonationModalOpen(false)} creatorId={selectedBarberId || ''} creatorName={selectedBarberName} />
+      
+      {/* Add Funds Modal */}
+      <AddFundsModal isOpen={showAddFundsModal} onClose={() => setShowAddFundsModal(false)} />
       
       {/* Upload Modal */}
       {showUploadModal && battle && <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
