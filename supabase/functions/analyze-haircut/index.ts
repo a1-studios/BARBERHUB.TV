@@ -245,73 +245,13 @@ Generate the mockup image showing how this person would look with the "${suggest
       }
     )
 
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Gemini API error:', errorText)
-      throw new Error(`Gemini API error: ${response.status}`)
-    }
-
-    const data = await response.json()
-    console.log('Received response from Gemini')
-
-    if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
-      throw new Error('Invalid response from Gemini API')
-    }
-
-    const textResponse = data.candidates[0].content.parts[0].text
-    console.log('Raw Gemini response:', textResponse)
-
-    // Parse the JSON response
-    let analysisResult: AnalysisResponse
-    try {
-      // Extract JSON from the response (in case there's additional text)
-      const jsonMatch = textResponse.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        analysisResult = JSON.parse(jsonMatch[0])
-      } else {
-        throw new Error('No JSON found in response')
-      }
-    } catch (parseError) {
-      console.error('Failed to parse JSON response:', parseError)
-      // Fallback response
-      analysisResult = {
-        face_shape: "Unable to determine",
-        hair_texture: "Not clearly visible",
-        suggestions: [
-          {
-            name: "Consultation Recommended",
-            description: "I recommend visiting a professional stylist for a personalized consultation based on your unique features.",
-            styling_tips: "Bring reference photos of styles you like",
-            maintenance: "Regular trims every 6-8 weeks",
-            face_shape_reason: "A professional can assess your features in person"
-          }
-        ],
-        general_tips: [
-          "Consider your lifestyle when choosing a haircut",
-          "Healthy hair is the foundation of any great style"
-        ]
-      }
-    }
-
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        analysis: analysisResult 
-      }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
-      }
-    )
-
   } catch (error) {
     console.error('Error in analyze-haircut function:', error)
+    const errorMessage = error instanceof Error ? error.message : 'Failed to analyze image';
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || 'Failed to analyze image' 
+        error: errorMessage 
       }),
       { 
         status: 500,
