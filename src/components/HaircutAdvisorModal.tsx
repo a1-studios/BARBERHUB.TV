@@ -188,39 +188,79 @@ export const HaircutAdvisorModal = ({ isOpen, onClose }: HaircutAdvisorModalProp
         <div className="space-y-6">
           {/* Camera/Upload Section */}
           {!capturedImage && !analysis && (
-            <div className="space-y-4">
-              {/* Camera Section */}
+            <div className="space-y-6">
+              {/* Example Hairstyles */}
               <Card className="border-primary/20">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <Camera className="h-4 w-4" />
-                    Take a Photo
+                    <Scissors className="h-4 w-4" />
+                    AI Haircut Analysis Examples
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  {!cameraActive ? (
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-4 mb-6">
+                    {/* Regular Cut Avatar */}
                     <div className="text-center">
-                      <Button onClick={startCamera} className="mb-3">
-                        <Camera className="h-4 w-4 mr-2" />
-                        Start Camera
-                      </Button>
-                      <p className="text-xs text-muted-foreground">
-                        We'll analyze your face shape for personalized recommendations
-                      </p>
+                      <div className="w-20 h-20 mx-auto mb-2 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center border-2 border-primary/30">
+                        <div className="w-12 h-12 rounded-full bg-muted-foreground/20 relative">
+                          <div className="absolute top-2 left-1/2 transform -translate-x-1/2 w-8 h-6 bg-muted-foreground/40 rounded-t-full"></div>
+                          <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-muted-foreground/60 rounded-full"></div>
+                          <div className="absolute top-3 left-3 w-1 h-1 bg-muted-foreground/60 rounded-full"></div>
+                          <div className="absolute top-3 right-3 w-1 h-1 bg-muted-foreground/60 rounded-full"></div>
+                        </div>
+                      </div>
+                      <p className="text-xs font-medium">Regular Cut</p>
+                      <p className="text-xs text-muted-foreground">Classic style</p>
                     </div>
-                  ) : (
-                    <div className="space-y-3">
+                    
+                    {/* Beard & Comeover Avatar */}
+                    <div className="text-center">
+                      <div className="w-20 h-20 mx-auto mb-2 rounded-full bg-gradient-to-br from-secondary/20 to-secondary/40 flex items-center justify-center border-2 border-secondary/30">
+                        <div className="w-12 h-12 rounded-full bg-muted-foreground/20 relative">
+                          <div className="absolute top-2 left-1 w-10 h-6 bg-muted-foreground/40 rounded-t-full transform -skew-x-6"></div>
+                          <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-muted-foreground/60 rounded-full"></div>
+                          <div className="absolute top-3 left-3 w-1 h-1 bg-muted-foreground/60 rounded-full"></div>
+                          <div className="absolute top-3 right-3 w-1 h-1 bg-muted-foreground/60 rounded-full"></div>
+                          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-6 h-3 bg-muted-foreground/50 rounded-b-lg"></div>
+                        </div>
+                      </div>
+                      <p className="text-xs font-medium">Beard & Comeover</p>
+                      <p className="text-xs text-muted-foreground">Sharp & modern</p>
+                    </div>
+                    
+                    {/* Buzz Cut Avatar */}
+                    <div className="text-center">
+                      <div className="w-20 h-20 mx-auto mb-2 rounded-full bg-gradient-to-br from-accent/20 to-accent/40 flex items-center justify-center border-2 border-accent/30">
+                        <div className="w-12 h-12 rounded-full bg-muted-foreground/20 relative">
+                          <div className="absolute top-2 left-1/2 transform -translate-x-1/2 w-8 h-4 bg-muted-foreground/30 rounded-t-full"></div>
+                          <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-muted-foreground/60 rounded-full"></div>
+                          <div className="absolute top-3 left-3 w-1 h-1 bg-muted-foreground/60 rounded-full"></div>
+                          <div className="absolute top-3 right-3 w-1 h-1 bg-muted-foreground/60 rounded-full"></div>
+                        </div>
+                      </div>
+                      <p className="text-xs font-medium">Buzz Cut</p>
+                      <p className="text-xs text-muted-foreground">Clean & minimal</p>
+                    </div>
+                  </div>
+                  
+                  <p className="text-center text-sm text-muted-foreground mb-4">
+                    Upload your photo to get personalized recommendations for your face shape
+                  </p>
+                  
+                  {/* Camera Controls */}
+                  {cameraActive && (
+                    <div className="space-y-3 mb-4">
                       <div className="relative bg-black rounded-lg overflow-hidden">
                         <video
                           ref={videoRef}
                           autoPlay
                           playsInline
-                          className="w-full h-auto max-h-64 object-cover"
+                          className="w-full h-auto max-h-48 object-cover"
                         />
                       </div>
                       <div className="flex gap-2 justify-center">
                         <Button onClick={capturePhoto} size="sm">
-                          <Camera className="h-4 w-4 mr-2" />
+                          <Camera className="h-3 w-3 mr-1" />
                           Capture
                         </Button>
                         <Button onClick={stopCamera} variant="outline" size="sm">
@@ -229,29 +269,39 @@ export const HaircutAdvisorModal = ({ isOpen, onClose }: HaircutAdvisorModalProp
                       </div>
                     </div>
                   )}
+                  
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 justify-center">
+                    <Button
+                      onClick={startCamera}
+                      size="sm"
+                      variant="outline"
+                      className="border-primary/30"
+                      disabled={cameraActive}
+                    >
+                      <Camera className="h-3 w-3 mr-1" />
+                      Camera
+                    </Button>
+                    <Button
+                      onClick={() => fileInputRef.current?.click()}
+                      size="sm"
+                      variant="outline"
+                      className="border-primary/30"
+                    >
+                      <Upload className="h-3 w-3 mr-1" />
+                      Upload
+                    </Button>
+                  </div>
+                  
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
                 </CardContent>
               </Card>
-
-              {/* Upload Section */}
-              <div className="text-center">
-                <p className="text-muted-foreground text-sm mb-3">Or upload an existing photo</p>
-                <Button
-                  onClick={() => fileInputRef.current?.click()}
-                  variant="outline"
-                  size="sm"
-                  className="border-primary/30"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload Image
-                </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-              </div>
             </div>
           )}
 
