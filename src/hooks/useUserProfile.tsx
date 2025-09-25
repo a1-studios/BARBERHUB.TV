@@ -8,6 +8,8 @@ interface UserProfile {
   display_name?: string;
   user_type: 'fan' | 'barber';
   country_code?: string;
+  is_verified_by_competition?: boolean;
+  three_x_vote_expires_at?: string;
 }
 
 export const useUserProfile = () => {
@@ -20,7 +22,7 @@ export const useUserProfile = () => {
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id, display_name, user_type, country_code')
+        .select('user_id, display_name, user_type, country_code, is_verified_by_competition, three_x_vote_expires_at')
         .eq('user_id', user.id)
         .single();
       
@@ -32,11 +34,16 @@ export const useUserProfile = () => {
 
   const isBarber = profile?.user_type === 'barber';
   const isFan = profile?.user_type === 'fan';
+  
+  // Check if user has verified status and it hasn't expired
+  const isVerified = profile?.is_verified_by_competition && 
+    (!profile?.three_x_vote_expires_at || new Date(profile.three_x_vote_expires_at) > new Date());
 
   return {
     profile,
     isBarber,
     isFan,
+    isVerified,
     isLoading,
     error
   };

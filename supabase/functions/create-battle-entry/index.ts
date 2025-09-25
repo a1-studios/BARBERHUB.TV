@@ -88,7 +88,7 @@ serve(async (req) => {
       cancel_url: `${origin}/payment-canceled`,
       metadata: {
         user_id: user.id,
-        product_type: 'battle_entry',
+        product_type: 'tournament_entry',
         category: category
       }
     });
@@ -104,7 +104,7 @@ serve(async (req) => {
         amount: amount,
         currency: 'usd',
         status: 'pending',
-        product_type: 'battle_entry',
+        product_type: 'tournament_entry',
         metadata: {
           category: category,
           tournament_entry: true

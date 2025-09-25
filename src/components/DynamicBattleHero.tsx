@@ -7,6 +7,7 @@ import { BattleCommentsPanel } from "./BattleCommentsPanel";
 import { DonationModal } from "./DonationModal";
 import { VideoPlayer } from "./VideoPlayer";
 import { VideoUpload } from "./VideoUpload";
+import { VerificationBadge } from "./VerificationBadge";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { toast } from "sonner";
@@ -37,7 +38,7 @@ interface BattleSubmission {
 }
 export const DynamicBattleHero = () => {
   const { user } = useAuth();
-  const { profile, isFan, isBarber } = useUserProfile();
+  const { profile, isFan, isBarber, isVerified } = useUserProfile();
   const [selectedBarberId, setSelectedBarberId] = useState<string | null>(null);
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const [selectedBarberName, setSelectedBarberName] = useState("");

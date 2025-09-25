@@ -25,3 +25,6 @@ verify_jwt = false
 
 [functions.create-donation]
 verify_jwt = true
+
+[functions.verify-tournament-payment]
+verify_jwt = false
