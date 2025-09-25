@@ -13,7 +13,10 @@ const Footer = () => {
                 alt="Barber Hub" 
                 className="w-8 h-8"
               />
-              <span className="text-xl font-bold text-gradient">BARBER-HUB</span>
+              <span className="text-xl font-bold">
+                <span className="text-white">BARBER</span>
+                <span className="text-gradient">-HUB</span>
+              </span>
             </div>
             <p className="text-muted-foreground">
               The ultimate platform for barber competitions, community, and grants.
