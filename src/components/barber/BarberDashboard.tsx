@@ -296,39 +296,8 @@ const BarberDashboard = () => {
 
         {/* Upcoming Events */}
         <Card className="card-gradient border-primary/20">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-primary">
-              <Calendar className="h-5 w-5" />
-              NEXT BATTLES & EVENTS
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
-                <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Trophy className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="font-semibold">Sunday Championship</p>
-                  <p className="text-sm text-muted-foreground">2 days remaining</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
-                <div className="w-12 h-12 rounded-full bg-success/20 flex items-center justify-center">
-                  <Users className="h-6 w-6 text-success" />
-                </div>
-                <div>
-                  <p className="font-semibold">Community Event</p>
-                  <p className="text-sm text-muted-foreground">Next week</p>
-                </div>
-              </div>
-
-              <Link to="/battles/create">
-                
-              </Link>
-            </div>
-          </CardContent>
+          
+          
         </Card>
       </div>
 
