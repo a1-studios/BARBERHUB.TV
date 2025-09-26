@@ -14,11 +14,11 @@ export function FloatingActionButton({ onClick, isOpen, className }: FloatingAct
       className={cn(
         "fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50",
         "w-14 h-14 rounded-full",
-        "bg-primary hover:bg-primary/90",
-        "shadow-lg hover:shadow-glow",
+        "bg-transparent hover:bg-primary/20",
+        "hover:shadow-glow",
         "transition-all duration-300 ease-in-out",
         "flex items-center justify-center",
-        "animate-float",
+        "hover:animate-float hover:scale-110",
         isOpen && "rotate-45 scale-110",
         className
       )}
