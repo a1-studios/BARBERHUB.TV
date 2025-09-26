@@ -27,6 +27,7 @@ interface BarberProfile {
   id: string;
   user_id: string;
   name: string;
+  country_code?: string;
 }
 interface BattleSubmission {
   id: string;
@@ -127,12 +128,30 @@ export const DynamicBattleHero = () => {
     queryKey: ['battleBarbers', battle?.barber1_id, battle?.barber2_id],
     queryFn: async () => {
       if (!battle?.barber1_id || !battle?.barber2_id) return [];
-      const {
-        data,
-        error
-      } = await supabase.from('barber_profiles').select('id, user_id, name').in('user_id', [battle.barber1_id, battle.barber2_id]);
-      if (error) throw error;
-      return data;
+      
+      // Fetch barber profiles with user profile data for country codes
+      const { data: barberProfiles, error: barberError } = await supabase
+        .from('barber_profiles')
+        .select('id, user_id, name, country_code')
+        .in('user_id', [battle.barber1_id, battle.barber2_id]);
+      
+      if (barberError) throw barberError;
+      
+      // If barber profiles don't have country_code, fetch from profiles table
+      const { data: userProfiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('user_id, country_code')
+        .in('user_id', [battle.barber1_id, battle.barber2_id]);
+      
+      if (profileError) throw profileError;
+      
+      // Merge the data, prioritizing barber_profiles country_code
+      const mergedData = barberProfiles?.map(barber => ({
+        ...barber,
+        country_code: barber.country_code || userProfiles?.find(p => p.user_id === barber.user_id)?.country_code || 'us'
+      }));
+      
+      return mergedData;
     },
     enabled: !!battle?.barber1_id && !!battle?.barber2_id
   });
@@ -367,41 +386,41 @@ export const DynamicBattleHero = () => {
                 </div>
               </div>
 
-              {/* Vertical Action Buttons - Mobile optimized */}
-              <div className="absolute left-1 sm:left-2 lg:left-3 top-[35%] sm:top-[30%] z-10 flex flex-col gap-1 sm:gap-2 mx-[10px]">
-                <button 
-                  className={`w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)] ${
-                    barber1LikeQuery.data ? 'bg-red-500/80 text-white' : 'bg-white/20 text-white hover:bg-white/30'
-                  }`}
-                  onClick={e => {
-                    e.stopPropagation();
-                    handleLike('synthetic-barber-1');
-                  }}
-                >
-                  <Heart className={`w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4 ${barber1LikeQuery.data ? 'fill-current' : ''}`} />
-                </button>
-                <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
-                e.stopPropagation();
-                handleShare();
-              }}>
-                  <Share2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
-                </button>
-                <button 
-                  className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-green-500/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-green-500/40 transition-all duration-300 shadow-[0_0_10px_rgba(34,197,94,0.4)] hover:shadow-[0_0_15px_rgba(34,197,94,0.7)]"
-                  onClick={e => {
-                    e.stopPropagation();
-                    handleDonate('synthetic-barber-1', "Carlos 'FadeKing' Martinez");
-                  }}
-                >
-                  <DollarSign className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
-                </button>
-                <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
-                e.stopPropagation();
-                toast.info("Feature coming soon!");
-              }}>
-                  <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
-                </button>
-              </div>
+                {/* Vertical Action Buttons - Mobile optimized - Fixed positions */}
+                <div className="absolute left-1 sm:left-2 lg:left-3 top-[35%] sm:top-[30%] z-10 flex flex-col gap-1 sm:gap-2">
+                  <button 
+                    className={`w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)] ${
+                      barber1LikeQuery.data ? 'bg-red-500/80 text-white' : 'bg-white/20 text-white hover:bg-white/30'
+                    }`}
+                    onClick={e => {
+                      e.stopPropagation();
+                      handleLike('synthetic-barber-1');
+                    }}
+                  >
+                    <Heart className={`w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4 ${barber1LikeQuery.data ? 'fill-current' : ''}`} />
+                  </button>
+                  <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
+                  e.stopPropagation();
+                  handleShare();
+                }}>
+                    <Share2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
+                  </button>
+                  <button 
+                    className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-green-500/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-green-500/40 transition-all duration-300 shadow-[0_0_10px_rgba(34,197,94,0.4)] hover:shadow-[0_0_15px_rgba(34,197,94,0.7)]"
+                    onClick={e => {
+                      e.stopPropagation();
+                      handleDonate('synthetic-barber-1', "Carlos 'FadeKing' Martinez");
+                    }}
+                  >
+                    <DollarSign className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
+                  </button>
+                  <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
+                  e.stopPropagation();
+                  toast.info("Feature coming soon!");
+                }}>
+                    <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
+                  </button>
+                </div>
 
             </div>
 
@@ -492,41 +511,41 @@ export const DynamicBattleHero = () => {
                 </div>
               </div>
 
-              {/* Vertical Action Buttons - Mobile optimized */}
-              <div className="absolute right-1 sm:right-2 lg:right-3 top-[35%] sm:top-[30%] z-10 flex flex-col gap-1 sm:gap-2 mx-[10px]">
-                <button 
-                  className={`w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)] ${
-                    barber2LikeQuery.data ? 'bg-red-500/80 text-white' : 'bg-white/20 text-white hover:bg-white/30'
-                  }`}
-                  onClick={e => {
-                    e.stopPropagation();
-                    handleLike('synthetic-barber-2');
-                  }}
-                >
-                  <Heart className={`w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4 ${barber2LikeQuery.data ? 'fill-current' : ''}`} />
-                </button>
-                <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
-                e.stopPropagation();
-                handleShare();
-              }}>
-                  <Share2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
-                </button>
-                <button 
-                  className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-green-500/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-green-500/40 transition-all duration-300 shadow-[0_0_10px_rgba(34,197,94,0.4)] hover:shadow-[0_0_15px_rgba(34,197,94,0.7)]"
-                  onClick={e => {
-                    e.stopPropagation();
-                    handleDonate('synthetic-barber-2', "Jamal 'SharpLine' Brooks");
-                  }}
-                >
-                  <DollarSign className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
-                </button>
-                <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
-                e.stopPropagation();
-                toast.info("Feature coming soon!");
-              }}>
-                  <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
-                </button>
-              </div>
+                {/* Vertical Action Buttons - Mobile optimized - Fixed positions */}
+                <div className="absolute right-1 sm:right-2 lg:right-3 top-[35%] sm:top-[30%] z-10 flex flex-col gap-1 sm:gap-2">
+                  <button 
+                    className={`w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 backdrop-blur-sm rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)] ${
+                      barber2LikeQuery.data ? 'bg-red-500/80 text-white' : 'bg-white/20 text-white hover:bg-white/30'
+                    }`}
+                    onClick={e => {
+                      e.stopPropagation();
+                      handleLike('synthetic-barber-2');
+                    }}
+                  >
+                    <Heart className={`w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4 ${barber2LikeQuery.data ? 'fill-current' : ''}`} />
+                  </button>
+                  <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
+                  e.stopPropagation();
+                  handleShare();
+                }}>
+                    <Share2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
+                  </button>
+                  <button 
+                    className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-green-500/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-green-500/40 transition-all duration-300 shadow-[0_0_10px_rgba(34,197,94,0.4)] hover:shadow-[0_0_15px_rgba(34,197,94,0.7)]"
+                    onClick={e => {
+                      e.stopPropagation();
+                      handleDonate('synthetic-barber-2', "Jamal 'SharpLine' Brooks");
+                    }}
+                  >
+                    <DollarSign className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
+                  </button>
+                  <button className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-all duration-300 shadow-[0_0_10px_rgba(255,165,0,0.4)] hover:shadow-[0_0_15px_rgba(255,165,0,0.7)]" onClick={e => {
+                  e.stopPropagation();
+                  toast.info("Feature coming soon!");
+                }}>
+                    <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 lg:w-4 lg:h-4" />
+                  </button>
+                </div>
 
               {/* Barber Info - Responsive text */}
               
@@ -562,7 +581,7 @@ export const DynamicBattleHero = () => {
               <div className="flex-1 relative overflow-hidden" onClick={() => handleVote(barber1?.user_id || '')}>
                 {/* Flag Background */}
                 <div className="absolute inset-0" style={{
-                backgroundImage: `url(${getFlagImageUrl('us')})`,
+                backgroundImage: `url(${getFlagImageUrl(barber1?.country_code || 'us')})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 opacity: 0.3
@@ -664,7 +683,7 @@ export const DynamicBattleHero = () => {
               <div className="flex-1 relative overflow-hidden" onClick={() => handleVote(barber2?.user_id || '')}>
                 {/* Flag Background */}
                 <div className="absolute inset-0" style={{
-                backgroundImage: `url(${getFlagImageUrl('ca')})`,
+                backgroundImage: `url(${getFlagImageUrl(barber2?.country_code || 'ca')})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 opacity: 0.3
