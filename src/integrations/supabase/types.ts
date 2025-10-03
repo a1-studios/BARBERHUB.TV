@@ -883,6 +883,20 @@ export type Database = {
           total_donated_cents: number
         }[]
       }
+      get_multiple_public_profiles: {
+        Args: { user_ids: string[] }
+        Returns: {
+          avatar_url: string
+          bio: string
+          country_code: string
+          creator_level: string
+          display_name: string
+          is_creator: boolean
+          user_id: string
+          user_type: string
+          username: string
+        }[]
+      }
       get_public_creator_profiles: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -894,6 +908,20 @@ export type Database = {
           like_count: number
           subscription_count: number
           user_id: string
+          username: string
+        }[]
+      }
+      get_public_profile: {
+        Args: { profile_user_id: string }
+        Returns: {
+          avatar_url: string
+          bio: string
+          country_code: string
+          creator_level: string
+          display_name: string
+          is_creator: boolean
+          user_id: string
+          user_type: string
           username: string
         }[]
       }

@@ -59,13 +59,27 @@ const BattleDetails = () => {
   const { data: participants } = useQuery({
     queryKey: ['battle-participants', id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch participants without profile join
+      const { data: participantsData, error } = await supabase
         .from('battle_participants')
-        .select('*, profiles(display_name, avatar_url, user_type)')
+        .select('*')
         .eq('battle_id', id);
       
       if (error) throw error;
-      return data;
+      if (!participantsData || participantsData.length === 0) return [];
+
+      // Fetch public profiles for all participants
+      const userIds = participantsData.map(p => p.user_id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .rpc('get_multiple_public_profiles', { user_ids: userIds });
+      
+      if (profilesError) throw profilesError;
+
+      // Merge participant data with profiles
+      return participantsData.map(participant => ({
+        ...participant,
+        profiles: profilesData?.find(p => p.user_id === participant.user_id) || null
+      }));
     }
   });
 
@@ -73,13 +87,27 @@ const BattleDetails = () => {
   const { data: submissions } = useQuery({
     queryKey: ['battle-submissions', id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch submissions without profile join
+      const { data: submissionsData, error } = await supabase
         .from('battle_submissions')
-        .select('*, profiles(display_name, avatar_url)')
+        .select('*')
         .eq('battle_id', id);
       
       if (error) throw error;
-      return data;
+      if (!submissionsData || submissionsData.length === 0) return [];
+
+      // Fetch public profiles for all submission creators
+      const userIds = submissionsData.map(s => s.user_id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .rpc('get_multiple_public_profiles', { user_ids: userIds });
+      
+      if (profilesError) throw profilesError;
+
+      // Merge submission data with profiles
+      return submissionsData.map(submission => ({
+        ...submission,
+        profiles: profilesData?.find(p => p.user_id === submission.user_id) || null
+      }));
     }
   });
 

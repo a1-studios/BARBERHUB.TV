@@ -83,17 +83,30 @@ export default function CreatorHub() {
   const { data: battles, isLoading: battlesLoading, refetch } = useQuery({
     queryKey: ['battles'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch battles without profile join
+      const { data: battlesData, error } = await supabase
         .from('battles')
         .select(`
           *,
-          battle_participants(count),
-          profiles!battles_organizer_id_fkey(display_name, avatar_url)
+          battle_participants(count)
         `)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      if (!battlesData || battlesData.length === 0) return [];
+
+      // Fetch public profiles for all organizers
+      const organizerIds = [...new Set(battlesData.map(b => b.organizer_id))];
+      const { data: profilesData, error: profilesError } = await supabase
+        .rpc('get_multiple_public_profiles', { user_ids: organizerIds });
+      
+      if (profilesError) throw profilesError;
+
+      // Merge battle data with organizer profiles
+      return battlesData.map(battle => ({
+        ...battle,
+        profiles: profilesData?.find(p => p.user_id === battle.organizer_id) || null
+      }));
     },
     enabled: !!user
   });
@@ -357,12 +370,12 @@ export default function CreatorHub() {
                       </div>
 
                       {/* Organizer */}
-                      {battle.profiles && battle.profiles.length > 0 && (
+                      {battle.profiles && (
                         <div className="flex items-center gap-2">
-                          {battle.profiles[0]?.avatar_url ? (
+                          {battle.profiles.avatar_url ? (
                             <img
-                              src={battle.profiles[0].avatar_url}
-                              alt={battle.profiles[0]?.display_name || 'Organizer'}
+                              src={battle.profiles.avatar_url}
+                              alt={battle.profiles.display_name || 'Organizer'}
                               className="w-6 h-6 rounded-full"
                             />
                           ) : (
@@ -371,7 +384,7 @@ export default function CreatorHub() {
                             </div>
                           )}
                           <span className="text-sm text-muted-foreground">
-                            by {battle.profiles[0]?.display_name || 'Anonymous'}
+                            by {battle.profiles.display_name || 'Anonymous'}
                           </span>
                         </div>
                       )}
