@@ -32,8 +32,25 @@ export const useUserProfile = () => {
     enabled: !!user
   });
 
-  const isBarber = profile?.user_type === 'barber';
-  const isFan = profile?.user_type === 'fan';
+  // Check user roles from user_roles table instead of profiles.user_type
+  const { data: userRoles } = useQuery({
+    queryKey: ['userRoles', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      return data.map(r => r.role);
+    },
+    enabled: !!user
+  });
+
+  const isBarber = userRoles?.includes('barber') ?? false;
+  const isFan = userRoles?.includes('fan') ?? false;
   
   // Check if user has verified status and it hasn't expired
   const isVerified = profile?.is_verified_by_competition && 
