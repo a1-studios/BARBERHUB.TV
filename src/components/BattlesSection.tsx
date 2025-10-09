@@ -155,10 +155,12 @@ const BattlesSection = () => {
             AI Haircut Advisor
           </Button>
           
-          <Button size="lg" onClick={() => navigate('/portal')} className="text-lg px-8 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90">
-            <Zap className="mr-2 h-5 w-5" />
-            Battle Portal
-          </Button>
+          {isBarber && (
+            <Button size="lg" onClick={() => navigate('/portal')} className="text-lg px-8 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90">
+              <Zap className="mr-2 h-5 w-5" />
+              Battle Portal
+            </Button>
+          )}
         </div>
         {/* Header */}
         <div className="text-center mb-12">
