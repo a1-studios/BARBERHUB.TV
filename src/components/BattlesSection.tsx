@@ -7,6 +7,7 @@ import { Trophy, Users, Clock, Vote, Plus, Scissors, Gift, Zap } from "lucide-re
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useQuery } from "@tanstack/react-query";
 import { HaircutAdvisorModal } from "./HaircutAdvisorModal";
 interface Battle {
   id: string;
@@ -30,6 +31,38 @@ const BattlesSection = () => {
       fetchFeaturedBattles();
     }
   }, [user]);
+
+  // Fetch barber's active battles if user is a barber
+  const { data: myActiveBattles } = useQuery({
+    queryKey: ['myActiveBattles', user?.id],
+    queryFn: async () => {
+      if (!user?.id || !isBarber) return [];
+      
+      const { data, error } = await supabase
+        .from('battle_participants')
+        .select(`
+          battle_id,
+          joined_at,
+          battles (
+            id,
+            title,
+            description,
+            status,
+            prize_amount,
+            currency,
+            category,
+            starts_at
+          )
+        `)
+        .eq('user_id', user.id)
+        .in('battles.status', ['upcoming', 'voting', 'active'])
+        .order('joined_at', { ascending: false });
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id && isBarber
+  });
   const fetchFeaturedBattles = async () => {
     try {
       // Fetch latest battles with participant counts
@@ -147,6 +180,18 @@ const BattlesSection = () => {
       <div className="absolute inset-0 bg-gradient-to-b from-background/90 via-background/70 to-background/90 mx-0 my-[50px]" />
       
       <div className="container mx-auto max-w-6xl relative z-10">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h2 className="text-4xl md:text-5xl font-bold mb-4">
+            <span className="text-primary">(Global) </span>
+            <span className="text-white">play </span>
+            <span className="text-primary">ground </span>
+          </h2>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            {isBarber ? "Compete with the best barbers worldwide. Show your skills, win prizes, and earn legendary status." : "Watch epic barber battles from around the world. Vote for your favorites and support the community."}
+          </p>
+        </div>
+
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row justify-center gap-4 mb-12">
           
@@ -161,18 +206,59 @@ const BattlesSection = () => {
               Battle Portal
             </Button>
           )}
+
+          {isFan && (
+            <Button size="lg" variant="outline" onClick={() => navigate('/creator-hub')} className="text-lg px-8">
+              <Trophy className="mr-2 h-5 w-5" />
+              Watch Battles
+            </Button>
+          )}
         </div>
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold mb-4">
-            <span className="text-primary">(Global) </span>
-            <span className="text-white">play </span>
-            <span className="text-primary">ground </span>
-          </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            {isBarber ? "Compete with the best barbers worldwide. Show your skills, win prizes, and earn legendary status." : "Watch epic barber battles from around the world. Vote for your favorites and support the community."}
-          </p>
-        </div>
+
+        {/* My Active Battles - Barbers Only */}
+        {isBarber && myActiveBattles && myActiveBattles.length > 0 && (
+          <div className="mb-12">
+            <h3 className="text-2xl font-bold text-white text-center mb-8">My Active Battles</h3>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {myActiveBattles.map(({ battles, joined_at }: any) => (
+                <Card 
+                  key={battles.id} 
+                  className="border border-primary/50 shadow-lg backdrop-blur-sm bg-card/50 hover:border-primary/70 transition-all cursor-pointer" 
+                  style={{ borderRadius: '1.5rem' }}
+                  onClick={() => navigate(`/battles/${battles.id}`)}
+                >
+                  <CardHeader>
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge className="bg-primary/20 text-primary border-primary/30">
+                        My Battle
+                      </Badge>
+                      <Badge variant="outline" className="text-primary border-primary/30">
+                        {battles.category || 'General'}
+                      </Badge>
+                    </div>
+                    <CardTitle className="text-white">{battles.title}</CardTitle>
+                    <CardDescription className="text-muted-foreground">
+                      {battles.description}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="text-muted-foreground">
+                        Status: {battles.status}
+                      </div>
+                      <div className="text-primary font-semibold">
+                        {battles.prize_amount > 0 ? `$${battles.prize_amount}` : 'Free'}
+                      </div>
+                    </div>
+                    <Button className="w-full" variant="default">
+                      View Battle
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
 
 
         {/* Featured Battles */}
