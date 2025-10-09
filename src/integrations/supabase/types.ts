@@ -138,33 +138,45 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_live_stream: boolean | null
           media_url: string
           status: string
+          stream_ended_at: string | null
+          stream_started_at: string | null
           thumbnail_url: string | null
           title: string | null
           user_id: string
+          youtube_vod_url: string | null
         }
         Insert: {
           battle_id: string
           created_at?: string
           description?: string | null
           id?: string
+          is_live_stream?: boolean | null
           media_url: string
           status?: string
+          stream_ended_at?: string | null
+          stream_started_at?: string | null
           thumbnail_url?: string | null
           title?: string | null
           user_id: string
+          youtube_vod_url?: string | null
         }
         Update: {
           battle_id?: string
           created_at?: string
           description?: string | null
           id?: string
+          is_live_stream?: boolean | null
           media_url?: string
           status?: string
+          stream_ended_at?: string | null
+          stream_started_at?: string | null
           thumbnail_url?: string | null
           title?: string | null
           user_id?: string
+          youtube_vod_url?: string | null
         }
         Relationships: [
           {

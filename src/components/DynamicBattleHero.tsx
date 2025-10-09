@@ -9,6 +9,7 @@ import { VideoPlayer } from "./VideoPlayer";
 import { VideoUpload } from "./VideoUpload";
 import { VerificationBadge } from "./VerificationBadge";
 import { AddFundsModal } from "./AddFundsModal";
+import { YouTubeStreamPlayer } from "./battles/YouTubeStreamPlayer";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useLikes } from "@/hooks/useLikes";
@@ -22,6 +23,8 @@ interface Battle {
   vote_count1: number;
   vote_count2: number;
   status: string;
+  youtube_stream_url?: string;
+  youtube_vod_url?: string;
 }
 interface BarberProfile {
   id: string;
@@ -38,6 +41,10 @@ interface BattleSubmission {
   title?: string;
   description?: string;
   status: string;
+  youtube_vod_url?: string;
+  is_live_stream?: boolean;
+  stream_started_at?: string;
+  stream_ended_at?: string;
 }
 export const DynamicBattleHero = () => {
   const {
@@ -348,7 +355,7 @@ export const DynamicBattleHero = () => {
                 </h3>
               </div>
 
-              {/* Video Box */}
+              {/* Video Box - Placeholder */}
               <div className="absolute top-[45%] left-1/2 transform -translate-x-1/2 w-[35vw] h-[35vw] max-w-[140px] max-h-[140px] sm:max-w-[200px] sm:max-h-[200px] lg:max-w-[260px] lg:max-h-[260px] bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg cursor-pointer group hover:bg-primary/20 transition-all duration-300">
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 group-hover:from-primary/20 group-hover:to-primary/40 transition-all duration-300">
                   <Play className="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white/60 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
@@ -556,11 +563,35 @@ export const DynamicBattleHero = () => {
                   <h3 className="text-white text-xs sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">{barber1?.name}</h3>
                 </div>
 
-                {/* Video Placeholder */}
-                <div className="absolute top-[55%] left-1/2 transform -translate-x-1/2 w-32 h-20 sm:w-40 sm:h-24 lg:w-48 lg:h-28 bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg cursor-pointer group hover:bg-primary/20 transition-all duration-300">
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 group-hover:from-primary/20 group-hover:to-primary/40 transition-all duration-300">
-                    <Play className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-white/60 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
-                  </div>
+                {/* Video Box - With YouTube or Upload Button */}
+                <div className="absolute top-[55%] left-1/2 transform -translate-x-1/2 w-32 h-20 sm:w-40 sm:h-24 lg:w-48 lg:h-28 bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg">
+                  {(() => {
+                    const submission = getBarberSubmission(barber1?.user_id || '');
+                    const youtubeUrl = submission?.youtube_vod_url || battle?.youtube_vod_url;
+                    const isLive = battle?.status === 'live' && submission?.is_live_stream;
+                    
+                    if (youtubeUrl) {
+                      return <YouTubeStreamPlayer videoUrl={youtubeUrl} isLive={isLive} title={submission?.title} />;
+                    }
+                    
+                    if (canUserUpload(barber1?.user_id || '')) {
+                      return (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleVideoUpload(); }}
+                          className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 to-primary/40 hover:from-primary/30 hover:to-primary/50 transition-all duration-300"
+                        >
+                          <Upload className="w-6 h-6 sm:w-8 sm:h-8 text-white mb-1" />
+                          <span className="text-white text-[8px] sm:text-xs">Upload Video</span>
+                        </button>
+                      );
+                    }
+                    
+                    return (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 group-hover:from-primary/20 group-hover:to-primary/40 transition-all duration-300 cursor-pointer">
+                        <Play className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-white/60 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
+                      </div>
+                    );
+                  })()}
                 </div>
                 
                 <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/60" />
@@ -658,11 +689,35 @@ export const DynamicBattleHero = () => {
                   <h3 className="text-white text-xs sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">{barber2?.name}</h3>
                 </div>
 
-                {/* Video Placeholder */}
-                <div className="absolute top-[55%] right-1/2 transform translate-x-1/2 w-32 h-20 sm:w-40 sm:h-24 lg:w-48 lg:h-28 bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg cursor-pointer group hover:bg-primary/20 transition-all duration-300">
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 group-hover:from-primary/20 group-hover:to-primary/40 transition-all duration-300">
-                    <Play className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-white/60 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
-                  </div>
+                {/* Video Box - With YouTube or Upload Button */}
+                <div className="absolute top-[55%] right-1/2 transform translate-x-1/2 w-32 h-20 sm:w-40 sm:h-24 lg:w-48 lg:h-28 bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg">
+                  {(() => {
+                    const submission = getBarberSubmission(barber2?.user_id || '');
+                    const youtubeUrl = submission?.youtube_vod_url || battle?.youtube_vod_url;
+                    const isLive = battle?.status === 'live' && submission?.is_live_stream;
+                    
+                    if (youtubeUrl) {
+                      return <YouTubeStreamPlayer videoUrl={youtubeUrl} isLive={isLive} title={submission?.title} />;
+                    }
+                    
+                    if (canUserUpload(barber2?.user_id || '')) {
+                      return (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleVideoUpload(); }}
+                          className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-primary/20 to-primary/40 hover:from-primary/30 hover:to-primary/50 transition-all duration-300"
+                        >
+                          <Upload className="w-6 h-6 sm:w-8 sm:h-8 text-white mb-1" />
+                          <span className="text-white text-[8px] sm:text-xs">Upload Video</span>
+                        </button>
+                      );
+                    }
+                    
+                    return (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 group-hover:from-primary/20 group-hover:to-primary/40 transition-all duration-300 cursor-pointer">
+                        <Play className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-white/60 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
+                      </div>
+                    );
+                  })()}
                 </div>
                 
                 <div className="absolute inset-0 bg-gradient-to-l from-black/60 via-black/40 to-black/60" />
