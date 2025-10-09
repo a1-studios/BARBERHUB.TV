@@ -2,11 +2,12 @@ import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { StandingsTable } from "@/components/tournament/StandingsTable";
+import { TournamentBracket } from "@/components/tournament/TournamentBracket";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Trophy, Users } from "lucide-react";
+import { Calendar, Trophy, Users, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 
 export default function TournamentDetails() {
@@ -182,10 +183,27 @@ export default function TournamentDetails() {
                           {match.barber1?.name || "TBD"} vs {match.barber2?.name || "TBD"}
                         </p>
                         <p className="text-sm text-muted-foreground">{match.title}</p>
+                        {match.starts_at && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {format(new Date(match.starts_at), "PPP p")}
+                          </p>
+                        )}
                       </div>
-                      <Badge variant={match.status === "completed" ? "outline" : "default"}>
-                        {match.status}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        {match.youtube_stream_url && (
+                          <a
+                            href={match.youtube_stream_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline flex items-center gap-1"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </a>
+                        )}
+                        <Badge variant={match.status === "completed" ? "outline" : "default"}>
+                          {match.status}
+                        </Badge>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -205,9 +223,7 @@ export default function TournamentDetails() {
               <CardDescription>Tournament bracket view</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                Bracket view coming soon - displays after qualification phase
-              </div>
+              <TournamentBracket tournamentId={tournamentId!} phaseId={currentPhase?.id} />
             </CardContent>
           </Card>
         </TabsContent>

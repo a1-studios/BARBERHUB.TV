@@ -9,7 +9,9 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import { TournamentRegistration } from "@/components/tournament/TournamentRegistration";
+import { LiveMatchCounter } from "@/components/tournament/LiveMatchCounter";
 import { Trophy, Users, Clock, Vote, Plus, DollarSign, Play, Calendar, Target } from "lucide-react";
 interface Battle {
   id: string;
@@ -142,7 +144,10 @@ const Portal = () => {
         <div className="container mx-auto px-4">
           {/* Portal Header */}
           <div className="text-center mb-12">
-            
+            <div className="flex items-center justify-center gap-4 mb-4">
+              <h1 className="text-4xl font-bold text-foreground">Barber Battle Portal</h1>
+              <LiveMatchCounter />
+            </div>
             <p className="text-xl text-muted-foreground mb-2">
               Year-round single-elimination tournament
             </p>
@@ -169,10 +174,7 @@ const Portal = () => {
                         <Plus className="mr-2 h-5 w-5" />
                         Create a Battle
                       </Button>
-                      <Button size="lg" variant="outline" onClick={handleEnterTournament} disabled={isCreatingBattle} className="text-lg px-8">
-                        <DollarSign className="mr-2 h-5 w-5" />
-                        Enter Tournament ($50)
-                      </Button>
+                      <TournamentRegistration />
                     </>}
                   {isFan && <>
                       <Button size="lg" onClick={() => liveBattles && liveBattles.length > 0 ? navigate(`/battles/${liveBattles[0].id}`) : toast({
