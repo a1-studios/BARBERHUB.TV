@@ -7,12 +7,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfileSetup } from '@/hooks/useProfileSetup';
+import { useUserRole } from '@/hooks/useUserRole';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { BackButton } from '@/components/ui/BackButton';
-import { Scissors, Users, Trophy, Plus, User, Loader2, Globe, Edit3, X, Settings } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Scissors, Users, Trophy, Plus, User, Loader2, Globe, Edit3, X, Settings, Upload, Zap, CheckCircle, Clock, Award } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { CountrySelector } from '@/components/CountrySelector';
 import { BarberProfileForm } from '@/components/profiles/BarberProfileForm';
@@ -23,6 +24,8 @@ import { BarberSettings } from '@/components/profiles/BarberSettings';
 
 const Profile = () => {
   const { user } = useAuth();
+  const { isBarber: isUserBarber } = useUserRole();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [showProfileSetup, setShowProfileSetup] = useState(false);
@@ -75,6 +78,82 @@ const Profile = () => {
       });
     }
   }, [profile]);
+
+  // Fetch battles where user is a participant (for barbers only)
+  const { data: myBattles } = useQuery({
+    queryKey: ['myBattles', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      
+      // Get participant records
+      const { data: participants, error: partError } = await supabase
+        .from('battle_participants')
+        .select('id, battle_id, joined_at')
+        .eq('user_id', user.id)
+        .order('joined_at', { ascending: false });
+      
+      if (partError) throw partError;
+      if (!participants || participants.length === 0) return [];
+      
+      // Get battle details for those battles
+      const battleIds = participants.map(p => p.battle_id);
+      const { data: battles, error: battleError } = await supabase
+        .from('battles')
+        .select('id, title, description, status, prize_amount, currency, category, starts_at, voting_ends_at')
+        .in('id', battleIds);
+      
+      if (battleError) throw battleError;
+      
+      // Combine the data
+      return participants.map(p => ({
+        ...p,
+        battles: battles?.find(b => b.id === p.battle_id)
+      }));
+    },
+    enabled: !!user?.id && isUserBarber
+  });
+
+  // Fetch battle submissions for the user
+  const { data: mySubmissions } = useQuery({
+    queryKey: ['mySubmissions', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from('battle_submissions')
+        .select('battle_id, status, created_at')
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id && isUserBarber
+  });
+
+  // Get submission status for a battle
+  const getSubmissionStatus = (battleId: string) => {
+    const submission = mySubmissions?.find(s => s.battle_id === battleId);
+    return submission?.status || 'pending';
+  };
+
+  // Check if battle needs submission
+  const needsSubmission = (battle: any) => {
+    if (!battle) return false;
+    const hasSubmission = mySubmissions?.some(s => s.battle_id === battle.id);
+    return !hasSubmission && (battle.status === 'upcoming' || battle.status === 'active');
+  };
+
+  // Categorize battles
+  const activeBattles = myBattles?.filter((b: any) => 
+    b.battles && (b.battles.status === 'voting' || b.battles.status === 'active')
+  ) || [];
+  
+  const upcomingBattles = myBattles?.filter((b: any) => 
+    b.battles && b.battles.status === 'upcoming'
+  ) || [];
+  
+  const pastBattles = myBattles?.filter((b: any) => 
+    b.battles && b.battles.status === 'completed'
+  ) || [];
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
@@ -427,46 +506,70 @@ const Profile = () => {
 
             {/* Quick Actions */}
             <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {isBarber && barberProfile && (
+              {/* Quick Actions for Barbers */}
+              {isBarber && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Quick Actions</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Button 
+                      variant="default" 
+                      className="w-full justify-start"
+                      onClick={() => navigate('/portal')}
+                    >
+                      <Zap className="w-4 h-4 mr-2" />
+                      Go to Portal
+                    </Button>
+
                     <Button 
                       variant="outline" 
                       className="w-full justify-start"
-                      onClick={() => setShowCreationUpload(true)}
+                      onClick={() => setShowBarberSettings(true)}
+                    >
+                      <Settings className="w-4 h-4 mr-2" />
+                      View My Settings
+                    </Button>
+
+                    {activeBattles.length > 0 && needsSubmission(activeBattles[0]?.battles) && (
+                      <Button 
+                        variant="outline" 
+                        className="w-full justify-start border-orange-500 text-orange-500 hover:bg-orange-500/10"
+                        onClick={() => navigate(`/battles/${activeBattles[0]?.battles?.id}`)}
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload to Active Battle
+                      </Button>
+                    )}
+
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-start"
+                      onClick={() => navigate('/battles/create')}
                     >
                       <Plus className="w-4 h-4 mr-2" />
-                      Upload Creation
+                      Create Battle
                     </Button>
-                  )}
-                  
-                  <Link to="/battles">
-                    <Button variant="outline" className="w-full justify-start">
-                      <Trophy className="w-4 h-4 mr-2" />
-                      View Battles
-                    </Button>
-                  </Link>
-                  
-                  {isBarber && (
-                    <Link to="/battles/create">
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Quick Actions for Fans */}
+              {!isBarber && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Quick Actions</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Link to="/creator-hub">
                       <Button variant="outline" className="w-full justify-start">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Create Battle
+                        <Trophy className="w-4 h-4 mr-2" />
+                        Watch Battles
                       </Button>
                     </Link>
-                  )}
-
-                  <Link to="/portal">
-                    <Button variant="outline" className="w-full justify-start">
-                      <Trophy className="w-4 h-4 mr-2" />
-                      Battle Portal
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
 
               {isBarber && (
                 <Card>
@@ -513,6 +616,141 @@ const Profile = () => {
               )}
             </div>
           </div>
+
+          {/* My Battles Section - Barbers Only */}
+          {isBarber && myBattles && myBattles.length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-2xl font-bold mb-6">My Battles</h3>
+              
+              {/* Active Battles */}
+              {activeBattles.length > 0 && (
+                <div className="mb-8">
+                  <h4 className="text-xl font-semibold mb-4 text-primary">Active Battles</h4>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {activeBattles.map(({ battles }: any) => {
+                      const hasSubmission = !needsSubmission(battles);
+                      return (
+                        <Card 
+                          key={battles.id}
+                          className="border-primary/50 hover:border-primary cursor-pointer"
+                          onClick={() => navigate(`/battles/${battles.id}`)}
+                        >
+                          <CardHeader>
+                            <div className="flex items-center justify-between mb-2">
+                              <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
+                                Active
+                              </Badge>
+                              {hasSubmission ? (
+                                <Badge className="bg-green-500 text-white">
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Submitted
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="border-orange-500 text-orange-500">
+                                  <Clock className="w-3 h-3 mr-1" />
+                                  Pending
+                                </Badge>
+                              )}
+                            </div>
+                            <CardTitle className="text-lg">{battles.title}</CardTitle>
+                            <CardDescription className="line-clamp-2">
+                              {battles.description}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-muted-foreground">{battles.category}</span>
+                              <span className="text-primary font-semibold">
+                                ${battles.prize_amount}
+                              </span>
+                            </div>
+                            {!hasSubmission && (
+                              <Button className="w-full mt-3" size="sm" variant="outline">
+                                <Upload className="w-4 h-4 mr-2" />
+                                Upload Submission
+                              </Button>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Upcoming Battles */}
+              {upcomingBattles.length > 0 && (
+                <div className="mb-8">
+                  <h4 className="text-xl font-semibold mb-4">Upcoming Battles</h4>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {upcomingBattles.map(({ battles }: any) => (
+                      <Card 
+                        key={battles.id}
+                        className="hover:border-primary cursor-pointer"
+                        onClick={() => navigate(`/battles/${battles.id}`)}
+                      >
+                        <CardHeader>
+                          <div className="flex items-center justify-between mb-2">
+                            <Badge variant="secondary">Upcoming</Badge>
+                            <Badge variant="outline">{battles.category}</Badge>
+                          </div>
+                          <CardTitle className="text-lg">{battles.title}</CardTitle>
+                          <CardDescription className="line-clamp-2">
+                            {battles.description}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-sm text-muted-foreground">
+                            {battles.starts_at && (
+                              <div>Starts: {new Date(battles.starts_at).toLocaleDateString()}</div>
+                            )}
+                            <div className="text-primary font-semibold mt-2">
+                              Prize: ${battles.prize_amount}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Past Battles */}
+              {pastBattles.length > 0 && (
+                <div>
+                  <h4 className="text-xl font-semibold mb-4">Past Battles</h4>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {pastBattles.map(({ battles }: any) => (
+                      <Card 
+                        key={battles.id}
+                        className="opacity-80 hover:opacity-100 cursor-pointer"
+                        onClick={() => navigate(`/battles/${battles.id}`)}
+                      >
+                        <CardHeader>
+                          <div className="flex items-center justify-between mb-2">
+                            <Badge variant="outline">
+                              <Award className="w-3 h-3 mr-1" />
+                              Completed
+                            </Badge>
+                            <Badge variant="outline">{battles.category}</Badge>
+                          </div>
+                          <CardTitle className="text-lg">{battles.title}</CardTitle>
+                          <CardDescription className="line-clamp-2">
+                            {battles.description}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <Button className="w-full" size="sm" variant="ghost">
+                            View Results
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Creation Upload Modal */}
           {showCreationUpload && isBarber && barberProfile && (

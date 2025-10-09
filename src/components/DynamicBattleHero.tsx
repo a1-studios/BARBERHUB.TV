@@ -186,12 +186,6 @@ export const DynamicBattleHero = () => {
       return;
     }
 
-    // Check if user is a fan
-    if (!isFan) {
-      toast.error("Only fans can vote in battles");
-      return;
-    }
-
     // Prevent clicking on "No battle" message
     if (!barberId) {
       toast.info("Voting will be available when a battle is live");
@@ -551,7 +545,7 @@ export const DynamicBattleHero = () => {
           <div className="w-full aspect-[16/9] sm:aspect-[16/10] bg-card rounded-xl sm:rounded-2xl shadow-2xl border-2 border-primary/50 animate-glow overflow-hidden relative transform-gpu will-change-transform">
             <div className="h-full flex">
               {/* Barber 1 Side */}
-              <div className="flex-1 relative overflow-hidden" onClick={() => isFan && handleVote(barber1?.user_id || '')}>
+              <div className="flex-1 relative overflow-hidden" onClick={() => handleVote(barber1?.user_id || '')}>
                 {/* Flag Background */}
                 <div className="absolute inset-0" style={{
                 backgroundImage: `url(${getFlagImageUrl(barber1?.country_code || 'us')})`,
@@ -677,7 +671,7 @@ export const DynamicBattleHero = () => {
               </div>
 
               {/* Barber 2 Side */}
-              <div className="flex-1 relative overflow-hidden" onClick={() => isFan && handleVote(barber2?.user_id || '')}>
+              <div className="flex-1 relative overflow-hidden" onClick={() => handleVote(barber2?.user_id || '')}>
                 {/* Flag Background */}
                 <div className="absolute inset-0" style={{
                 backgroundImage: `url(${getFlagImageUrl(barber2?.country_code || 'ca')})`,
