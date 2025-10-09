@@ -12,6 +12,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { BackButton } from '@/components/ui/BackButton';
+import { RoleBadge } from '@/components/RoleBadge';
+import { EmptyState } from '@/components/EmptyState';
 import { Scissors, Users, Trophy, Plus, User, Loader2, Globe, Edit3, X, Settings, Upload, Zap, CheckCircle, Clock, Award } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
@@ -330,27 +332,30 @@ const Profile = () => {
                         Manage your account details and preferences
                       </CardDescription>
                     </div>
-                    <div className="flex gap-2">
-                      {isBarber && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowBarberSettings(true)}
-                        >
-                          <Settings className="h-4 w-4 mr-2" />
-                          Barber Settings
-                        </Button>
-                      )}
-                      {(barberProfile || clientProfile) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setShowProfileSetup(true)}
-                        >
-                          <Edit3 className="h-4 w-4 mr-2" />
-                          Edit {isBarber ? 'Barber' : 'Client'} Profile
-                        </Button>
-                      )}
+                    <div className="flex flex-col gap-2">
+                      <RoleBadge size="md" />
+                      <div className="flex gap-2">
+                        {isBarber && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowBarberSettings(true)}
+                          >
+                            <Settings className="h-4 w-4 mr-2" />
+                            Barber Settings
+                          </Button>
+                        )}
+                        {(barberProfile || clientProfile) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowProfileSetup(true)}
+                          >
+                            <Edit3 className="h-4 w-4 mr-2" />
+                            Edit {isBarber ? 'Barber' : 'Client'} Profile
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardHeader>
@@ -749,6 +754,19 @@ const Profile = () => {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Empty State for Barbers with No Battles */}
+          {isBarber && (!myBattles || myBattles.length === 0) && (
+            <div className="mt-8">
+              <EmptyState
+                icon={Trophy}
+                title="No Battles Yet"
+                description="Create your first battle or join a tournament to start competing!"
+                actionLabel="Go to Portal"
+                onAction={() => navigate('/portal')}
+              />
             </div>
           )}
 

@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import { CreatorHub } from "@/components/creator/CreatorHub";
 import GrantsSection from "@/components/GrantsSection";
 import { VirtualHaircutTryOn } from "@/components/VirtualHaircutTryOn";
+import { OnboardingMessage } from "@/components/OnboardingMessage";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { FEATURES } from "@/config/features";
@@ -30,6 +31,9 @@ const Index = () => {
       {/* Content gated behind authentication */}
       {user ? (
         <main>
+          {/* Onboarding Message */}
+          <OnboardingMessage />
+
           {/* Head-to-Head Battle Hero */}
           <DynamicBattleHero />
           

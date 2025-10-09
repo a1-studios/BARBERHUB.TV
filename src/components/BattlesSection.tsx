@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useQuery } from "@tanstack/react-query";
 import { HaircutAdvisorModal } from "./HaircutAdvisorModal";
+import { EmptyState } from "./EmptyState";
 interface Battle {
   id: string;
   title: string;
@@ -215,7 +216,7 @@ const BattlesSection = () => {
           )}
         </div>
 
-        {/* My Active Battles - Barbers Only */}
+                  {/* My Active Battles - Barbers Only */}
         {isBarber && myActiveBattles && myActiveBattles.length > 0 && (
           <div className="mb-12">
             <h3 className="text-2xl font-bold text-white text-center mb-8">My Active Battles</h3>
@@ -257,6 +258,19 @@ const BattlesSection = () => {
                 </Card>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Empty State for Barbers with No Battles */}
+        {isBarber && (!myActiveBattles || myActiveBattles.length === 0) && (
+          <div className="mb-12">
+            <EmptyState
+              icon={Trophy}
+              title="No Active Battles Yet"
+              description="Create your first battle or join a tournament to start competing with barbers worldwide!"
+              actionLabel="Go to Portal"
+              onAction={() => navigate('/portal')}
+            />
           </div>
         )}
 
