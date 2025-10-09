@@ -27,7 +27,7 @@ export function FloatingActionButton({ onClick, isOpen, className }: FloatingAct
         src="/lovable-uploads/c5bbb6c4-149e-41f8-9e68-1580ee1afdf8.png" 
         alt="Quick Actions"
         className={cn(
-          "w-10 h-10 object-contain",
+          "w-13 h-13 object-contain",
           "transition-transform duration-200",
           isOpen && "rotate-45"
         )}
