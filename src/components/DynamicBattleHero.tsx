@@ -489,8 +489,8 @@ export const DynamicBattleHero = () => {
                   <h3 className="text-white text-xs sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">{barber1?.name}</h3>
                 </div>
 
-                {/* Video Box - With YouTube or Upload Button */}
-                <div className="absolute top-[55%] left-1/2 transform -translate-x-1/2 w-32 h-20 sm:w-40 sm:h-24 lg:w-48 lg:h-28 bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg">
+                {/* Portrait Video Box - With YouTube or Upload Button */}
+                <div className="absolute top-[55%] left-1/2 transform -translate-x-1/2 w-28 h-40 sm:w-36 sm:h-52 lg:w-44 lg:h-64 bg-black/80 border-2 border-white/30 rounded-lg overflow-hidden shadow-2xl">
                   {(() => {
                   const submission = getBarberSubmission(barber1?.user_id || '');
                   const youtubeUrl = submission?.youtube_vod_url || battle?.youtube_vod_url;
@@ -608,8 +608,8 @@ export const DynamicBattleHero = () => {
                   <h3 className="text-white text-xs sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">{barber2?.name}</h3>
                 </div>
 
-                {/* Video Box - With YouTube or Upload Button */}
-                <div className="absolute top-[55%] right-1/2 transform translate-x-1/2 w-32 h-20 sm:w-40 sm:h-24 lg:w-48 lg:h-28 bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg">
+                {/* Portrait Video Box - With YouTube or Upload Button */}
+                <div className="absolute top-[55%] right-1/2 transform translate-x-1/2 w-28 h-40 sm:w-36 sm:h-52 lg:w-44 lg:h-64 bg-black/80 border-2 border-white/30 rounded-lg overflow-hidden shadow-2xl">
                   {(() => {
                   const submission = getBarberSubmission(barber2?.user_id || '');
                   const youtubeUrl = submission?.youtube_vod_url || battle?.youtube_vod_url;
