@@ -8,32 +8,12 @@ import { CreatorHub } from "@/components/creator/CreatorHub";
 import GrantsSection from "@/components/GrantsSection";
 import { VirtualHaircutTryOn } from "@/components/VirtualHaircutTryOn";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { FEATURES } from "@/config/features";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
-  const {
-    user,
-    loading
-  } = useAuth();
-
-  // Fetch user profile to determine user type
-  const { data: profile } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('user_type')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id
-  });
+  const { user, loading } = useAuth();
+  const { isBarber } = useUserRole();
 
   if (loading) {
     return (
@@ -60,7 +40,7 @@ const Index = () => {
           <VirtualHaircutTryOn />
           
           {/* Creator Hub for Barbers */}
-          {FEATURES.CREATOR_HUB_ENABLED && profile?.user_type === 'barber' && (
+          {FEATURES.CREATOR_HUB_ENABLED && isBarber && (
             <CreatorHub />
           )}
           

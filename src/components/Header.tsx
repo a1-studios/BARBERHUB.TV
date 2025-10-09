@@ -2,35 +2,15 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { Scissors, Menu, X, Trophy, Plus, User, LogOut, Sparkles } from 'lucide-react';
+import { useUserRole } from '@/hooks/useUserRole';
+import { Scissors, Menu, X, Trophy, Plus, User, LogOut, Sparkles, Zap } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Badge } from '@/components/ui/badge';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 
 const Header = () => {
   const { user, signOut } = useAuth();
+  const { isBarber, isFan } = useUserRole();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
-
-  // Fetch user profile for navigation permissions
-  const { data: profile } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('user_type')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id
-  });
-
-  const isBarber = profile?.user_type === 'barber';
 
   const handleSignOut = async () => {
     await signOut();
@@ -83,22 +63,34 @@ const Header = () => {
             <div className="px-4 py-6 space-y-4">
               {user ? (
                 <>
-                  <Link
-                    to="/battles"
-                    className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
-                    onClick={closeMobileMenu}
-                  >
-                    <Trophy className="h-5 w-5" />
-                    View Battles
-                  </Link>
                   {isBarber && (
+                    <>
+                      <Link
+                        to="/portal"
+                        className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
+                        onClick={closeMobileMenu}
+                      >
+                        <Zap className="h-5 w-5" />
+                        Portal
+                      </Link>
+                      <Link
+                        to="/battles/create"
+                        className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
+                        onClick={closeMobileMenu}
+                      >
+                        <Plus className="h-5 w-5" />
+                        Create Battle
+                      </Link>
+                    </>
+                  )}
+                  {isFan && (
                     <Link
-                      to="/battles/create"
+                      to="/creator-hub"
                       className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
                       onClick={closeMobileMenu}
                     >
-                      <Plus className="h-5 w-5" />
-                      Create Battle
+                      <Trophy className="h-5 w-5" />
+                      Watch Battles
                     </Link>
                   )}
                   <Link

@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { AuthGuard } from "@/components/auth/AuthGuard";
+import { BarberGuard } from "@/components/auth/BarberGuard";
 import { QuickActionsMenu } from "@/components/QuickActionsMenu";
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
@@ -49,7 +50,9 @@ const App = () => (
               path="/battles/create" 
               element={
                 <AuthGuard>
-                  <CreateBattle />
+                  <BarberGuard>
+                    <CreateBattle />
+                  </BarberGuard>
                 </AuthGuard>
               } 
             />
@@ -73,7 +76,9 @@ const App = () => (
               path="/portal" 
               element={
                 <AuthGuard>
-                  <Portal />
+                  <BarberGuard>
+                    <Portal />
+                  </BarberGuard>
                 </AuthGuard>
               } 
             />

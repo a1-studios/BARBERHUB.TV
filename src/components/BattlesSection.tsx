@@ -4,11 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Trophy, Users, Clock, Vote, Plus, Scissors, Gift, Zap } from "lucide-react";
-import globeBackground from '@/assets/globe-background.png';
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { HaircutAdvisorModal } from "./HaircutAdvisorModal";
-import { useQuery } from "@tanstack/react-query";
 interface Battle {
   id: string;
   title: string;
@@ -20,30 +19,12 @@ interface Battle {
   category: string;
 }
 const BattlesSection = () => {
-  const {
-    user
-  } = useAuth();
+  const { user } = useAuth();
+  const { isBarber, isFan } = useUserRole();
   const navigate = useNavigate();
   const [battles, setBattles] = useState<Battle[]>([]);
   const [loading, setLoading] = useState(true);
   const [isHaircutModalOpen, setIsHaircutModalOpen] = useState(false);
-
-  // Fetch user profile
-  const {
-    data: profile
-  } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const {
-        data,
-        error
-      } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id
-  });
   useEffect(() => {
     if (user) {
       fetchFeaturedBattles();
@@ -140,7 +121,6 @@ const BattlesSection = () => {
     }
   };
   const getActionText = (status: string) => {
-    const isBarber = profile?.user_type === 'barber';
     switch (status) {
       case "active":
         return isBarber ? "Join Battle" : "Watch Battle";
@@ -188,7 +168,7 @@ const BattlesSection = () => {
             <span className="text-primary">ground </span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            {profile?.user_type === 'barber' ? "Compete with the best barbers worldwide. Show your skills, win prizes, and earn legendary status." : "Watch epic barber battles from around the world. Vote for your favorites and support the community."}
+            {isBarber ? "Compete with the best barbers worldwide. Show your skills, win prizes, and earn legendary status." : "Watch epic barber battles from around the world. Vote for your favorites and support the community."}
           </p>
         </div>
 

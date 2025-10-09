@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -26,31 +26,11 @@ interface Battle {
   organizer_id: string;
 }
 const Portal = () => {
-  const {
-    user
-  } = useAuth();
+  const { user } = useAuth();
+  const { isBarber, isFan } = useUserRole();
   const navigate = useNavigate();
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
   const [isCreatingBattle, setIsCreatingBattle] = useState(false);
-
-  // Fetch user profile to determine role
-  const {
-    data: profile
-  } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const {
-        data,
-        error
-      } = await supabase.from('profiles').select('user_type, display_name').eq('user_id', user.id).single();
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id
-  });
 
   // Fetch upcoming battles
   const {
@@ -121,8 +101,6 @@ const Portal = () => {
       setIsCreatingBattle(false);
     }
   };
-  const isBarber = profile?.user_type === 'barber';
-  const isFan = profile?.user_type === 'fan' || !profile?.user_type;
   if (!user) {
     return <div className="min-h-screen">
         <Header />
