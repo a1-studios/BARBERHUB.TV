@@ -75,21 +75,30 @@ export type Database = {
           battle_id: string
           id: string
           joined_at: string
+          registration_date: string | null
+          seed: number | null
           status: string
+          tournament_id: string | null
           user_id: string
         }
         Insert: {
           battle_id: string
           id?: string
           joined_at?: string
+          registration_date?: string | null
+          seed?: number | null
           status?: string
+          tournament_id?: string | null
           user_id: string
         }
         Update: {
           battle_id?: string
           id?: string
           joined_at?: string
+          registration_date?: string | null
+          seed?: number | null
           status?: string
+          tournament_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -98,6 +107,13 @@ export type Database = {
             columns: ["battle_id"]
             isOneToOne: false
             referencedRelation: "battles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_participants_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
             referencedColumns: ["id"]
           },
           {
@@ -247,19 +263,26 @@ export type Database = {
           description: string | null
           ends_at: string | null
           id: string
+          is_tournament_match: boolean | null
           live_viewers: number | null
+          match_number: number | null
           max_participants: number | null
           organizer_id: string
+          phase_id: string | null
           prize_amount: number
+          round_number: number | null
           rules: string | null
           starts_at: string | null
           status: string
           stream_url: string | null
           title: string
+          tournament_id: string | null
           updated_at: string
           vote_count1: number | null
           vote_count2: number | null
           voting_ends_at: string | null
+          youtube_stream_url: string | null
+          youtube_vod_url: string | null
         }
         Insert: {
           barber1_id?: string | null
@@ -273,19 +296,26 @@ export type Database = {
           description?: string | null
           ends_at?: string | null
           id?: string
+          is_tournament_match?: boolean | null
           live_viewers?: number | null
+          match_number?: number | null
           max_participants?: number | null
           organizer_id: string
+          phase_id?: string | null
           prize_amount?: number
+          round_number?: number | null
           rules?: string | null
           starts_at?: string | null
           status?: string
           stream_url?: string | null
           title: string
+          tournament_id?: string | null
           updated_at?: string
           vote_count1?: number | null
           vote_count2?: number | null
           voting_ends_at?: string | null
+          youtube_stream_url?: string | null
+          youtube_vod_url?: string | null
         }
         Update: {
           barber1_id?: string | null
@@ -299,19 +329,26 @@ export type Database = {
           description?: string | null
           ends_at?: string | null
           id?: string
+          is_tournament_match?: boolean | null
           live_viewers?: number | null
+          match_number?: number | null
           max_participants?: number | null
           organizer_id?: string
+          phase_id?: string | null
           prize_amount?: number
+          round_number?: number | null
           rules?: string | null
           starts_at?: string | null
           status?: string
           stream_url?: string | null
           title?: string
+          tournament_id?: string | null
           updated_at?: string
           vote_count1?: number | null
           vote_count2?: number | null
           voting_ends_at?: string | null
+          youtube_stream_url?: string | null
+          youtube_vod_url?: string | null
         }
         Relationships: [
           {
@@ -341,6 +378,126 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "creations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battles_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battles_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bracket_matches: {
+        Row: {
+          barber1_id: string | null
+          barber2_id: string | null
+          battle_id: string | null
+          bracket_position: number | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          match_number: number
+          phase_id: string
+          round_name: string
+          round_number: number
+          scheduled_at: string | null
+          seed1: number | null
+          seed2: number | null
+          status: string | null
+          tournament_id: string
+          winner_id: string | null
+          youtube_stream_url: string | null
+        }
+        Insert: {
+          barber1_id?: string | null
+          barber2_id?: string | null
+          battle_id?: string | null
+          bracket_position?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          match_number: number
+          phase_id: string
+          round_name: string
+          round_number: number
+          scheduled_at?: string | null
+          seed1?: number | null
+          seed2?: number | null
+          status?: string | null
+          tournament_id: string
+          winner_id?: string | null
+          youtube_stream_url?: string | null
+        }
+        Update: {
+          barber1_id?: string | null
+          barber2_id?: string | null
+          battle_id?: string | null
+          bracket_position?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          match_number?: number
+          phase_id?: string
+          round_name?: string
+          round_number?: number
+          scheduled_at?: string | null
+          seed1?: number | null
+          seed2?: number | null
+          status?: string | null
+          tournament_id?: string
+          winner_id?: string | null
+          youtube_stream_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bracket_matches_barber1_id_fkey"
+            columns: ["barber1_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "bracket_matches_barber2_id_fkey"
+            columns: ["barber2_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "bracket_matches_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bracket_matches_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bracket_matches_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bracket_matches_winner_id_fkey"
+            columns: ["winner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -660,6 +817,109 @@ export type Database = {
           },
         ]
       }
+      match_results: {
+        Row: {
+          barber1_id: string | null
+          barber1_points: number | null
+          barber1_weighted_votes: number | null
+          barber2_id: string | null
+          barber2_points: number | null
+          barber2_weighted_votes: number | null
+          battle_id: string
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          is_draw: boolean | null
+          match_type: string
+          phase_id: string | null
+          round_number: number | null
+          tournament_id: string | null
+          winner_id: string | null
+          youtube_stream_url: string | null
+        }
+        Insert: {
+          barber1_id?: string | null
+          barber1_points?: number | null
+          barber1_weighted_votes?: number | null
+          barber2_id?: string | null
+          barber2_points?: number | null
+          barber2_weighted_votes?: number | null
+          battle_id: string
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          is_draw?: boolean | null
+          match_type: string
+          phase_id?: string | null
+          round_number?: number | null
+          tournament_id?: string | null
+          winner_id?: string | null
+          youtube_stream_url?: string | null
+        }
+        Update: {
+          barber1_id?: string | null
+          barber1_points?: number | null
+          barber1_weighted_votes?: number | null
+          barber2_id?: string | null
+          barber2_points?: number | null
+          barber2_weighted_votes?: number | null
+          battle_id?: string
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          is_draw?: boolean | null
+          match_type?: string
+          phase_id?: string | null
+          round_number?: number | null
+          tournament_id?: string | null
+          winner_id?: string | null
+          youtube_stream_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "match_results_barber1_id_fkey"
+            columns: ["barber1_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "match_results_barber2_id_fkey"
+            columns: ["barber2_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "match_results_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: true
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_results_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_results_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "match_results_winner_id_fkey"
+            columns: ["winner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           amount: number
@@ -821,6 +1081,183 @@ export type Database = {
           },
         ]
       }
+      tournament_phases: {
+        Row: {
+          created_at: string | null
+          end_date: string | null
+          id: string
+          matches_required: number | null
+          phase_name: string
+          phase_order: number
+          phase_type: string
+          start_date: string | null
+          status: string | null
+          tournament_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          matches_required?: number | null
+          phase_name: string
+          phase_order: number
+          phase_type: string
+          start_date?: string | null
+          status?: string | null
+          tournament_id: string
+        }
+        Update: {
+          created_at?: string | null
+          end_date?: string | null
+          id?: string
+          matches_required?: number | null
+          phase_name?: string
+          phase_order?: number
+          phase_type?: string
+          start_date?: string | null
+          status?: string | null
+          tournament_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_phases_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournament_standings: {
+        Row: {
+          barber_id: string
+          created_at: string | null
+          draws: number | null
+          id: string
+          losses: number | null
+          matches_played: number | null
+          phase_id: string | null
+          points: number | null
+          qualified: boolean | null
+          rank: number | null
+          tournament_id: string
+          updated_at: string | null
+          vote_difference: number | null
+          votes_against: number | null
+          votes_for: number | null
+          wins: number | null
+        }
+        Insert: {
+          barber_id: string
+          created_at?: string | null
+          draws?: number | null
+          id?: string
+          losses?: number | null
+          matches_played?: number | null
+          phase_id?: string | null
+          points?: number | null
+          qualified?: boolean | null
+          rank?: number | null
+          tournament_id: string
+          updated_at?: string | null
+          vote_difference?: number | null
+          votes_against?: number | null
+          votes_for?: number | null
+          wins?: number | null
+        }
+        Update: {
+          barber_id?: string
+          created_at?: string | null
+          draws?: number | null
+          id?: string
+          losses?: number | null
+          matches_played?: number | null
+          phase_id?: string | null
+          points?: number | null
+          qualified?: boolean | null
+          rank?: number | null
+          tournament_id?: string
+          updated_at?: string | null
+          vote_difference?: number | null
+          votes_against?: number | null
+          votes_for?: number | null
+          wins?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_standings_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "tournament_standings_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_standings_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tournaments: {
+        Row: {
+          created_at: string | null
+          elimination_start_date: string | null
+          end_date: string | null
+          id: string
+          min_participants: number | null
+          name: string
+          qualification_end_date: string
+          qualification_rounds: number | null
+          season: string
+          start_date: string
+          status: string
+          total_registered: number | null
+          updated_at: string | null
+          youtube_stream_url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          elimination_start_date?: string | null
+          end_date?: string | null
+          id?: string
+          min_participants?: number | null
+          name: string
+          qualification_end_date: string
+          qualification_rounds?: number | null
+          season: string
+          start_date: string
+          status?: string
+          total_registered?: number | null
+          updated_at?: string | null
+          youtube_stream_url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          elimination_start_date?: string | null
+          end_date?: string | null
+          id?: string
+          min_participants?: number | null
+          name?: string
+          qualification_end_date?: string
+          qualification_rounds?: number | null
+          season?: string
+          start_date?: string
+          status?: string
+          total_registered?: number | null
+          updated_at?: string | null
+          youtube_stream_url?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -855,9 +1292,32 @@ export type Database = {
           winner_creation_id: string
         }[]
       }
+      calculate_match_result: {
+        Args: { battle_id_param: string }
+        Returns: {
+          barber1_points: number
+          barber1_weighted_votes: number
+          barber2_points: number
+          barber2_weighted_votes: number
+          is_draw: boolean
+          winner_id: string
+        }[]
+      }
       check_vote_eligibility: {
         Args: { battle_id_param: string; creation_id_param: string }
         Returns: boolean
+      }
+      complete_qualification_phase: {
+        Args: {
+          phase_id_param: string
+          top_n?: number
+          tournament_id_param: string
+        }
+        Returns: undefined
+      }
+      generate_elimination_bracket: {
+        Args: { num_participants?: number; tournament_id_param: string }
+        Returns: undefined
       }
       generate_referral_code: {
         Args: Record<PropertyKey, never>
@@ -940,6 +1400,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      update_tournament_standings: {
+        Args: { battle_id_param: string }
+        Returns: undefined
       }
       validate_user_action: {
         Args: { action_type: string; target_user_type: string }
