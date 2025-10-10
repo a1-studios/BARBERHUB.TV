@@ -21,6 +21,7 @@ import Grants from "./pages/Grants";
 import CreatorHub from "./pages/CreatorHub";
 import TournamentDetails from "./pages/TournamentDetails";
 import NotFound from "./pages/NotFound";
+import BarberPublicProfile from "./pages/BarberPublicProfile";
 
 const queryClient = new QueryClient();
 
@@ -87,6 +88,7 @@ const App = () => (
             <Route path="/grants" element={<Grants />} />
             <Route path="/creator-hub" element={<CreatorHub />} />
             <Route path="/tournaments/:tournamentId" element={<TournamentDetails />} />
+            <Route path="/barber/:userId" element={<BarberPublicProfile />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <QuickActionsMenu />
