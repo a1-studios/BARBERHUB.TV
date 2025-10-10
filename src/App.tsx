@@ -10,6 +10,7 @@ import { BarberGuard } from "@/components/auth/BarberGuard";
 import { QuickActionsMenu } from "@/components/QuickActionsMenu";
 import { useFollowedBarbersNotifications } from "@/hooks/useFollowedBarbersNotifications";
 import Index from "./pages/Index";
+import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import BattlesPage from "./pages/BattlesPage";
 import CreateBattle from "./pages/CreateBattle";
@@ -24,6 +25,7 @@ import TournamentDetails from "./pages/TournamentDetails";
 import NotFound from "./pages/NotFound";
 import BarberPublicProfile from "./pages/BarberPublicProfile";
 import BarbersDirectory from "./pages/BarbersDirectory";
+import LandingHero from "@/components/LandingHero";
 
 const queryClient = new QueryClient();
 
@@ -34,7 +36,32 @@ const AppContent = () => {
   return (
     <>
       <Routes>
-            <Route path="/" element={<Index />} />
+            {/* NEW: Global League Dashboard as main page */}
+            <Route 
+              path="/" 
+              element={
+                <AuthGuard>
+                  <Dashboard />
+                </AuthGuard>
+              } 
+            />
+            
+            {/* RENAMED: Current Index.tsx becomes /discover */}
+            <Route 
+              path="/discover" 
+              element={
+                <AuthGuard>
+                  <Index />
+                </AuthGuard>
+              } 
+            />
+            
+            {/* For unauthenticated users, show login landing */}
+            <Route 
+              path="/welcome" 
+              element={<LandingHero />}
+            />
+            
             <Route path="/auth" element={<Navigate to="/" replace />} />
             <Route 
               path="/profile" 
