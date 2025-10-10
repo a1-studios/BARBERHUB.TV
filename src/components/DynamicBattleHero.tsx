@@ -10,6 +10,7 @@ import { VideoUpload } from "./VideoUpload";
 import { VerificationBadge } from "./VerificationBadge";
 import { AddFundsModal } from "./AddFundsModal";
 import { YouTubeStreamPlayer } from "./battles/YouTubeStreamPlayer";
+import { BarberVideoSection } from "./barber/BarberVideoSection";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useLikes } from "@/hooks/useLikes";
@@ -32,6 +33,9 @@ interface BarberProfile {
   user_id: string;
   name: string;
   country_code?: string;
+  is_live?: boolean;
+  live_video_id?: string | null;
+  featured_video_id?: string | null;
 }
 interface BattleSubmission {
   id: string;
@@ -101,7 +105,7 @@ export const DynamicBattleHero = () => {
     refetchInterval: 5000 // Refresh every 5 seconds for live updates
   });
 
-  // Fetch barber profiles for the battle
+  // Fetch barber profiles for the battle with live status and video data
   const {
     data: barbers,
     isLoading: barbersLoading
@@ -110,11 +114,14 @@ export const DynamicBattleHero = () => {
     queryFn: async () => {
       if (!battle?.barber1_id || !battle?.barber2_id) return [];
 
-      // Fetch barber profiles with user profile data for country codes
+      // Fetch barber profiles with live status and video IDs
       const {
         data: barberProfiles,
         error: barberError
-      } = await supabase.from('barber_profiles').select('id, user_id, name, country_code').in('user_id', [battle.barber1_id, battle.barber2_id]);
+      } = await supabase
+        .from('barber_profiles')
+        .select('id, user_id, name, country_code, is_live, live_video_id, featured_video_id')
+        .in('user_id', [battle.barber1_id, battle.barber2_id]);
       if (barberError) throw barberError;
 
       // If barber profiles don't have country_code, fetch from profiles table
@@ -491,15 +498,29 @@ export const DynamicBattleHero = () => {
                   <h3 className="text-white text-xs sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">{barber1?.name}</h3>
                 </div>
 
-                {/* Portrait Video Box - With YouTube or Upload Button */}
-                <div className="absolute top-[55%] left-1/2 transform -translate-x-1/2 w-28 h-40 sm:w-36 sm:h-52 lg:w-44 lg:h-64 bg-black/80 border-2 border-white/30 rounded-lg overflow-hidden shadow-2xl">
+                {/* Portrait Video Box - Shows live stream or featured video */}
+                <div className="absolute top-[55%] left-1/2 transform -translate-x-1/2 w-28 h-40 sm:w-36 sm:h-52 lg:w-44 lg:h-64 rounded-lg overflow-hidden shadow-2xl">
                   {(() => {
                   const submission = getBarberSubmission(barber1?.user_id || '');
+                  const barberData = barbers?.find(b => b.user_id === barber1?.user_id);
+                  
+                  // Priority: submission video > live stream > featured video > upload button > placeholder
                   const youtubeUrl = submission?.youtube_vod_url || battle?.youtube_vod_url;
-                  const isLive = battle?.status === 'live' && submission?.is_live_stream;
+                  const isSubmissionLive = battle?.status === 'live' && submission?.is_live_stream;
+                  
                   if (youtubeUrl) {
-                    return <YouTubeStreamPlayer videoUrl={youtubeUrl} isLive={isLive} title={submission?.title} />;
+                    return <YouTubeStreamPlayer videoUrl={youtubeUrl} isLive={isSubmissionLive} title={submission?.title} />;
                   }
+                  
+                  // Show barber's live stream or featured video
+                  if (barberData && (barberData.is_live || barberData.featured_video_id)) {
+                    return <BarberVideoSection
+                      videoId={barberData.is_live ? barberData.live_video_id : barberData.featured_video_id}
+                      isLive={barberData.is_live || false}
+                      aspectRatio="portrait"
+                    />;
+                  }
+                  
                   if (canUserUpload(barber1?.user_id || '')) {
                     return <button onClick={e => {
                       e.stopPropagation();
@@ -626,15 +647,29 @@ export const DynamicBattleHero = () => {
                   <h3 className="text-white text-xs sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">{barber2?.name}</h3>
                 </div>
 
-                {/* Portrait Video Box - With YouTube or Upload Button */}
-                <div className="absolute top-[55%] right-1/2 transform translate-x-1/2 w-28 h-40 sm:w-36 sm:h-52 lg:w-44 lg:h-64 bg-black/80 border-2 border-white/30 rounded-lg overflow-hidden shadow-2xl">
+                {/* Portrait Video Box - Shows live stream or featured video */}
+                <div className="absolute top-[55%] right-1/2 transform translate-x-1/2 w-28 h-40 sm:w-36 sm:h-52 lg:w-44 lg:h-64 rounded-lg overflow-hidden shadow-2xl">
                   {(() => {
                   const submission = getBarberSubmission(barber2?.user_id || '');
+                  const barberData = barbers?.find(b => b.user_id === barber2?.user_id);
+                  
+                  // Priority: submission video > live stream > featured video > upload button > placeholder
                   const youtubeUrl = submission?.youtube_vod_url || battle?.youtube_vod_url;
-                  const isLive = battle?.status === 'live' && submission?.is_live_stream;
+                  const isSubmissionLive = battle?.status === 'live' && submission?.is_live_stream;
+                  
                   if (youtubeUrl) {
-                    return <YouTubeStreamPlayer videoUrl={youtubeUrl} isLive={isLive} title={submission?.title} />;
+                    return <YouTubeStreamPlayer videoUrl={youtubeUrl} isLive={isSubmissionLive} title={submission?.title} />;
                   }
+                  
+                  // Show barber's live stream or featured video
+                  if (barberData && (barberData.is_live || barberData.featured_video_id)) {
+                    return <BarberVideoSection
+                      videoId={barberData.is_live ? barberData.live_video_id : barberData.featured_video_id}
+                      isLive={barberData.is_live || false}
+                      aspectRatio="portrait"
+                    />;
+                  }
+                  
                   if (canUserUpload(barber2?.user_id || '')) {
                     return <button onClick={e => {
                       e.stopPropagation();

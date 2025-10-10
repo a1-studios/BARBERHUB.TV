@@ -298,17 +298,8 @@ const Profile = () => {
     );
   }
 
-  // Show barber dashboard for barber users
-  if (isBarber && barberProfile) {
-    return (
-      <div className="min-h-screen">
-        <Header />
-        <main className="pt-20">
-          <BarberDashboard />
-        </main>
-      </div>
-    );
-  }
+  // Barbers can access BarberDashboard via /portal route
+  // This allows them to see their full profile with YouTube integration here
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5">
