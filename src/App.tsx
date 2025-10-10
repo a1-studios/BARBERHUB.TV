@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { BarberGuard } from "@/components/auth/BarberGuard";
 import { QuickActionsMenu } from "@/components/QuickActionsMenu";
+import { useFollowedBarbersNotifications } from "@/hooks/useFollowedBarbersNotifications";
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import BattlesPage from "./pages/BattlesPage";
@@ -26,14 +27,13 @@ import BarbersDirectory from "./pages/BarbersDirectory";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
+const AppContent = () => {
+  // Enable real-time notifications for followed barbers going live
+  useFollowedBarbersNotifications();
+  
+  return (
+    <>
+      <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Navigate to="/" replace />} />
             <Route 
@@ -94,6 +94,18 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
           <QuickActionsMenu />
+    </>
+  );
+};
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AppContent />
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
