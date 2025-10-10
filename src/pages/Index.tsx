@@ -6,6 +6,7 @@ import BattlesSection from "@/components/BattlesSection";
 import Footer from "@/components/Footer";
 import { CreatorHub } from "@/components/creator/CreatorHub";
 import GrantsSection from "@/components/GrantsSection";
+import { GlobalLeagueDashboard } from "@/components/GlobalLeagueDashboard";
 import { VirtualHaircutTryOn } from "@/components/VirtualHaircutTryOn";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -53,6 +54,9 @@ const Index = () => {
           {FEATURES.GRANTS_SECTION && (
             <GrantsSection />
           )}
+          
+          {/* Global League Dashboard */}
+          <GlobalLeagueDashboard />
         </main>
       ) : (
         <>
