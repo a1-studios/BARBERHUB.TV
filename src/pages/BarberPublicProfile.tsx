@@ -8,19 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, MapPin, Award, Calendar, Users, Heart, Bell, DollarSign, Instagram, Facebook, Twitter, Youtube } from 'lucide-react';
+import { ArrowLeft, MapPin, Award, Calendar, Instagram, Facebook, Twitter, Youtube } from 'lucide-react';
 import { BarberVideoSection } from '@/components/barber/BarberVideoSection';
+import { BarberActionButtons } from '@/components/barber/BarberActionButtons';
 import { useState } from 'react';
 import { DonationModal } from '@/components/DonationModal';
-import { useAuth } from '@/hooks/useAuth';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
 
 export default function BarberPublicProfile() {
   const { userId } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const queryClient = useQueryClient();
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
 
   // Fetch barber profile
@@ -74,28 +70,7 @@ export default function BarberPublicProfile() {
     enabled: !!barberData?.id
   });
 
-  // Fetch user relations
-  const { data: userRelations } = useQuery({
-    queryKey: ['barber-public-relations', userId, user?.id],
-    queryFn: async () => {
-      if (!user?.id || !userId) return { isFollowing: false, hasLiked: false, isSubscribed: false };
-      
-      const [followResult, likeResult, subscriptionResult] = await Promise.all([
-        supabase.from('creator_follows').select('id').eq('creator_id', userId).eq('follower_id', user.id).maybeSingle(),
-        supabase.from('creator_likes').select('id').eq('creator_id', userId).eq('user_id', user.id).maybeSingle(),
-        supabase.from('creator_subscriptions').select('id').eq('creator_id', userId).eq('user_id', user.id).maybeSingle()
-      ]);
-
-      return {
-        isFollowing: !followResult.error && followResult.data !== null,
-        hasLiked: !likeResult.error && likeResult.data !== null,
-        isSubscribed: !subscriptionResult.error && subscriptionResult.data !== null
-      };
-    },
-    enabled: !!user?.id && !!userId
-  });
-
-  // Fetch recent battles
+  // Fetch portfolio
   const { data: recentBattles } = useQuery({
     queryKey: ['barber-battles', userId],
     queryFn: async () => {
@@ -128,79 +103,6 @@ export default function BarberPublicProfile() {
       return data;
     },
     enabled: !!barberData?.id
-  });
-
-  // Follow/Unfollow mutation
-  const followMutation = useMutation({
-    mutationFn: async (action: 'follow' | 'unfollow') => {
-      if (!user?.id || !userId) throw new Error('Not authenticated');
-      
-      if (action === 'follow') {
-        const { error } = await supabase
-          .from('creator_follows')
-          .insert({ creator_id: userId, follower_id: user.id });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('creator_follows')
-          .delete()
-          .eq('creator_id', userId)
-          .eq('follower_id', user.id);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['barber-public-relations'] });
-      queryClient.invalidateQueries({ queryKey: ['barber-public-stats'] });
-    }
-  });
-
-  const likeMutation = useMutation({
-    mutationFn: async (action: 'like' | 'unlike') => {
-      if (!user?.id || !userId) throw new Error('Not authenticated');
-      
-      if (action === 'like') {
-        const { error } = await supabase
-          .from('creator_likes')
-          .insert({ creator_id: userId, user_id: user.id });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('creator_likes')
-          .delete()
-          .eq('creator_id', userId)
-          .eq('user_id', user.id);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['barber-public-relations'] });
-      queryClient.invalidateQueries({ queryKey: ['barber-public-stats'] });
-    }
-  });
-
-  const subscribeMutation = useMutation({
-    mutationFn: async (action: 'subscribe' | 'unsubscribe') => {
-      if (!user?.id || !userId) throw new Error('Not authenticated');
-      
-      if (action === 'subscribe') {
-        const { error } = await supabase
-          .from('creator_subscriptions')
-          .insert({ creator_id: userId, user_id: user.id });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('creator_subscriptions')
-          .delete()
-          .eq('creator_id', userId)
-          .eq('user_id', user.id);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['barber-public-relations'] });
-      queryClient.invalidateQueries({ queryKey: ['barber-public-stats'] });
-    }
   });
 
   const getCountryFlag = (countryCode: string | null) => {
@@ -309,47 +211,11 @@ export default function BarberPublicProfile() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-2 flex-wrap">
-                  <Button
-                    variant={userRelations?.isFollowing ? "secondary" : "default"}
-                    onClick={() => followMutation.mutate(userRelations?.isFollowing ? 'unfollow' : 'follow')}
-                    disabled={!user || followMutation.isPending}
-                    className="flex items-center gap-2"
-                  >
-                    <Users className="w-4 h-4" />
-                    {userRelations?.isFollowing ? 'Following' : 'Follow'}
-                  </Button>
-                  
-                  <Button
-                    variant={userRelations?.hasLiked ? "secondary" : "outline"}
-                    onClick={() => likeMutation.mutate(userRelations?.hasLiked ? 'unlike' : 'like')}
-                    disabled={!user || likeMutation.isPending}
-                    className="flex items-center gap-2"
-                  >
-                    <Heart className={`w-4 h-4 ${userRelations?.hasLiked ? 'fill-current text-red-400' : ''}`} />
-                    {userRelations?.hasLiked ? 'Liked' : 'Like'}
-                  </Button>
-
-                  <Button
-                    variant={userRelations?.isSubscribed ? "secondary" : "outline"}
-                    onClick={() => subscribeMutation.mutate(userRelations?.isSubscribed ? 'unsubscribe' : 'subscribe')}
-                    disabled={!user || subscribeMutation.isPending}
-                    className="flex items-center gap-2"
-                  >
-                    <Bell className="w-4 h-4" />
-                    {userRelations?.isSubscribed ? 'Subscribed' : 'Subscribe'}
-                  </Button>
-
-                  <Button
-                    variant="default"
-                    onClick={() => setIsDonationModalOpen(true)}
-                    disabled={!user}
-                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-                  >
-                    <DollarSign className="w-4 h-4" />
-                    Donate
-                  </Button>
-                </div>
+                <BarberActionButtons
+                  barberId={barberData.id}
+                  barberUserId={userId!}
+                  onDonateClick={() => setIsDonationModalOpen(true)}
+                />
               </div>
             </div>
           </CardContent>

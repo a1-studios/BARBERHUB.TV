@@ -4,13 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Heart, Users, Bell, DollarSign, ExternalLink, Scissors } from 'lucide-react';
+import { ExternalLink, Scissors } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { DonationModal } from '../DonationModal';
 import { BarberVideoSection } from './BarberVideoSection';
+import { BarberActionButtons } from './BarberActionButtons';
 
 interface BarberProfileCardProps {
   barberId: string;
@@ -284,51 +285,11 @@ export const BarberProfileCard = ({
           {/* Action Buttons */}
           {showActions && (
             <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant={userRelations?.isFollowing ? "secondary" : "outline"}
-                  size="sm"
-                  onClick={() => followMutation.mutate(userRelations?.isFollowing ? 'unfollow' : 'follow')}
-                  disabled={followMutation.isPending || !user}
-                  className="flex items-center gap-2"
-                >
-                  <Users className="w-4 h-4" />
-                  {userRelations?.isFollowing ? 'Following' : 'Follow'}
-                </Button>
-                
-                <Button
-                  variant={userRelations?.hasLiked ? "secondary" : "outline"}
-                  size="sm"
-                  onClick={() => likeMutation.mutate(userRelations?.hasLiked ? 'unlike' : 'like')}
-                  disabled={likeMutation.isPending || !user}
-                  className="flex items-center gap-2"
-                >
-                  <Heart className={`w-4 h-4 ${userRelations?.hasLiked ? 'fill-current text-red-400' : ''}`} />
-                  {userRelations?.hasLiked ? 'Liked' : 'Like'}
-                </Button>
-
-                <Button
-                  variant={userRelations?.isSubscribed ? "secondary" : "outline"}
-                  size="sm"
-                  onClick={() => subscribeMutation.mutate(userRelations?.isSubscribed ? 'unsubscribe' : 'subscribe')}
-                  disabled={subscribeMutation.isPending || !user}
-                  className="flex items-center gap-2"
-                >
-                  <Bell className="w-4 h-4" />
-                  {userRelations?.isSubscribed ? 'Subscribed' : 'Subscribe'}
-                </Button>
-
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => setIsDonationModalOpen(true)}
-                  disabled={!user}
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-                >
-                  <DollarSign className="w-4 h-4" />
-                  Donate
-                </Button>
-              </div>
+              <BarberActionButtons
+                barberId={barberId}
+                barberUserId={userId}
+                onDonateClick={() => setIsDonationModalOpen(true)}
+              />
 
               <Button
                 variant="default"

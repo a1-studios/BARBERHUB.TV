@@ -1,144 +1,154 @@
-import { useState, useRef } from 'react';
-import { Play, Pause, Volume2, VolumeX, Maximize, Loader2 } from 'lucide-react';
+import { useRef, useEffect, useState } from 'react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Maximize2, Settings } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface VideoPlayerProps {
-  src: string;
+  src?: string;
+  youtubeVideoId?: string;
   poster?: string;
   className?: string;
+  isLive?: boolean;
   autoPlay?: boolean;
-  muted?: boolean;
 }
 
 export const VideoPlayer = ({ 
   src, 
+  youtubeVideoId,
   poster, 
-  className = '', 
-  autoPlay = false, 
-  muted = true 
+  className = '',
+  isLive = false,
+  autoPlay = false 
 }: VideoPlayerProps) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(muted);
-  const [isLoading, setIsLoading] = useState(false);
-  const [showControls, setShowControls] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [quality, setQuality] = useState<'auto' | 'hd720' | 'hd1080'>('auto');
 
-  const togglePlay = async () => {
-    if (!videoRef.current) return;
+  useEffect(() => {
+    if (videoRef.current && src) {
+      videoRef.current.load();
+    }
+  }, [src]);
 
-    try {
-      if (isPlaying) {
-        videoRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        setIsLoading(true);
-        await videoRef.current.play();
-        setIsPlaying(true);
+  const handlePictureInPicture = async () => {
+    if (videoRef.current && document.pictureInPictureEnabled) {
+      try {
+        if (document.pictureInPictureElement) {
+          await document.exitPictureInPicture();
+        } else {
+          await videoRef.current.requestPictureInPicture();
+        }
+      } catch (error) {
+        console.error('PiP error:', error);
       }
-    } catch (error) {
-      console.error('Video play error:', error);
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const toggleMute = () => {
-    if (!videoRef.current) return;
+  // YouTube embed mode
+  if (youtubeVideoId) {
+    const embedUrl = new URL(`https://www.youtube.com/embed/${youtubeVideoId}`);
+    embedUrl.searchParams.set('autoplay', autoPlay || isLive ? '1' : '0');
+    embedUrl.searchParams.set('mute', isLive ? '1' : '0');
+    embedUrl.searchParams.set('controls', '1');
+    embedUrl.searchParams.set('modestbranding', '1');
+    embedUrl.searchParams.set('rel', '0');
     
-    videoRef.current.muted = !isMuted;
-    setIsMuted(!isMuted);
-  };
-
-  const toggleFullscreen = () => {
-    if (!videoRef.current) return;
-    
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else {
-      videoRef.current.requestFullscreen();
+    if (quality !== 'auto') {
+      embedUrl.searchParams.set('vq', quality);
     }
-  };
 
-  const handleVideoClick = () => {
-    togglePlay();
-  };
+    return (
+      <div className={`relative ${className}`}>
+        {isLive && (
+          <Badge 
+            variant="destructive" 
+            className="absolute top-2 left-2 z-10 bg-red-600 text-white animate-pulse"
+          >
+            🔴 LIVE
+          </Badge>
+        )}
+        
+        <div className="absolute top-2 right-2 z-10 flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="icon" variant="secondary" className="h-8 w-8">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => setQuality('auto')}>
+                {quality === 'auto' && '✓ '}Auto Quality
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setQuality('hd720')}>
+                {quality === 'hd720' && '✓ '}720p HD
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setQuality('hd1080')}>
+                {quality === 'hd1080' && '✓ '}1080p HD
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        <iframe
+          src={embedUrl.toString()}
+          className="w-full h-full rounded-lg border border-primary/20"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+        />
+      </div>
+    );
+  }
+
+  // Standard video player mode
+  if (!src) {
+    return (
+      <div className={`${className} bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg border border-primary/20 flex items-center justify-center`}>
+        <p className="text-sm text-muted-foreground">No video available</p>
+      </div>
+    );
+  }
 
   return (
-    <div 
-      className={`relative group ${className}`}
-      onMouseEnter={() => setShowControls(true)}
-      onMouseLeave={() => setShowControls(false)}
-    >
+    <div className={`relative ${className}`}>
+      {isLive && (
+        <Badge 
+          variant="destructive" 
+          className="absolute top-2 left-2 z-10 bg-red-600 text-white animate-pulse"
+        >
+          🔴 LIVE
+        </Badge>
+      )}
+      
+      <div className="absolute top-2 right-2 z-10 flex gap-2">
+        {document.pictureInPictureEnabled && (
+          <Button 
+            size="icon" 
+            variant="secondary" 
+            className="h-8 w-8"
+            onClick={handlePictureInPicture}
+          >
+            <Maximize2 className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+
       <video
         ref={videoRef}
-        src={src}
+        controls
         poster={poster}
-        className="w-full h-full object-cover cursor-pointer"
-        autoPlay={autoPlay}
-        muted={muted}
-        playsInline
+        autoPlay={autoPlay || isLive}
+        muted={isLive}
+        className="w-full h-full rounded-lg"
         preload="metadata"
-        onClick={handleVideoClick}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onLoadStart={() => setIsLoading(true)}
-        onLoadedData={() => setIsLoading(false)}
-        onWaiting={() => setIsLoading(true)}
-        onCanPlay={() => setIsLoading(false)}
-      />
-
-      {/* Loading Overlay */}
-      {isLoading && (
-        <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-          <Loader2 className="w-8 h-8 text-white animate-spin" />
-        </div>
-      )}
-
-      {/* Play/Pause Overlay */}
-      {!isPlaying && !isLoading && (
-        <div 
-          className="absolute inset-0 bg-black/20 flex items-center justify-center cursor-pointer"
-          onClick={handleVideoClick}
-        >
-          <div className="bg-white/20 backdrop-blur-sm rounded-full p-4 hover:bg-white/30 transition-all duration-300">
-            <Play className="w-8 h-8 text-white" />
-          </div>
-        </div>
-      )}
-
-      {/* Controls */}
-      {showControls && (
-        <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white"
-              onClick={togglePlay}
-            >
-              {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-            </Button>
-            
-            <Button
-              size="sm"
-              variant="ghost"
-              className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white"
-              onClick={toggleMute}
-            >
-              {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            </Button>
-          </div>
-
-          <Button
-            size="sm"
-            variant="ghost"
-            className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white"
-            onClick={toggleFullscreen}
-          >
-            <Maximize className="w-4 h-4" />
-          </Button>
-        </div>
-      )}
+      >
+        <source src={src} type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
     </div>
   );
 };
