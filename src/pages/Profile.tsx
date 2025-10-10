@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { BackButton } from '@/components/ui/BackButton';
 import { RoleBadge } from '@/components/RoleBadge';
 import { EmptyState } from '@/components/EmptyState';
-import { Scissors, Users, Trophy, Plus, User, Loader2, Globe, Edit3, X, Settings, Upload, Zap, CheckCircle, Clock, Award } from 'lucide-react';
+import { Scissors, Users, Trophy, Plus, User, Loader2, Globe, Edit3, X, Settings, Upload, Zap, CheckCircle, Clock, Award, Heart, Bell, DollarSign } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { CountrySelector } from '@/components/CountrySelector';
@@ -594,6 +594,132 @@ const Profile = () => {
                     <p className="text-sm text-muted-foreground">
                       • Build your reputation
                     </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* YouTube Integration - Barbers Only */}
+              {isBarber && barberProfile && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      YouTube Integration
+                      {barberProfile.is_live && (
+                        <Badge variant="destructive" className="animate-pulse">
+                          🔴 LIVE
+                        </Badge>
+                      )}
+                    </CardTitle>
+                    <CardDescription>
+                      Connect your YouTube channel and featured video
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="youtube_channel_id">YouTube Channel ID</Label>
+                      <Input
+                        id="youtube_channel_id"
+                        placeholder="UCxxx..."
+                        defaultValue={barberProfile.youtube_channel_id || ''}
+                        onBlur={async (e) => {
+                          const { error } = await supabase
+                            .from('barber_profiles')
+                            .update({ youtube_channel_id: e.target.value })
+                            .eq('user_id', user?.id);
+                          
+                          if (error) {
+                            toast.error('Failed to update channel ID');
+                          } else {
+                            toast.success('Channel ID updated');
+                          }
+                        }}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="featured_video">Featured Video URL</Label>
+                      <Input
+                        id="featured_video"
+                        placeholder="https://www.youtube.com/watch?v=..."
+                        onKeyDown={async (e) => {
+                          if (e.key === 'Enter') {
+                            const input = e.target as HTMLInputElement;
+                            try {
+                              const { data, error } = await supabase.functions.invoke('set-featured-video', {
+                                body: { youtube_url: input.value }
+                              });
+                              
+                              if (error) throw error;
+                              toast.success('Featured video updated!');
+                              queryClient.invalidateQueries({ queryKey: ['barber-profile'] });
+                            } catch (error) {
+                              toast.error('Failed to set featured video');
+                            }
+                          }
+                        }}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Press Enter to save
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Stats Dashboard - Barbers Only */}
+              {isBarber && barberProfile && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Your Stats</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const { data: stats } = useQuery({
+                        queryKey: ['barber-own-stats', barberProfile.id],
+                        queryFn: async () => {
+                          const { data, error } = await supabase
+                            .from('barber_stats')
+                            .select('*')
+                            .eq('barber_id', barberProfile.id)
+                            .maybeSingle();
+                          
+                          if (error) throw error;
+                          return data || {
+                            follower_count: 0,
+                            like_count: 0,
+                            subscription_count: 0,
+                            total_donations_cents: 0
+                          };
+                        }
+                      });
+
+                      return (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="text-center p-3 bg-primary/5 rounded-lg">
+                            <Users className="w-6 h-6 mx-auto mb-1 text-primary" />
+                            <div className="text-2xl font-bold text-white">{stats?.follower_count || 0}</div>
+                            <div className="text-xs text-muted-foreground">Followers</div>
+                          </div>
+                          <div className="text-center p-3 bg-primary/5 rounded-lg">
+                            <Heart className="w-6 h-6 mx-auto mb-1 text-primary" />
+                            <div className="text-2xl font-bold text-white">{stats?.like_count || 0}</div>
+                            <div className="text-xs text-muted-foreground">Likes</div>
+                          </div>
+                          <div className="text-center p-3 bg-primary/5 rounded-lg">
+                            <Users className="w-6 h-6 mx-auto mb-1 text-primary" />
+                            <div className="text-2xl font-bold text-white">{stats?.subscription_count || 0}</div>
+                            <div className="text-xs text-muted-foreground">Subscribers</div>
+                          </div>
+                          <div className="text-center p-3 bg-primary/5 rounded-lg">
+                            <DollarSign className="w-6 h-6 mx-auto mb-1 text-primary" />
+                            <div className="text-2xl font-bold text-white">
+                              ${((stats?.total_donations_cents || 0) / 100).toFixed(2)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">Donations</div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </CardContent>
                 </Card>
               )}

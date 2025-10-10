@@ -63,6 +63,15 @@ const Header = () => {
             <div className="px-4 py-6 space-y-4">
               {user ? (
                 <>
+                  <Link
+                    to="/barbers"
+                    className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
+                    onClick={closeMobileMenu}
+                  >
+                    <Scissors className="h-5 w-5" />
+                    Barbers
+                  </Link>
+
                   {isBarber && (
                     <>
                       <Link

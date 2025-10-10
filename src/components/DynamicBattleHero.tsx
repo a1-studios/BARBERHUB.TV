@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Share2, Play, Heart, TrendingUp, Users, DollarSign, Upload } from "lucide-react";
+import { Share2, Play, Heart, TrendingUp, Users, DollarSign, Upload, ExternalLink } from "lucide-react";
 import { BattleCommentsPanel } from "./BattleCommentsPanel";
 import { DonationModal } from "./DonationModal";
 import { VideoPlayer } from "./VideoPlayer";
@@ -15,6 +15,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useLikes } from "@/hooks/useLikes";
 import { useBarberBucks } from "@/hooks/useBarberBucks";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 interface Battle {
   id: string;
   title: string;
@@ -50,6 +51,7 @@ export const DynamicBattleHero = () => {
   const {
     user
   } = useAuth();
+  const navigate = useNavigate();
   const {
     profile,
     isFan,
@@ -512,6 +514,22 @@ export const DynamicBattleHero = () => {
                       </div>;
                 })()}
                 </div>
+
+                {/* View Profile Button */}
+                <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 z-10">
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/barber/${barber1?.user_id}`);
+                    }}
+                    className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30 text-xs px-3"
+                  >
+                    <ExternalLink className="w-3 h-3 mr-1" />
+                    View Profile
+                  </Button>
+                </div>
                 
                 <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/60" />
                 
@@ -630,6 +648,22 @@ export const DynamicBattleHero = () => {
                         <Play className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-white/60 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
                       </div>;
                 })()}
+                </div>
+
+                {/* View Profile Button */}
+                <div className="absolute bottom-3 right-1/2 transform translate-x-1/2 z-10">
+                  <Button 
+                    variant="secondary" 
+                    size="sm" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/barber/${barber2?.user_id}`);
+                    }}
+                    className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30 text-xs px-3"
+                  >
+                    <ExternalLink className="w-3 h-3 mr-1" />
+                    View Profile
+                  </Button>
                 </div>
                 
                 <div className="absolute inset-0 bg-gradient-to-l from-black/60 via-black/40 to-black/60" />
