@@ -43,15 +43,6 @@ export const OnboardingMessage = () => {
             <AlertTitle className="text-lg font-bold">Welcome, Barber! 💈</AlertTitle>
             <AlertDescription className="mt-2 space-y-2">
               <p>Get started by visiting the <strong>Battle Portal</strong> to manage your competitions and showcase your skills!</p>
-              <div className="flex gap-2 mt-3">
-                <Button size="sm" onClick={() => { navigate('/portal'); handleDismiss(); }}>
-                  <Zap className="w-4 h-4 mr-2" />
-                  Go to Portal
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => { navigate('/battles/create'); handleDismiss(); }}>
-                  Create Your First Battle
-                </Button>
-              </div>
             </AlertDescription>
           </>
         ) : (
