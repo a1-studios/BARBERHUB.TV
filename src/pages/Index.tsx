@@ -34,6 +34,9 @@ const Index = () => {
           {/* Head-to-Head Battle Hero */}
           <DynamicBattleHero />
           
+          {/* Global League Dashboard */}
+          <GlobalLeagueDashboard />
+          
           {/* Main Battles Section with all navigation and features */}
           <BattlesSection />
           
@@ -54,9 +57,6 @@ const Index = () => {
           {FEATURES.GRANTS_SECTION && (
             <GrantsSection />
           )}
-          
-          {/* Global League Dashboard */}
-          <GlobalLeagueDashboard />
         </main>
       ) : (
         <>
