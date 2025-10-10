@@ -19,7 +19,11 @@ export type Database = {
           bio: string | null
           country_code: string | null
           created_at: string
+          featured_video_id: string | null
           id: string
+          is_live: boolean | null
+          last_live_check: string | null
+          live_video_id: string | null
           location: string | null
           name: string
           nickname: string | null
@@ -29,12 +33,17 @@ export type Database = {
           updated_at: string
           user_id: string
           years_experience: number | null
+          youtube_channel_id: string | null
         }
         Insert: {
           bio?: string | null
           country_code?: string | null
           created_at?: string
+          featured_video_id?: string | null
           id?: string
+          is_live?: boolean | null
+          last_live_check?: string | null
+          live_video_id?: string | null
           location?: string | null
           name: string
           nickname?: string | null
@@ -44,12 +53,17 @@ export type Database = {
           updated_at?: string
           user_id: string
           years_experience?: number | null
+          youtube_channel_id?: string | null
         }
         Update: {
           bio?: string | null
           country_code?: string | null
           created_at?: string
+          featured_video_id?: string | null
           id?: string
+          is_live?: boolean | null
+          last_live_check?: string | null
+          live_video_id?: string | null
           location?: string | null
           name?: string
           nickname?: string | null
@@ -59,6 +73,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           years_experience?: number | null
+          youtube_channel_id?: string | null
         }
         Relationships: [
           {
@@ -371,11 +386,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "battles_barber1_id_fkey"
+            columns: ["barber1_id"]
+            isOneToOne: false
+            referencedRelation: "barber_stats"
+            referencedColumns: ["barber_id"]
+          },
+          {
             foreignKeyName: "battles_barber2_id_fkey"
             columns: ["barber2_id"]
             isOneToOne: false
             referencedRelation: "barber_profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battles_barber2_id_fkey"
+            columns: ["barber2_id"]
+            isOneToOne: false
+            referencedRelation: "barber_stats"
+            referencedColumns: ["barber_id"]
           },
           {
             foreignKeyName: "battles_creation1_id_fkey"
@@ -595,6 +624,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "barber_profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "creations_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barber_stats"
+            referencedColumns: ["barber_id"]
           },
         ]
       }
@@ -1293,7 +1329,27 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      barber_stats: {
+        Row: {
+          barber_id: string | null
+          donation_count: number | null
+          follower_count: number | null
+          like_count: number | null
+          name: string | null
+          subscription_count: number | null
+          total_donations_cents: number | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "barber_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
     }
     Functions: {
       calculate_battle_results: {
@@ -1412,6 +1468,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      refresh_barber_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       update_tournament_standings: {
         Args: { battle_id_param: string }
