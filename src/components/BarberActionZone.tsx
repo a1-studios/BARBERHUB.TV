@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Trophy, DollarSign } from 'lucide-react';
+import { Swords, DollarSign, Trophy } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,23 +30,23 @@ export const BarberActionZone = () => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 my-8">
-      <Card className="border-2 border-teal-500/30 hover:border-teal-500/50 transition-colors bg-gradient-to-br from-teal-500/5 to-blue-500/5">
+      <Card className="border-2 border-primary/30 hover:border-primary/50 transition-colors">
         <CardHeader>
-          <div className="w-12 h-12 rounded-full bg-teal-500/20 flex items-center justify-center mb-3">
-            <Trophy className="w-6 h-6 text-teal-500" />
+          <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center mb-3">
+            <Swords className="w-6 h-6 text-primary" />
           </div>
-          <CardTitle>My Performance Stats</CardTitle>
+          <CardTitle>Create a Battle</CardTitle>
           <CardDescription>
-            View your analytics, follower growth, and engagement metrics across the league
+            Challenge other barbers and showcase your skills to the world
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Button 
-            variant="outline"
-            className="w-full"
-            onClick={() => navigate('/portal')}
+            className="w-full" 
+            size="lg"
+            onClick={() => navigate('/battles/create')}
           >
-            View Dashboard
+            Create Battle
           </Button>
         </CardContent>
       </Card>
@@ -85,7 +85,7 @@ export const BarberActionZone = () => {
             </CardDescription>
           ) : (
             <CardDescription>
-              Check your current standing in the Global League competition and track your progress
+              You're not enrolled in the Global League yet. Join to compete for prizes!
             </CardDescription>
           )}
         </CardHeader>
@@ -95,7 +95,7 @@ export const BarberActionZone = () => {
             className="w-full"
             onClick={() => navigate('/portal')}
           >
-            View League Stats
+            {leagueStatus ? 'View Details' : 'Join the League'}
           </Button>
         </CardContent>
       </Card>

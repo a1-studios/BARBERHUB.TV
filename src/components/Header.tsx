@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Scissors, Menu, X, Trophy, Plus, User, LogOut, Sparkles, Zap, Home, Compass } from 'lucide-react';
+import { Scissors, Menu, X, Trophy, Plus, User, LogOut, Sparkles, Zap } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 
 const Header = () => {
@@ -63,24 +63,6 @@ const Header = () => {
             <div className="px-4 py-6 space-y-4">
               {user ? (
                 <>
-                  <Link
-                    to="/"
-                    className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
-                    onClick={closeMobileMenu}
-                  >
-                    <Home className="h-5 w-5" />
-                    Dashboard
-                  </Link>
-                  
-                  <Link
-                    to="/discover"
-                    className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
-                    onClick={closeMobileMenu}
-                  >
-                    <Compass className="h-5 w-5" />
-                    Discover
-                  </Link>
-                  
                   <Link
                     to="/barbers"
                     className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
