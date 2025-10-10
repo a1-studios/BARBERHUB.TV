@@ -1,12 +1,20 @@
 import Header from "@/components/Header";
 import LandingHero from "@/components/LandingHero";
+import CommunitySection from "@/components/CommunitySection";
+import { DynamicBattleHero } from "@/components/DynamicBattleHero";
+import BattlesSection from "@/components/BattlesSection";
 import Footer from "@/components/Footer";
-import { GlobalLeagueDashboard } from "@/components/GlobalLeagueDashboard";
+import { CreatorHub } from "@/components/creator/CreatorHub";
+import GrantsSection from "@/components/GrantsSection";
 import { VirtualHaircutTryOn } from "@/components/VirtualHaircutTryOn";
+import { OnboardingMessage } from "@/components/OnboardingMessage";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
+import { FEATURES } from "@/config/features";
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const { isBarber } = useUserRole();
 
   if (loading) {
     return (
@@ -22,13 +30,38 @@ const Index = () => {
       
       {/* Content gated behind authentication */}
       {user ? (
-        <main className="pt-16">
-          {/* Global League Dashboard - Main Entry Point */}
-          <GlobalLeagueDashboard />
+        <main>
+          {/* Onboarding Message */}
+          <OnboardingMessage />
+
+          {/* Head-to-Head Battle Hero */}
+          <DynamicBattleHero />
+          
+          {/* Main Battles Section with all navigation and features */}
+          <BattlesSection />
+          
+          {/* AI Haircut Coach - Available to all users */}
+          <VirtualHaircutTryOn />
+          
+          {/* Creator Hub for Barbers */}
+          {FEATURES.CREATOR_HUB_ENABLED && isBarber && (
+            <CreatorHub />
+          )}
+          
+          {/* Community Leaderboard */}
+          {FEATURES.COMMUNITY_LEADERBOARD && (
+            <CommunitySection />
+          )}
+          
+          {/* Grants Section */}
+          {FEATURES.GRANTS_SECTION && (
+            <GrantsSection />
+          )}
         </main>
       ) : (
         <>
           <LandingHero />
+          {/* AI Haircut Coach - Available to all users */}
           <VirtualHaircutTryOn />
         </>
       )}
