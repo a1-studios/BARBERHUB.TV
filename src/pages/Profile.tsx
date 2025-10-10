@@ -23,6 +23,7 @@ import { ClientProfileForm } from '@/components/profiles/ClientProfileForm';
 import { CreationUpload } from '@/components/creations/CreationUpload';
 import BarberDashboard from '@/components/barber/BarberDashboard';
 import { BarberSettings } from '@/components/profiles/BarberSettings';
+import { AvatarUpload } from '@/components/profiles/AvatarUpload';
 
 const Profile = () => {
   const { user } = useAuth();
@@ -201,8 +202,13 @@ const Profile = () => {
       toast.success('Profile updated successfully!');
       setIsEditing(false);
     },
-    onError: (error) => {
-      toast.error('Failed to update profile: ' + error.message);
+    onError: (error: any) => {
+      // Handle duplicate username error specifically
+      if (error.code === '23505' && error.message.includes('profiles_username_key')) {
+        toast.error('This username is already taken. Please choose another one.');
+      } else {
+        toast.error('Failed to update profile: ' + error.message);
+      }
     },
   });
 
@@ -326,73 +332,67 @@ const Profile = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5">
       <Header />
-      <main className="pt-24 pb-12 px-4">
+      <main className="pt-20 sm:pt-24 pb-12 px-4">
         <div className="container mx-auto max-w-4xl">
-          <BackButton className="mb-6" />
+          <BackButton className="mb-4 sm:mb-6" />
           
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
             {/* Profile Info */}
-            <div className="md:col-span-2">
+            <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+              {/* Personal Information Card */}
               <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <User className="h-5 w-5" />
-                        Profile Information
+                <CardHeader className="pb-4">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                        <User className="h-5 w-5 flex-shrink-0" />
+                        <span className="truncate">Personal Information</span>
                       </CardTitle>
-                      <CardDescription>
-                        Manage your account details and preferences
+                      <CardDescription className="text-sm mt-1">
+                        Manage your basic profile information and avatar
                       </CardDescription>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <RoleBadge size="md" />
-                      <div className="flex gap-2">
-                        {isBarber && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowBarberSettings(true)}
-                          >
-                            <Settings className="h-4 w-4 mr-2" />
-                            Barber Settings
-                          </Button>
-                        )}
-                        {(barberProfile || clientProfile) && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowProfileSetup(true)}
-                          >
-                            <Edit3 className="h-4 w-4 mr-2" />
-                            Edit {isBarber ? 'Barber' : 'Client'} Profile
-                          </Button>
-                        )}
-                      </div>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-6">
+                  {/* Avatar Upload Section */}
+                  <div className="flex flex-col items-center pb-6 border-b">
+                    <AvatarUpload
+                      currentAvatar={profile?.avatar_url || ''}
+                      onAvatarChange={(url) => {
+                        queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+                      }}
+                      size="lg"
+                    />
+                  </div>
+
                   <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="display_name">Display Name</Label>
-                      <Input
-                        id="display_name"
-                        value={formData.display_name}
-                        onChange={(e) => setFormData(prev => ({ ...prev, display_name: e.target.value }))}
-                        disabled={!isEditing}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="username">Username</Label>
-                      <Input
-                        id="username"
-                        value={formData.username}
-                        onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
-                        disabled={!isEditing}
-                        placeholder="@username"
-                      />
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="display_name">Display Name</Label>
+                        <Input
+                          id="display_name"
+                          value={formData.display_name}
+                          onChange={(e) => setFormData(prev => ({ ...prev, display_name: e.target.value }))}
+                          disabled={!isEditing}
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="username">Username</Label>
+                        <Input
+                          id="username"
+                          value={formData.username}
+                          onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
+                          disabled={!isEditing}
+                          placeholder="@username"
+                          className="w-full"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Choose a unique username
+                        </p>
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -406,57 +406,61 @@ const Profile = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="bio">Bio</Label>
+                      <Label htmlFor="bio">Personal Bio</Label>
                       <Textarea
                         id="bio"
                         value={formData.bio}
                         onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
                         disabled={!isEditing}
-                        placeholder="Tell us about yourself..."
+                        placeholder="Tell people about yourself..."
                         rows={3}
+                        className="resize-none w-full"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <Label>Email</Label>
-                      <Input value={user?.email || ''} disabled />
+                      <Input value={user?.email || ''} disabled className="bg-muted" />
                     </div>
 
                     <div className="space-y-2">
                       <Label>Account Type</Label>
-                      <div>
-                        <Badge variant={isBarber ? "default" : "secondary"} className="text-sm">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={isBarber ? "default" : "secondary"} className="text-sm px-3 py-1">
                           {isBarber ? (
                             <>
-                              <Scissors className="w-4 h-4 mr-1" />
+                              <Scissors className="w-4 h-4 mr-1.5" />
                               Barber
                             </>
                           ) : (
                             <>
-                              <Users className="w-4 h-4 mr-1" />
+                              <Users className="w-4 h-4 mr-1.5" />
                               Fan
                             </>
                           )}
                         </Badge>
+                        <RoleBadge size="sm" />
                       </div>
                     </div>
 
-                    <div className="flex gap-2 pt-4">
+                    <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
                       {isEditing ? (
                         <>
                           <Button 
                             type="submit" 
                             disabled={updateProfileMutation.isPending}
+                            className="w-full sm:w-auto"
                           >
                             {updateProfileMutation.isPending && (
                               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             )}
-                            Save Changes
+                            Save Profile
                           </Button>
                           <Button 
                             type="button" 
                             variant="outline" 
                             onClick={handleCancel}
+                            className="w-full sm:w-auto"
                           >
                             Cancel
                           </Button>
@@ -465,8 +469,32 @@ const Profile = () => {
                         <Button 
                           type="button" 
                           onClick={() => setIsEditing(true)}
+                          className="w-full sm:w-auto"
                         >
                           Edit Profile
+                        </Button>
+                      )}
+                      
+                      {isBarber && (
+                        <Button
+                          variant="outline"
+                          size="default"
+                          onClick={() => setShowBarberSettings(true)}
+                          className="w-full sm:w-auto sm:ml-auto"
+                        >
+                          <Settings className="h-4 w-4 mr-2" />
+                          Barber Settings
+                        </Button>
+                      )}
+                      {(barberProfile || clientProfile) && (
+                        <Button
+                          variant="outline"
+                          size="default"
+                          onClick={() => setShowProfileSetup(true)}
+                          className="w-full sm:w-auto"
+                        >
+                          <Edit3 className="h-4 w-4 mr-2" />
+                          Edit {isBarber ? 'Barber' : 'Client'} Profile
                         </Button>
                       )}
                     </div>
@@ -522,51 +550,45 @@ const Profile = () => {
               </Card>
             </div>
 
-            {/* Quick Actions */}
-            <div className="space-y-6">
+            {/* Quick Actions Sidebar */}
+            <div className="space-y-4 sm:space-y-6">
               {/* Quick Actions for Barbers */}
               {isBarber && (
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Quick Actions</CardTitle>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
+                  <CardContent className="space-y-2">
                     <Button 
                       variant="default" 
-                      className="w-full justify-start"
+                      className="w-full justify-start text-sm"
+                      size="sm"
                       onClick={() => navigate('/portal')}
                     >
-                      <Zap className="w-4 h-4 mr-2" />
-                      Go to Portal
-                    </Button>
-
-                    <Button 
-                      variant="outline" 
-                      className="w-full justify-start"
-                      onClick={() => setShowBarberSettings(true)}
-                    >
-                      <Settings className="w-4 h-4 mr-2" />
-                      View My Settings
+                      <Zap className="w-4 h-4 mr-2 flex-shrink-0" />
+                      <span className="truncate">Go to Portal</span>
                     </Button>
 
                     {activeBattles.length > 0 && needsSubmission(activeBattles[0]?.battles) && (
                       <Button 
                         variant="outline" 
-                        className="w-full justify-start border-orange-500 text-orange-500 hover:bg-orange-500/10"
+                        className="w-full justify-start border-orange-500 text-orange-500 hover:bg-orange-500/10 text-sm"
+                        size="sm"
                         onClick={() => navigate(`/battles/${activeBattles[0]?.battles?.id}`)}
                       >
-                        <Upload className="w-4 h-4 mr-2" />
-                        Upload to Active Battle
+                        <Upload className="w-4 h-4 mr-2 flex-shrink-0" />
+                        <span className="truncate">Upload to Active Battle</span>
                       </Button>
                     )}
 
                     <Button 
                       variant="outline" 
-                      className="w-full justify-start"
+                      className="w-full justify-start text-sm"
+                      size="sm"
                       onClick={() => navigate('/battles/create')}
                     >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create Battle
+                      <Plus className="w-4 h-4 mr-2 flex-shrink-0" />
+                      <span className="truncate">Create Battle</span>
                     </Button>
                   </CardContent>
                 </Card>
@@ -575,14 +597,14 @@ const Profile = () => {
               {/* Quick Actions for Fans */}
               {!isBarber && (
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Quick Actions</CardTitle>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    <Link to="/creator-hub">
-                      <Button variant="outline" className="w-full justify-start">
-                        <Trophy className="w-4 h-4 mr-2" />
-                        Watch Battles
+                  <CardContent className="space-y-2">
+                    <Link to="/creator-hub" className="block">
+                      <Button variant="outline" className="w-full justify-start text-sm" size="sm">
+                        <Trophy className="w-4 h-4 mr-2 flex-shrink-0" />
+                        <span className="truncate">Watch Battles</span>
                       </Button>
                     </Link>
                   </CardContent>
@@ -591,20 +613,20 @@ const Profile = () => {
 
               {isBarber && (
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Barber Tools</CardTitle>
-                    <CardDescription>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base sm:text-lg">Barber Tools</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
                       Professional features for barbers
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    <p className="text-sm text-muted-foreground">
+                  <CardContent className="space-y-2">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       • Create and manage battles
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       • Showcase your work
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       • Build your reputation
                     </p>
                   </CardContent>
@@ -614,26 +636,27 @@ const Profile = () => {
               {/* YouTube Integration - Barbers Only */}
               {isBarber && barberProfile && (
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      YouTube Integration
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg flex-wrap">
+                      <span className="truncate">YouTube Integration</span>
                       {barberProfile.is_live && (
-                        <Badge variant="destructive" className="animate-pulse">
+                        <Badge variant="destructive" className="animate-pulse text-xs">
                           🔴 LIVE
                         </Badge>
                       )}
                     </CardTitle>
-                    <CardDescription>
+                    <CardDescription className="text-xs sm:text-sm">
                       Connect your YouTube channel and featured video
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <Label htmlFor="youtube_channel_id">YouTube Channel ID</Label>
+                      <Label htmlFor="youtube_channel_id" className="text-sm">YouTube Channel ID</Label>
                       <Input
                         id="youtube_channel_id"
                         placeholder="UCxxx..."
                         defaultValue={barberProfile.youtube_channel_id || ''}
+                        className="text-sm"
                         onBlur={async (e) => {
                           const { error } = await supabase
                             .from('barber_profiles')
@@ -650,10 +673,11 @@ const Profile = () => {
                     </div>
                     
                     <div>
-                      <Label htmlFor="featured_video">Featured Video URL</Label>
+                      <Label htmlFor="featured_video" className="text-sm">Featured Video URL</Label>
                       <Input
                         id="featured_video"
                         placeholder="https://www.youtube.com/watch?v=..."
+                        className="text-sm"
                         onKeyDown={async (e) => {
                           if (e.key === 'Enter') {
                             const input = e.target as HTMLInputElement;
@@ -682,29 +706,29 @@ const Profile = () => {
               {/* Stats Dashboard - Barbers Only */}
               {isBarber && barberProfile && (
                 <Card>
-                  <CardHeader>
-                    <CardTitle>Your Stats</CardTitle>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base sm:text-lg">Your Stats</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3">
                       <div className="text-center p-3 bg-primary/5 rounded-lg">
-                        <Users className="w-6 h-6 mx-auto mb-1 text-primary" />
-                        <div className="text-2xl font-bold text-white">{barberStats?.follower_count || 0}</div>
+                        <Users className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 text-primary" />
+                        <div className="text-xl sm:text-2xl font-bold text-white">{barberStats?.follower_count || 0}</div>
                         <div className="text-xs text-muted-foreground">Followers</div>
                       </div>
                       <div className="text-center p-3 bg-primary/5 rounded-lg">
-                        <Heart className="w-6 h-6 mx-auto mb-1 text-primary" />
-                        <div className="text-2xl font-bold text-white">{barberStats?.like_count || 0}</div>
+                        <Heart className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 text-primary" />
+                        <div className="text-xl sm:text-2xl font-bold text-white">{barberStats?.like_count || 0}</div>
                         <div className="text-xs text-muted-foreground">Likes</div>
                       </div>
                       <div className="text-center p-3 bg-primary/5 rounded-lg">
-                        <Users className="w-6 h-6 mx-auto mb-1 text-primary" />
-                        <div className="text-2xl font-bold text-white">{barberStats?.subscription_count || 0}</div>
+                        <Bell className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 text-primary" />
+                        <div className="text-xl sm:text-2xl font-bold text-white">{barberStats?.subscription_count || 0}</div>
                         <div className="text-xs text-muted-foreground">Subscribers</div>
                       </div>
                       <div className="text-center p-3 bg-primary/5 rounded-lg">
-                        <DollarSign className="w-6 h-6 mx-auto mb-1 text-primary" />
-                        <div className="text-2xl font-bold text-white">
+                        <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 text-primary" />
+                        <div className="text-xl sm:text-2xl font-bold text-white">
                           ${((barberStats?.total_donations_cents || 0) / 100).toFixed(2)}
                         </div>
                         <div className="text-xs text-muted-foreground">Donations</div>
