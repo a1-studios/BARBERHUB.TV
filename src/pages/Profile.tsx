@@ -131,6 +131,28 @@ const Profile = () => {
     enabled: !!user?.id && isUserBarber
   });
 
+  // Fetch barber stats (must be at top level, not inside JSX!)
+  const { data: barberStats } = useQuery({
+    queryKey: ['barber-own-stats', barberProfile?.id],
+    queryFn: async () => {
+      if (!barberProfile?.id) return null;
+      const { data, error } = await supabase
+        .from('barber_stats')
+        .select('*')
+        .eq('barber_id', barberProfile.id)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data || {
+        follower_count: 0,
+        like_count: 0,
+        subscription_count: 0,
+        total_donations_cents: 0
+      };
+    },
+    enabled: !!barberProfile?.id && isBarber
+  });
+
   // Get submission status for a battle
   const getSubmissionStatus = (battleId: string) => {
     const submission = mySubmissions?.find(s => s.battle_id === battleId);
@@ -664,53 +686,30 @@ const Profile = () => {
                     <CardTitle>Your Stats</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {(() => {
-                      const { data: stats } = useQuery({
-                        queryKey: ['barber-own-stats', barberProfile.id],
-                        queryFn: async () => {
-                          const { data, error } = await supabase
-                            .from('barber_stats')
-                            .select('*')
-                            .eq('barber_id', barberProfile.id)
-                            .maybeSingle();
-                          
-                          if (error) throw error;
-                          return data || {
-                            follower_count: 0,
-                            like_count: 0,
-                            subscription_count: 0,
-                            total_donations_cents: 0
-                          };
-                        }
-                      });
-
-                      return (
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="text-center p-3 bg-primary/5 rounded-lg">
-                            <Users className="w-6 h-6 mx-auto mb-1 text-primary" />
-                            <div className="text-2xl font-bold text-white">{stats?.follower_count || 0}</div>
-                            <div className="text-xs text-muted-foreground">Followers</div>
-                          </div>
-                          <div className="text-center p-3 bg-primary/5 rounded-lg">
-                            <Heart className="w-6 h-6 mx-auto mb-1 text-primary" />
-                            <div className="text-2xl font-bold text-white">{stats?.like_count || 0}</div>
-                            <div className="text-xs text-muted-foreground">Likes</div>
-                          </div>
-                          <div className="text-center p-3 bg-primary/5 rounded-lg">
-                            <Users className="w-6 h-6 mx-auto mb-1 text-primary" />
-                            <div className="text-2xl font-bold text-white">{stats?.subscription_count || 0}</div>
-                            <div className="text-xs text-muted-foreground">Subscribers</div>
-                          </div>
-                          <div className="text-center p-3 bg-primary/5 rounded-lg">
-                            <DollarSign className="w-6 h-6 mx-auto mb-1 text-primary" />
-                            <div className="text-2xl font-bold text-white">
-                              ${((stats?.total_donations_cents || 0) / 100).toFixed(2)}
-                            </div>
-                            <div className="text-xs text-muted-foreground">Donations</div>
-                          </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center p-3 bg-primary/5 rounded-lg">
+                        <Users className="w-6 h-6 mx-auto mb-1 text-primary" />
+                        <div className="text-2xl font-bold text-white">{barberStats?.follower_count || 0}</div>
+                        <div className="text-xs text-muted-foreground">Followers</div>
+                      </div>
+                      <div className="text-center p-3 bg-primary/5 rounded-lg">
+                        <Heart className="w-6 h-6 mx-auto mb-1 text-primary" />
+                        <div className="text-2xl font-bold text-white">{barberStats?.like_count || 0}</div>
+                        <div className="text-xs text-muted-foreground">Likes</div>
+                      </div>
+                      <div className="text-center p-3 bg-primary/5 rounded-lg">
+                        <Users className="w-6 h-6 mx-auto mb-1 text-primary" />
+                        <div className="text-2xl font-bold text-white">{barberStats?.subscription_count || 0}</div>
+                        <div className="text-xs text-muted-foreground">Subscribers</div>
+                      </div>
+                      <div className="text-center p-3 bg-primary/5 rounded-lg">
+                        <DollarSign className="w-6 h-6 mx-auto mb-1 text-primary" />
+                        <div className="text-2xl font-bold text-white">
+                          ${((barberStats?.total_donations_cents || 0) / 100).toFixed(2)}
                         </div>
-                      );
-                    })()}
+                        <div className="text-xs text-muted-foreground">Donations</div>
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               )}
