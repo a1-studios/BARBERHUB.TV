@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TournamentRegistration } from "@/components/tournament/TournamentRegistration";
 import { LiveMatchCounter } from "@/components/tournament/LiveMatchCounter";
+import { MyBattlesSection } from "@/components/barber/MyBattlesSection";
 import { Trophy, Users, Clock, Vote, Plus, DollarSign, Play, Calendar, Target } from "lucide-react";
 interface Battle {
   id: string;
@@ -178,6 +179,16 @@ const Portal = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* My Battles Section - Barber Only */}
+          {isBarber && user && (
+            <div className="mb-12">
+              <h2 className="text-3xl font-bold text-foreground mb-6 text-center">
+                My Active Battles
+              </h2>
+              <MyBattlesSection userId={user.id} />
+            </div>
+          )}
 
           {/* Live Battles Section */}
           {liveBattles && liveBattles.length > 0 && <div className="mb-12">
