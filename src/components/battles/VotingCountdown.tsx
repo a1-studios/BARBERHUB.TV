@@ -116,13 +116,13 @@ export const VotingCountdown = ({ battleId, votingEndsAt, status, isOrganizer }:
 
         {isExpired && !isOrganizer && (
           <p className="text-xs text-muted-foreground mt-2">
-            Waiting for organizer to finalize results...
+            Results will be calculated automatically shortly...
           </p>
         )}
 
         {!isExpired && (
           <p className="text-xs text-muted-foreground mt-2">
-            Cast your vote before time runs out!
+            Cast your vote before time runs out! Voting closes automatically.
           </p>
         )}
       </CardContent>

@@ -23,17 +23,35 @@ major_version = 15
 [functions.analyze-haircut]
 verify_jwt = false
 
-[functions.create-donation]
-verify_jwt = true
-
-[functions.verify-tournament-payment]
+[functions.auto-close-voting]
 verify_jwt = false
 
 [functions.check-youtube-live]
 verify_jwt = false
 
+[functions.close-voting]
+verify_jwt = true
+
+[functions.complete-match]
+verify_jwt = true
+
+[functions.create-battle-entry]
+verify_jwt = true
+
+[functions.create-donation]
+verify_jwt = true
+
+[functions.schedule-tournament-match]
+verify_jwt = true
+
 [functions.set-featured-video]
+verify_jwt = true
+
+[functions.start-live-stream]
 verify_jwt = true
 
 [functions.submit-battle-video]
 verify_jwt = true
+
+[functions.verify-tournament-payment]
+verify_jwt = false
