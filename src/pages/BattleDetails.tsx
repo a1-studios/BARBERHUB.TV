@@ -13,6 +13,7 @@ import { Calendar, MapPin, Trophy, Users, Upload, Vote } from 'lucide-react';
 import { format } from 'date-fns';
 import VotingCard from '@/components/VotingCard';
 import { VotingCountdown } from '@/components/battles/VotingCountdown';
+import { BattleResults } from '@/components/battles/BattleResults';
 import { useEffect } from 'react';
 
 const BattleDetails = () => {
@@ -110,6 +111,22 @@ const BattleDetails = () => {
         profiles: profilesData?.find(p => p.user_id === submission.user_id) || null
       }));
     }
+  });
+
+  // Fetch all public profiles for submissions (for results display)
+  const { data: submissionProfiles } = useQuery({
+    queryKey: ['submission-profiles', id],
+    queryFn: async () => {
+      if (!submissions || submissions.length === 0) return [];
+      
+      const userIds = [...new Set(submissions.map(s => s.user_id))];
+      const { data, error } = await supabase
+        .rpc('get_multiple_public_profiles', { user_ids: userIds });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!submissions && submissions.length > 0
   });
 
   // Fetch vote results
@@ -395,14 +412,22 @@ const BattleDetails = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content */}
         <div className="lg:col-span-2">
-          {/* Submissions & Voting */}
-          {submissions && submissions.length > 0 ? (
+          {/* Battle Results (Completed) */}
+          {battle.status === 'completed' && submissions && submissions.length > 0 ? (
+            <BattleResults
+              battle={battle}
+              submissions={submissions}
+              voteResults={voteResults || []}
+              profiles={submissionProfiles || []}
+            />
+          ) : battle.status === 'voting' && submissions && submissions.length > 0 ? (
+            /* Voting Phase */
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-white">
-                  {battle.status === 'voting' ? 'Vote for Your Favorite' : 'Submissions'}
+                  Vote for Your Favorite
                 </h2>
-                {battle.status === 'voting' && totalWeightedVotes > 0 && (
+                {totalWeightedVotes > 0 && (
                   <div className="text-sm text-muted-foreground">
                     {totalWeightedVotes} total weighted votes
                   </div>
@@ -424,7 +449,27 @@ const BattleDetails = () => {
                 ))}
               </div>
             </div>
+          ) : submissions && submissions.length > 0 ? (
+            /* Other Statuses with Submissions */
+            <div className="space-y-6">
+              <h2 className="text-2xl font-bold text-white">Submissions</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {submissions.map((submission) => (
+                  <VotingCard
+                    key={submission.id}
+                    submission={submission}
+                    voteResults={voteResults || []}
+                    userVote={userVote}
+                    totalWeightedVotes={totalWeightedVotes}
+                    canVote={false}
+                    isVoting={false}
+                    onVote={() => {}}
+                  />
+                ))}
+              </div>
+            </div>
           ) : (
+            /* No Submissions */
             <div className="text-center py-12">
               <Upload className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-xl font-semibold text-white mb-2">No submissions yet</h3>
