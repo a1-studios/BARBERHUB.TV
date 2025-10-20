@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Calendar, MapPin, Trophy, Users, Upload, Vote } from 'lucide-react';
 import { format } from 'date-fns';
 import VotingCard from '@/components/VotingCard';
+import { VotingCountdown } from '@/components/battles/VotingCountdown';
 import { useEffect } from 'react';
 
 const BattleDetails = () => {
@@ -377,6 +378,18 @@ const BattleDetails = () => {
       </div>
 
       <Separator className="my-8" />
+
+      {/* Voting Countdown */}
+      {battle.status === 'voting' && battle.voting_ends_at && (
+        <div className="mb-8">
+          <VotingCountdown
+            battleId={id}
+            votingEndsAt={battle.voting_ends_at}
+            status={battle.status}
+            isOrganizer={isOrganizer}
+          />
+        </div>
+      )}
 
       {/* Battle Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
