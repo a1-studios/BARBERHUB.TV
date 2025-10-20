@@ -984,6 +984,39 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string
+          data: Json | null
+          id: string
+          message: string
+          read: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          message: string
+          read?: boolean | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json | null
+          id?: string
+          message?: string
+          read?: boolean | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           amount: number
@@ -1399,6 +1432,16 @@ export type Database = {
         }
         Returns: undefined
       }
+      create_battle_notification: {
+        Args: {
+          p_data?: Json
+          p_message: string
+          p_title: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       generate_elimination_bracket: {
         Args: { num_participants?: number; tournament_id_param: string }
         Returns: undefined
@@ -1492,6 +1535,26 @@ export type Database = {
       increment_vote_count: {
         Args: { increment_by?: number; submission_id: string }
         Returns: undefined
+      }
+      notify_battle_participants: {
+        Args: {
+          p_battle_id: string
+          p_data?: Json
+          p_message: string
+          p_title: string
+          p_type?: string
+        }
+        Returns: number
+      }
+      notify_battle_voters: {
+        Args: {
+          p_battle_id: string
+          p_data?: Json
+          p_message: string
+          p_title: string
+          p_type?: string
+        }
+        Returns: number
       }
       refresh_barber_stats: {
         Args: Record<PropertyKey, never>

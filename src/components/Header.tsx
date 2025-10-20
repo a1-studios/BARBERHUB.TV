@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Scissors, Menu, X, Trophy, Plus, User, LogOut, Sparkles, Zap } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
+import { NotificationBell } from '@/components/NotificationBell';
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -43,18 +44,23 @@ const Header = () => {
             </span>
           </button>
 
-          {/* Hamburger Menu Button */}
-          <button
-            className="p-2 -mr-2"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle menu"
-          >
-            {mobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
-          </button>
+          {/* Right Side - Notifications & Menu */}
+          <div className="flex items-center gap-2">
+            {user && <NotificationBell />}
+            
+            {/* Hamburger Menu Button */}
+            <button
+              className="p-2 -mr-2"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Hamburger Menu Dropdown */}

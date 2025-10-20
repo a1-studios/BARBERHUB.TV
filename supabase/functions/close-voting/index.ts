@@ -70,6 +70,8 @@ serve(async (req) => {
       throw battleError;
     }
 
+    let winnerDisplayName = null;
+
     // If tournament match, trigger standings update
     if (battle.tournament_id) {
       console.log('[CLOSE-VOTING] Tournament match - calculating results');
@@ -82,6 +84,16 @@ serve(async (req) => {
         console.error('[CLOSE-VOTING] Result calculation failed:', resultError);
       } else {
         console.log('[CLOSE-VOTING] Match result:', result);
+        
+        // Get winner profile for notification
+        if (result && result.length > 0 && result[0].winner_id) {
+          const { data: winnerProfile } = await supabaseClient
+            .rpc('get_public_profile', { profile_user_id: result[0].winner_id });
+          
+          if (winnerProfile && winnerProfile.length > 0) {
+            winnerDisplayName = winnerProfile[0].display_name;
+          }
+        }
       }
 
       // Update tournament standings
@@ -112,6 +124,38 @@ serve(async (req) => {
           console.log('[CLOSE-VOTING] Bracket updated with winner:', matchResult.winner_id);
         }
       }
+    }
+
+    // Send notifications to participants
+    const participantsNotifyResult = await supabaseClient
+      .rpc('notify_battle_participants', {
+        p_battle_id: battleId,
+        p_title: '🏆 Battle Results',
+        p_message: `Voting has ended for "${battle.title}". ${winnerDisplayName ? `${winnerDisplayName} won!` : 'Check the results now!'}`,
+        p_type: 'battle_completed',
+        p_data: { winner_name: winnerDisplayName }
+      });
+
+    if (participantsNotifyResult.error) {
+      console.error('[CLOSE-VOTING] Participant notification error:', participantsNotifyResult.error);
+    } else {
+      console.log('[CLOSE-VOTING] Notified participants');
+    }
+
+    // Send notifications to voters
+    const votersNotifyResult = await supabaseClient
+      .rpc('notify_battle_voters', {
+        p_battle_id: battleId,
+        p_title: '🎉 Battle Results Are In!',
+        p_message: `The battle "${battle.title}" has ended. ${winnerDisplayName ? `${winnerDisplayName} won!` : 'See who won!'}`,
+        p_type: 'battle_result',
+        p_data: { winner_name: winnerDisplayName }
+      });
+
+    if (votersNotifyResult.error) {
+      console.error('[CLOSE-VOTING] Voter notification error:', votersNotifyResult.error);
+    } else {
+      console.log('[CLOSE-VOTING] Notified voters');
     }
 
     console.log('[CLOSE-VOTING] Voting closed and results calculated');

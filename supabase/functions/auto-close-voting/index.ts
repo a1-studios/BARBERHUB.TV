@@ -70,6 +70,8 @@ serve(async (req) => {
           continue;
         }
 
+        let winnerDisplayName = null;
+
         // If tournament match, calculate results and update standings
         if (battle.tournament_id) {
           console.log(`[AUTO-CLOSE-VOTING] Tournament match - calculating results for ${battle.id}`);
@@ -82,6 +84,16 @@ serve(async (req) => {
             console.error(`[AUTO-CLOSE-VOTING] Result calculation error for battle ${battle.id}:`, resultError);
           } else {
             console.log(`[AUTO-CLOSE-VOTING] Match result calculated for ${battle.id}:`, result);
+            
+            // Get winner profile for notification
+            if (result && result.length > 0 && result[0].winner_id) {
+              const { data: winnerProfile } = await supabaseClient
+                .rpc('get_public_profile', { profile_user_id: result[0].winner_id });
+              
+              if (winnerProfile && winnerProfile.length > 0) {
+                winnerDisplayName = winnerProfile[0].display_name;
+              }
+            }
           }
 
           // Update tournament standings
@@ -114,11 +126,44 @@ serve(async (req) => {
           }
         }
 
+        // Send notifications to participants
+        const participantsNotifyResult = await supabaseClient
+          .rpc('notify_battle_participants', {
+            p_battle_id: battle.id,
+            p_title: '🏆 Battle Results',
+            p_message: `Voting has ended for "${battle.title}". ${winnerDisplayName ? `${winnerDisplayName} won!` : 'Check the results now!'}`,
+            p_type: 'battle_completed',
+            p_data: { winner_name: winnerDisplayName }
+          });
+
+        if (participantsNotifyResult.error) {
+          console.error(`[AUTO-CLOSE-VOTING] Participant notification error:`, participantsNotifyResult.error);
+        } else {
+          console.log(`[AUTO-CLOSE-VOTING] Notified ${participantsNotifyResult.data} participants`);
+        }
+
+        // Send notifications to voters
+        const votersNotifyResult = await supabaseClient
+          .rpc('notify_battle_voters', {
+            p_battle_id: battle.id,
+            p_title: '🎉 Battle Results Are In!',
+            p_message: `The battle "${battle.title}" has ended. ${winnerDisplayName ? `${winnerDisplayName} won!` : 'See who won!'}`,
+            p_type: 'battle_result',
+            p_data: { winner_name: winnerDisplayName }
+          });
+
+        if (votersNotifyResult.error) {
+          console.error(`[AUTO-CLOSE-VOTING] Voter notification error:`, votersNotifyResult.error);
+        } else {
+          console.log(`[AUTO-CLOSE-VOTING] Notified ${votersNotifyResult.data} voters`);
+        }
+
         results.push({
           battleId: battle.id,
           title: battle.title,
           success: true,
-          isTournamentMatch: !!battle.tournament_id
+          isTournamentMatch: !!battle.tournament_id,
+          winnerName: winnerDisplayName
         });
 
         console.log(`[AUTO-CLOSE-VOTING] Successfully closed battle ${battle.id}`);
