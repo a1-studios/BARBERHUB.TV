@@ -279,6 +279,8 @@ export type Database = {
       }
       battles: {
         Row: {
+          barber_1_video_url: string | null
+          barber_2_video_url: string | null
           barber1_id: string | null
           barber2_id: string | null
           category: string | null
@@ -308,10 +310,13 @@ export type Database = {
           vote_count1: number | null
           vote_count2: number | null
           voting_ends_at: string | null
+          winner_id: string | null
           youtube_stream_url: string | null
           youtube_vod_url: string | null
         }
         Insert: {
+          barber_1_video_url?: string | null
+          barber_2_video_url?: string | null
           barber1_id?: string | null
           barber2_id?: string | null
           category?: string | null
@@ -341,10 +346,13 @@ export type Database = {
           vote_count1?: number | null
           vote_count2?: number | null
           voting_ends_at?: string | null
+          winner_id?: string | null
           youtube_stream_url?: string | null
           youtube_vod_url?: string | null
         }
         Update: {
+          barber_1_video_url?: string | null
+          barber_2_video_url?: string | null
           barber1_id?: string | null
           barber2_id?: string | null
           category?: string | null
@@ -374,6 +382,7 @@ export type Database = {
           vote_count1?: number | null
           vote_count2?: number | null
           voting_ends_at?: string | null
+          winner_id?: string | null
           youtube_stream_url?: string | null
           youtube_vod_url?: string | null
         }
@@ -433,6 +442,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "tournaments"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battles_winner_id_fkey"
+            columns: ["winner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1468,6 +1484,14 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_no_show_count: {
+        Args: { barber_user_id: string }
+        Returns: undefined
+      }
+      increment_vote_count: {
+        Args: { increment_by?: number; submission_id: string }
+        Returns: undefined
       }
       refresh_barber_stats: {
         Args: Record<PropertyKey, never>
