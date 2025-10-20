@@ -34,3 +34,6 @@ verify_jwt = false
 
 [functions.set-featured-video]
 verify_jwt = true
+
+[functions.submit-battle-video]
+verify_jwt = true
