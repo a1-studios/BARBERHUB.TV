@@ -3,8 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-// VideoSubmissionModal will be created in Phase 3
-// import { VideoSubmissionModal } from '@/components/battles/VideoSubmissionModal';
+import { VideoSubmissionModal } from '@/components/battles/VideoSubmissionModal';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trophy, Upload, Eye, Clock, CheckCircle2, Loader2 } from 'lucide-react';
@@ -264,14 +263,14 @@ export const MyBattlesSection = ({ userId }: MyBattlesSectionProps) => {
         </div>
       )}
 
-      {/* Video Submission Modal - Will be added in Phase 3 */}
+      {/* Video Submission Modal */}
       {selectedBattle && (
-        <Card className="fixed inset-0 z-50 bg-background/95 flex items-center justify-center">
-          <CardContent className="text-center">
-            <p className="text-muted-foreground">Video submission modal coming in Phase 3...</p>
-            <Button onClick={() => setSelectedBattle(null)} className="mt-4">Close</Button>
-          </CardContent>
-        </Card>
+        <VideoSubmissionModal
+          battleId={selectedBattle}
+          isOpen={!!selectedBattle}
+          onClose={() => setSelectedBattle(null)}
+          onSuccess={handleSubmissionSuccess}
+        />
       )}
     </div>
   );
