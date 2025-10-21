@@ -2,12 +2,16 @@ import { useNavigate } from 'react-router-dom';
 import { Trophy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import Globe3D from '@/components/Globe3D';
 
 export const PrizePoolCard = () => {
   const navigate = useNavigate();
 
   return (
     <Card className="relative overflow-hidden border-2 border-primary/50 bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+      {/* Dynamic 3D Globe Background */}
+      <Globe3D />
+      
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent animate-pulse" />
 
       <CardContent className="relative z-10 text-center py-8 sm:py-12">
