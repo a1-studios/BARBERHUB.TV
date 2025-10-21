@@ -1,45 +1,48 @@
 import { useState, useEffect } from 'react';
+import { Timer } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 export const BattleWindowTimer = () => {
   const [status, setStatus] = useState<{
     isLive: boolean;
     message: string;
     countdown: string;
-  }>({ isLive: false, message: '', countdown: '' });
+    totalSeconds: number;
+  }>({ isLive: false, message: '', countdown: '', totalSeconds: 0 });
 
   useEffect(() => {
     const updateStatus = () => {
       const now = new Date();
-      const day = now.getDay(); // 0 = Sunday
+      const day = now.getDay();
       const hour = now.getHours();
 
-      // Check if currently Sunday 10 AM - 6 PM
       if (day === 0 && hour >= 10 && hour < 18) {
         setStatus({
           isLive: true,
-          message: 'Battles are LIVE NOW!',
-          countdown: ''
+          message: 'LIVE',
+          countdown: '',
+          totalSeconds: 0
         });
         return;
       }
 
-      // Calculate next Sunday 10 AM
       const nextSunday = new Date(now);
       const daysUntil = day === 0 ? 7 : (7 - day);
       nextSunday.setDate(now.getDate() + daysUntil);
       nextSunday.setHours(10, 0, 0, 0);
 
       const diff = nextSunday.getTime() - now.getTime();
+      const totalSeconds = Math.floor(diff / 1000);
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
       const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
       setStatus({
         isLive: false,
-        message: 'Next battle window:',
-        countdown: `${days}d ${hours}h ${minutes}m ${seconds}s`
+        message: 'Next Battle',
+        countdown: `${days}d ${hours}h ${minutes}m`,
+        totalSeconds
       });
     };
 
@@ -49,34 +52,60 @@ export const BattleWindowTimer = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Calculate sand animation progress (0-1)
+  const sandProgress = status.isLive ? 1 : Math.min(1, 1 - (status.totalSeconds % 60) / 60);
+
   return (
-    <div
-      className={cn(
-        "w-full py-6 text-center border-b",
-        status.isLive
-          ? "bg-gradient-to-r from-red-500/20 via-primary/20 to-red-500/20 animate-pulse"
-          : "bg-gradient-to-r from-primary/10 to-secondary/10"
-      )}
-    >
-      <div className="container mx-auto px-4">
-        {status.isLive ? (
-          <div className="flex items-center justify-center gap-4 flex-wrap">
-            <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse" />
-            <h2 className="text-2xl sm:text-4xl font-bold text-foreground">
-              🔴 BATTLES ARE LIVE NOW!
-            </h2>
+    <div className="inline-flex items-center gap-3 px-4 py-2 rounded-full bg-card border border-border shadow-lg">
+      {/* Sand Clock Icon with Animation */}
+      <div className="relative w-10 h-10 flex items-center justify-center">
+        {/* Hourglass Frame */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          {/* Top Bulb */}
+          <div className="w-8 h-4 border-2 border-primary rounded-t-full overflow-hidden relative">
+            <motion.div
+              className={cn(
+                "absolute bottom-0 left-0 right-0 bg-primary/30",
+                status.isLive && "bg-red-500/50"
+              )}
+              animate={{ height: `${(1 - sandProgress) * 100}%` }}
+              transition={{ duration: 0.5 }}
+            />
           </div>
-        ) : (
-          <div>
-            <p className="text-sm sm:text-lg text-muted-foreground mb-2">{status.message}</p>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-primary">
-              T-minus {status.countdown}
-            </h2>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-2">
-              Until battles begin (Sunday 10:00 AM - 6:00 PM)
-            </p>
+          {/* Middle Neck */}
+          <div className="w-1 h-2 bg-primary" />
+          {/* Bottom Bulb */}
+          <div className="w-8 h-4 border-2 border-primary rounded-b-full overflow-hidden relative">
+            <motion.div
+              className={cn(
+                "absolute top-0 left-0 right-0 bg-primary",
+                status.isLive && "bg-red-500 animate-pulse"
+              )}
+              animate={{ height: `${sandProgress * 100}%` }}
+              transition={{ duration: 0.5 }}
+            />
           </div>
+        </div>
+        
+        {status.isLive && (
+          <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse" />
         )}
+      </div>
+
+      {/* Countdown Text */}
+      <div className="flex flex-col">
+        <span className={cn(
+          "text-xs font-medium",
+          status.isLive ? "text-red-500" : "text-muted-foreground"
+        )}>
+          {status.message}
+        </span>
+        <span className={cn(
+          "text-sm font-bold",
+          status.isLive ? "text-red-500" : "text-foreground"
+        )}>
+          {status.isLive ? '🔴 NOW' : status.countdown}
+        </span>
       </div>
     </div>
   );

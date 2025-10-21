@@ -11,9 +11,6 @@ export const GlobalLeagueDashboard = () => {
 
   return (
     <div className="min-h-screen">
-      {/* Battle Window Status Banner */}
-      <BattleWindowTimer />
-
       <div className="container mx-auto px-4 py-8 space-y-12">
         {/* Prize Pool Feature Card */}
         <PrizePoolCard />
@@ -21,8 +18,14 @@ export const GlobalLeagueDashboard = () => {
         {/* Role-Based Action Zone */}
         <FanActionZone />
 
-        {/* Live Battle Feed */}
-        <LiveBattleFeed />
+        {/* Battle Section with Timer */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold">Live Battles</h2>
+            <BattleWindowTimer />
+          </div>
+          <LiveBattleFeed />
+        </div>
 
         {/* Quick Access Links */}
         <div className="border-t pt-8">
