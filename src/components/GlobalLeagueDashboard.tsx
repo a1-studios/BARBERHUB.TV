@@ -1,16 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { Compass, MapPin, Gift } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useUserRole } from '@/hooks/useUserRole';
 import { BattleWindowTimer } from '@/components/BattleWindowTimer';
 import { PrizePoolCard } from '@/components/PrizePoolCard';
 import { LiveBattleFeed } from '@/components/LiveBattleFeed';
-import { BarberActionZone } from '@/components/BarberActionZone';
 import { FanActionZone } from '@/components/FanActionZone';
 
 export const GlobalLeagueDashboard = () => {
   const navigate = useNavigate();
-  const { isBarber } = useUserRole();
 
   return (
     <div className="min-h-screen">
@@ -22,7 +19,7 @@ export const GlobalLeagueDashboard = () => {
         <PrizePoolCard />
 
         {/* Role-Based Action Zone */}
-        {isBarber ? <BarberActionZone /> : <FanActionZone />}
+        <FanActionZone />
 
         {/* Live Battle Feed */}
         <LiveBattleFeed />
