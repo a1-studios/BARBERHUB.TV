@@ -291,6 +291,8 @@ export type Database = {
           currency: string
           description: string | null
           ends_at: string | null
+          forfeit_reason: string | null
+          forfeit_winner_id: string | null
           id: string
           is_tournament_match: boolean | null
           live_viewers: number | null
@@ -304,6 +306,7 @@ export type Database = {
           starts_at: string | null
           status: string
           stream_url: string | null
+          submission_deadline: string | null
           title: string
           tournament_id: string | null
           updated_at: string
@@ -327,6 +330,8 @@ export type Database = {
           currency?: string
           description?: string | null
           ends_at?: string | null
+          forfeit_reason?: string | null
+          forfeit_winner_id?: string | null
           id?: string
           is_tournament_match?: boolean | null
           live_viewers?: number | null
@@ -340,6 +345,7 @@ export type Database = {
           starts_at?: string | null
           status?: string
           stream_url?: string | null
+          submission_deadline?: string | null
           title: string
           tournament_id?: string | null
           updated_at?: string
@@ -363,6 +369,8 @@ export type Database = {
           currency?: string
           description?: string | null
           ends_at?: string | null
+          forfeit_reason?: string | null
+          forfeit_winner_id?: string | null
           id?: string
           is_tournament_match?: boolean | null
           live_viewers?: number | null
@@ -376,6 +384,7 @@ export type Database = {
           starts_at?: string | null
           status?: string
           stream_url?: string | null
+          submission_deadline?: string | null
           title?: string
           tournament_id?: string | null
           updated_at?: string
@@ -428,6 +437,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "creations"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battles_forfeit_winner_id_fkey"
+            columns: ["forfeit_winner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "battles_phase_id_fkey"
@@ -1441,6 +1457,14 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      create_forfeit_match_result: {
+        Args: {
+          battle_id_param: string
+          forfeit_reason_param: string
+          winner_id_param: string
+        }
+        Returns: undefined
       }
       generate_elimination_bracket: {
         Args: { num_participants?: number; tournament_id_param: string }

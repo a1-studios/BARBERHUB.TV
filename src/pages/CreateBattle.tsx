@@ -32,6 +32,7 @@ const battleSchema = z.object({
   max_participants: z.number().min(2, 'Must allow at least 2 participants').optional(),
   starts_at: z.date().optional(),
   ends_at: z.date().optional(),
+  submission_deadline: z.date().optional(),
   voting_ends_at: z.date().optional(),
   rules: z.string().optional(),
   cover_image_url: z.string().url().optional().or(z.literal('')),
@@ -43,6 +44,14 @@ const battleSchema = z.object({
 }, {
   message: "End date must be after start date",
   path: ["ends_at"],
+}).refine((data) => {
+  if (data.submission_deadline && data.ends_at) {
+    return data.submission_deadline < data.ends_at;
+  }
+  return true;
+}, {
+  message: "Submission deadline must be before battle end date",
+  path: ["submission_deadline"],
 }).refine((data) => {
   if (data.ends_at && data.voting_ends_at) {
     return data.voting_ends_at > data.ends_at;
@@ -132,6 +141,7 @@ const CreateBattle = () => {
         max_participants: data.max_participants || null,
         starts_at: data.starts_at?.toISOString() || null,
         ends_at: data.ends_at?.toISOString() || null,
+        submission_deadline: data.submission_deadline?.toISOString() || null,
         voting_ends_at: data.voting_ends_at?.toISOString() || null,
       };
 
@@ -290,11 +300,54 @@ const CreateBattle = () => {
                           </FormControl>
                           <FormDescription>Enter 0 for no prize</FormDescription>
                           <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+              </FormItem>
+            )}
+          />
 
-                    <FormField
+          <FormField
+            control={form.control}
+            name="submission_deadline"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <FormLabel>Submission Deadline</FormLabel>
+                <FormDescription>
+                  Barbers must submit videos by this time or forfeit
+                </FormDescription>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "pl-3 text-left font-normal",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value ? (
+                          format(field.value as Date, "PPP p")
+                        ) : (
+                          <span>Pick date & time (optional)</span>
+                        )}
+                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value as Date | undefined}
+                      onSelect={field.onChange}
+                      disabled={(date: Date) => date < new Date()}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
                       control={form.control}
                       name="currency"
                       render={({ field }) => (

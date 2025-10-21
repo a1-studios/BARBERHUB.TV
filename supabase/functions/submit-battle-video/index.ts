@@ -131,6 +131,17 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Check if submission deadline has passed
+    if (battle.submission_deadline && new Date() > new Date(battle.submission_deadline)) {
+      console.error('Submission deadline passed:', battle.submission_deadline);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Submission deadline has passed. This battle has been forfeited.' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Check for existing submission
     const { data: existingSubmission } = await supabaseClient
       .from('battle_submissions')

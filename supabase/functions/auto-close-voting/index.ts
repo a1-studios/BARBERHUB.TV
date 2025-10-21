@@ -22,7 +22,7 @@ serve(async (req) => {
     // Find all battles that are in 'voting' status and have expired voting periods
     const { data: expiredBattles, error: fetchError } = await supabaseClient
       .from('battles')
-      .select('id, title, voting_ends_at, tournament_id')
+      .select('id, title, voting_ends_at, tournament_id, forfeit_reason')
       .eq('status', 'voting')
       .lt('voting_ends_at', new Date().toISOString());
 
@@ -53,6 +53,12 @@ serve(async (req) => {
     for (const battle of expiredBattles) {
       try {
         console.log(`[AUTO-CLOSE-VOTING] Processing battle: ${battle.id} - ${battle.title}`);
+
+        // Skip if battle was forfeit (already processed by check-battle-submissions)
+        if (battle.forfeit_reason) {
+          console.log(`[AUTO-CLOSE-VOTING] Battle ${battle.id} was forfeit, skipping vote calculation`);
+          continue;
+        }
 
         // Update battle status to completed
         const { error: updateError } = await supabaseClient

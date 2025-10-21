@@ -316,6 +316,24 @@ const BattleDetails = () => {
               </p>
             )}
 
+            {/* Forfeit Warning */}
+            {battle.forfeit_reason && (
+              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-6">
+                <div className="flex items-start gap-3">
+                  <div className="text-destructive">⚠️</div>
+                  <div>
+                    <h3 className="font-semibold text-destructive mb-1">Battle Forfeited</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {battle.forfeit_reason === 'no_submission_barber1' && 'Barber 1 did not submit a video by the deadline'}
+                      {battle.forfeit_reason === 'no_submission_barber2' && 'Barber 2 did not submit a video by the deadline'}
+                      {battle.forfeit_reason === 'no_submission_both' && 'Neither barber submitted a video by the deadline'}
+                      {battle.forfeit_winner_id && ` - Winner by forfeit awarded 3 points`}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               {battle.starts_at && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">

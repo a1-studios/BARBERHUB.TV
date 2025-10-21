@@ -26,6 +26,9 @@ verify_jwt = false
 [functions.auto-close-voting]
 verify_jwt = false
 
+[functions.check-battle-submissions]
+verify_jwt = false
+
 [functions.check-youtube-live]
 verify_jwt = false
 
