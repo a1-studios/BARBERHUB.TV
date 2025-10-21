@@ -11,12 +11,15 @@ import { VerificationBadge } from "./VerificationBadge";
 import { AddFundsModal } from "./AddFundsModal";
 import { YouTubeStreamPlayer } from "./battles/YouTubeStreamPlayer";
 import { BarberVideoSection } from "./barber/BarberVideoSection";
+import { BattleVotingView } from "./battles/BattleVotingView";
+import { BattleResultsView } from "./battles/BattleResultsView";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useLikes } from "@/hooks/useLikes";
 import { useBarberBucks } from "@/hooks/useBarberBucks";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import confetti from 'canvas-confetti';
 interface Battle {
   id: string;
   title: string;
@@ -27,6 +30,8 @@ interface Battle {
   status: string;
   youtube_stream_url?: string;
   youtube_vod_url?: string;
+  barber_1_video_url?: string;
+  barber_2_video_url?: string;
 }
 interface BarberProfile {
   id: string;
@@ -75,6 +80,8 @@ export const DynamicBattleHero = () => {
   const [selectedBarberName, setSelectedBarberName] = useState("");
   const [isPanelOpen, setIsPanelOpen] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [previousStatus, setPreviousStatus] = useState<string | null>(null);
+  const [userVotedFor, setUserVotedFor] = useState<string | null>(null);
 
   // Fetch active battle
   const {
@@ -186,6 +193,67 @@ export const DynamicBattleHero = () => {
     },
     enabled: !!battle?.id
   });
+  // Fetch user's vote if logged in
+  const { data: userVote } = useQuery({
+    queryKey: ['user-vote', battle?.id, user?.id],
+    queryFn: async () => {
+      if (!user?.id || !battle?.id) return null;
+      
+      const { data, error } = await supabase
+        .from('battle_votes')
+        .select('submission_id')
+        .eq('battle_id', battle.id)
+        .eq('voter_id', user.id)
+        .maybeSingle();
+      
+      if (error && error.code !== 'PGRST116') throw error;
+      return data?.submission_id || null;
+    },
+    enabled: !!user?.id && !!battle?.id
+  });
+
+  // Update user voted state
+  useEffect(() => {
+    if (userVote && submissions) {
+      const submission = submissions.find(s => s.id === userVote);
+      if (submission) {
+        setUserVotedFor(submission.user_id);
+      }
+    }
+  }, [userVote, submissions]);
+
+  // Confetti effect when voting closes
+  useEffect(() => {
+    if (battle?.status === 'completed' && previousStatus === 'voting') {
+      // Fire confetti
+      const duration = 3000;
+      const end = Date.now() + duration;
+
+      const frame = () => {
+        confetti({
+          particleCount: 2,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0 },
+          colors: ['#FFD700', '#FFA500', '#FF6347']
+        });
+        confetti({
+          particleCount: 2,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1 },
+          colors: ['#FFD700', '#FFA500', '#FF6347']
+        });
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      };
+      frame();
+    }
+    setPreviousStatus(battle?.status || null);
+  }, [battle?.status]);
+
   const handleVote = async (barberId: string) => {
     if (!user || !battle) {
       toast.error("Please sign in to vote");
@@ -472,6 +540,158 @@ export const DynamicBattleHero = () => {
   // Default photos for barbers
   const barber1Photo = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=800&h=800&fit=crop&crop=face";
   const barber2Photo = "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=800&h=800&fit=crop&crop=face";
+
+  // Determine render mode based on battle status
+  const renderMode = battle.status === 'voting' ? 'voting' : battle.status === 'completed' ? 'results' : 'preview';
+
+  // Enhanced Voting Mode - Uses BattleVotingView
+  if (renderMode === 'voting') {
+    const barber1Submission = getBarberSubmission(barber1?.user_id || '');
+    const barber2Submission = getBarberSubmission(barber2?.user_id || '');
+    
+    return (
+      <div className="pt-24 lg:pt-28 pb-8 px-2 sm:px-4">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+          {/* Main Voting Card - Full Width */}
+          <div className="flex-1 max-w-7xl mx-auto">
+            <div className="w-full h-[calc(100vh-200px)] bg-card rounded-2xl shadow-2xl border-2 border-primary/50 animate-glow overflow-hidden relative">
+              <BattleVotingView
+                barber1={{
+                  id: barber1?.id || '',
+                  user_id: barber1?.user_id || '',
+                  name: barber1?.name || 'Barber 1',
+                  country_code: barber1?.country_code,
+                  photo: barber1Photo,
+                  videoUrl: barber1Submission?.youtube_vod_url || battle.barber_1_video_url,
+                  isLive: barber1?.is_live || false
+                }}
+                barber2={{
+                  id: barber2?.id || '',
+                  user_id: barber2?.user_id || '',
+                  name: barber2?.name || 'Barber 2',
+                  country_code: barber2?.country_code,
+                  photo: barber2Photo,
+                  videoUrl: barber2Submission?.youtube_vod_url || battle.barber_2_video_url,
+                  isLive: barber2?.is_live || false
+                }}
+                percentages={percentages}
+                totalVotes={battle.vote_count1 + battle.vote_count2}
+                userVoted={userVotedFor}
+                onVote={handleVote}
+                onViewProfile={(barberId) => navigate(`/barber/${barberId}`)}
+                isVoting={false}
+              />
+            </div>
+          </div>
+
+          {/* Desktop Comments Panel */}
+          <div className="hidden lg:block lg:w-80">
+            <BattleCommentsPanel 
+              battleId={battle.id} 
+              isOpen={isPanelOpen} 
+              onToggle={() => setIsPanelOpen(!isPanelOpen)} 
+            />
+          </div>
+        </div>
+
+        {/* Mobile Comments Panel */}
+        <div className="lg:hidden mt-6">
+          <BattleCommentsPanel 
+            battleId={battle.id} 
+            isOpen={isPanelOpen} 
+            onToggle={() => setIsPanelOpen(!isPanelOpen)} 
+          />
+        </div>
+
+        {/* Modals */}
+        <DonationModal 
+          isOpen={isDonationModalOpen} 
+          onClose={() => setIsDonationModalOpen(false)} 
+          creatorId={selectedBarberId || ''} 
+          creatorName={selectedBarberName} 
+        />
+        <AddFundsModal 
+          isOpen={showAddFundsModal} 
+          onClose={() => setShowAddFundsModal(false)} 
+        />
+      </div>
+    );
+  }
+
+  // Results Mode - Uses BattleResultsView
+  if (renderMode === 'results') {
+    const barber1Submission = getBarberSubmission(barber1?.user_id || '');
+    const barber2Submission = getBarberSubmission(barber2?.user_id || '');
+    const winner = battle.vote_count1 > battle.vote_count2 ? 'barber1' : 
+                   battle.vote_count2 > battle.vote_count1 ? 'barber2' : 'tie';
+    
+    return (
+      <div className="pt-24 lg:pt-28 pb-8 px-2 sm:px-4">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
+          {/* Main Results Card */}
+          <div className="flex-1 max-w-7xl mx-auto">
+            <div className="w-full min-h-[calc(100vh-200px)] bg-card rounded-2xl shadow-2xl border-2 border-primary/50 overflow-hidden relative">
+              <BattleResultsView
+                barber1={{
+                  id: barber1?.id || '',
+                  user_id: barber1?.user_id || '',
+                  name: barber1?.name || 'Barber 1',
+                  country_code: barber1?.country_code,
+                  photo: barber1Photo,
+                  videoUrl: barber1Submission?.youtube_vod_url || battle.barber_1_video_url,
+                  votes: battle.vote_count1
+                }}
+                barber2={{
+                  id: barber2?.id || '',
+                  user_id: barber2?.user_id || '',
+                  name: barber2?.name || 'Barber 2',
+                  country_code: barber2?.country_code,
+                  photo: barber2Photo,
+                  videoUrl: barber2Submission?.youtube_vod_url || battle.barber_2_video_url,
+                  votes: battle.vote_count2
+                }}
+                winner={winner}
+                percentages={percentages}
+                onViewProfile={(barberId) => navigate(`/barber/${barberId}`)}
+              />
+            </div>
+          </div>
+
+          {/* Desktop Comments Panel */}
+          <div className="hidden lg:block lg:w-80">
+            <BattleCommentsPanel 
+              battleId={battle.id} 
+              isOpen={isPanelOpen} 
+              onToggle={() => setIsPanelOpen(!isPanelOpen)} 
+            />
+          </div>
+        </div>
+
+        {/* Mobile Comments Panel */}
+        <div className="lg:hidden mt-6">
+          <BattleCommentsPanel 
+            battleId={battle.id} 
+            isOpen={isPanelOpen} 
+            onToggle={() => setIsPanelOpen(!isPanelOpen)} 
+          />
+        </div>
+
+        {/* Modals */}
+        <DonationModal 
+          isOpen={isDonationModalOpen} 
+          onClose={() => setIsDonationModalOpen(false)} 
+          creatorId={selectedBarberId || ''} 
+          creatorName={selectedBarberName} 
+        />
+        <AddFundsModal 
+          isOpen={showAddFundsModal} 
+          onClose={() => setShowAddFundsModal(false)} 
+        />
+      </div>
+    );
+  }
+
+  // Preview Mode - Original Layout (for upcoming/active battles)
   return <div className="pt-24 lg:pt-28 pb-8 px-2 sm:px-4 max-w-5xl mx-auto">
       <div className="flex flex-col lg:flex-row gap-4 lg:gap-6">
         {/* Main Battle Card - 30% smaller */}
