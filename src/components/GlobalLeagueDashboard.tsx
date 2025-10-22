@@ -13,28 +13,33 @@ import { Skeleton } from '@/components/ui/skeleton';
 export const GlobalLeagueDashboard = () => {
   const navigate = useNavigate();
 
-  // Fetch barber contenders from database
+  // Fetch ALL registered barbers from database
   const { data: contenders = [], isLoading: isLoadingContenders } = useQuery({
     queryKey: ['global-contenders'],
     queryFn: async () => {
-      // Fetch barber profiles with user profiles for avatar
-      const { data: barbers, error } = await supabase
+      // Fetch ALL barber profiles (no limit, no filters)
+      const { data: barbers, error: barbersError } = await supabase
         .from('barber_profiles')
-        .select(`
-          id,
-          user_id,
-          name,
-          country_code,
-          profiles!inner(avatar_url)
-        `)
-        .limit(50);
+        .select('id, user_id, name, country_code');
 
-      if (error) throw error;
+      if (barbersError) throw barbersError;
+
+      // Fetch corresponding user profiles for avatars
+      const userIds = (barbers || []).map(b => b.user_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, avatar_url')
+        .in('user_id', userIds);
+
+      // Create a map of user_id to avatar_url
+      const avatarMap = new Map(
+        (profiles || []).map(p => [p.user_id, p.avatar_url])
+      );
 
       // Transform to ImageData format
       return (barbers || []).map((barber): ImageData => ({
         id: barber.id,
-        src: barber.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber.id}`,
+        src: avatarMap.get(barber.user_id) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber.id}`,
         alt: barber.name || 'Barber',
         title: barber.name || 'Barber',
         description: `Country: ${barber.country_code || 'XX'} - Professional barber competing in the global league`
