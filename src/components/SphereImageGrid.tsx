@@ -39,6 +39,13 @@ export interface ImageData {
   alt: string;
   title?: string;
   description?: string;
+  countryCode?: string;
+  isChampion?: boolean;
+  rating?: number;
+  stats?: {
+    followers: number;
+    likes: number;
+  };
 }
 
 export interface SphereImageGridProps {
@@ -53,6 +60,10 @@ export interface SphereImageGridProps {
   perspective?: number;
   autoRotate?: boolean;
   autoRotateSpeed?: number;
+  championId?: string;
+  grandPrize?: string;
+  showCountryFlags?: boolean;
+  showChampionCrown?: boolean;
   className?: string;
 }
 
@@ -116,6 +127,10 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
   perspective = 1000,
   autoRotate = false,
   autoRotateSpeed = 0.3,
+  championId,
+  grandPrize = '$50,000',
+  showCountryFlags = false,
+  showChampionCrown = false,
   className = ''
 }) => {
 
@@ -452,6 +467,15 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
 
   const worldPositions = calculateWorldPositions();
 
+  const getCountryFlagEmoji = (code: string): string => {
+    if (!code || code.length !== 2 || code === 'XX') return '🌍';
+    const codePoints = code
+      .toUpperCase()
+      .split('')
+      .map(char => 127397 + char.charCodeAt(0));
+    return String.fromCodePoint(...codePoints);
+  };
+
   const renderImageNode = useCallback((image: ImageData, index: number) => {
     const position = worldPositions[index];
 
@@ -460,6 +484,7 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
     const imageSize = baseImageSize * position.scale;
     const isHovered = hoveredIndex === index;
     const finalScale = isHovered ? Math.min(1.2, 1.2 / position.scale) : 1;
+    const isChampion = showChampionCrown && championId && image.id === championId;
 
     return (
       <div
@@ -486,10 +511,24 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
             draggable={false}
             loading={index < 3 ? 'eager' : 'lazy'}
           />
+          
+          {/* Country Flag Badge - bottom right */}
+          {showCountryFlags && image.countryCode && (
+            <div className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-white shadow-lg flex items-center justify-center text-sm">
+              {getCountryFlagEmoji(image.countryCode)}
+            </div>
+          )}
+          
+          {/* Champion Crown - top center */}
+          {isChampion && (
+            <div className="absolute -top-2 left-1/2 -translate-x-1/2 text-2xl animate-pulse drop-shadow-[0_0_8px_rgba(255,215,0,0.8)]">
+              👑
+            </div>
+          )}
         </div>
       </div>
     );
-  }, [worldPositions, baseImageSize, containerSize, hoveredIndex]);
+  }, [worldPositions, baseImageSize, containerSize, hoveredIndex, showCountryFlags, showChampionCrown, championId]);
 
   const renderSpotlightModal = () => {
     if (!selectedImage) return null;
@@ -622,6 +661,28 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
   // MAIN RENDER
   // ==========================================
 
+  const renderCenterPrize = () => {
+    if (!grandPrize) return null;
+
+    return (
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          left: `${containerSize/2}px`,
+          top: `${containerSize/2}px`,
+          transform: 'translate(-50%, -50%)',
+          zIndex: 1500
+        }}
+      >
+        <div className="bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 backdrop-blur-md border-2 border-yellow-500/50 rounded-2xl px-6 py-4 shadow-2xl text-center animate-float">
+          <div className="text-3xl mb-1">🏆</div>
+          <div className="text-xs text-yellow-200 font-semibold tracking-wider">GRAND PRIZE</div>
+          <div className="text-2xl font-bold text-yellow-400">{grandPrize}</div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <style>{`
@@ -632,6 +693,13 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
         @keyframes scaleIn {
           from { transform: scale(0.8); opacity: 0; }
           to { transform: scale(1); opacity: 1; }
+        }
+        @keyframes float {
+          0%, 100% { transform: translate(-50%, -50%) translateY(0px); }
+          50% { transform: translate(-50%, -50%) translateY(-10px); }
+        }
+        .animate-float {
+          animation: float 3s ease-in-out infinite;
         }
       `}</style>
 
@@ -649,6 +717,9 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
         <div className="relative w-full h-full" style={{ zIndex: 10 }}>
           {images.map((image, index) => renderImageNode(image, index))}
         </div>
+        
+        {/* Center Grand Prize Display */}
+        {renderCenterPrize()}
       </div>
 
       {renderSpotlightModal()}

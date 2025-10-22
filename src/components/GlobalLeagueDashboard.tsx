@@ -13,40 +13,85 @@ import { Skeleton } from '@/components/ui/skeleton';
 export const GlobalLeagueDashboard = () => {
   const navigate = useNavigate();
 
-  // Fetch ALL registered barbers from database
-  const { data: contenders = [], isLoading: isLoadingContenders } = useQuery({
+  // Fetch ALL registered barbers from database with stats
+  const { data: contendersData = { contenders: [], championId: null }, isLoading: isLoadingContenders } = useQuery({
     queryKey: ['global-contenders'],
     queryFn: async () => {
-      // Fetch ALL barber profiles (no limit, no filters)
+      // Fetch ALL barber profiles with ratings
       const { data: barbers, error: barbersError } = await supabase
         .from('barber_profiles')
-        .select('id, user_id, name, country_code');
+        .select('id, user_id, name, country_code, rating');
 
       if (barbersError) throw barbersError;
 
-      // Fetch corresponding user profiles for avatars
+      // Fetch corresponding user profiles for avatars and display names
       const userIds = (barbers || []).map(b => b.user_id);
       const { data: profiles } = await supabase
         .from('profiles')
-        .select('user_id, avatar_url')
+        .select('user_id, avatar_url, display_name')
         .in('user_id', userIds);
 
-      // Create a map of user_id to avatar_url
+      // Fetch barber stats for ranking
+      const barberIds = (barbers || []).map(b => b.id);
+      const { data: stats } = await supabase
+        .from('barber_stats')
+        .select('barber_id, follower_count, like_count')
+        .in('barber_id', barberIds);
+
+      // Create maps
       const avatarMap = new Map(
-        (profiles || []).map(p => [p.user_id, p.avatar_url])
+        (profiles || []).map(p => [p.user_id, { avatar: p.avatar_url, displayName: p.display_name }])
+      );
+      const statsMap = new Map(
+        (stats || []).map(s => [s.barber_id, { followers: s.follower_count || 0, likes: s.like_count || 0 }])
       );
 
+      // Determine champion based on rating, then followers, then likes
+      let championId = null;
+      if (barbers && barbers.length > 0) {
+        const sorted = [...barbers].sort((a, b) => {
+          const ratingDiff = (b.rating || 0) - (a.rating || 0);
+          if (ratingDiff !== 0) return ratingDiff;
+          
+          const aStats = statsMap.get(a.id) || { followers: 0, likes: 0 };
+          const bStats = statsMap.get(b.id) || { followers: 0, likes: 0 };
+          
+          const followerDiff = bStats.followers - aStats.followers;
+          if (followerDiff !== 0) return followerDiff;
+          
+          return bStats.likes - aStats.likes;
+        });
+        championId = sorted[0]?.id || null;
+      }
+
       // Transform to ImageData format
-      return (barbers || []).map((barber): ImageData => ({
-        id: barber.id,
-        src: avatarMap.get(barber.user_id) || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber.id}`,
-        alt: barber.name || 'Barber',
-        title: barber.name || 'Barber',
-        description: `Country: ${barber.country_code || 'XX'} - Professional barber competing in the global league`
-      }));
+      const contenders = (barbers || []).map((barber): ImageData => {
+        const profile = avatarMap.get(barber.user_id);
+        const barberStats = statsMap.get(barber.id);
+        
+        return {
+          id: barber.id,
+          src: profile?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber.id}`,
+          alt: profile?.displayName || barber.name || 'Barber',
+          title: profile?.displayName || barber.name || 'Barber',
+          description: `Country: ${barber.country_code || 'XX'} - Professional barber competing in the global league`,
+          countryCode: barber.country_code || 'XX',
+          isChampion: barber.id === championId,
+          rating: barber.rating || 0,
+          stats: barberStats ? {
+            followers: barberStats.followers,
+            likes: barberStats.likes
+          } : undefined
+        };
+      });
+
+      return { contenders, championId };
     },
     refetchInterval: 30000, // Refresh every 30 seconds
   });
+
+  const contenders = contendersData.contenders;
+  const championId = contendersData.championId;
 
   return (
     <div className="min-h-screen">
@@ -85,6 +130,10 @@ export const GlobalLeagueDashboard = () => {
                 baseImageScale={0.14}
                 hoverScale={1.3}
                 perspective={1200}
+                championId={championId || undefined}
+                grandPrize="$50,000"
+                showCountryFlags={true}
+                showChampionCrown={true}
                 className="mx-auto"
               />
             ) : (

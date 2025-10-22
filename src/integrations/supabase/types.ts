@@ -1470,10 +1470,7 @@ export type Database = {
         Args: { num_participants?: number; tournament_id_param: string }
         Returns: undefined
       }
-      generate_referral_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_referral_code: { Args: never; Returns: string }
       get_battle_vote_results: {
         Args: {
           _barber_weight?: number
@@ -1509,7 +1506,7 @@ export type Database = {
         }[]
       }
       get_public_creator_profiles: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           avatar_url: string
           bio: string
@@ -1580,10 +1577,7 @@ export type Database = {
         }
         Returns: number
       }
-      refresh_barber_stats: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      refresh_barber_stats: { Args: never; Returns: undefined }
       update_tournament_standings: {
         Args: { battle_id_param: string }
         Returns: undefined
