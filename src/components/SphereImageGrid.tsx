@@ -664,6 +664,14 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
   const renderCenterPrize = () => {
     if (!grandPrize) return null;
 
+    // Responsive coin size: 16% of container, min 80px, max 120px
+    const coinSize = Math.min(Math.max(containerSize * 0.16, 80), 120);
+    const fontSize = {
+      trophy: `${coinSize * 0.3}px`,
+      label: `${coinSize * 0.095}px`,
+      amount: `${coinSize * 0.2}px`
+    };
+
     return (
       <div
         className="absolute pointer-events-none"
@@ -675,21 +683,66 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
         }}
       >
         {/* Gold Coin Container */}
-        <div className="relative w-[102px] h-[102px] animate-coin-spin">
+        <div 
+          className="relative animate-coin-spin"
+          style={{
+            width: `${coinSize}px`,
+            height: `${coinSize}px`
+          }}
+        >
           {/* Coin Shadow */}
           <div className="absolute inset-0 rounded-full bg-black/40 blur-xl transform translate-y-2" />
           
           {/* Gold Coin */}
-          <div className="relative w-full h-full rounded-full bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 shadow-2xl border-4 border-yellow-300 flex items-center justify-center animate-float">
-            {/* Inner Coin Ring */}
-            <div className="absolute inset-2 rounded-full border-2 border-yellow-300/50" />
-            <div className="absolute inset-4 rounded-full border border-yellow-300/30" />
+          <div 
+            className="relative w-full h-full rounded-full bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 shadow-2xl flex items-center justify-center animate-float"
+            style={{
+              borderWidth: `${Math.max(coinSize * 0.04, 3)}px`,
+              borderColor: 'rgb(253 224 71)' // yellow-300
+            }}
+          >
+            {/* Inner Coin Rings */}
+            <div 
+              className="absolute rounded-full border-yellow-300/50"
+              style={{
+                inset: `${coinSize * 0.08}px`,
+                borderWidth: `${Math.max(coinSize * 0.02, 2)}px`
+              }}
+            />
+            <div 
+              className="absolute rounded-full border-yellow-300/30"
+              style={{
+                inset: `${coinSize * 0.16}px`,
+                borderWidth: `${Math.max(coinSize * 0.01, 1)}px`
+              }}
+            />
             
             {/* Coin Content */}
-            <div className="relative text-center z-10">
-              <div className="text-3xl mb-0.5 drop-shadow-lg">🏆</div>
-              <div className="text-[10px] text-yellow-900 font-bold tracking-wider uppercase">Grand Prize</div>
-              <div className="text-xl font-black text-yellow-900 drop-shadow-sm">{grandPrize}</div>
+            <div className="relative text-center z-10 px-2">
+              <div 
+                className="drop-shadow-lg leading-none"
+                style={{ 
+                  fontSize: fontSize.trophy,
+                  marginBottom: `${coinSize * 0.02}px`
+                }}
+              >
+                🏆
+              </div>
+              <div 
+                className="text-yellow-900 font-bold tracking-wider uppercase leading-none"
+                style={{ 
+                  fontSize: fontSize.label,
+                  marginBottom: `${coinSize * 0.02}px`
+                }}
+              >
+                Grand Prize
+              </div>
+              <div 
+                className="font-black text-yellow-900 drop-shadow-sm leading-none whitespace-nowrap"
+                style={{ fontSize: fontSize.amount }}
+              >
+                {grandPrize}
+              </div>
             </div>
             
             {/* Shine Effect */}
