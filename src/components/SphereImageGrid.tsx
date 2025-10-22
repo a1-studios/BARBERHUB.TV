@@ -498,6 +498,18 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
     const countryMatch = selectedImage.description?.match(/Country:\s*([A-Z]{2})/);
     const countryCode = countryMatch ? countryMatch[1] : 'US';
     const countryFlag = countryCode ? `https://flagcdn.com/w320/${countryCode.toLowerCase()}.png` : '';
+    
+    // Convert country code to flag emoji (works for any valid ISO 3166-1 alpha-2 code)
+    const getCountryFlagEmoji = (code: string): string => {
+      if (!code || code.length !== 2) return '🌍';
+      const codePoints = code
+        .toUpperCase()
+        .split('')
+        .map(char => 127397 + char.charCodeAt(0));
+      return String.fromCodePoint(...codePoints);
+    };
+    
+    const countryFlagEmoji = getCountryFlagEmoji(countryCode);
 
     return (
       <div
@@ -547,17 +559,7 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
                   className="w-20 h-20 rounded-full object-cover border-4 border-primary/40 shadow-lg"
                 />
                 <div className="absolute -bottom-1 -right-1 text-3xl">
-                  {countryCode === 'US' && '🇺🇸'}
-                  {countryCode === 'GB' && '🇬🇧'}
-                  {countryCode === 'CA' && '🇨🇦'}
-                  {countryCode === 'MX' && '🇲🇽'}
-                  {countryCode === 'BR' && '🇧🇷'}
-                  {countryCode === 'ES' && '🇪🇸'}
-                  {countryCode === 'FR' && '🇫🇷'}
-                  {countryCode === 'IT' && '🇮🇹'}
-                  {countryCode === 'DE' && '🇩🇪'}
-                  {countryCode === 'JP' && '🇯🇵'}
-                  {!['US', 'GB', 'CA', 'MX', 'BR', 'ES', 'FR', 'IT', 'DE', 'JP'].includes(countryCode) && '🌍'}
+                  {countryFlagEmoji}
                 </div>
               </div>
               <div className="flex-1">
