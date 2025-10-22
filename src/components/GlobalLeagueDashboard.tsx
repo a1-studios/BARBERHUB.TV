@@ -1,43 +1,47 @@
 import { useNavigate } from 'react-router-dom';
 import { Compass, MapPin, Gift } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { BattleWindowTimer } from '@/components/BattleWindowTimer';
 import { PrizePoolCard } from '@/components/PrizePoolCard';
 import { LiveBattleFeed } from '@/components/LiveBattleFeed';
 import { FanActionZone } from '@/components/FanActionZone';
 import SphereImageGrid, { ImageData } from '@/components/SphereImageGrid';
-
-// Mock contender data - easily replaceable with real data
-const MOCK_CONTENDERS: ImageData[] = [
-  { id: '1', src: 'https://i.pravatar.cc/300?img=12', alt: 'Marcus Silva', title: 'Marcus Silva', description: 'From Brazil' },
-  { id: '2', src: 'https://i.pravatar.cc/300?img=13', alt: 'Ahmed Hassan', title: 'Ahmed Hassan', description: 'From Egypt' },
-  { id: '3', src: 'https://i.pravatar.cc/300?img=14', alt: 'Yuki Tanaka', title: 'Yuki Tanaka', description: 'From Japan' },
-  { id: '4', src: 'https://i.pravatar.cc/300?img=15', alt: 'Pierre Dubois', title: 'Pierre Dubois', description: 'From France' },
-  { id: '5', src: 'https://i.pravatar.cc/300?img=33', alt: 'Carlos Rodriguez', title: 'Carlos Rodriguez', description: 'From Spain' },
-  { id: '6', src: 'https://i.pravatar.cc/300?img=51', alt: 'James Wilson', title: 'James Wilson', description: 'From UK' },
-  { id: '7', src: 'https://i.pravatar.cc/300?img=52', alt: 'Andre Johnson', title: 'Andre Johnson', description: 'From USA' },
-  { id: '8', src: 'https://i.pravatar.cc/300?img=53', alt: 'Luigi Rossi', title: 'Luigi Rossi', description: 'From Italy' },
-  { id: '9', src: 'https://i.pravatar.cc/300?img=54', alt: 'Hans Mueller', title: 'Hans Mueller', description: 'From Germany' },
-  { id: '10', src: 'https://i.pravatar.cc/300?img=56', alt: 'Ivan Petrov', title: 'Ivan Petrov', description: 'From Russia' },
-  { id: '11', src: 'https://i.pravatar.cc/300?img=57', alt: 'Miguel Santos', title: 'Miguel Santos', description: 'From Portugal' },
-  { id: '12', src: 'https://i.pravatar.cc/300?img=59', alt: 'Zhang Wei', title: 'Zhang Wei', description: 'From China' },
-  { id: '13', src: 'https://i.pravatar.cc/300?img=60', alt: 'Park Jin', title: 'Park Jin', description: 'From South Korea' },
-  { id: '14', src: 'https://i.pravatar.cc/300?img=61', alt: 'Omar Ali', title: 'Omar Ali', description: 'From UAE' },
-  { id: '15', src: 'https://i.pravatar.cc/300?img=62', alt: 'Raj Patel', title: 'Raj Patel', description: 'From India' },
-  { id: '16', src: 'https://i.pravatar.cc/300?img=63', alt: 'David Cohen', title: 'David Cohen', description: 'From Israel' },
-  { id: '17', src: 'https://i.pravatar.cc/300?img=64', alt: 'Jamal Brown', title: 'Jamal Brown', description: 'From Jamaica' },
-  { id: '18', src: 'https://i.pravatar.cc/300?img=65', alt: 'Stefan Novak', title: 'Stefan Novak', description: 'From Poland' },
-  { id: '19', src: 'https://i.pravatar.cc/300?img=66', alt: 'Dimitri Popov', title: 'Dimitri Popov', description: 'From Ukraine' },
-  { id: '20', src: 'https://i.pravatar.cc/300?img=67', alt: 'Lars Eriksson', title: 'Lars Eriksson', description: 'From Sweden' },
-  { id: '21', src: 'https://i.pravatar.cc/300?img=68', alt: 'Mateo Garcia', title: 'Mateo Garcia', description: 'From Mexico' },
-  { id: '22', src: 'https://i.pravatar.cc/300?img=69', alt: 'Anton Ivanov', title: 'Anton Ivanov', description: 'From Bulgaria' },
-  { id: '23', src: 'https://i.pravatar.cc/300?img=11', alt: 'Liam Murphy', title: 'Liam Murphy', description: 'From Ireland' },
-  { id: '24', src: 'https://i.pravatar.cc/300?img=17', alt: 'Nikos Papadopoulos', title: 'Nikos Papadopoulos', description: 'From Greece' },
-  { id: '25', src: 'https://i.pravatar.cc/300?img=18', alt: 'Felix van der Berg', title: 'Felix van der Berg', description: 'From Netherlands' },
-];
+import { Skeleton } from '@/components/ui/skeleton';
 
 export const GlobalLeagueDashboard = () => {
   const navigate = useNavigate();
+
+  // Fetch barber contenders from database
+  const { data: contenders = [], isLoading: isLoadingContenders } = useQuery({
+    queryKey: ['global-contenders'],
+    queryFn: async () => {
+      // Fetch barber profiles with user profiles for avatar
+      const { data: barbers, error } = await supabase
+        .from('barber_profiles')
+        .select(`
+          id,
+          user_id,
+          name,
+          country_code,
+          profiles!inner(avatar_url)
+        `)
+        .limit(50);
+
+      if (error) throw error;
+
+      // Transform to ImageData format
+      return (barbers || []).map((barber): ImageData => ({
+        id: barber.id,
+        src: barber.profiles?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber.id}`,
+        alt: barber.name || 'Barber',
+        title: barber.name || 'Barber',
+        description: `Country: ${barber.country_code || 'XX'} - Professional barber competing in the global league`
+      }));
+    },
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
 
   return (
     <div className="min-h-screen">
@@ -52,7 +56,7 @@ export const GlobalLeagueDashboard = () => {
               Global Contenders
             </h2>
             <p className="text-lg text-muted-foreground">
-              🌍 Barbers from 25+ countries competing for glory
+              🌍 {contenders.length}+ barbers competing from around the world
             </p>
             <p className="text-sm text-muted-foreground/70">
               Drag to rotate • Click to view profiles
@@ -60,18 +64,36 @@ export const GlobalLeagueDashboard = () => {
           </div>
           
           <div className="flex justify-center py-8">
-            <SphereImageGrid
-              images={MOCK_CONTENDERS}
-              containerSize={650}
-              sphereRadius={280}
-              autoRotate={true}
-              autoRotateSpeed={0.25}
-              dragSensitivity={0.7}
-              baseImageScale={0.14}
-              hoverScale={1.3}
-              perspective={1200}
-              className="mx-auto"
-            />
+            {isLoadingContenders ? (
+              <div className="flex flex-col items-center gap-4">
+                <Skeleton className="w-[650px] h-[650px] rounded-full" />
+                <p className="text-sm text-muted-foreground">Loading contenders...</p>
+              </div>
+            ) : contenders.length > 0 ? (
+              <SphereImageGrid
+                images={contenders}
+                containerSize={650}
+                sphereRadius={280}
+                autoRotate={true}
+                autoRotateSpeed={0.25}
+                dragSensitivity={0.7}
+                baseImageScale={0.14}
+                hoverScale={1.3}
+                perspective={1200}
+                className="mx-auto"
+              />
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No contenders registered yet</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => navigate('/barbers')}
+                >
+                  Explore Barbers
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
