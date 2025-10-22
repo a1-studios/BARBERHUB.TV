@@ -5,15 +5,90 @@ import { BattleWindowTimer } from '@/components/BattleWindowTimer';
 import { PrizePoolCard } from '@/components/PrizePoolCard';
 import { LiveBattleFeed } from '@/components/LiveBattleFeed';
 import { FanActionZone } from '@/components/FanActionZone';
+import SphereImageGrid, { ImageData } from '@/components/SphereImageGrid';
+import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
 
 export const GlobalLeagueDashboard = () => {
   const navigate = useNavigate();
+  const [contenderImages, setContenderImages] = useState<ImageData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchContenders = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('barber_profiles')
+          .select(`
+            id,
+            user_id,
+            shop_name,
+            shop_country,
+            profiles!inner(
+              full_name,
+              avatar_url
+            )
+          `)
+          .not('profiles.avatar_url', 'is', null)
+          .limit(30);
+
+        if (error) throw error;
+
+        const images: ImageData[] = (data || []).map((barber: any) => ({
+          id: barber.id,
+          src: barber.profiles.avatar_url,
+          alt: barber.profiles.full_name || barber.shop_name || 'Barber',
+          title: barber.profiles.full_name || barber.shop_name,
+          description: barber.shop_country ? `From ${barber.shop_country}` : 'Global Contender'
+        }));
+
+        setContenderImages(images);
+      } catch (error) {
+        console.error('Error fetching contenders:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchContenders();
+  }, []);
 
   return (
     <div className="min-h-screen">
       <div className="container mx-auto px-4 py-8 space-y-12">
         {/* Prize Pool Feature Card */}
         <PrizePoolCard />
+
+        {/* Global Contenders Sphere */}
+        <div className="space-y-6">
+          <div className="text-center space-y-2">
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-primary via-primary-glow to-primary bg-clip-text text-transparent">
+              Global Contenders
+            </h2>
+            <p className="text-muted-foreground">
+              Barbers from around the world competing for glory
+            </p>
+          </div>
+          
+          <div className="flex justify-center">
+            {loading ? (
+              <div className="w-[600px] h-[600px] flex items-center justify-center">
+                <div className="animate-pulse text-muted-foreground">Loading contenders...</div>
+              </div>
+            ) : (
+              <SphereImageGrid
+                images={contenderImages}
+                containerSize={600}
+                sphereRadius={250}
+                autoRotate={true}
+                autoRotateSpeed={0.2}
+                dragSensitivity={0.6}
+                baseImageScale={0.12}
+                className="mx-auto"
+              />
+            )}
+          </div>
+        </div>
 
         {/* Role-Based Action Zone */}
         <FanActionZone />
