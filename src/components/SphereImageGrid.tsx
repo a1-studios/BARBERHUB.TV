@@ -128,7 +128,7 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
   autoRotate = false,
   autoRotateSpeed = 0.3,
   championId,
-  grandPrize = '$50,000',
+  grandPrize = '$25,000',
   showCountryFlags = false,
   showChampionCrown = false,
   className = ''
@@ -674,10 +674,27 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
           zIndex: 1500
         }}
       >
-        <div className="bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 backdrop-blur-md border-2 border-yellow-500/50 rounded-2xl px-6 py-4 shadow-2xl text-center animate-float">
-          <div className="text-3xl mb-1">🏆</div>
-          <div className="text-xs text-yellow-200 font-semibold tracking-wider">GRAND PRIZE</div>
-          <div className="text-2xl font-bold text-yellow-400">{grandPrize}</div>
+        {/* Gold Coin Container */}
+        <div className="relative w-32 h-32 animate-coin-spin">
+          {/* Coin Shadow */}
+          <div className="absolute inset-0 rounded-full bg-black/40 blur-xl transform translate-y-2" />
+          
+          {/* Gold Coin */}
+          <div className="relative w-full h-full rounded-full bg-gradient-to-br from-yellow-400 via-yellow-500 to-yellow-600 shadow-2xl border-4 border-yellow-300 flex items-center justify-center animate-float">
+            {/* Inner Coin Ring */}
+            <div className="absolute inset-2 rounded-full border-2 border-yellow-300/50" />
+            <div className="absolute inset-4 rounded-full border border-yellow-300/30" />
+            
+            {/* Coin Content */}
+            <div className="relative text-center z-10">
+              <div className="text-3xl mb-0.5 drop-shadow-lg">🏆</div>
+              <div className="text-[10px] text-yellow-900 font-bold tracking-wider uppercase">Grand Prize</div>
+              <div className="text-xl font-black text-yellow-900 drop-shadow-sm">{grandPrize}</div>
+            </div>
+            
+            {/* Shine Effect */}
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/40 via-transparent to-transparent animate-shine" />
+          </div>
         </div>
       </div>
     );
@@ -695,11 +712,27 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
           to { transform: scale(1); opacity: 1; }
         }
         @keyframes float {
-          0%, 100% { transform: translate(-50%, -50%) translateY(0px); }
-          50% { transform: translate(-50%, -50%) translateY(-10px); }
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-8px); }
+        }
+        @keyframes coinSpin {
+          0% { transform: rotateY(0deg); }
+          100% { transform: rotateY(360deg); }
+        }
+        @keyframes shine {
+          0% { opacity: 0.6; transform: rotate(0deg); }
+          50% { opacity: 0.3; }
+          100% { opacity: 0.6; transform: rotate(360deg); }
         }
         .animate-float {
           animation: float 3s ease-in-out infinite;
+        }
+        .animate-coin-spin {
+          animation: coinSpin 4s linear infinite;
+          transform-style: preserve-3d;
+        }
+        .animate-shine {
+          animation: shine 3s ease-in-out infinite;
         }
       `}</style>
 

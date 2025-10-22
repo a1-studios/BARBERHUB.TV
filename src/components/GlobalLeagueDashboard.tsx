@@ -131,7 +131,7 @@ export const GlobalLeagueDashboard = () => {
                 hoverScale={1.3}
                 perspective={1200}
                 championId={championId || undefined}
-                grandPrize="$50,000"
+                grandPrize="$25,000"
                 showCountryFlags={true}
                 showChampionCrown={true}
                 className="mx-auto"
