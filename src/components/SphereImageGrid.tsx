@@ -675,7 +675,7 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
         }}
       >
         {/* Gold Coin Container */}
-        <div className="relative w-32 h-32 animate-coin-spin">
+        <div className="relative w-[102px] h-[102px] animate-coin-spin">
           {/* Coin Shadow */}
           <div className="absolute inset-0 rounded-full bg-black/40 blur-xl transform translate-y-2" />
           
