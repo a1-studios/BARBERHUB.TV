@@ -494,6 +494,11 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
   const renderSpotlightModal = () => {
     if (!selectedImage) return null;
 
+    // Extract country code from description (format: "Country: XX")
+    const countryMatch = selectedImage.description?.match(/Country:\s*([A-Z]{2})/);
+    const countryCode = countryMatch ? countryMatch[1] : 'US';
+    const countryFlag = countryCode ? `https://flagcdn.com/w320/${countryCode.toLowerCase()}.png` : '';
+
     return (
       <div
         className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
@@ -503,36 +508,80 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
         }}
       >
         <div
-          className="bg-card rounded-xl max-w-md w-full overflow-hidden border border-border"
-          onClick={(e) => e.stopPropagation()}
+          className="bg-card rounded-xl max-w-lg w-full overflow-hidden border-2 border-primary/30 shadow-2xl cursor-pointer hover:border-primary/60 transition-all"
+          onClick={(e) => {
+            e.stopPropagation();
+            // Navigate to barber profile (barberId is stored in image.id)
+            window.location.href = `/barber/${selectedImage.id}`;
+          }}
           style={{
             animation: 'scaleIn 0.3s ease-out'
           }}
         >
-          <div className="relative aspect-square">
+          {/* Split Card: Country Flag (Top Half) */}
+          <div className="relative h-48 overflow-hidden">
             <img
-              src={selectedImage.src}
-              alt={selectedImage.alt}
-              className="w-full h-full object-cover"
+              src={countryFlag}
+              alt={`${countryCode} flag`}
+              className="w-full h-full object-cover opacity-90"
             />
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
             <button
-              onClick={() => setSelectedImage(null)}
-              className="absolute top-2 right-2 w-8 h-8 bg-black/50 rounded-full text-white flex items-center justify-center hover:bg-black/70 transition-all cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedImage(null);
+              }}
+              className="absolute top-3 right-3 w-10 h-10 bg-black/60 rounded-full text-white flex items-center justify-center hover:bg-black/80 transition-all z-10"
             >
-              <X size={16} />
+              <X size={18} />
             </button>
           </div>
 
-          {(selectedImage.title || selectedImage.description) && (
-            <div className="p-6">
-              {selectedImage.title && (
-                <h3 className="text-xl font-bold mb-2 text-foreground">{selectedImage.title}</h3>
-              )}
-              {selectedImage.description && (
-                <p className="text-muted-foreground">{selectedImage.description}</p>
-              )}
+          {/* Barber Info (Bottom Half) */}
+          <div className="p-6 space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <img
+                  src={selectedImage.src}
+                  alt={selectedImage.alt}
+                  className="w-20 h-20 rounded-full object-cover border-4 border-primary/40 shadow-lg"
+                />
+                <div className="absolute -bottom-1 -right-1 text-3xl">
+                  {countryCode === 'US' && '🇺🇸'}
+                  {countryCode === 'GB' && '🇬🇧'}
+                  {countryCode === 'CA' && '🇨🇦'}
+                  {countryCode === 'MX' && '🇲🇽'}
+                  {countryCode === 'BR' && '🇧🇷'}
+                  {countryCode === 'ES' && '🇪🇸'}
+                  {countryCode === 'FR' && '🇫🇷'}
+                  {countryCode === 'IT' && '🇮🇹'}
+                  {countryCode === 'DE' && '🇩🇪'}
+                  {countryCode === 'JP' && '🇯🇵'}
+                  {!['US', 'GB', 'CA', 'MX', 'BR', 'ES', 'FR', 'IT', 'DE', 'JP'].includes(countryCode) && '🌍'}
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-2xl font-bold text-foreground mb-1">
+                  {selectedImage.title}
+                </h3>
+                <p className="text-sm text-muted-foreground uppercase tracking-wide font-semibold">
+                  {countryCode} Contender
+                </p>
+              </div>
             </div>
-          )}
+
+            {selectedImage.description && (
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                {selectedImage.description.replace(/Country:\s*[A-Z]{2}\s*-\s*/, '')}
+              </p>
+            )}
+
+            <div className="pt-4 border-t border-border">
+              <p className="text-center text-sm text-muted-foreground">
+                Click to view full profile →
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     );
