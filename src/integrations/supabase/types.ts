@@ -432,6 +432,13 @@ export type Database = {
             referencedColumns: ["barber_id"]
           },
           {
+            foreignKeyName: "battles_barber1_id_fkey"
+            columns: ["barber1_id"]
+            isOneToOne: false
+            referencedRelation: "public_barber_profiles"
+            referencedColumns: ["barber_id"]
+          },
+          {
             foreignKeyName: "battles_barber2_id_fkey"
             columns: ["barber2_id"]
             isOneToOne: false
@@ -443,6 +450,13 @@ export type Database = {
             columns: ["barber2_id"]
             isOneToOne: false
             referencedRelation: "barber_stats"
+            referencedColumns: ["barber_id"]
+          },
+          {
+            foreignKeyName: "battles_barber2_id_fkey"
+            columns: ["barber2_id"]
+            isOneToOne: false
+            referencedRelation: "public_barber_profiles"
             referencedColumns: ["barber_id"]
           },
           {
@@ -683,6 +697,13 @@ export type Database = {
             columns: ["barber_id"]
             isOneToOne: false
             referencedRelation: "barber_stats"
+            referencedColumns: ["barber_id"]
+          },
+          {
+            foreignKeyName: "creations_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "public_barber_profiles"
             referencedColumns: ["barber_id"]
           },
         ]
@@ -1436,6 +1457,44 @@ export type Database = {
           },
         ]
       }
+      public_barber_profiles: {
+        Row: {
+          avatar_url: string | null
+          barber_bio: string | null
+          barber_created_at: string | null
+          barber_id: string | null
+          barber_name: string | null
+          barber_updated_at: string | null
+          country_code: string | null
+          display_name: string | null
+          featured_video_id: string | null
+          follower_count: number | null
+          is_live: boolean | null
+          last_live_check: string | null
+          like_count: number | null
+          live_video_id: string | null
+          location: string | null
+          portfolio_url: string | null
+          rating: number | null
+          specialty: string | null
+          subscription_count: number | null
+          total_donations_cents: number | null
+          user_bio: string | null
+          user_id: string | null
+          username: string | null
+          years_experience: number | null
+          youtube_channel_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "barber_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
     }
     Functions: {
       calculate_battle_results: {
@@ -1592,6 +1651,10 @@ export type Database = {
       increment_vote_count: {
         Args: { increment_by?: number; submission_id: string }
         Returns: undefined
+      }
+      normalize_country_code: {
+        Args: { code: string; location?: string; name?: string }
+        Returns: string
       }
       notify_battle_participants: {
         Args: {
