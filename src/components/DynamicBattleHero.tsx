@@ -132,18 +132,17 @@ export const DynamicBattleHero = () => {
       } = await supabase
         .from('barber_profiles')
         .select('id, user_id, name, country_code, is_live, live_video_id, featured_video_id')
-        .in('id', [battle.barber1_id, battle.barber2_id]);
+        .in('user_id', [battle.barber1_id, battle.barber2_id]);
       if (barberError) throw barberError;
 
       // Fetch user profiles for country_code and avatar_url
-      const userIds = barberProfiles?.map(b => b.user_id) || [];
       const {
         data: userProfiles,
         error: profileError
       } = await supabase
         .from('profiles')
         .select('user_id, country_code, avatar_url, display_name')
-        .in('user_id', userIds);
+        .in('user_id', [battle.barber1_id, battle.barber2_id]);
       if (profileError) throw profileError;
 
       // Merge the data, prioritizing barber_profiles country_code and adding avatar
@@ -586,8 +585,8 @@ export const DynamicBattleHero = () => {
         </div>
       </div>;
   }
-  const barber1 = barbers.find(b => b.id === battle.barber1_id);
-  const barber2 = barbers.find(b => b.id === battle.barber2_id);
+  const barber1 = barbers.find(b => b.user_id === battle.barber1_id);
+  const barber2 = barbers.find(b => b.user_id === battle.barber2_id);
   const percentages = calculatePercentages();
 
   // Get barber photos from profiles
