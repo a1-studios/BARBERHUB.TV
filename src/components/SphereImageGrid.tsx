@@ -559,7 +559,7 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
         }}
       >
         <div
-          className="bg-card rounded-xl max-w-lg w-full overflow-hidden border-2 border-primary/30 shadow-2xl cursor-pointer hover:border-primary/60 transition-all"
+          className="bg-card rounded-xl max-w-4xl w-full overflow-hidden border-2 border-primary/30 shadow-2xl cursor-pointer hover:border-primary/60 transition-all"
           onClick={(e) => {
             e.stopPropagation();
             // Navigate to barber profile (barberId is stored in image.id)
@@ -569,58 +569,64 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
             animation: 'scaleIn 0.3s ease-out'
           }}
         >
-          {/* Split Card: Country Flag (Top Half) */}
-          <div className="relative h-48 overflow-hidden">
-            <img
-              src={countryFlag}
-              alt={`${countryCode} flag`}
-              className="w-full h-full object-cover opacity-90"
-            />
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background" />
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedImage(null);
-              }}
-              className="absolute top-3 right-3 w-10 h-10 bg-black/60 rounded-full text-white flex items-center justify-center hover:bg-black/80 transition-all z-10"
-            >
-              <X size={18} />
-            </button>
-          </div>
+          {/* Close Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedImage(null);
+            }}
+            className="absolute top-3 right-3 w-10 h-10 bg-black/60 rounded-full text-white flex items-center justify-center hover:bg-black/80 transition-all z-10"
+          >
+            <X size={18} />
+          </button>
 
-          {/* Barber Info (Bottom Half) */}
-          <div className="p-6 space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <img
-                  src={selectedImage.src}
-                  alt={selectedImage.alt}
-                  className="w-20 h-20 rounded-full object-cover border-4 border-primary/40 shadow-lg"
-                />
-                <div className="absolute -bottom-1 -right-1 text-3xl">
+          {/* 50/50 Split Layout */}
+          <div className="flex flex-col md:flex-row min-h-[400px]">
+            {/* LEFT: Large Country Flag */}
+            <div className="w-full md:w-1/2 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 flex items-center justify-center p-8 md:p-12">
+              <div className="text-center">
+                <div className="text-[6rem] md:text-[10rem] lg:text-[12rem] leading-none mb-4 drop-shadow-2xl">
                   {countryFlagEmoji}
                 </div>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-2xl font-bold text-foreground mb-1">
-                  {selectedImage.title}
-                </h3>
-                <p className="text-sm text-muted-foreground uppercase tracking-wide font-semibold">
-                  {countryCode} Contender
+                <p className="text-2xl md:text-3xl font-bold text-foreground tracking-wider">
+                  {countryCode}
                 </p>
               </div>
             </div>
 
-            {selectedImage.description && (
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                {selectedImage.description.replace(/Country:\s*[A-Z]{2}\s*-\s*/, '')}
-              </p>
-            )}
+            {/* RIGHT: Barber Information */}
+            <div className="w-full md:w-1/2 p-6 md:p-8 flex flex-col justify-center space-y-6 border-l border-border/50">
+              {/* Avatar & Name */}
+              <div className="flex items-start gap-4">
+                <img
+                  src={selectedImage.src}
+                  alt={selectedImage.alt}
+                  className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover border-4 border-primary/40 shadow-lg flex-shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-1 truncate">
+                    {selectedImage.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground uppercase tracking-wide font-semibold">
+                    {countryCode} Contender
+                  </p>
+                </div>
+              </div>
 
-            <div className="pt-4 border-t border-border">
-              <p className="text-center text-sm text-muted-foreground">
-                Click to view full profile →
-              </p>
+              {/* Bio/Description */}
+              {selectedImage.description && (
+                <p className="text-muted-foreground text-sm md:text-base leading-relaxed line-clamp-4">
+                  {selectedImage.description.replace(/Country:\s*[A-Z]{2}\s*-\s*/, '')}
+                </p>
+              )}
+
+              {/* CTA */}
+              <div className="pt-4 border-t border-border">
+                <p className="text-center md:text-left text-sm text-muted-foreground flex items-center justify-center md:justify-start gap-2">
+                  <span>Click to view full profile</span>
+                  <span className="text-primary">→</span>
+                </p>
+              </div>
             </div>
           </div>
         </div>
