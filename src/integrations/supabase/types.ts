@@ -303,7 +303,13 @@ export type Database = {
           barber_1_video_url: string | null
           barber_2_video_url: string | null
           barber1_id: string | null
+          barber1_live_viewers: number | null
+          barber1_peak_viewers: number | null
+          barber1_youtube_video_id: string | null
           barber2_id: string | null
+          barber2_live_viewers: number | null
+          barber2_peak_viewers: number | null
+          barber2_youtube_video_id: string | null
           category: string | null
           cover_image_url: string | null
           created_at: string
@@ -316,6 +322,7 @@ export type Database = {
           forfeit_winner_id: string | null
           id: string
           is_tournament_match: boolean | null
+          last_viewer_check: string | null
           live_viewers: number | null
           match_number: number | null
           max_participants: number | null
@@ -342,7 +349,13 @@ export type Database = {
           barber_1_video_url?: string | null
           barber_2_video_url?: string | null
           barber1_id?: string | null
+          barber1_live_viewers?: number | null
+          barber1_peak_viewers?: number | null
+          barber1_youtube_video_id?: string | null
           barber2_id?: string | null
+          barber2_live_viewers?: number | null
+          barber2_peak_viewers?: number | null
+          barber2_youtube_video_id?: string | null
           category?: string | null
           cover_image_url?: string | null
           created_at?: string
@@ -355,6 +368,7 @@ export type Database = {
           forfeit_winner_id?: string | null
           id?: string
           is_tournament_match?: boolean | null
+          last_viewer_check?: string | null
           live_viewers?: number | null
           match_number?: number | null
           max_participants?: number | null
@@ -381,7 +395,13 @@ export type Database = {
           barber_1_video_url?: string | null
           barber_2_video_url?: string | null
           barber1_id?: string | null
+          barber1_live_viewers?: number | null
+          barber1_peak_viewers?: number | null
+          barber1_youtube_video_id?: string | null
           barber2_id?: string | null
+          barber2_live_viewers?: number | null
+          barber2_peak_viewers?: number | null
+          barber2_youtube_video_id?: string | null
           category?: string | null
           cover_image_url?: string | null
           created_at?: string
@@ -394,6 +414,7 @@ export type Database = {
           forfeit_winner_id?: string | null
           id?: string
           is_tournament_match?: boolean | null
+          last_viewer_check?: string | null
           live_viewers?: number | null
           match_number?: number | null
           max_participants?: number | null

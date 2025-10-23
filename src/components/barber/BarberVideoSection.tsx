@@ -1,16 +1,19 @@
 import { Badge } from '@/components/ui/badge';
-import { Play } from 'lucide-react';
+import { Play, Users } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface BarberVideoSectionProps {
   videoId?: string | null;
   isLive?: boolean;
+  viewerCount?: number;
   aspectRatio?: 'portrait' | 'landscape';
   className?: string;
 }
 
 export const BarberVideoSection = ({ 
   videoId, 
-  isLive = false, 
+  isLive = false,
+  viewerCount = 0,
   aspectRatio = 'landscape',
   className = ''
 }: BarberVideoSectionProps) => {
@@ -43,6 +46,26 @@ export const BarberVideoSection = ({
           🔴 LIVE
         </Badge>
       )}
+      
+      {/* Live viewer count overlay */}
+      {isLive && viewerCount > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute top-2 right-2 z-10 bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/20"
+        >
+          <Users className="w-4 h-4 text-white" />
+          <motion.span 
+            key={viewerCount}
+            initial={{ scale: 1.2 }}
+            animate={{ scale: 1 }}
+            className="text-white font-semibold text-sm"
+          >
+            {viewerCount.toLocaleString()}
+          </motion.span>
+        </motion.div>
+      )}
+      
       <iframe
         src={embedUrl}
         className="w-full h-full rounded-lg border border-primary/20"

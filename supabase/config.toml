@@ -56,5 +56,8 @@ verify_jwt = true
 [functions.submit-battle-video]
 verify_jwt = true
 
+[functions.sync-battle-viewers]
+verify_jwt = false
+
 [functions.verify-tournament-payment]
 verify_jwt = false

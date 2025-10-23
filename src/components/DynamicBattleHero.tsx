@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarberVideoSection } from "@/components/barber/BarberVideoSection";
+import { LiveViewerComparison } from "@/components/battles/LiveViewerComparison";
+import { useRealtimeBattleViewers } from "@/hooks/useRealtimeBattleViewers";
 import { Heart, Users } from "lucide-react";
 
 interface Battle {
@@ -29,6 +31,8 @@ interface BarberProfile {
 
 export const DynamicBattleHero = () => {
   const navigate = useNavigate();
+  
+  // Track live battle viewers
 
   // Fetch active battle (voting or upcoming)
   const { data: battle, isLoading: battleLoading } = useQuery({
@@ -145,9 +149,27 @@ export const DynamicBattleHero = () => {
 
   const barber1 = displayBarbers[0];
   const barber2 = displayBarbers[1];
+  
+  // Get real-time viewer counts if this is an active battle
+  const viewerData = useRealtimeBattleViewers(battle?.id || '');
+  const isActiveBattle = battle?.status === 'voting';
 
   return (
     <div className="pt-20 sm:pt-24 lg:pt-32 pb-4 sm:pb-6 lg:pb-8 px-1 sm:px-2 lg:px-4 max-w-[95vw] sm:max-w-4xl lg:max-w-5xl mx-auto">
+      {/* Live Viewer Comparison - Only show during active battles */}
+      {isActiveBattle && (
+        <div className="mb-4">
+          <LiveViewerComparison 
+            barber1Name={barber1.display_name || barber1.name}
+            barber2Name={barber2.display_name || barber2.name}
+            barber1Viewers={viewerData.barber1}
+            barber2Viewers={viewerData.barber2}
+            barber1Peak={viewerData.peak1}
+            barber2Peak={viewerData.peak2}
+            lastUpdate={viewerData.lastUpdate}
+          />
+        </div>
+      )}
       <div className="w-full portrait:aspect-[3/4] sm:portrait:aspect-[4/5] landscape:aspect-[16/10] lg:landscape:aspect-[16/9] bg-card rounded-lg sm:rounded-xl lg:rounded-2xl shadow-xl sm:shadow-2xl border border-primary/30 sm:border-2 sm:border-primary/50 animate-glow overflow-hidden relative">
         <div className="h-full flex">
           {/* Left Side - Barber 1 */}
@@ -209,6 +231,7 @@ export const DynamicBattleHero = () => {
                 <BarberVideoSection 
                   videoId={barber1.is_live ? barber1.live_video_id : barber1.featured_video_id}
                   isLive={barber1.is_live}
+                  viewerCount={isActiveBattle ? viewerData.barber1 : undefined}
                   aspectRatio="portrait"
                   className="rounded-md aspect-square"
                 />
@@ -278,6 +301,7 @@ export const DynamicBattleHero = () => {
                 <BarberVideoSection 
                   videoId={barber2.is_live ? barber2.live_video_id : barber2.featured_video_id}
                   isLive={barber2.is_live}
+                  viewerCount={isActiveBattle ? viewerData.barber2 : undefined}
                   aspectRatio="portrait"
                   className="rounded-md aspect-square"
                 />
