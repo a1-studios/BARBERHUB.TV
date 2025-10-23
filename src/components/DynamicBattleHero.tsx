@@ -125,16 +125,19 @@ export const DynamicBattleHero = () => {
     queryFn: async () => {
       if (!battle?.barber1_id || !battle?.barber2_id) return [];
 
-      // Fetch barber profiles with live status and video IDs
+      // Fetch barber profiles by id (battles store barber_profiles.id in barber1_id/barber2_id)
       const {
         data: barberProfiles,
         error: barberError
       } = await supabase
         .from('barber_profiles')
         .select('id, user_id, name, country_code, is_live, live_video_id, featured_video_id')
-        .in('user_id', [battle.barber1_id, battle.barber2_id]);
+        .in('id', [battle.barber1_id, battle.barber2_id]);
       if (barberError) throw barberError;
 
+      // Extract user_ids to fetch profile data
+      const userIds = (barberProfiles || []).map(b => b.user_id);
+      
       // Fetch user profiles for country_code and avatar_url
       const {
         data: userProfiles,
@@ -142,50 +145,63 @@ export const DynamicBattleHero = () => {
       } = await supabase
         .from('profiles')
         .select('user_id, country_code, avatar_url, display_name')
-        .in('user_id', [battle.barber1_id, battle.barber2_id]);
+        .in('user_id', userIds);
       if (profileError) throw profileError;
 
+      // Create map for fast lookup
+      const profileMap = new Map(userProfiles?.map(p => [p.user_id, p]) || []);
+      
       // Merge the data, prioritizing barber_profiles country_code and adding avatar
-      const mergedData = barberProfiles?.map(barber => {
-        const userProfile = userProfiles?.find(p => p.user_id === barber.user_id);
+      const merged = barberProfiles?.map(barber => {
+        const userProfile = profileMap.get(barber.user_id);
         return {
           ...barber,
           country_code: barber.country_code || userProfile?.country_code || 'us',
           avatar_url: userProfile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber.id}`,
           display_name: userProfile?.display_name || barber.name
         };
-      });
-      return mergedData;
+      }) || [];
+      
+      // Preserve barber order: barber1 first, barber2 second
+      const ordered = [battle.barber1_id, battle.barber2_id]
+        .map(id => merged.find(b => b.id === id))
+        .filter(Boolean);
+      
+      return ordered;
     },
     enabled: !!battle?.barber1_id && !!battle?.barber2_id
   });
 
-  // Get like states for real barbers
+  // Get barber user_ids for like state queries
+  const barber1UserId = barbers?.find(b => b.id === battle?.barber1_id)?.user_id;
+  const barber2UserId = barbers?.find(b => b.id === battle?.barber2_id)?.user_id;
+  
+  // Get like states for real barbers (using user_id as creator_id)
   const barber1LikeQuery = useQuery({
-    queryKey: ['user_like', battle?.barber1_id, user?.id],
+    queryKey: ['user_like', barber1UserId, user?.id],
     queryFn: async () => {
-      if (!user || !battle?.barber1_id) return false;
+      if (!user || !barber1UserId) return false;
       const {
         data,
         error
-      } = await supabase.from('creator_likes').select('id').eq('creator_id', battle.barber1_id).eq('user_id', user.id).maybeSingle();
+      } = await supabase.from('creator_likes').select('id').eq('creator_id', barber1UserId).eq('user_id', user.id).maybeSingle();
       if (error) throw error;
       return !!data;
     },
-    enabled: !!user && !!battle?.barber1_id
+    enabled: !!user && !!barber1UserId
   });
   const barber2LikeQuery = useQuery({
-    queryKey: ['user_like', battle?.barber2_id, user?.id],
+    queryKey: ['user_like', barber2UserId, user?.id],
     queryFn: async () => {
-      if (!user || !battle?.barber2_id) return false;
+      if (!user || !barber2UserId) return false;
       const {
         data,
         error
-      } = await supabase.from('creator_likes').select('id').eq('creator_id', battle.barber2_id).eq('user_id', user.id).maybeSingle();
+      } = await supabase.from('creator_likes').select('id').eq('creator_id', barber2UserId).eq('user_id', user.id).maybeSingle();
       if (error) throw error;
       return !!data;
     },
-    enabled: !!user && !!battle?.barber2_id
+    enabled: !!user && !!barber2UserId
   });
 
   // Fetch battle submissions
@@ -311,9 +327,9 @@ export const DynamicBattleHero = () => {
       return;
     }
     let isLiked = false;
-    if (barberId === battle?.barber1_id) {
+    if (barberId === barber1UserId) {
       isLiked = barber1LikeQuery.data || false;
-    } else if (barberId === battle?.barber2_id) {
+    } else if (barberId === barber2UserId) {
       isLiked = barber2LikeQuery.data || false;
     }
     toggleLike.mutate({
@@ -585,8 +601,8 @@ export const DynamicBattleHero = () => {
         </div>
       </div>;
   }
-  const barber1 = barbers.find(b => b.user_id === battle.barber1_id);
-  const barber2 = barbers.find(b => b.user_id === battle.barber2_id);
+  const barber1 = barbers.find(b => b.id === battle.barber1_id);
+  const barber2 = barbers.find(b => b.id === battle.barber2_id);
   const percentages = calculatePercentages();
 
   // Get barber photos from profiles
