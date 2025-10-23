@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X } from 'lucide-react';
-import { getFlagUrl, getFlagEmoji } from '@/lib/country';
 
 /**
  * SphereImageGrid - Interactive 3D Image Sphere Component
@@ -471,6 +470,16 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
 
   const worldPositions = calculateWorldPositions();
 
+  const getCountryFlagEmoji = (code: string): string => {
+    const normalized = code?.trim();
+    if (!normalized || normalized.length !== 2 || normalized === 'XX') return '🌍';
+    const codePoints = normalized
+      .toUpperCase()
+      .split('')
+      .map(char => 127397 + char.charCodeAt(0));
+    return String.fromCodePoint(...codePoints);
+  };
+
   const renderImageNode = useCallback((image: ImageData, index: number) => {
     const position = worldPositions[index];
 
@@ -509,16 +518,8 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
           
           {/* Country Flag Badge - bottom right */}
           {showCountryFlags && image.countryCode && (
-            <div className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-white shadow-lg flex items-center justify-center overflow-hidden">
-              {image.countryCode === 'XX' ? (
-                <span className="text-sm">{getFlagEmoji('XX')}</span>
-              ) : (
-                <img 
-                  src={getFlagUrl(image.countryCode, 'w40')} 
-                  alt={`${image.countryCode} flag`}
-                  className="w-full h-full object-cover"
-                />
-              )}
+            <div className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-white shadow-lg flex items-center justify-center text-sm">
+              {getCountryFlagEmoji(image.countryCode)}
             </div>
           )}
           
@@ -537,6 +538,19 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
     if (!selectedImage) return null;
 
     const countryCode = selectedImage.countryCode || 'XX';
+    
+    // Convert country code to flag emoji (works for any valid ISO 3166-1 alpha-2 code)
+    const getCountryFlagEmoji = (code: string): string => {
+      const normalized = code?.trim();
+      if (!normalized || normalized.length !== 2 || normalized === 'XX') return '🌍';
+      const codePoints = normalized
+        .toUpperCase()
+        .split('')
+        .map(char => 127397 + char.charCodeAt(0));
+      return String.fromCodePoint(...codePoints);
+    };
+    
+    const countryFlagEmoji = getCountryFlagEmoji(countryCode);
 
     return (
       <div
@@ -572,17 +586,9 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
           <div className="flex flex-col sm:flex-row h-auto">
             {/* LEFT: Country Flag (50%) */}
             <div className="w-full sm:w-1/2 bg-gradient-to-br from-primary/5 to-primary/10 flex flex-col items-center justify-center p-6 min-h-[180px]">
-              {countryCode === 'XX' ? (
-                <div className="text-[4rem] md:text-[5rem] leading-none mb-2">
-                  {getFlagEmoji('XX')}
-                </div>
-              ) : (
-                <img 
-                  src={getFlagUrl(countryCode, 'w320')} 
-                  alt={`${countryCode} flag`}
-                  className="w-32 h-32 object-cover rounded-lg shadow-lg mb-2"
-                />
-              )}
+              <div className="text-[4rem] md:text-[5rem] leading-none mb-2">
+                {countryFlagEmoji}
+              </div>
               <p className="text-lg font-bold text-foreground tracking-wider">
                 {countryCode}
               </p>
