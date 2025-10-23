@@ -176,7 +176,10 @@ export const DynamicBattleHero = () => {
             {/* Content */}
             <div className="relative h-full flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
               {/* Photo */}
-              <div className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl mb-4">
+              <div 
+                onClick={() => navigate(`/barber/${barber1.user_id}`)}
+                className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl mb-4 cursor-pointer hover:border-white transition-all"
+              >
                 {barber1.avatar_url ? (
                   <img 
                     src={barber1.avatar_url} 
@@ -225,7 +228,10 @@ export const DynamicBattleHero = () => {
             {/* Content */}
             <div className="relative h-full flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
               {/* Photo */}
-              <div className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl mb-4">
+              <div 
+                onClick={() => navigate(`/barber/${barber2.user_id}`)}
+                className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl mb-4 cursor-pointer hover:border-white transition-all"
+              >
                 {barber2.avatar_url ? (
                   <img 
                     src={barber2.avatar_url} 
