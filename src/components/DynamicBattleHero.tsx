@@ -125,7 +125,7 @@ export const DynamicBattleHero = () => {
     queryFn: async () => {
       if (!battle?.barber1_id || !battle?.barber2_id) return [];
 
-      // Fetch barber profiles by their ID (battle.barber1_id/barber2_id are barber_profiles.id)
+      // Fetch barber profiles by id (battles store barber_profiles.id in barber1_id/barber2_id)
       const {
         data: barberProfiles,
         error: barberError
@@ -133,13 +133,14 @@ export const DynamicBattleHero = () => {
         .from('barber_profiles')
         .select('id, user_id, name, country_code, is_live, live_video_id, featured_video_id')
         .in('id', [battle.barber1_id, battle.barber2_id]);
-      if (barberError) throw barberError;
-      if (!barberProfiles || barberProfiles.length === 0) return [];
+      if (barberError) {
+        throw barberError;
+      }
 
-      // Extract user_ids from barber profiles
-      const userIds = barberProfiles.map(b => b.user_id);
-
-      // Fetch user profiles for country_code and avatar_url using user_ids
+      // Extract user_ids to fetch profile data
+      const userIds = (barberProfiles || []).map(b => b.user_id);
+      
+      // Fetch user profiles for country_code and avatar_url
       const {
         data: userProfiles,
         error: profileError
@@ -147,67 +148,38 @@ export const DynamicBattleHero = () => {
         .from('profiles')
         .select('user_id, country_code, avatar_url, display_name')
         .in('user_id', userIds);
-      if (profileError) throw profileError;
+      if (profileError) {
+        throw profileError;
+      }
 
-      // Merge the data, prioritizing barber_profiles country_code, no dicebear fallback
-      const mergedData = barberProfiles.map(barber => {
-        const userProfile = userProfiles?.find(p => p.user_id === barber.user_id);
+      // Create map for fast lookup
+      const profileMap = new Map(userProfiles?.map(p => [p.user_id, p]) || []);
+      
+      // Merge the data, prioritizing barber_profiles country_code and adding avatar
+      const merged = barberProfiles?.map(barber => {
+        const userProfile = profileMap.get(barber.user_id);
         return {
           ...barber,
           country_code: barber.country_code || userProfile?.country_code || 'us',
-          avatar_url: userProfile?.avatar_url || undefined,
+          avatar_url: userProfile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber.id}`,
           display_name: userProfile?.display_name || barber.name
         };
-      });
+      }) || [];
       
-      // Preserve order: return in [barber1_id, barber2_id] order
-      const orderedBarbers = [
-        mergedData.find(b => b.id === battle.barber1_id),
-        mergedData.find(b => b.id === battle.barber2_id)
-      ].filter(Boolean);
-      
-      return orderedBarbers;
+      // Preserve barber order: barber1 first, barber2 second
+      const ordered = [battle.barber1_id, battle.barber2_id]
+        .map(id => merged.find(b => b.id === id))
+        .filter(Boolean);
+      return ordered;
     },
     enabled: !!battle?.barber1_id && !!battle?.barber2_id
   });
 
-  // Fallback: featured barbers when no battle with both barbers
-  const { data: featuredBarbers } = useQuery({
-    queryKey: ['featuredBarbers'],
-    queryFn: async () => {
-      const { data: barberProfiles, error } = await supabase
-        .from('barber_profiles')
-        .select('id, user_id, name, country_code, is_live, live_video_id, featured_video_id')
-        .order('updated_at', { ascending: false })
-        .limit(2);
-      if (error) throw error;
-      if (!barberProfiles || barberProfiles.length === 0) return [];
-
-      const userIds = barberProfiles.map(b => b.user_id);
-      const { data: userProfiles, error: profileError } = await supabase
-        .from('profiles')
-        .select('user_id, country_code, avatar_url, display_name')
-        .in('user_id', userIds);
-      if (profileError) throw profileError;
-
-      return barberProfiles.map(barber => {
-        const up = userProfiles?.find(p => p.user_id === barber.user_id);
-        return {
-          ...barber,
-          country_code: barber.country_code || up?.country_code || 'us',
-          avatar_url: up?.avatar_url || undefined,
-          display_name: up?.display_name || barber.name
-        };
-      });
-    },
-    enabled: !battle?.barber1_id || !battle?.barber2_id
-  });
-
-  // Get barber user_ids for likes (extract from barbers array)
+  // Get barber user_ids for like state queries
   const barber1UserId = barbers?.find(b => b.id === battle?.barber1_id)?.user_id;
   const barber2UserId = barbers?.find(b => b.id === battle?.barber2_id)?.user_id;
-
-  // Get like states using correct user_ids
+  
+  // Get like states for real barbers (using user_id as creator_id)
   const barber1LikeQuery = useQuery({
     queryKey: ['user_like', barber1UserId, user?.id],
     queryFn: async () => {
@@ -348,8 +320,8 @@ export const DynamicBattleHero = () => {
       }
     }
   };
-  const handleLike = async (barberUserId: string) => {
-    if (!barberUserId) {
+  const handleLike = async (barberId: string) => {
+    if (!barberId) {
       toast.info("No active battle yet");
       return;
     }
@@ -357,15 +329,14 @@ export const DynamicBattleHero = () => {
       toast.error("Please sign in to like barbers");
       return;
     }
-    // Determine if this user_id is liked
     let isLiked = false;
-    if (barberUserId === barber1UserId) {
+    if (barberId === barber1UserId) {
       isLiked = barber1LikeQuery.data || false;
-    } else if (barberUserId === barber2UserId) {
+    } else if (barberId === barber2UserId) {
       isLiked = barber2LikeQuery.data || false;
     }
     toggleLike.mutate({
-      creatorId: barberUserId,
+      creatorId: barberId,
       isLiked
     });
   };
@@ -485,98 +456,161 @@ export const DynamicBattleHero = () => {
       </div>;
   }
 
-  // Fallback highlight: show two barbers from database in head-to-head when no battle
-  if (!battle || !barbers || barbers.length < 2) {
-    if (!featuredBarbers || featuredBarbers.length < 2) {
-      return (
-        <div className="pt-24 lg:pt-28 pb-8 px-4 max-w-7xl mx-auto">
-          <div className="aspect-video bg-card rounded-2xl shadow-2xl border-2 border-primary/50 flex items-center justify-center">
-            <div className="text-lg text-muted-foreground">No barbers to showcase yet</div>
-          </div>
-        </div>
-      );
-    }
-    const fb1 = featuredBarbers[0];
-    const fb2 = featuredBarbers[1];
-    const fb1Photo = fb1?.avatar_url;
-    const fb2Photo = fb2?.avatar_url;
-
-    return (
-      <div className="pt-24 lg:pt-28 pb-8 px-2 sm:px-4 max-w-5xl mx-auto">
-        <div className="w-full aspect-[16/9] sm:aspect-[16/10] bg-card rounded-xl sm:rounded-2xl shadow-2xl border-2 border-primary/50 overflow-hidden relative">
+  // Fallback wireframe when no real battle exists (keeps layout/buttons/ads)
+  if (!battle) {
+    return <div className="pt-20 sm:pt-24 lg:pt-32 pb-4 sm:pb-6 lg:pb-8 px-1 sm:px-2 lg:px-4 max-w-[95vw] sm:max-w-4xl lg:max-w-5xl mx-auto">
+        <div className="w-full portrait:aspect-[3/4] sm:portrait:aspect-[4/5] landscape:aspect-[16/10] lg:landscape:aspect-[16/9] bg-card rounded-lg sm:rounded-xl lg:rounded-2xl shadow-xl sm:shadow-2xl border border-primary/30 sm:border-2 sm:border-primary/50 animate-glow overflow-hidden relative transform-gpu will-change-transform mx-0 my-[24px] py-0 px-0">
           <div className="h-full flex">
-            {/* Left Barber */}
-            <div className="flex-1 relative overflow-hidden">
+            {/* Left Side */}
+            <div className="flex-1 relative overflow-hidden" onClick={() => toast.info("Voting will be available when a battle is live")}>
+              {/* Flag Background */}
               <div className="absolute inset-0" style={{
-                backgroundImage: `url(${getFlagImageUrl(fb1?.country_code || 'us')})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                opacity: 0.3
-              }} />
-              <div className="absolute top-[25%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl bg-gray-700/50">
-                {fb1Photo && <img src={fb1Photo} alt={fb1?.display_name || fb1?.name} className="w-full h-full object-cover" />}
+              backgroundImage: `url(${getFlagImageUrl(barbers?.[0]?.country_code || 'us')})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: 0.3
+            }} />
+
+              {/* Barber Photo */}
+              <div className="absolute top-[12%] left-1/2 transform -translate-x-1/2 w-[20vw] h-[20vw] max-w-[80px] max-h-[80px] sm:max-w-[120px] sm:max-h-[120px] lg:max-w-[160px] lg:max-h-[160px] rounded-full overflow-hidden border-2 sm:border-4 border-white/80 shadow-xl sm:shadow-2xl">
+                <img 
+                  src={barbers?.[0]?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barbers?.[0]?.id}`} 
+                  alt={barbers?.[0]?.display_name || barbers?.[0]?.name || 'Barber 1'} 
+                  className="w-full h-full object-cover" 
+                />
               </div>
-              <div className="absolute top-[40%] left-1/2 transform -translate-x-1/2 text-center z-10">
-                <h3 className="text-white text-xs sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">{fb1?.display_name || fb1?.name || 'Barber 1'}</h3>
+
+              {/* Barber Name */}
+              <div className="absolute top-[32%] left-1/2 transform -translate-x-1/2 text-center z-10">
+                <h3 className="text-white text-[8px] xs:text-[10px] sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">
+                  {barbers?.[0]?.display_name || barbers?.[0]?.name || 'Barber 1'}
+                </h3>
               </div>
-              <div className="absolute top-[55%] left-1/2 transform -translate-x-1/2 w-28 h-40 sm:w-36 sm:h-52 lg:w-44 lg:h-64 rounded-lg overflow-hidden shadow-2xl bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-                <Play className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-white/60" />
+
+              {/* Video Box - Placeholder */}
+              <div className="absolute top-[45%] left-1/2 transform -translate-x-1/2 w-[35vw] h-[35vw] max-w-[140px] max-h-[140px] sm:max-w-[200px] sm:max-h-[200px] lg:max-w-[260px] lg:max-h-[260px] bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg cursor-pointer group hover:bg-primary/20 transition-all duration-300">
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 group-hover:from-primary/20 group-hover:to-primary/40 transition-all duration-300">
+                  <Play className="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white/60 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
+                </div>
               </div>
+
               <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/60" />
-              <div className="absolute top-3 sm:top-6 left-3 sm:left-6 z-10">
-                <div className="bg-white/20 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1 sm:py-1.5">
-                  <span className="text-white font-bold text-sm sm:text-lg lg:text-xl">50%</span>
+
+              {/* Vote Percentage */}
+              <div className="absolute top-1 sm:top-2 lg:top-3 left-1 sm:left-2 lg:left-3 z-10">
+                <div className="bg-white/20 backdrop-blur-sm rounded-full px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 lg:py-1.5">
+                  <span className="text-white font-bold text-xs sm:text-sm lg:text-lg xl:text-xl">50%</span>
+                </div>
+              </div>
+
+              {/* Vertical Action Buttons */}
+              
+            </div>
+
+            {/* Vertical Advertisement Bar */}
+            <div className="absolute left-1/2 top-0 bottom-0 transform -translate-x-1/2 z-20 w-10 sm:w-14 lg:w-20">
+              <div className="h-full bg-gradient-to-b from-black/80 via-black/60 to-black/80 backdrop-blur-sm border-x border-white/20 sm:border-x-2 flex flex-col">
+                <div className="flex-1 border-b border-white/20 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="text-white/60 text-[8px] sm:text-xs font-medium">AD</div>
+                    <div className="text-white/40 text-[6px] sm:text-[10px]">SPOT 1</div>
+                  </div>
+                </div>
+                <div className="flex-1 border-b border-white/20 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="text-white/60 text-[8px] sm:text-xs font-medium">AD</div>
+                    <div className="text-white/40 text-[6px] sm:text-[10px]">SPOT 2</div>
+                  </div>
+                </div>
+                <div className="flex-1 border-b border-white/20 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="text-white/60 text-[8px] sm:text-xs font-medium">AD</div>
+                    <div className="text-white/40 text-[6px] sm:text-[10px]">SPOT 3</div>
+                  </div>
+                </div>
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <div className="text-white/60 text-[8px] sm:text-xs font-medium">AD</div>
+                    <div className="text-white/40 text-[6px] sm:text-[10px]">SPOT 4</div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Center VS */}
-            <div className="absolute left-1/2 top-0 bottom-0 transform -translate-x-1/2 z-20 w-16 sm:w-20 lg:w-24 flex flex-col">
-              <div className="flex-1" />
-              <div className="h-16 sm:h-20 lg:h-24 flex items-center justify-center">
-                <div className="bg-white rounded-full w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 flex items-center justify-center shadow-2xl border-2 border-primary">
-                  <span className="text-xs sm:text-sm font-bold text-primary">VS</span>
-                </div>
-              </div>
-              <div className="flex-1" />
-            </div>
-
-            {/* Right Barber */}
-            <div className="flex-1 relative overflow-hidden">
+            {/* Right Side */}
+            <div className="flex-1 relative overflow-hidden" onClick={() => toast.info("Voting will be available when a battle is live")}>
+              {/* Flag Background */}
               <div className="absolute inset-0" style={{
-                backgroundImage: `url(${getFlagImageUrl(fb2?.country_code || 'us')})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                opacity: 0.3
-              }} />
-              <div className="absolute top-[25%] right-1/2 transform translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl bg-gray-700/50">
-                {fb2Photo && <img src={fb2Photo} alt={fb2?.display_name || fb2?.name} className="w-full h-full object-cover" />}
+              backgroundImage: `url(${getFlagImageUrl(barbers?.[1]?.country_code || 'ca')})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: 0.3
+            }} />
+
+              {/* Barber Photo */}
+              <div className="absolute top-[12%] right-1/2 transform translate-x-1/2 w-[20vw] h-[20vw] max-w-[80px] max-h-[80px] sm:max-w-[120px] sm:max-h-[120px] lg:max-w-[160px] lg:max-h-[160px] rounded-full overflow-hidden border-2 sm:border-4 border-white/80 shadow-xl sm:shadow-2xl">
+                <img 
+                  src={barbers?.[1]?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barbers?.[1]?.id}`} 
+                  alt={barbers?.[1]?.display_name || barbers?.[1]?.name || 'Barber 2'} 
+                  className="w-full h-full object-cover" 
+                />
               </div>
-              <div className="absolute top-[40%] right-1/2 transform translate-x-1/2 text-center z-10">
-                <h3 className="text-white text-xs sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">{fb2?.display_name || fb2?.name || 'Barber 2'}</h3>
+
+              {/* Barber Name */}
+              <div className="absolute top-[32%] right-1/2 transform translate-x-1/2 text-center z-10">
+                <h3 className="text-white text-[8px] xs:text-[10px] sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">
+                  {barbers?.[1]?.display_name || barbers?.[1]?.name || 'Barber 2'}
+                </h3>
               </div>
-              <div className="absolute top-[55%] right-1/2 transform translate-x-1/2 w-28 h-40 sm:w-36 sm:h-52 lg:w-44 lg:h-64 rounded-lg overflow-hidden shadow-2xl bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-                <Play className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-white/60" />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-l from-black/60 via-black/40 to-black/60" />
-              <div className="absolute top-3 sm:top-6 right-3 sm:right-6 z-10">
-                <div className="bg-white/20 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1 sm:py-1.5">
-                  <span className="text-white font-bold text-sm sm:text-lg lg:text-xl">50%</span>
+
+              {/* Video Box */}
+              <div className="absolute top-[45%] right-1/2 transform translate-x-1/2 w-[35vw] h-[35vw] max-w-[140px] max-h-[140px] sm:max-w-[200px] sm:max-h-[200px] lg:max-w-[260px] lg:max-h-[260px] bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg cursor-pointer group hover:bg-primary/20 transition-all duration-300">
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 group-hover:from-primary/20 group-hover:to-primary/40 transition-all duration-300">
+                  <Play className="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white/60 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
                 </div>
               </div>
+
+              <div className="absolute inset-0 bg-gradient-to-l from-black/60 via-black/40 to-black/60" />
+
+              {/* Vote Percentage */}
+              <div className="absolute top-1 sm:top-2 lg:top-3 right-1 sm:right-2 lg:right-3 z-10">
+                <div className="bg-white/20 backdrop-blur-sm rounded-full px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 lg:py-1.5">
+                  <span className="text-white font-bold text-xs sm:text-sm lg:text-lg xl:text-xl">50%</span>
+                </div>
+              </div>
+
+              {/* Vertical Action Buttons */}
+              
             </div>
           </div>
+
+          {/* Bottom Action Buttons (Left) */}
+          <div className="absolute bottom-3 sm:bottom-6 left-3 sm:left-6 z-10 flex gap-1 sm:gap-2">
+            <Button variant="secondary" size="sm" onClick={e => {
+            e.stopPropagation();
+            handleLike(battle?.barber1_id || '');
+          }} className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30 text-xs sm:text-sm px-2 sm:px-3">
+              <Heart className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+              <span className="hidden xs:inline">Like</span>
+            </Button>
+            <Button variant="secondary" size="sm" onClick={e => {
+            e.stopPropagation();
+            handleDonate(battle?.barber1_id || '', barbers?.[0]?.name || 'Barber 1');
+          }} className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30 text-xs sm:text-sm px-2 sm:px-3">
+              <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+              <span className="hidden xs:inline">Donate</span>
+            </Button>
+          </div>
         </div>
-      </div>
-    );
+      </div>;
   }
   const barber1 = barbers.find(b => b.id === battle.barber1_id);
   const barber2 = barbers.find(b => b.id === battle.barber2_id);
   const percentages = calculatePercentages();
 
-  // Get barber photos from profiles (no dicebear fallback)
-  const barber1Photo = barber1?.avatar_url;
-  const barber2Photo = barber2?.avatar_url;
+  // Get barber photos from profiles
+  const barber1Photo = barber1?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber1?.id}`;
+  const barber2Photo = barber2?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber2?.id}`;
 
   // Determine render mode based on battle status
   const renderMode = battle.status === 'voting' ? 'voting' : battle.status === 'completed' ? 'results' : 'preview';
@@ -745,9 +779,9 @@ export const DynamicBattleHero = () => {
                 opacity: 0.3
               }} />
                 
-                {/* Barber Photo - Empty circle if no avatar */}
-                <div className="absolute top-[25%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl bg-gray-700/50">
-                  {barber1Photo && <img src={barber1Photo} alt={barber1?.name} className="w-full h-full object-cover" />}
+                {/* Barber Photo - Smaller and Clearer */}
+                <div className="absolute top-[25%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
+                  <img src={barber1Photo} alt={barber1?.name} className="w-full h-full object-cover" />
                 </div>
 
                 {/* Barber Name - Under profile photo */}
@@ -824,7 +858,25 @@ export const DynamicBattleHero = () => {
                   </div>
                 </div>
 
-                {/* Vertical Stats Bar - removed per request */}
+                {/* Vertical Stats Bar */}
+                <div className="absolute left-3 sm:left-6 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-2 bg-black/60 backdrop-blur-sm rounded-lg p-2">
+                  <div className="flex items-center gap-1 text-white text-xs">
+                    <TrendingUp className="w-3 h-3" />
+                    <span>#5</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-white text-xs">
+                    <Heart className="w-3 h-3" />
+                    <span>{battle.vote_count1}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-white text-xs">
+                    <Users className="w-3 h-3" />
+                    <span>1.2k</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-white text-xs">
+                    <DollarSign className="w-3 h-3" />
+                    <span>$320</span>
+                  </div>
+                </div>
 
               </div>
 
@@ -882,9 +934,9 @@ export const DynamicBattleHero = () => {
                 opacity: 0.3
               }} />
                 
-                {/* Barber Photo - Empty circle if no avatar */}
-                <div className="absolute top-[25%] right-1/2 transform translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl bg-gray-700/50">
-                  {barber2Photo && <img src={barber2Photo} alt={barber2?.name} className="w-full h-full object-cover" />}
+                {/* Barber Photo - Smaller and Clearer */}
+                <div className="absolute top-[25%] right-1/2 transform translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
+                  <img src={barber2Photo} alt={barber2?.name} className="w-full h-full object-cover" />
                 </div>
 
                 {/* Barber Name - Under profile photo */}
@@ -961,7 +1013,25 @@ export const DynamicBattleHero = () => {
                   </div>
                 </div>
 
-                {/* Vertical Stats Bar - removed per request */}
+                {/* Vertical Stats Bar */}
+                <div className="absolute right-3 sm:right-6 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-2 bg-black/60 backdrop-blur-sm rounded-lg p-2">
+                  <div className="flex items-center gap-1 text-white text-xs">
+                    <TrendingUp className="w-3 h-3" />
+                    <span>#3</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-white text-xs">
+                    <Heart className="w-3 h-3" />
+                    <span>{battle.vote_count2}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-white text-xs">
+                    <Users className="w-3 h-3" />
+                    <span>2.1k</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-white text-xs">
+                    <DollarSign className="w-3 h-3" />
+                    <span>$890</span>
+                  </div>
+                </div>
 
               </div>
             </div>
@@ -970,14 +1040,14 @@ export const DynamicBattleHero = () => {
             <div className="absolute bottom-3 sm:bottom-6 left-3 sm:left-6 z-10 flex gap-1 sm:gap-2">
               <Button variant="secondary" size="sm" onClick={e => {
               e.stopPropagation();
-              handleLike(barber1UserId || '');
+              handleLike(barber1?.user_id || '');
             }} className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30 text-xs sm:text-sm px-2 sm:px-3">
                 <Heart className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                 <span className="hidden xs:inline">Like</span>
               </Button>
               <Button variant="secondary" size="sm" onClick={e => {
               e.stopPropagation();
-              handleDonate(barber1UserId || '', barber1?.name || '');
+              handleDonate(barber1?.user_id || '', barber1?.name || '');
             }} className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30 text-xs sm:text-sm px-2 sm:px-3">
                 <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                 <span className="hidden xs:inline">Donate</span>
