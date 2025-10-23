@@ -316,14 +316,16 @@ const Profile = () => {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Avatar Upload Section */}
-                  <div className="flex flex-col items-center pb-6 border-b">
-                    <AvatarUpload currentAvatar={profile?.avatar_url || ''} onAvatarChange={url => {
-                    queryClient.invalidateQueries({
-                      queryKey: ['profile', user?.id]
-                    });
-                  }} size="lg" />
-                  </div>
+                  {/* Avatar Upload Section - Barbers Only */}
+                  {isBarber && (
+                    <div className="flex flex-col items-center pb-6 border-b">
+                      <AvatarUpload currentAvatar={profile?.avatar_url || ''} onAvatarChange={url => {
+                        queryClient.invalidateQueries({
+                          queryKey: ['profile', user?.id]
+                        });
+                      }} size="lg" />
+                    </div>
+                  )}
 
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid gap-4 sm:grid-cols-2">
