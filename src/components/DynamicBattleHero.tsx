@@ -41,6 +41,8 @@ interface BarberProfile {
   is_live?: boolean;
   live_video_id?: string | null;
   featured_video_id?: string | null;
+  avatar_url?: string;
+  display_name?: string;
 }
 interface BattleSubmission {
   id: string;
@@ -112,7 +114,7 @@ export const DynamicBattleHero = () => {
     refetchInterval: 5000 // Refresh every 5 seconds for live updates
   });
 
-  // Fetch barber profiles for the battle with live status and video data
+  // Fetch barber profiles for the battle with live status, video data, and avatar
   const {
     data: barbers,
     isLoading: barbersLoading
@@ -131,18 +133,26 @@ export const DynamicBattleHero = () => {
         .in('user_id', [battle.barber1_id, battle.barber2_id]);
       if (barberError) throw barberError;
 
-      // If barber profiles don't have country_code, fetch from profiles table
+      // Fetch user profiles for country_code and avatar_url
       const {
         data: userProfiles,
         error: profileError
-      } = await supabase.from('profiles').select('user_id, country_code').in('user_id', [battle.barber1_id, battle.barber2_id]);
+      } = await supabase
+        .from('profiles')
+        .select('user_id, country_code, avatar_url, display_name')
+        .in('user_id', [battle.barber1_id, battle.barber2_id]);
       if (profileError) throw profileError;
 
-      // Merge the data, prioritizing barber_profiles country_code
-      const mergedData = barberProfiles?.map(barber => ({
-        ...barber,
-        country_code: barber.country_code || userProfiles?.find(p => p.user_id === barber.user_id)?.country_code || 'us'
-      }));
+      // Merge the data, prioritizing barber_profiles country_code and adding avatar
+      const mergedData = barberProfiles?.map(barber => {
+        const userProfile = userProfiles?.find(p => p.user_id === barber.user_id);
+        return {
+          ...barber,
+          country_code: barber.country_code || userProfile?.country_code || 'us',
+          avatar_url: userProfile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber.id}`,
+          display_name: userProfile?.display_name || barber.name
+        };
+      });
       return mergedData;
     },
     enabled: !!battle?.barber1_id && !!battle?.barber2_id
@@ -410,13 +420,17 @@ export const DynamicBattleHero = () => {
 
               {/* Barber Photo */}
               <div className="absolute top-[12%] left-1/2 transform -translate-x-1/2 w-[20vw] h-[20vw] max-w-[80px] max-h-[80px] sm:max-w-[120px] sm:max-h-[120px] lg:max-w-[160px] lg:max-h-[160px] rounded-full overflow-hidden border-2 sm:border-4 border-white/80 shadow-xl sm:shadow-2xl">
-                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&h=800&fit=crop&crop=face" alt={barbers?.[0]?.name || 'Barber 1'} className="w-full h-full object-cover" />
+                <img 
+                  src={barbers?.[0]?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barbers?.[0]?.id}`} 
+                  alt={barbers?.[0]?.display_name || barbers?.[0]?.name || 'Barber 1'} 
+                  className="w-full h-full object-cover" 
+                />
               </div>
 
               {/* Barber Name */}
               <div className="absolute top-[32%] left-1/2 transform -translate-x-1/2 text-center z-10">
                 <h3 className="text-white text-[8px] xs:text-[10px] sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">
-                  {barbers?.[0]?.name || 'Barber 1'}
+                  {barbers?.[0]?.display_name || barbers?.[0]?.name || 'Barber 1'}
                 </h3>
               </div>
 
@@ -482,13 +496,17 @@ export const DynamicBattleHero = () => {
 
               {/* Barber Photo */}
               <div className="absolute top-[12%] right-1/2 transform translate-x-1/2 w-[20vw] h-[20vw] max-w-[80px] max-h-[80px] sm:max-w-[120px] sm:max-h-[120px] lg:max-w-[160px] lg:max-h-[160px] rounded-full overflow-hidden border-2 sm:border-4 border-white/80 shadow-xl sm:shadow-2xl">
-                <img src="https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=800&h=800&fit=crop&crop=face" alt={barbers?.[1]?.name || 'Barber 2'} className="w-full h-full object-cover" />
+                <img 
+                  src={barbers?.[1]?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barbers?.[1]?.id}`} 
+                  alt={barbers?.[1]?.display_name || barbers?.[1]?.name || 'Barber 2'} 
+                  className="w-full h-full object-cover" 
+                />
               </div>
 
               {/* Barber Name */}
               <div className="absolute top-[32%] right-1/2 transform translate-x-1/2 text-center z-10">
                 <h3 className="text-white text-[8px] xs:text-[10px] sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">
-                  {barbers?.[1]?.name || 'Barber 2'}
+                  {barbers?.[1]?.display_name || barbers?.[1]?.name || 'Barber 2'}
                 </h3>
               </div>
 
@@ -537,9 +555,9 @@ export const DynamicBattleHero = () => {
   const barber2 = barbers.find(b => b.user_id === battle.barber2_id);
   const percentages = calculatePercentages();
 
-  // Default photos for barbers
-  const barber1Photo = "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=800&h=800&fit=crop&crop=face";
-  const barber2Photo = "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=800&h=800&fit=crop&crop=face";
+  // Get barber photos from profiles
+  const barber1Photo = barber1?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber1?.id}`;
+  const barber2Photo = barber2?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber2?.id}`;
 
   // Determine render mode based on battle status
   const renderMode = battle.status === 'voting' ? 'voting' : battle.status === 'completed' ? 'results' : 'preview';
