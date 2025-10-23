@@ -195,7 +195,7 @@ export const DynamicBattleHero = () => {
                 backgroundImage: `url(${getFlagImageUrl(barber1.country_code)})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                opacity: 0.3
+                opacity: 0.1
               }}
             />
             <div className="absolute inset-0 bg-gradient-to-br from-black/50 via-transparent to-black/30" />
@@ -265,7 +265,7 @@ export const DynamicBattleHero = () => {
                 backgroundImage: `url(${getFlagImageUrl(barber2.country_code)})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                opacity: 0.3
+                opacity: 0.1
               }}
             />
             <div className="absolute inset-0 bg-gradient-to-bl from-black/50 via-transparent to-black/30" />
