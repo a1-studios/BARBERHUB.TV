@@ -33,32 +33,30 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
     setLoading(true);
     try {
       const profileData = {
-        ...formData,
         user_id: user.id,
-        years_experience: formData.years_experience ? parseInt(formData.years_experience) : null
+        name: formData.name,
+        specialty: formData.specialty,
+        bio: formData.bio || null,
+        location: formData.location || null,
+        years_experience: formData.years_experience ? parseInt(formData.years_experience) : null,
+        portfolio_url: formData.portfolio_url || null
       };
 
-      if (existingProfile) {
-        const { error } = await supabase
-          .from('barber_profiles')
-          .update(profileData)
-          .eq('id', existingProfile.id);
+      const { error } = await supabase
+        .from('barber_profiles')
+        .upsert(profileData, { onConflict: 'user_id' });
 
-        if (error) throw error;
-        toast.success('Profile updated successfully!');
-      } else {
-        const { error } = await supabase
-          .from('barber_profiles')
-          .insert(profileData);
-
-        if (error) throw error;
-        toast.success('Barber profile created successfully!');
-      }
-
+      if (error) throw error;
+      
+      toast.success(existingProfile ? 'Profile updated successfully!' : 'Barber profile created successfully!');
       onProfileCreated?.();
     } catch (error: any) {
       console.error('Error saving barber profile:', error);
-      toast.error(error.message || 'Failed to save profile');
+      if (error.message?.includes('row-level security')) {
+        toast.error('You must be a Barber to save barber profile. Please switch your role.');
+      } else {
+        toast.error(error.message || 'Failed to save profile');
+      }
     } finally {
       setLoading(false);
     }

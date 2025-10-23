@@ -69,8 +69,8 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
         .from('barber_profiles')
         .select('*')
         .eq('user_id', user.id)
-        .single();
-      if (error && error.code !== 'PGRST116') throw error;
+        .maybeSingle();
+      if (error) throw error;
       return data;
     },
     enabled: !!user?.id
@@ -199,25 +199,22 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
         portfolio_url: data.portfolio_url
       };
 
-      if (barberProfile) {
-        const { error } = await supabase
-          .from('barber_profiles')
-          .update(barberData)
-          .eq('user_id', user.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('barber_profiles')
-          .insert(barberData);
-        if (error) throw error;
-      }
+      const { error } = await supabase
+        .from('barber_profiles')
+        .upsert(barberData, { onConflict: 'user_id' });
+      
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['barberProfile', user?.id] });
       toast.success('Barber profile updated successfully!');
     },
     onError: (error: any) => {
-      toast.error('Failed to update barber profile: ' + error.message);
+      if (error.message?.includes('row-level security')) {
+        toast.error('You must be a Barber to save barber profile. Please switch your role.');
+      } else {
+        toast.error('Failed to update barber profile: ' + error.message);
+      }
     },
   });
 
@@ -320,17 +317,6 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
                     value={profileForm.country_code}
                     onChange={(country_code) => setProfileForm(prev => ({ ...prev, country_code }))}
                     placeholder="Select your country"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="bio">Personal Bio</Label>
-                  <Textarea
-                    id="bio"
-                    value={profileForm.bio}
-                    onChange={(e) => setProfileForm(prev => ({ ...prev, bio: e.target.value }))}
-                    placeholder="Tell people about yourself..."
-                    rows={3}
                   />
                 </div>
 

@@ -79,11 +79,32 @@ export type Database = {
           {
             foreignKeyName: "barber_profiles_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      barber_stats_secure: {
+        Row: {
+          barber_id: string
+          metric_date: string
+          tenant_id: string
+          total_haircuts: number
+        }
+        Insert: {
+          barber_id: string
+          metric_date: string
+          tenant_id: string
+          total_haircuts?: number
+        }
+        Update: {
+          barber_id?: string
+          metric_date?: string
+          tenant_id?: string
+          total_haircuts?: number
+        }
+        Relationships: []
       }
       battle_participants: {
         Row: {
@@ -1409,7 +1430,7 @@ export type Database = {
           {
             foreignKeyName: "barber_profiles_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },

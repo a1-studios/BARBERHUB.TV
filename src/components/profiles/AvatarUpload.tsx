@@ -54,14 +54,23 @@ export function AvatarUpload({
       const objectUrl = URL.createObjectURL(file);
       setPreviewUrl(objectUrl);
 
-      // Upload to Supabase Storage
+      // Create unique file name with user folder structure
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
 
+      // Delete old avatar if it exists in avatars bucket
+      if (currentAvatar && currentAvatar.includes('/avatars/')) {
+        const oldPath = currentAvatar.split('/avatars/')[1]?.split('?')[0];
+        if (oldPath) {
+          await supabase.storage.from('avatars').remove([oldPath]);
+        }
+      }
+
+      // Upload to avatars bucket
       const { error: uploadError } = await supabase.storage
-        .from('portfolios')
-        .upload(filePath, file, {
+        .from('avatars')
+        .upload(fileName, file, {
+          contentType: file.type,
           cacheControl: '3600',
           upsert: false
         });
@@ -69,11 +78,9 @@ export function AvatarUpload({
       if (uploadError) throw uploadError;
 
       // Get public URL
-      const { data } = supabase.storage
-        .from('portfolios')
-        .getPublicUrl(filePath);
-
-      const publicUrl = data.publicUrl;
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
 
       // Update profile with new avatar URL
       const { error: updateError } = await supabase
@@ -92,7 +99,7 @@ export function AvatarUpload({
       
     } catch (error: any) {
       console.error('Error uploading avatar:', error);
-      toast.error('Failed to upload profile picture');
+      toast.error(error.message || 'Failed to upload profile picture');
       if (previewUrl) {
         URL.revokeObjectURL(previewUrl);
         setPreviewUrl(null);
