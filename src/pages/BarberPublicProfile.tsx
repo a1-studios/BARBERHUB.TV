@@ -19,95 +19,65 @@ export default function BarberPublicProfile() {
   const navigate = useNavigate();
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
 
-  // Fetch barber profile
+  // Fetch barber profile using unified view
   const { data: barberData, isLoading } = useQuery({
     queryKey: ['barber-public-profile', userId],
     queryFn: async () => {
-      // First get barber profile
-      const { data: barberProfile, error: barberError } = await supabase
-        .from('barber_profiles')
+      const { data, error } = await supabase
+        .from('public_barber_profiles')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
       
-      if (barberError) throw barberError;
-      if (!barberProfile) return null;
-
-      // Then get user profile data
-      const { data: userProfile, error: profileError } = await supabase
-        .from('profiles')
-        .select('display_name, avatar_url, bio, country_code')
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      if (profileError) throw profileError;
-
-      return {
-        ...barberProfile,
-        profiles: userProfile
-      };
+      if (error) throw error;
+      return data;
     },
     enabled: !!userId
   });
 
-  // Fetch barber stats
-  const { data: stats } = useQuery({
-    queryKey: ['barber-public-stats', barberData?.id],
-    queryFn: async () => {
-      if (!barberData?.id) return null;
-      
-      const { data, error } = await supabase
-        .from('barber_stats')
-        .select('*')
-        .eq('barber_id', barberData.id)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data || {
-        follower_count: 0,
-        like_count: 0,
-        subscription_count: 0,
-        total_donations_cents: 0
-      };
-    },
-    enabled: !!barberData?.id
-  });
+  // Map stats directly from the view data
+  const stats = barberData ? {
+    follower_count: barberData.follower_count,
+    like_count: barberData.like_count,
+    subscription_count: barberData.subscription_count,
+    total_donations_cents: barberData.total_donations_cents
+  } : null;
 
-  // Fetch recent battles using barber_profile id
+  // Fetch recent battles using barber_id from view
   const { data: recentBattles } = useQuery({
-    queryKey: ['barber-battles', barberData?.id],
+    queryKey: ['barber-battles', barberData?.barber_id],
     queryFn: async () => {
-      if (!barberData?.id) return [];
+      if (!barberData?.barber_id) return [];
       
       const { data, error } = await supabase
         .from('battles')
         .select('*')
-        .or(`barber1_id.eq.${barberData.id},barber2_id.eq.${barberData.id}`)
+        .or(`barber1_id.eq.${barberData.barber_id},barber2_id.eq.${barberData.barber_id}`)
         .order('created_at', { ascending: false })
         .limit(6);
       
       if (error) throw error;
       return data;
     },
-    enabled: !!barberData?.id
+    enabled: !!barberData?.barber_id
   });
 
-  // Fetch portfolio
+  // Fetch portfolio using barber_id from view
   const { data: portfolio } = useQuery({
-    queryKey: ['barber-portfolio', barberData?.id],
+    queryKey: ['barber-portfolio', barberData?.barber_id],
     queryFn: async () => {
-      if (!barberData?.id) return [];
+      if (!barberData?.barber_id) return [];
       
       const { data, error } = await supabase
         .from('creations')
         .select('*')
-        .eq('barber_id', barberData.id)
+        .eq('barber_id', barberData.barber_id)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data;
     },
-    enabled: !!barberData?.id
+    enabled: !!barberData?.barber_id
   });
 
   const getCountryFlag = (countryCode: string | null) => {
@@ -151,8 +121,7 @@ export default function BarberPublicProfile() {
     );
   }
 
-  const profile = barberData.profiles as any;
-  const displayName = profile?.display_name || barberData.name;
+  const displayName = barberData.display_name || barberData.barber_name;
 
   return (
     <div className="min-h-screen bg-background">
@@ -170,7 +139,7 @@ export default function BarberPublicProfile() {
           <CardContent className="p-8">
             <div className="flex flex-col md:flex-row gap-6 items-start">
               <Avatar className="w-32 h-32 border-4 border-primary/30">
-                <AvatarImage src={profile?.avatar_url || undefined} />
+                <AvatarImage src={barberData.avatar_url || undefined} />
                 <AvatarFallback className="bg-primary/20 text-primary text-4xl font-bold">
                   {(displayName || 'B').charAt(0).toUpperCase()}
                 </AvatarFallback>
@@ -180,8 +149,8 @@ export default function BarberPublicProfile() {
                 <div>
                   <div className="flex items-center gap-3 flex-wrap">
                     <h1 className="text-4xl font-bold text-white">{displayName}</h1>
-                    {profile?.country_code && (
-                      <span className="text-3xl">{getCountryFlag(profile.country_code)}</span>
+                    {barberData.country_code && (
+                      <span className="text-3xl">{getCountryFlag(barberData.country_code)}</span>
                     )}
                     {barberData.is_live && (
                       <Badge variant="destructive" className="animate-pulse text-lg px-3 py-1">
@@ -217,7 +186,7 @@ export default function BarberPublicProfile() {
 
                 {/* Action Buttons */}
                 <BarberActionButtons
-                  barberId={barberData.id}
+                  barberId={barberData.barber_id}
                   barberUserId={userId!}
                   onDonateClick={() => setIsDonationModalOpen(true)}
                 />
@@ -241,8 +210,8 @@ export default function BarberPublicProfile() {
                 <CardTitle>About</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {profile?.bio && (
-                  <p className="text-muted-foreground">{profile.bio}</p>
+                {(barberData.user_bio || barberData.barber_bio) && (
+                  <p className="text-muted-foreground">{barberData.user_bio || barberData.barber_bio}</p>
                 )}
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -259,40 +228,6 @@ export default function BarberPublicProfile() {
                     </div>
                   )}
                 </div>
-
-                {/* Social Links */}
-                {(profile?.instagram_handle || profile?.facebook_handle || profile?.twitter_handle || profile?.youtube_handle) && (
-                  <div className="flex gap-4 pt-4 border-t">
-                    {profile?.instagram_handle && (
-                      <a href={`https://instagram.com/${profile.instagram_handle}`} target="_blank" rel="noopener noreferrer">
-                        <Button variant="ghost" size="sm">
-                          <Instagram className="w-5 h-5" />
-                        </Button>
-                      </a>
-                    )}
-                    {profile?.facebook_handle && (
-                      <a href={`https://facebook.com/${profile.facebook_handle}`} target="_blank" rel="noopener noreferrer">
-                        <Button variant="ghost" size="sm">
-                          <Facebook className="w-5 h-5" />
-                        </Button>
-                      </a>
-                    )}
-                    {profile?.twitter_handle && (
-                      <a href={`https://twitter.com/${profile.twitter_handle}`} target="_blank" rel="noopener noreferrer">
-                        <Button variant="ghost" size="sm">
-                          <Twitter className="w-5 h-5" />
-                        </Button>
-                      </a>
-                    )}
-                    {profile?.youtube_handle && (
-                      <a href={`https://youtube.com/${profile.youtube_handle}`} target="_blank" rel="noopener noreferrer">
-                        <Button variant="ghost" size="sm">
-                          <Youtube className="w-5 h-5" />
-                        </Button>
-                      </a>
-                    )}
-                  </div>
-                )}
               </CardContent>
             </Card>
 

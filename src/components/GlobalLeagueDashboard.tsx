@@ -13,87 +13,46 @@ import { Skeleton } from '@/components/ui/skeleton';
 export const GlobalLeagueDashboard = () => {
   const navigate = useNavigate();
 
-  // Fetch ALL registered barbers from database with stats
+  // Fetch ALL registered barbers using unified view
   const { data: contendersData = { contenders: [], championId: null }, isLoading: isLoadingContenders } = useQuery({
     queryKey: ['global-contenders'],
     queryFn: async () => {
-      // Fetch ALL barber profiles with ratings
-      const { data: barbers, error: barbersError } = await supabase
-        .from('barber_profiles')
-        .select('id, user_id, name, country_code, rating');
+      const { data: barbers, error } = await supabase
+        .from('public_barber_profiles')
+        .select('*')
+        .order('rating', { ascending: false });
 
-      if (barbersError) throw barbersError;
+      if (error) throw error;
 
-      // Fetch corresponding user profiles for avatars and display names
-      const userIds = (barbers || []).map(b => b.user_id);
-      const { data: profiles } = await supabase
-        .from('profiles')
-        .select('user_id, avatar_url, display_name')
-        .in('user_id', userIds);
-
-      // Fetch barber stats for ranking
-      const barberIds = (barbers || []).map(b => b.id);
-      const { data: stats } = await supabase
-        .from('barber_stats')
-        .select('barber_id, follower_count, like_count')
-        .in('barber_id', barberIds);
-
-      // Create maps
-      const avatarMap = new Map(
-        (profiles || []).map(p => [p.user_id, { avatar: p.avatar_url, displayName: p.display_name }])
-      );
-      const statsMap = new Map(
-        (stats || []).map(s => [s.barber_id, { followers: s.follower_count || 0, likes: s.like_count || 0 }])
-      );
-
-      // Determine champion based on rating, then followers, then likes
-      let championId = null;
-      if (barbers && barbers.length > 0) {
-        const sorted = [...barbers].sort((a, b) => {
-          const ratingDiff = (b.rating || 0) - (a.rating || 0);
-          if (ratingDiff !== 0) return ratingDiff;
-          
-          const aStats = statsMap.get(a.id) || { followers: 0, likes: 0 };
-          const bStats = statsMap.get(b.id) || { followers: 0, likes: 0 };
-          
-          const followerDiff = bStats.followers - aStats.followers;
-          if (followerDiff !== 0) return followerDiff;
-          
-          return bStats.likes - aStats.likes;
-        });
-        championId = sorted[0]?.id || null;
-      }
+      // Determine champion (highest rated)
+      const championId = barbers?.[0]?.barber_id || null;
 
       // Transform to ImageData format
-  const contenders = (barbers || []).map((barber, index): ImageData => {
-    const profile = avatarMap.get(barber.user_id);
-    const barberStats = statsMap.get(barber.id);
-    
-    // Normalize country code: empty string → 'XX'
-    const normalizedCountryCode = barber.country_code?.trim() || 'XX';
-    
-    return {
-      id: barber.user_id,
-      barberId: barber.id,
-      src: profile?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber.id}`,
-      alt: profile?.displayName || barber.name || 'Barber',
-      title: profile?.displayName || barber.name || 'Barber',
-      description: `Country: ${normalizedCountryCode} - Professional barber competing in the global league`,
-      countryCode: normalizedCountryCode,
-      isChampion: barber.id === championId,
-      rating: barber.rating || 0,
-      rank: index + 1,
-      location: normalizedCountryCode,
-      stats: barberStats ? {
-        followers: barberStats.followers,
-        likes: barberStats.likes
-      } : undefined
-    };
-  });
+      const contenders = (barbers || []).map((barber, index): ImageData => {
+        const normalizedCountryCode = barber.country_code?.trim() || 'XX';
+        
+        return {
+          id: barber.user_id,
+          barberId: barber.barber_id,
+          src: barber.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber.barber_id}`,
+          alt: barber.display_name || barber.barber_name || 'Barber',
+          title: barber.display_name || barber.barber_name || 'Barber',
+          description: `Professional barber competing in the global league`,
+          countryCode: normalizedCountryCode,
+          isChampion: barber.barber_id === championId,
+          rating: barber.rating || 0,
+          rank: index + 1,
+          location: barber.location || normalizedCountryCode,
+          stats: {
+            followers: barber.follower_count,
+            likes: barber.like_count
+          }
+        };
+      });
 
       return { contenders, championId };
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
   });
 
   const contenders = contendersData.contenders;

@@ -50,108 +50,67 @@ export const DynamicBattleHero = () => {
     refetchInterval: 10000
   });
 
-  // Fetch barber profiles for the battle
+  // Fetch barber profiles for the battle using unified view
   const { data: barbers, isLoading: barbersLoading } = useQuery({
     queryKey: ['battleBarbers', battle?.barber1_id, battle?.barber2_id],
     queryFn: async () => {
       if (!battle?.barber1_id || !battle?.barber2_id) return [];
 
-      // Fetch barber profiles by id
-      const { data: barberProfiles, error: barberError } = await supabase
-        .from('barber_profiles')
-        .select('id, user_id, name, country_code, featured_video_id, live_video_id, is_live')
-        .in('id', [battle.barber1_id, battle.barber2_id]);
+      const { data, error } = await supabase
+        .from('public_barber_profiles')
+        .select('*')
+        .in('barber_id', [battle.barber1_id, battle.barber2_id]);
       
-      if (barberError) throw barberError;
+      if (error) throw error;
 
-      // Fetch user profiles for avatar and display_name
-      const userIds = barberProfiles?.map(b => b.user_id) || [];
-      const { data: userProfiles, error: profileError } = await supabase
-        .from('profiles')
-        .select('user_id, avatar_url, display_name, country_code')
-        .in('user_id', userIds);
-      
-      if (profileError) throw profileError;
-
-      // Fetch barber stats
-      const barberIds = barberProfiles?.map(b => b.id) || [];
-      const { data: barberStats } = await supabase
-        .from('barber_stats')
-        .select('barber_id, follower_count, like_count')
-        .in('barber_id', barberIds);
-
-      // Merge data
-      const mergedData = barberProfiles?.map(barber => {
-        const userProfile = userProfiles?.find(p => p.user_id === barber.user_id);
-        const stats = barberStats?.find(s => s.barber_id === barber.id);
-        return {
-          ...barber,
-          avatar_url: userProfile?.avatar_url || undefined,
-          display_name: userProfile?.display_name || barber.name,
-          country_code: barber.country_code || userProfile?.country_code || 'us',
-          featured_video_id: barber.featured_video_id,
-          live_video_id: barber.live_video_id,
-          is_live: barber.is_live,
-          followers: stats?.follower_count || 0,
-          likes: stats?.like_count || 0
-        };
-      });
-
-      // Preserve order: barber1, barber2
+      // Transform to BarberProfile format and preserve order
       const orderedBarbers = [
-        mergedData?.find(b => b.id === battle.barber1_id),
-        mergedData?.find(b => b.id === battle.barber2_id)
-      ].filter(Boolean) as BarberProfile[];
+        data?.find(b => b.barber_id === battle.barber1_id),
+        data?.find(b => b.barber_id === battle.barber2_id)
+      ].filter(Boolean).map(barber => ({
+        id: barber.barber_id,
+        user_id: barber.user_id,
+        name: barber.barber_name,
+        display_name: barber.display_name || barber.barber_name,
+        avatar_url: barber.avatar_url,
+        country_code: barber.country_code || 'US',
+        featured_video_id: barber.featured_video_id,
+        live_video_id: barber.live_video_id,
+        is_live: barber.is_live,
+        followers: barber.follower_count,
+        likes: barber.like_count
+      })) as BarberProfile[];
 
       return orderedBarbers;
     },
     enabled: !!battle?.barber1_id && !!battle?.barber2_id
   });
 
-  // Fallback: fetch latest 2 barbers if no battle
+  // Fallback: fetch latest 2 barbers if no battle using unified view
   const { data: featuredBarbers } = useQuery({
     queryKey: ['featuredBarbers'],
     queryFn: async () => {
-      const { data: barberProfiles, error: barberError } = await supabase
-        .from('barber_profiles')
-        .select('id, user_id, name, country_code, featured_video_id, live_video_id, is_live')
-        .order('updated_at', { ascending: false })
+      const { data, error } = await supabase
+        .from('public_barber_profiles')
+        .select('*')
+        .order('barber_updated_at', { ascending: false })
         .limit(2);
       
-      if (barberError) throw barberError;
+      if (error) throw error;
 
-      const userIds = barberProfiles?.map(b => b.user_id) || [];
-      const { data: userProfiles, error: profileError } = await supabase
-        .from('profiles')
-        .select('user_id, avatar_url, display_name, country_code')
-        .in('user_id', userIds);
-      
-      if (profileError) throw profileError;
-
-      // Fetch barber stats
-      const barberIds = barberProfiles?.map(b => b.id) || [];
-      const { data: barberStats } = await supabase
-        .from('barber_stats')
-        .select('barber_id, follower_count, like_count')
-        .in('barber_id', barberIds);
-
-      const mergedData = barberProfiles?.map(barber => {
-        const userProfile = userProfiles?.find(p => p.user_id === barber.user_id);
-        const stats = barberStats?.find(s => s.barber_id === barber.id);
-        return {
-          ...barber,
-          avatar_url: userProfile?.avatar_url || undefined,
-          display_name: userProfile?.display_name || barber.name,
-          country_code: barber.country_code || userProfile?.country_code || 'us',
-          featured_video_id: barber.featured_video_id,
-          live_video_id: barber.live_video_id,
-          is_live: barber.is_live,
-          followers: stats?.follower_count || 0,
-          likes: stats?.like_count || 0
-        };
-      });
-
-      return mergedData as BarberProfile[];
+      return data?.map(barber => ({
+        id: barber.barber_id,
+        user_id: barber.user_id,
+        name: barber.barber_name,
+        display_name: barber.display_name || barber.barber_name,
+        avatar_url: barber.avatar_url,
+        country_code: barber.country_code || 'US',
+        featured_video_id: barber.featured_video_id,
+        live_video_id: barber.live_video_id,
+        is_live: barber.is_live,
+        followers: barber.follower_count,
+        likes: barber.like_count
+      })) as BarberProfile[];
     },
     enabled: !battle || !barbers || barbers.length < 2
   });
