@@ -23,26 +23,29 @@ export default function BarberPublicProfile() {
   const { data: barberData, isLoading } = useQuery({
     queryKey: ['barber-public-profile', userId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First get barber profile
+      const { data: barberProfile, error: barberError } = await supabase
         .from('barber_profiles')
-        .select(`
-          *,
-          profiles:user_id (
-            display_name,
-            avatar_url,
-            bio,
-            country_code,
-            instagram_handle,
-            facebook_handle,
-            twitter_handle,
-            youtube_handle
-          )
-        `)
+        .select('*')
         .eq('user_id', userId)
-        .single();
+        .maybeSingle();
       
-      if (error) throw error;
-      return data;
+      if (barberError) throw barberError;
+      if (!barberProfile) return null;
+
+      // Then get user profile data
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('display_name, avatar_url, bio, country_code')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (profileError) throw profileError;
+
+      return {
+        ...barberProfile,
+        profiles: userProfile
+      };
     },
     enabled: !!userId
   });
@@ -70,21 +73,23 @@ export default function BarberPublicProfile() {
     enabled: !!barberData?.id
   });
 
-  // Fetch portfolio
+  // Fetch recent battles using barber_profile id
   const { data: recentBattles } = useQuery({
-    queryKey: ['barber-battles', userId],
+    queryKey: ['barber-battles', barberData?.id],
     queryFn: async () => {
+      if (!barberData?.id) return [];
+      
       const { data, error } = await supabase
         .from('battles')
         .select('*')
-        .or(`barber1_id.eq.${userId},barber2_id.eq.${userId}`)
+        .or(`barber1_id.eq.${barberData.id},barber2_id.eq.${barberData.id}`)
         .order('created_at', { ascending: false })
         .limit(6);
       
       if (error) throw error;
       return data;
     },
-    enabled: !!userId
+    enabled: !!barberData?.id
   });
 
   // Fetch portfolio
