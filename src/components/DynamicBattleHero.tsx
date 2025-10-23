@@ -125,8 +125,6 @@ export const DynamicBattleHero = () => {
     queryFn: async () => {
       if (!battle?.barber1_id || !battle?.barber2_id) return [];
 
-      console.log('Fetching barbers with IDs:', battle.barber1_id, battle.barber2_id);
-
       // Fetch barber profiles by id (battles store barber_profiles.id in barber1_id/barber2_id)
       const {
         data: barberProfiles,
@@ -135,16 +133,12 @@ export const DynamicBattleHero = () => {
         .from('barber_profiles')
         .select('id, user_id, name, country_code, is_live, live_video_id, featured_video_id')
         .in('id', [battle.barber1_id, battle.barber2_id]);
-      
-      console.log('Barber profiles fetched:', barberProfiles);
       if (barberError) {
-        console.error('Barber fetch error:', barberError);
         throw barberError;
       }
 
       // Extract user_ids to fetch profile data
       const userIds = (barberProfiles || []).map(b => b.user_id);
-      console.log('User IDs to fetch:', userIds);
       
       // Fetch user profiles for country_code and avatar_url
       const {
@@ -154,10 +148,7 @@ export const DynamicBattleHero = () => {
         .from('profiles')
         .select('user_id, country_code, avatar_url, display_name')
         .in('user_id', userIds);
-      
-      console.log('User profiles fetched:', userProfiles);
       if (profileError) {
-        console.error('Profile fetch error:', profileError);
         throw profileError;
       }
 
@@ -179,8 +170,6 @@ export const DynamicBattleHero = () => {
       const ordered = [battle.barber1_id, battle.barber2_id]
         .map(id => merged.find(b => b.id === id))
         .filter(Boolean);
-      
-      console.log('Final ordered barbers:', ordered);
       return ordered;
     },
     enabled: !!battle?.barber1_id && !!battle?.barber2_id
@@ -468,7 +457,7 @@ export const DynamicBattleHero = () => {
   }
 
   // Fallback wireframe when no real battle exists (keeps layout/buttons/ads)
-  if (!battle || !barbers || barbers.length < 2) {
+  if (!battle) {
     return <div className="pt-20 sm:pt-24 lg:pt-32 pb-4 sm:pb-6 lg:pb-8 px-1 sm:px-2 lg:px-4 max-w-[95vw] sm:max-w-4xl lg:max-w-5xl mx-auto">
         <div className="w-full portrait:aspect-[3/4] sm:portrait:aspect-[4/5] landscape:aspect-[16/10] lg:landscape:aspect-[16/9] bg-card rounded-lg sm:rounded-xl lg:rounded-2xl shadow-xl sm:shadow-2xl border border-primary/30 sm:border-2 sm:border-primary/50 animate-glow overflow-hidden relative transform-gpu will-change-transform mx-0 my-[24px] py-0 px-0">
           <div className="h-full flex">
@@ -939,7 +928,7 @@ export const DynamicBattleHero = () => {
               <div className="flex-1 relative overflow-hidden" onClick={() => handleVote(barber2?.user_id || '')}>
                 {/* Flag Background */}
                 <div className="absolute inset-0" style={{
-                backgroundImage: `url(${getFlagImageUrl(barber2?.country_code || 'ca')})`,
+                backgroundImage: `url(${getFlagImageUrl(barber2?.country_code || 'us')})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 opacity: 0.3
