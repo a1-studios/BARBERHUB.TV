@@ -18,10 +18,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Loader2, Trophy } from 'lucide-react';
+import { CalendarIcon, Loader2, Trophy, Youtube } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { extractYouTubeVideoId, getYouTubeInputHelperText } from '@/utils/youtubeHelpers';
 
 const battleSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
@@ -36,6 +37,8 @@ const battleSchema = z.object({
   voting_ends_at: z.date().optional(),
   rules: z.string().optional(),
   cover_image_url: z.string().url().optional().or(z.literal('')),
+  barber1_youtube_video_id: z.string().optional(),
+  barber2_youtube_video_id: z.string().optional(),
 }).refine((data) => {
   if (data.starts_at && data.ends_at) {
     return data.ends_at > data.starts_at;
@@ -108,6 +111,8 @@ const CreateBattle = () => {
       max_participants: undefined,
       rules: '',
       cover_image_url: '',
+      barber1_youtube_video_id: '',
+      barber2_youtube_video_id: '',
     },
   });
 
@@ -128,6 +133,14 @@ const CreateBattle = () => {
     try {
       setSubmitting(true);
 
+      // Extract video IDs from input (handles URLs or raw IDs)
+      const barber1VideoId = data.barber1_youtube_video_id 
+        ? extractYouTubeVideoId(data.barber1_youtube_video_id) 
+        : null;
+      const barber2VideoId = data.barber2_youtube_video_id 
+        ? extractYouTubeVideoId(data.barber2_youtube_video_id) 
+        : null;
+
       const battleData = {
         title: data.title,
         description: data.description || null,
@@ -143,6 +156,8 @@ const CreateBattle = () => {
         ends_at: data.ends_at?.toISOString() || null,
         submission_deadline: data.submission_deadline?.toISOString() || null,
         voting_ends_at: data.voting_ends_at?.toISOString() || null,
+        barber1_youtube_video_id: barber1VideoId,
+        barber2_youtube_video_id: barber2VideoId,
       };
 
       const { data: battle, error } = await supabase
@@ -528,6 +543,60 @@ const CreateBattle = () => {
                       </FormItem>
                     )}
                   />
+
+                  {/* YouTube Live Stream Setup Section */}
+                  <div className="space-y-4 pt-6 border-t border-border">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Youtube className="h-5 w-5 text-red-500" />
+                      <h3 className="text-lg font-semibold">Live Battle Setup (Optional)</h3>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      For live viewer tracking during battles, add YouTube Live Stream Video IDs for both competitors.
+                      Start your YouTube live streams first, then paste the video IDs or URLs here.
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="barber1_youtube_video_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Barber 1 YouTube Video ID</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="dQw4w9WgXcQ or full URL"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormDescription className="text-xs">
+                              {getYouTubeInputHelperText()}
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="barber2_youtube_video_id"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Barber 2 YouTube Video ID</FormLabel>
+                            <FormControl>
+                              <Input
+                                placeholder="dQw4w9WgXcQ or full URL"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormDescription className="text-xs">
+                              {getYouTubeInputHelperText()}
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
 
                   <div className="flex gap-4 pt-4">
                     <Button
