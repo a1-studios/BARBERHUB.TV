@@ -125,67 +125,82 @@ export const DynamicBattleHero = () => {
     queryFn: async () => {
       if (!battle?.barber1_id || !battle?.barber2_id) return [];
 
-      // Fetch barber profiles with live status and video IDs
+      // Fetch barber profiles by their ID (battle.barber1_id/barber2_id are barber_profiles.id)
       const {
         data: barberProfiles,
         error: barberError
       } = await supabase
         .from('barber_profiles')
         .select('id, user_id, name, country_code, is_live, live_video_id, featured_video_id')
-        .in('user_id', [battle.barber1_id, battle.barber2_id]);
+        .in('id', [battle.barber1_id, battle.barber2_id]);
       if (barberError) throw barberError;
+      if (!barberProfiles || barberProfiles.length === 0) return [];
 
-      // Fetch user profiles for country_code and avatar_url
+      // Extract user_ids from barber profiles
+      const userIds = barberProfiles.map(b => b.user_id);
+
+      // Fetch user profiles for country_code and avatar_url using user_ids
       const {
         data: userProfiles,
         error: profileError
       } = await supabase
         .from('profiles')
         .select('user_id, country_code, avatar_url, display_name')
-        .in('user_id', [battle.barber1_id, battle.barber2_id]);
+        .in('user_id', userIds);
       if (profileError) throw profileError;
 
-      // Merge the data, prioritizing barber_profiles country_code and adding avatar
-      const mergedData = barberProfiles?.map(barber => {
+      // Merge the data, prioritizing barber_profiles country_code, no dicebear fallback
+      const mergedData = barberProfiles.map(barber => {
         const userProfile = userProfiles?.find(p => p.user_id === barber.user_id);
         return {
           ...barber,
           country_code: barber.country_code || userProfile?.country_code || 'us',
-          avatar_url: userProfile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber.id}`,
+          avatar_url: userProfile?.avatar_url || undefined,
           display_name: userProfile?.display_name || barber.name
         };
       });
-      return mergedData;
+      
+      // Preserve order: return in [barber1_id, barber2_id] order
+      const orderedBarbers = [
+        mergedData.find(b => b.id === battle.barber1_id),
+        mergedData.find(b => b.id === battle.barber2_id)
+      ].filter(Boolean);
+      
+      return orderedBarbers;
     },
     enabled: !!battle?.barber1_id && !!battle?.barber2_id
   });
 
-  // Get like states for real barbers
+  // Get barber user_ids for likes (extract from barbers array)
+  const barber1UserId = barbers?.find(b => b.id === battle?.barber1_id)?.user_id;
+  const barber2UserId = barbers?.find(b => b.id === battle?.barber2_id)?.user_id;
+
+  // Get like states using correct user_ids
   const barber1LikeQuery = useQuery({
-    queryKey: ['user_like', battle?.barber1_id, user?.id],
+    queryKey: ['user_like', barber1UserId, user?.id],
     queryFn: async () => {
-      if (!user || !battle?.barber1_id) return false;
+      if (!user || !barber1UserId) return false;
       const {
         data,
         error
-      } = await supabase.from('creator_likes').select('id').eq('creator_id', battle.barber1_id).eq('user_id', user.id).maybeSingle();
+      } = await supabase.from('creator_likes').select('id').eq('creator_id', barber1UserId).eq('user_id', user.id).maybeSingle();
       if (error) throw error;
       return !!data;
     },
-    enabled: !!user && !!battle?.barber1_id
+    enabled: !!user && !!barber1UserId
   });
   const barber2LikeQuery = useQuery({
-    queryKey: ['user_like', battle?.barber2_id, user?.id],
+    queryKey: ['user_like', barber2UserId, user?.id],
     queryFn: async () => {
-      if (!user || !battle?.barber2_id) return false;
+      if (!user || !barber2UserId) return false;
       const {
         data,
         error
-      } = await supabase.from('creator_likes').select('id').eq('creator_id', battle.barber2_id).eq('user_id', user.id).maybeSingle();
+      } = await supabase.from('creator_likes').select('id').eq('creator_id', barber2UserId).eq('user_id', user.id).maybeSingle();
       if (error) throw error;
       return !!data;
     },
-    enabled: !!user && !!battle?.barber2_id
+    enabled: !!user && !!barber2UserId
   });
 
   // Fetch battle submissions
@@ -301,8 +316,8 @@ export const DynamicBattleHero = () => {
       }
     }
   };
-  const handleLike = async (barberId: string) => {
-    if (!barberId) {
+  const handleLike = async (barberUserId: string) => {
+    if (!barberUserId) {
       toast.info("No active battle yet");
       return;
     }
@@ -310,14 +325,15 @@ export const DynamicBattleHero = () => {
       toast.error("Please sign in to like barbers");
       return;
     }
+    // Determine if this user_id is liked
     let isLiked = false;
-    if (barberId === battle?.barber1_id) {
+    if (barberUserId === barber1UserId) {
       isLiked = barber1LikeQuery.data || false;
-    } else if (barberId === battle?.barber2_id) {
+    } else if (barberUserId === barber2UserId) {
       isLiked = barber2LikeQuery.data || false;
     }
     toggleLike.mutate({
-      creatorId: barberId,
+      creatorId: barberUserId,
       isLiked
     });
   };
@@ -437,161 +453,21 @@ export const DynamicBattleHero = () => {
       </div>;
   }
 
-  // Fallback wireframe when no real battle exists (keeps layout/buttons/ads)
+  // If no battle or barbers, show nothing (can add a message if desired)
   if (!battle || !barbers || barbers.length < 2) {
-    return <div className="pt-20 sm:pt-24 lg:pt-32 pb-4 sm:pb-6 lg:pb-8 px-1 sm:px-2 lg:px-4 max-w-[95vw] sm:max-w-4xl lg:max-w-5xl mx-auto">
-        <div className="w-full portrait:aspect-[3/4] sm:portrait:aspect-[4/5] landscape:aspect-[16/10] lg:landscape:aspect-[16/9] bg-card rounded-lg sm:rounded-xl lg:rounded-2xl shadow-xl sm:shadow-2xl border border-primary/30 sm:border-2 sm:border-primary/50 animate-glow overflow-hidden relative transform-gpu will-change-transform mx-0 my-[24px] py-0 px-0">
-          <div className="h-full flex">
-            {/* Left Side */}
-            <div className="flex-1 relative overflow-hidden" onClick={() => toast.info("Voting will be available when a battle is live")}>
-              {/* Flag Background */}
-              <div className="absolute inset-0" style={{
-              backgroundImage: `url(${getFlagImageUrl(barbers?.[0]?.country_code || 'us')})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              opacity: 0.3
-            }} />
-
-              {/* Barber Photo */}
-              <div className="absolute top-[12%] left-1/2 transform -translate-x-1/2 w-[20vw] h-[20vw] max-w-[80px] max-h-[80px] sm:max-w-[120px] sm:max-h-[120px] lg:max-w-[160px] lg:max-h-[160px] rounded-full overflow-hidden border-2 sm:border-4 border-white/80 shadow-xl sm:shadow-2xl">
-                <img 
-                  src={barbers?.[0]?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barbers?.[0]?.id}`} 
-                  alt={barbers?.[0]?.display_name || barbers?.[0]?.name || 'Barber 1'} 
-                  className="w-full h-full object-cover" 
-                />
-              </div>
-
-              {/* Barber Name */}
-              <div className="absolute top-[32%] left-1/2 transform -translate-x-1/2 text-center z-10">
-                <h3 className="text-white text-[8px] xs:text-[10px] sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">
-                  {barbers?.[0]?.display_name || barbers?.[0]?.name || 'Barber 1'}
-                </h3>
-              </div>
-
-              {/* Video Box - Placeholder */}
-              <div className="absolute top-[45%] left-1/2 transform -translate-x-1/2 w-[35vw] h-[35vw] max-w-[140px] max-h-[140px] sm:max-w-[200px] sm:max-h-[200px] lg:max-w-[260px] lg:max-h-[260px] bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg cursor-pointer group hover:bg-primary/20 transition-all duration-300">
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 group-hover:from-primary/20 group-hover:to-primary/40 transition-all duration-300">
-                  <Play className="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white/60 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
-                </div>
-              </div>
-
-              <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/60" />
-
-              {/* Vote Percentage */}
-              <div className="absolute top-1 sm:top-2 lg:top-3 left-1 sm:left-2 lg:left-3 z-10">
-                <div className="bg-white/20 backdrop-blur-sm rounded-full px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 lg:py-1.5">
-                  <span className="text-white font-bold text-xs sm:text-sm lg:text-lg xl:text-xl">50%</span>
-                </div>
-              </div>
-
-              {/* Vertical Action Buttons */}
-              
-            </div>
-
-            {/* Vertical Advertisement Bar */}
-            <div className="absolute left-1/2 top-0 bottom-0 transform -translate-x-1/2 z-20 w-10 sm:w-14 lg:w-20">
-              <div className="h-full bg-gradient-to-b from-black/80 via-black/60 to-black/80 backdrop-blur-sm border-x border-white/20 sm:border-x-2 flex flex-col">
-                <div className="flex-1 border-b border-white/20 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-white/60 text-[8px] sm:text-xs font-medium">AD</div>
-                    <div className="text-white/40 text-[6px] sm:text-[10px]">SPOT 1</div>
-                  </div>
-                </div>
-                <div className="flex-1 border-b border-white/20 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-white/60 text-[8px] sm:text-xs font-medium">AD</div>
-                    <div className="text-white/40 text-[6px] sm:text-[10px]">SPOT 2</div>
-                  </div>
-                </div>
-                <div className="flex-1 border-b border-white/20 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-white/60 text-[8px] sm:text-xs font-medium">AD</div>
-                    <div className="text-white/40 text-[6px] sm:text-[10px]">SPOT 3</div>
-                  </div>
-                </div>
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-white/60 text-[8px] sm:text-xs font-medium">AD</div>
-                    <div className="text-white/40 text-[6px] sm:text-[10px]">SPOT 4</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Side */}
-            <div className="flex-1 relative overflow-hidden" onClick={() => toast.info("Voting will be available when a battle is live")}>
-              {/* Flag Background */}
-              <div className="absolute inset-0" style={{
-              backgroundImage: `url(${getFlagImageUrl(barbers?.[1]?.country_code || 'ca')})`,
-              backgroundSize: 'cover',
-              backgroundPosition: 'center',
-              opacity: 0.3
-            }} />
-
-              {/* Barber Photo */}
-              <div className="absolute top-[12%] right-1/2 transform translate-x-1/2 w-[20vw] h-[20vw] max-w-[80px] max-h-[80px] sm:max-w-[120px] sm:max-h-[120px] lg:max-w-[160px] lg:max-h-[160px] rounded-full overflow-hidden border-2 sm:border-4 border-white/80 shadow-xl sm:shadow-2xl">
-                <img 
-                  src={barbers?.[1]?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barbers?.[1]?.id}`} 
-                  alt={barbers?.[1]?.display_name || barbers?.[1]?.name || 'Barber 2'} 
-                  className="w-full h-full object-cover" 
-                />
-              </div>
-
-              {/* Barber Name */}
-              <div className="absolute top-[32%] right-1/2 transform translate-x-1/2 text-center z-10">
-                <h3 className="text-white text-[8px] xs:text-[10px] sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">
-                  {barbers?.[1]?.display_name || barbers?.[1]?.name || 'Barber 2'}
-                </h3>
-              </div>
-
-              {/* Video Box */}
-              <div className="absolute top-[45%] right-1/2 transform translate-x-1/2 w-[35vw] h-[35vw] max-w-[140px] max-h-[140px] sm:max-w-[200px] sm:max-h-[200px] lg:max-w-[260px] lg:max-h-[260px] bg-black/80 border border-white/30 rounded-lg overflow-hidden shadow-lg cursor-pointer group hover:bg-primary/20 transition-all duration-300">
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900 group-hover:from-primary/20 group-hover:to-primary/40 transition-all duration-300">
-                  <Play className="w-4 h-4 sm:w-6 sm:h-6 lg:w-8 lg:h-8 text-white/60 group-hover:text-white group-hover:scale-110 transition-all duration-300" />
-                </div>
-              </div>
-
-              <div className="absolute inset-0 bg-gradient-to-l from-black/60 via-black/40 to-black/60" />
-
-              {/* Vote Percentage */}
-              <div className="absolute top-1 sm:top-2 lg:top-3 right-1 sm:right-2 lg:right-3 z-10">
-                <div className="bg-white/20 backdrop-blur-sm rounded-full px-1.5 sm:px-2 lg:px-3 py-0.5 sm:py-1 lg:py-1.5">
-                  <span className="text-white font-bold text-xs sm:text-sm lg:text-lg xl:text-xl">50%</span>
-                </div>
-              </div>
-
-              {/* Vertical Action Buttons */}
-              
-            </div>
-          </div>
-
-          {/* Bottom Action Buttons (Left) */}
-          <div className="absolute bottom-3 sm:bottom-6 left-3 sm:left-6 z-10 flex gap-1 sm:gap-2">
-            <Button variant="secondary" size="sm" onClick={e => {
-            e.stopPropagation();
-            handleLike(battle?.barber1_id || '');
-          }} className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30 text-xs sm:text-sm px-2 sm:px-3">
-              <Heart className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-              <span className="hidden xs:inline">Like</span>
-            </Button>
-            <Button variant="secondary" size="sm" onClick={e => {
-            e.stopPropagation();
-            handleDonate(battle?.barber1_id || '', barbers?.[0]?.name || 'Barber 1');
-          }} className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30 text-xs sm:text-sm px-2 sm:px-3">
-              <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
-              <span className="hidden xs:inline">Donate</span>
-            </Button>
-          </div>
+    return <div className="pt-24 lg:pt-28 pb-8 px-4 max-w-7xl mx-auto">
+        <div className="aspect-video bg-card rounded-2xl shadow-2xl border-2 border-primary/50 flex items-center justify-center">
+          <div className="text-lg text-muted-foreground">No active battle at the moment</div>
         </div>
       </div>;
   }
-  const barber1 = barbers.find(b => b.user_id === battle.barber1_id);
-  const barber2 = barbers.find(b => b.user_id === battle.barber2_id);
+  const barber1 = barbers.find(b => b.id === battle.barber1_id);
+  const barber2 = barbers.find(b => b.id === battle.barber2_id);
   const percentages = calculatePercentages();
 
-  // Get barber photos from profiles
-  const barber1Photo = barber1?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber1?.id}`;
-  const barber2Photo = barber2?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber2?.id}`;
+  // Get barber photos from profiles (no dicebear fallback)
+  const barber1Photo = barber1?.avatar_url;
+  const barber2Photo = barber2?.avatar_url;
 
   // Determine render mode based on battle status
   const renderMode = battle.status === 'voting' ? 'voting' : battle.status === 'completed' ? 'results' : 'preview';
@@ -760,9 +636,9 @@ export const DynamicBattleHero = () => {
                 opacity: 0.3
               }} />
                 
-                {/* Barber Photo - Smaller and Clearer */}
-                <div className="absolute top-[25%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
-                  <img src={barber1Photo} alt={barber1?.name} className="w-full h-full object-cover" />
+                {/* Barber Photo - Empty circle if no avatar */}
+                <div className="absolute top-[25%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl bg-gray-700/50">
+                  {barber1Photo && <img src={barber1Photo} alt={barber1?.name} className="w-full h-full object-cover" />}
                 </div>
 
                 {/* Barber Name - Under profile photo */}
@@ -909,15 +785,15 @@ export const DynamicBattleHero = () => {
               <div className="flex-1 relative overflow-hidden" onClick={() => handleVote(barber2?.user_id || '')}>
                 {/* Flag Background */}
                 <div className="absolute inset-0" style={{
-                backgroundImage: `url(${getFlagImageUrl(barber2?.country_code || 'ca')})`,
+                backgroundImage: `url(${getFlagImageUrl(barber2?.country_code || 'us')})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 opacity: 0.3
               }} />
                 
-                {/* Barber Photo - Smaller and Clearer */}
-                <div className="absolute top-[25%] right-1/2 transform translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
-                  <img src={barber2Photo} alt={barber2?.name} className="w-full h-full object-cover" />
+                {/* Barber Photo - Empty circle if no avatar */}
+                <div className="absolute top-[25%] right-1/2 transform translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl bg-gray-700/50">
+                  {barber2Photo && <img src={barber2Photo} alt={barber2?.name} className="w-full h-full object-cover" />}
                 </div>
 
                 {/* Barber Name - Under profile photo */}
@@ -1021,14 +897,14 @@ export const DynamicBattleHero = () => {
             <div className="absolute bottom-3 sm:bottom-6 left-3 sm:left-6 z-10 flex gap-1 sm:gap-2">
               <Button variant="secondary" size="sm" onClick={e => {
               e.stopPropagation();
-              handleLike(barber1?.user_id || '');
+              handleLike(barber1UserId || '');
             }} className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30 text-xs sm:text-sm px-2 sm:px-3">
                 <Heart className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                 <span className="hidden xs:inline">Like</span>
               </Button>
               <Button variant="secondary" size="sm" onClick={e => {
               e.stopPropagation();
-              handleDonate(barber1?.user_id || '', barber1?.name || '');
+              handleDonate(barber1UserId || '', barber1?.name || '');
             }} className="bg-white/20 backdrop-blur-sm hover:bg-white/30 text-white border-white/30 text-xs sm:text-sm px-2 sm:px-3">
                 <DollarSign className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
                 <span className="hidden xs:inline">Donate</span>
