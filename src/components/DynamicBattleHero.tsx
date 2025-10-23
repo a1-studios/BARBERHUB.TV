@@ -152,41 +152,52 @@ export const DynamicBattleHero = () => {
         return {
           ...barber,
           country_code: barber.country_code || userProfile?.country_code || 'us',
-          avatar_url: userProfile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber.id}`,
+          avatar_url: userProfile?.avatar_url || undefined,
           display_name: userProfile?.display_name || barber.name
         };
       });
-      return mergedData;
+      
+      // Preserve order based on battle.barber1_id and battle.barber2_id
+      const orderedBarbers = [
+        mergedData?.find(b => b.id === battle.barber1_id),
+        mergedData?.find(b => b.id === battle.barber2_id)
+      ].filter(Boolean);
+      
+      return orderedBarbers;
     },
     enabled: !!battle?.barber1_id && !!battle?.barber2_id
   });
 
-  // Get like states for real barbers
+  // Get barber user_ids for likes
+  const barber1UserId = barbers?.find(b => b.id === battle?.barber1_id)?.user_id;
+  const barber2UserId = barbers?.find(b => b.id === battle?.barber2_id)?.user_id;
+
+  // Get like states for real barbers using user_ids
   const barber1LikeQuery = useQuery({
-    queryKey: ['user_like', battle?.barber1_id, user?.id],
+    queryKey: ['user_like', barber1UserId, user?.id],
     queryFn: async () => {
-      if (!user || !battle?.barber1_id) return false;
+      if (!user || !barber1UserId) return false;
       const {
         data,
         error
-      } = await supabase.from('creator_likes').select('id').eq('creator_id', battle.barber1_id).eq('user_id', user.id).maybeSingle();
+      } = await supabase.from('creator_likes').select('id').eq('creator_id', barber1UserId).eq('user_id', user.id).maybeSingle();
       if (error) throw error;
       return !!data;
     },
-    enabled: !!user && !!battle?.barber1_id
+    enabled: !!user && !!barber1UserId
   });
   const barber2LikeQuery = useQuery({
-    queryKey: ['user_like', battle?.barber2_id, user?.id],
+    queryKey: ['user_like', barber2UserId, user?.id],
     queryFn: async () => {
-      if (!user || !battle?.barber2_id) return false;
+      if (!user || !barber2UserId) return false;
       const {
         data,
         error
-      } = await supabase.from('creator_likes').select('id').eq('creator_id', battle.barber2_id).eq('user_id', user.id).maybeSingle();
+      } = await supabase.from('creator_likes').select('id').eq('creator_id', barber2UserId).eq('user_id', user.id).maybeSingle();
       if (error) throw error;
       return !!data;
     },
-    enabled: !!user && !!battle?.barber2_id
+    enabled: !!user && !!barber2UserId
   });
 
   // Fetch battle submissions
@@ -302,8 +313,8 @@ export const DynamicBattleHero = () => {
       }
     }
   };
-  const handleLike = async (barberId: string) => {
-    if (!barberId) {
+  const handleLike = async (barberUserId: string) => {
+    if (!barberUserId) {
       toast.info("No active battle yet");
       return;
     }
@@ -312,13 +323,13 @@ export const DynamicBattleHero = () => {
       return;
     }
     let isLiked = false;
-    if (barberId === battle?.barber1_id) {
+    if (barberUserId === barber1UserId) {
       isLiked = barber1LikeQuery.data || false;
-    } else if (barberId === battle?.barber2_id) {
+    } else if (barberUserId === barber2UserId) {
       isLiked = barber2LikeQuery.data || false;
     }
     toggleLike.mutate({
-      creatorId: barberId,
+      creatorId: barberUserId,
       isLiked
     });
   };
@@ -454,12 +465,16 @@ export const DynamicBattleHero = () => {
             }} />
 
               {/* Barber Photo */}
-              <div className="absolute top-[12%] left-1/2 transform -translate-x-1/2 w-[20vw] h-[20vw] max-w-[80px] max-h-[80px] sm:max-w-[120px] sm:max-h-[120px] lg:max-w-[160px] lg:max-h-[160px] rounded-full overflow-hidden border-2 sm:border-4 border-white/80 shadow-xl sm:shadow-2xl">
-                <img 
-                  src={barbers?.[0]?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barbers?.[0]?.id}`} 
-                  alt={barbers?.[0]?.display_name || barbers?.[0]?.name || 'Barber 1'} 
-                  className="w-full h-full object-cover" 
-                />
+              <div className="absolute top-[12%] left-1/2 transform -translate-x-1/2 w-[20vw] h-[20vw] max-w-[80px] max-h-[80px] sm:max-w-[120px] sm:max-h-[120px] lg:max-w-[160px] lg:max-h-[160px] rounded-full overflow-hidden border-2 sm:border-4 border-white/80 shadow-xl sm:shadow-2xl bg-gray-200/50">
+                {barbers?.[0]?.avatar_url ? (
+                  <img 
+                    src={barbers[0].avatar_url} 
+                    alt={barbers[0]?.display_name || barbers[0]?.name || 'Barber 1'} 
+                    className="w-full h-full object-cover" 
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400" />
+                )}
               </div>
 
               {/* Barber Name */}
@@ -523,19 +538,23 @@ export const DynamicBattleHero = () => {
             <div className="flex-1 relative overflow-hidden" onClick={() => toast.info("Voting will be available when a battle is live")}>
               {/* Flag Background */}
               <div className="absolute inset-0" style={{
-              backgroundImage: `url(${getFlagImageUrl(barbers?.[1]?.country_code || 'ca')})`,
+              backgroundImage: `url(${getFlagImageUrl(barbers?.[1]?.country_code || 'us')})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
               opacity: 0.3
             }} />
 
               {/* Barber Photo */}
-              <div className="absolute top-[12%] right-1/2 transform translate-x-1/2 w-[20vw] h-[20vw] max-w-[80px] max-h-[80px] sm:max-w-[120px] sm:max-h-[120px] lg:max-w-[160px] lg:max-h-[160px] rounded-full overflow-hidden border-2 sm:border-4 border-white/80 shadow-xl sm:shadow-2xl">
-                <img 
-                  src={barbers?.[1]?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barbers?.[1]?.id}`} 
-                  alt={barbers?.[1]?.display_name || barbers?.[1]?.name || 'Barber 2'} 
-                  className="w-full h-full object-cover" 
-                />
+              <div className="absolute top-[12%] right-1/2 transform translate-x-1/2 w-[20vw] h-[20vw] max-w-[80px] max-h-[80px] sm:max-w-[120px] sm:max-h-[120px] lg:max-w-[160px] lg:max-h-[160px] rounded-full overflow-hidden border-2 sm:border-4 border-white/80 shadow-xl sm:shadow-2xl bg-gray-200/50">
+                {barbers?.[1]?.avatar_url ? (
+                  <img 
+                    src={barbers[1].avatar_url} 
+                    alt={barbers[1]?.display_name || barbers[1]?.name || 'Barber 2'} 
+                    className="w-full h-full object-cover" 
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400" />
+                )}
               </div>
 
               {/* Barber Name */}
@@ -590,9 +609,9 @@ export const DynamicBattleHero = () => {
   const barber2 = barbers.find(b => b.id === battle.barber2_id);
   const percentages = calculatePercentages();
 
-  // Get barber photos from profiles
-  const barber1Photo = barber1?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber1?.id}`;
-  const barber2Photo = barber2?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber2?.id}`;
+  // Get barber photos from profiles (leave empty if no avatar)
+  const barber1Photo = barber1?.avatar_url;
+  const barber2Photo = barber2?.avatar_url;
 
   // Determine render mode based on battle status
   const renderMode = battle.status === 'voting' ? 'voting' : battle.status === 'completed' ? 'results' : 'preview';
@@ -762,8 +781,12 @@ export const DynamicBattleHero = () => {
               }} />
                 
                 {/* Barber Photo - Smaller and Clearer */}
-                <div className="absolute top-[25%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
-                  <img src={barber1Photo} alt={barber1?.name} className="w-full h-full object-cover" />
+                <div className="absolute top-[25%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl bg-gray-200/50">
+                  {barber1Photo ? (
+                    <img src={barber1Photo} alt={barber1?.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400" />
+                  )}
                 </div>
 
                 {/* Barber Name - Under profile photo */}
@@ -917,8 +940,12 @@ export const DynamicBattleHero = () => {
               }} />
                 
                 {/* Barber Photo - Smaller and Clearer */}
-                <div className="absolute top-[25%] right-1/2 transform translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl">
-                  <img src={barber2Photo} alt={barber2?.name} className="w-full h-full object-cover" />
+                <div className="absolute top-[25%] right-1/2 transform translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl bg-gray-200/50">
+                  {barber2Photo ? (
+                    <img src={barber2Photo} alt={barber2?.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400" />
+                  )}
                 </div>
 
                 {/* Barber Name - Under profile photo */}
