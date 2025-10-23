@@ -2,12 +2,16 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useRealtimeBattleViewers } from '@/hooks/useRealtimeBattleViewers';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Calendar } from 'lucide-react';
+import { Calendar, Users, Eye } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
+import { motion } from 'framer-motion';
+import { AnimatedCounter } from '@/components/battles/AnimatedCounter';
+import { BattleCard } from '@/components/battles/BattleCard';
 
 const getCountryFlag = (countryCode: string | null): string => {
   if (!countryCode) return '🌍';
@@ -136,62 +140,16 @@ export const LiveBattleFeed = () => {
           )?.weighted_votes || 0;
 
           return (
-            <Card key={battle.id} className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex justify-between mb-4">
-                  <Badge variant={battle.status === 'voting' ? 'default' : 'secondary'}>
-                    {battle.status === 'voting' ? '🔴 LIVE' : 'UPCOMING'}
-                  </Badge>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                  <div className="text-center">
-                    <Avatar className="w-12 h-12 mx-auto mb-2">
-                      <AvatarImage src={battle.barber1?.avatar_url} />
-                      <AvatarFallback>
-                        {battle.barber1?.name?.charAt(0) || '?'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <p className="font-semibold text-sm truncate">
-                      {battle.barber1?.name || 'Unknown'}
-                    </p>
-                    <span className="text-2xl">
-                      {getCountryFlag(battle.barber1?.country_code)}
-                    </span>
-                    <div className="text-primary font-bold mt-1">{barber1Votes}</div>
-                    <div className="text-xs text-muted-foreground">votes</div>
-                  </div>
-
-                  <div className="flex items-center justify-center">
-                    <div className="text-2xl font-bold text-primary">VS</div>
-                  </div>
-
-                  <div className="text-center">
-                    <Avatar className="w-12 h-12 mx-auto mb-2">
-                      <AvatarImage src={battle.barber2?.avatar_url} />
-                      <AvatarFallback>
-                        {battle.barber2?.name?.charAt(0) || '?'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <p className="font-semibold text-sm truncate">
-                      {battle.barber2?.name || 'Unknown'}
-                    </p>
-                    <span className="text-2xl">
-                      {getCountryFlag(battle.barber2?.country_code)}
-                    </span>
-                    <div className="text-primary font-bold mt-1">{barber2Votes}</div>
-                    <div className="text-xs text-muted-foreground">votes</div>
-                  </div>
-                </div>
-
-                <Button
-                  className="w-full"
-                  onClick={() => navigate(`/battles/${battle.id}`)}
-                >
-                  {battle.status === 'voting' ? 'Vote Now' : 'View Battle'}
-                </Button>
-              </CardContent>
-            </Card>
+            <BattleCard
+              key={battle.id}
+              battleId={battle.id}
+              status={battle.status}
+              barber1={battle.barber1}
+              barber2={battle.barber2}
+              barber1Votes={barber1Votes}
+              barber2Votes={barber2Votes}
+              onViewBattle={() => navigate(`/battles/${battle.id}`)}
+            />
           );
         })}
       </div>

@@ -4,6 +4,7 @@ import { useParams, Navigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useRealtimeBattleViewers } from '@/hooks/useRealtimeBattleViewers';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +15,9 @@ import { format } from 'date-fns';
 import VotingCard from '@/components/VotingCard';
 import { VotingCountdown } from '@/components/battles/VotingCountdown';
 import { BattleResults } from '@/components/battles/BattleResults';
+import { LiveViewerComparison } from '@/components/battles/LiveViewerComparison';
+import { LiveBattleIndicator } from '@/components/battles/LiveBattleIndicator';
+import { BattleStatsCard } from '@/components/battles/BattleStatsCard';
 import { useEffect } from 'react';
 
 const BattleDetails = () => {
@@ -274,10 +278,48 @@ const BattleDetails = () => {
   const canJoin = isBarber && !isParticipant && battle.status === 'upcoming';
   const canVote = user && battle.status === 'voting';
   const totalWeightedVotes = voteResults?.reduce((sum, result) => sum + result.weighted_votes, 0) || 0;
+  
+  // Get live viewer data if battle is active
+  const viewerData = useRealtimeBattleViewers(battle.id);
+  const isLiveBattle = battle.status === 'voting';
+  const hasLiveViewers = isLiveBattle && (viewerData.barber1 > 0 || viewerData.barber2 > 0);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <BackButton to="/battles" />
+      
+      {/* Live Battle Indicator */}
+      {isLiveBattle && (
+        <div className="mb-6 flex justify-center">
+          <LiveBattleIndicator />
+        </div>
+      )}
+      
+      {/* Live Viewer Stats */}
+      {hasLiveViewers && submissions && submissions.length >= 2 && (
+        <div className="mb-6 space-y-4">
+          <LiveViewerComparison
+            barber1Name={
+              submissionProfiles?.find(p => p.user_id === submissions[0]?.user_id)?.display_name ||
+              'Barber 1'
+            }
+            barber2Name={
+              submissionProfiles?.find(p => p.user_id === submissions[1]?.user_id)?.display_name ||
+              'Barber 2'
+            }
+            barber1Viewers={viewerData.barber1}
+            barber2Viewers={viewerData.barber2}
+            barber1Peak={viewerData.peak1}
+            barber2Peak={viewerData.peak2}
+            lastUpdate={viewerData.lastUpdate}
+          />
+          
+          <BattleStatsCard
+            totalViewers={viewerData.barber1 + viewerData.barber2}
+            peakViewers={Math.max(viewerData.peak1, viewerData.peak2)}
+          />
+        </div>
+      )}
       {/* Battle Header */}
       <div className="mb-8">
         <div className="flex flex-col lg:flex-row gap-6">
