@@ -156,7 +156,7 @@ export const DynamicBattleHero = () => {
   const isActiveBattle = battle?.status === 'voting';
 
   return (
-    <div className="pt-20 sm:pt-24 lg:pt-32 pb-4 sm:pb-6 lg:pb-8 px-1 sm:px-2 lg:px-4 max-w-[95vw] sm:max-w-4xl lg:max-w-5xl mx-auto space-y-4">
+    <div className="pt-36 sm:pt-40 lg:pt-44 pb-4 sm:pb-6 lg:pb-8 px-1 sm:px-2 lg:px-4 max-w-[95vw] sm:max-w-4xl lg:max-w-5xl mx-auto space-y-4">
       {/* Live Battle Indicator */}
       {isActiveBattle && (
         <div className="flex justify-center">
