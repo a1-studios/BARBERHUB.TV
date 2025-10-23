@@ -35,46 +35,18 @@ export const BarberProfileCard = ({
   const navigate = useNavigate();
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
 
-  // Fetch barber profile data
+  // Fetch unified barber profile with stats
   const { data: barberProfile, isLoading } = useQuery({
-    queryKey: ['barber-profile', barberId],
+    queryKey: ['public-barber-profile', barberId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('barber_profiles')
-        .select(`
-          *,
-          profiles:user_id (
-            display_name,
-            avatar_url,
-            bio,
-            country_code
-          )
-        `)
-        .eq('id', barberId)
+        .from('public_barber_profiles')
+        .select('*')
+        .eq('barber_id', barberId)
         .single();
       
       if (error) throw error;
       return data;
-    }
-  });
-
-  // Fetch barber stats
-  const { data: stats } = useQuery({
-    queryKey: ['barber-stats', barberId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('barber_stats')
-        .select('*')
-        .eq('barber_id', barberId)
-        .maybeSingle();
-      
-      if (error) throw error;
-      return data || {
-        follower_count: 0,
-        like_count: 0,
-        subscription_count: 0,
-        total_donations_cents: 0
-      };
     }
   });
 
@@ -120,7 +92,7 @@ export const BarberProfileCard = ({
     },
     onSuccess: (_, action) => {
       queryClient.invalidateQueries({ queryKey: ['barber-relations'] });
-      queryClient.invalidateQueries({ queryKey: ['barber-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['public-barber-profile'] });
       toast.success(`Successfully ${action === 'follow' ? 'followed' : 'unfollowed'}`);
     }
   });
@@ -146,7 +118,7 @@ export const BarberProfileCard = ({
     },
     onSuccess: (_, action) => {
       queryClient.invalidateQueries({ queryKey: ['barber-relations'] });
-      queryClient.invalidateQueries({ queryKey: ['barber-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['public-barber-profile'] });
       toast.success(action === 'like' ? 'Liked!' : 'Unliked');
     }
   });
@@ -172,7 +144,7 @@ export const BarberProfileCard = ({
     },
     onSuccess: (_, action) => {
       queryClient.invalidateQueries({ queryKey: ['barber-relations'] });
-      queryClient.invalidateQueries({ queryKey: ['barber-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['public-barber-profile'] });
       toast.success(`${action}d successfully`);
     }
   });
@@ -210,8 +182,7 @@ export const BarberProfileCard = ({
 
   if (!barberProfile) return null;
 
-  const profile = barberProfile.profiles as any;
-  const displayName = profile?.display_name || barberProfile.name;
+  const displayName = barberProfile.display_name || barberProfile.barber_name;
 
   return (
     <>
@@ -219,7 +190,7 @@ export const BarberProfileCard = ({
         <CardHeader className="pb-3">
           <div className="flex items-center gap-3">
             <Avatar className="w-12 h-12 border-2 border-primary/30">
-              <AvatarImage src={profile?.avatar_url || undefined} />
+              <AvatarImage src={barberProfile.avatar_url || undefined} />
               <AvatarFallback className="bg-primary/20 text-primary font-semibold">
                 {(displayName || 'B').charAt(0).toUpperCase()}
               </AvatarFallback>
@@ -229,9 +200,9 @@ export const BarberProfileCard = ({
                 <CardTitle className="text-lg text-white">
                   {displayName}
                 </CardTitle>
-                {profile?.country_code && (
-                  <span className="text-lg" title={`Country: ${profile.country_code}`}>
-                    {getCountryFlag(profile.country_code)}
+                {barberProfile.country_code && (
+                  <span className="text-lg" title={`Country: ${barberProfile.country_code}`}>
+                    {getCountryFlag(barberProfile.country_code)}
                   </span>
                 )}
                 {barberProfile.is_live && (
@@ -251,9 +222,9 @@ export const BarberProfileCard = ({
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {profile?.bio && layout === 'full' && (
+          {(barberProfile.user_bio || barberProfile.barber_bio) && layout === 'full' && (
             <p className="text-sm text-muted-foreground line-clamp-2">
-              {profile.bio}
+              {barberProfile.user_bio || barberProfile.barber_bio}
             </p>
           )}
 
@@ -261,7 +232,7 @@ export const BarberProfileCard = ({
           {showVideo && (
             <BarberVideoSection
               videoId={barberProfile.is_live ? barberProfile.live_video_id : barberProfile.featured_video_id}
-              isLive={barberProfile.is_live}
+              isLive={barberProfile.is_live || false}
               aspectRatio="portrait"
             />
           )}
@@ -269,15 +240,15 @@ export const BarberProfileCard = ({
           {/* Stats */}
           <div className="flex items-center justify-around text-center border border-primary/10 rounded-lg p-3 bg-primary/5">
             <div>
-              <div className="text-lg font-semibold text-white">{stats?.follower_count || 0}</div>
+              <div className="text-lg font-semibold text-white">{barberProfile.follower_count || 0}</div>
               <div className="text-xs text-muted-foreground">Followers</div>
             </div>
             <div>
-              <div className="text-lg font-semibold text-white">{stats?.like_count || 0}</div>
+              <div className="text-lg font-semibold text-white">{barberProfile.like_count || 0}</div>
               <div className="text-xs text-muted-foreground">Likes</div>
             </div>
             <div>
-              <div className="text-lg font-semibold text-white">{stats?.subscription_count || 0}</div>
+              <div className="text-lg font-semibold text-white">{barberProfile.subscription_count || 0}</div>
               <div className="text-xs text-muted-foreground">Subscribers</div>
             </div>
           </div>
