@@ -3,7 +3,6 @@ import { Compass, MapPin, Gift } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { BattleWindowTimer } from '@/components/BattleWindowTimer';
 import { PrizePoolCard } from '@/components/PrizePoolCard';
 import { LiveBattleFeed } from '@/components/LiveBattleFeed';
 import { FanActionZone } from '@/components/FanActionZone';
@@ -121,14 +120,8 @@ export const GlobalLeagueDashboard = () => {
         {/* Role-Based Action Zone */}
         <FanActionZone />
 
-        {/* Battle Section with Timer */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold">Live Battles</h2>
-            <BattleWindowTimer />
-          </div>
-          <LiveBattleFeed />
-        </div>
+        {/* Live Battles */}
+        <LiveBattleFeed />
 
         {/* Quick Access Links */}
         <div className="border-t pt-8">

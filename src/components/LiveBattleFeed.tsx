@@ -12,6 +12,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { motion } from 'framer-motion';
 import { AnimatedCounter } from '@/components/battles/AnimatedCounter';
 import { BattleCard } from '@/components/battles/BattleCard';
+import { BattleWindowTimer } from '@/components/BattleWindowTimer';
 
 const getCountryFlag = (countryCode: string | null): string => {
   if (!countryCode) return '🌍';
@@ -129,7 +130,10 @@ export const LiveBattleFeed = () => {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl sm:text-3xl font-bold mb-6">Live & Upcoming Battles</h2>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl sm:text-3xl font-bold">Live & Upcoming Battles</h2>
+        <BattleWindowTimer />
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {liveBattles.map((battle) => {
           const barber1Votes = battle.votes.find((v: any) => 
