@@ -1526,6 +1526,21 @@ export type Database = {
           username: string
         }[]
       }
+      get_public_barber_profiles: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          barber_id: string
+          country_code: string
+          display_name: string
+          follower_count: number
+          like_count: number
+          location: string
+          name: string
+          rating: number
+          user_id: string
+        }[]
+      }
       get_public_creator_profiles: {
         Args: never
         Returns: {
