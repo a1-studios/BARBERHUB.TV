@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BarberVideoSection } from "@/components/barber/BarberVideoSection";
 
 interface Battle {
   id: string;
@@ -19,6 +19,9 @@ interface BarberProfile {
   country_code?: string;
   avatar_url?: string;
   display_name?: string;
+  featured_video_id?: string;
+  live_video_id?: string;
+  is_live?: boolean;
 }
 
 export const DynamicBattleHero = () => {
@@ -53,7 +56,7 @@ export const DynamicBattleHero = () => {
       // Fetch barber profiles by id
       const { data: barberProfiles, error: barberError } = await supabase
         .from('barber_profiles')
-        .select('id, user_id, name, country_code')
+        .select('id, user_id, name, country_code, featured_video_id, live_video_id, is_live')
         .in('id', [battle.barber1_id, battle.barber2_id]);
       
       if (barberError) throw barberError;
@@ -74,7 +77,10 @@ export const DynamicBattleHero = () => {
           ...barber,
           avatar_url: userProfile?.avatar_url || undefined,
           display_name: userProfile?.display_name || barber.name,
-          country_code: barber.country_code || userProfile?.country_code || 'us'
+          country_code: barber.country_code || userProfile?.country_code || 'us',
+          featured_video_id: barber.featured_video_id,
+          live_video_id: barber.live_video_id,
+          is_live: barber.is_live
         };
       });
 
@@ -95,7 +101,7 @@ export const DynamicBattleHero = () => {
     queryFn: async () => {
       const { data: barberProfiles, error: barberError } = await supabase
         .from('barber_profiles')
-        .select('id, user_id, name, country_code')
+        .select('id, user_id, name, country_code, featured_video_id, live_video_id, is_live')
         .order('updated_at', { ascending: false })
         .limit(2);
       
@@ -115,7 +121,10 @@ export const DynamicBattleHero = () => {
           ...barber,
           avatar_url: userProfile?.avatar_url || undefined,
           display_name: userProfile?.display_name || barber.name,
-          country_code: barber.country_code || userProfile?.country_code || 'us'
+          country_code: barber.country_code || userProfile?.country_code || 'us',
+          featured_video_id: barber.featured_video_id,
+          live_video_id: barber.live_video_id,
+          is_live: barber.is_live
         };
       });
 
@@ -174,11 +183,10 @@ export const DynamicBattleHero = () => {
             <div className="absolute inset-0 bg-gradient-to-br from-black/50 via-transparent to-black/30" />
 
             {/* Content */}
-            <div className="relative h-full flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
+            <div className="relative h-full flex flex-col items-center justify-start pt-[5%] p-4 sm:p-6 lg:p-8 space-y-3">
               {/* Photo */}
               <div 
-                onClick={() => navigate(`/barber/${barber1.user_id}`)}
-                className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl mb-4 cursor-pointer hover:border-white transition-all"
+                className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl cursor-pointer hover:border-white transition-all"
               >
                 {barber1.avatar_url ? (
                   <img 
@@ -191,20 +199,23 @@ export const DynamicBattleHero = () => {
                 )}
               </div>
 
-              {/* Name */}
-              <h3 className="text-white text-sm sm:text-base lg:text-lg font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-4 py-2 mb-4">
+              {/* Name - Clickable */}
+              <h3 
+                onClick={() => navigate(`/barber/${barber1.user_id}`)}
+                className="text-white text-sm sm:text-base lg:text-lg font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-4 py-2 cursor-pointer hover:bg-black/70 transition-all"
+              >
                 {barber1.display_name}
               </h3>
 
-              {/* View Profile Button */}
-              <Button
-                onClick={() => navigate(`/barber/${barber1.user_id}`)}
-                variant="secondary"
-                size="sm"
-                className="shadow-lg"
-              >
-                View Profile
-              </Button>
+              {/* Video Preview */}
+              <div className="w-full max-w-[200px] sm:max-w-[250px]">
+                <BarberVideoSection 
+                  videoId={barber1.is_live ? barber1.live_video_id : barber1.featured_video_id}
+                  isLive={barber1.is_live}
+                  aspectRatio="landscape"
+                  className="rounded-md"
+                />
+              </div>
             </div>
           </div>
 
@@ -226,11 +237,10 @@ export const DynamicBattleHero = () => {
             <div className="absolute inset-0 bg-gradient-to-bl from-black/50 via-transparent to-black/30" />
 
             {/* Content */}
-            <div className="relative h-full flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
+            <div className="relative h-full flex flex-col items-center justify-start pt-[5%] p-4 sm:p-6 lg:p-8 space-y-3">
               {/* Photo */}
               <div 
-                onClick={() => navigate(`/barber/${barber2.user_id}`)}
-                className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl mb-4 cursor-pointer hover:border-white transition-all"
+                className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl cursor-pointer hover:border-white transition-all"
               >
                 {barber2.avatar_url ? (
                   <img 
@@ -243,20 +253,23 @@ export const DynamicBattleHero = () => {
                 )}
               </div>
 
-              {/* Name */}
-              <h3 className="text-white text-sm sm:text-base lg:text-lg font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-4 py-2 mb-4">
+              {/* Name - Clickable */}
+              <h3 
+                onClick={() => navigate(`/barber/${barber2.user_id}`)}
+                className="text-white text-sm sm:text-base lg:text-lg font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-4 py-2 cursor-pointer hover:bg-black/70 transition-all"
+              >
                 {barber2.display_name}
               </h3>
 
-              {/* View Profile Button */}
-              <Button
-                onClick={() => navigate(`/barber/${barber2.user_id}`)}
-                variant="secondary"
-                size="sm"
-                className="shadow-lg"
-              >
-                View Profile
-              </Button>
+              {/* Video Preview */}
+              <div className="w-full max-w-[200px] sm:max-w-[250px]">
+                <BarberVideoSection 
+                  videoId={barber2.is_live ? barber2.live_video_id : barber2.featured_video_id}
+                  isLive={barber2.is_live}
+                  aspectRatio="landscape"
+                  className="rounded-md"
+                />
+              </div>
             </div>
           </div>
         </div>
