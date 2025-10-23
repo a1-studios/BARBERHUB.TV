@@ -65,27 +65,31 @@ export const GlobalLeagueDashboard = () => {
       }
 
       // Transform to ImageData format
-      const contenders = (barbers || []).map((barber, index): ImageData => {
-        const profile = avatarMap.get(barber.user_id);
-        const barberStats = statsMap.get(barber.id);
-        
-        return {
-          id: barber.id,
-          src: profile?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber.id}`,
-          alt: profile?.displayName || barber.name || 'Barber',
-          title: profile?.displayName || barber.name || 'Barber',
-          description: `Country: ${barber.country_code || 'XX'} - Professional barber competing in the global league`,
-          countryCode: barber.country_code || 'XX',
-          isChampion: barber.id === championId,
-          rating: barber.rating || 0,
-          rank: index + 1,
-          location: barber.country_code || 'XX',
-          stats: barberStats ? {
-            followers: barberStats.followers,
-            likes: barberStats.likes
-          } : undefined
-        };
-      });
+  const contenders = (barbers || []).map((barber, index): ImageData => {
+    const profile = avatarMap.get(barber.user_id);
+    const barberStats = statsMap.get(barber.id);
+    
+    // Normalize country code: empty string → 'XX'
+    const normalizedCountryCode = barber.country_code?.trim() || 'XX';
+    
+    return {
+      id: barber.user_id,
+      barberId: barber.id,
+      src: profile?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber.id}`,
+      alt: profile?.displayName || barber.name || 'Barber',
+      title: profile?.displayName || barber.name || 'Barber',
+      description: `Country: ${normalizedCountryCode} - Professional barber competing in the global league`,
+      countryCode: normalizedCountryCode,
+      isChampion: barber.id === championId,
+      rating: barber.rating || 0,
+      rank: index + 1,
+      location: normalizedCountryCode,
+      stats: barberStats ? {
+        followers: barberStats.followers,
+        likes: barberStats.likes
+      } : undefined
+    };
+  });
 
       return { contenders, championId };
     },

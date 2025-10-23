@@ -35,6 +35,7 @@ export interface WorldPosition extends Position3D {
 
 export interface ImageData {
   id: string;
+  barberId?: string;
   src: string;
   alt: string;
   title?: string;
@@ -470,8 +471,9 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
   const worldPositions = calculateWorldPositions();
 
   const getCountryFlagEmoji = (code: string): string => {
-    if (!code || code.length !== 2 || code === 'XX') return '🌍';
-    const codePoints = code
+    const normalized = code?.trim();
+    if (!normalized || normalized.length !== 2 || normalized === 'XX') return '🌍';
+    const codePoints = normalized
       .toUpperCase()
       .split('')
       .map(char => 127397 + char.charCodeAt(0));
@@ -535,15 +537,13 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
   const renderSpotlightModal = () => {
     if (!selectedImage) return null;
 
-    // Extract country code from description (format: "Country: XX")
-    const countryMatch = selectedImage.description?.match(/Country:\s*([A-Z]{2})/);
-    const countryCode = countryMatch ? countryMatch[1] : 'US';
-    const countryFlag = countryCode ? `https://flagcdn.com/w320/${countryCode.toLowerCase()}.png` : '';
+    const countryCode = selectedImage.countryCode || 'XX';
     
     // Convert country code to flag emoji (works for any valid ISO 3166-1 alpha-2 code)
     const getCountryFlagEmoji = (code: string): string => {
-      if (!code || code.length !== 2) return '🌍';
-      const codePoints = code
+      const normalized = code?.trim();
+      if (!normalized || normalized.length !== 2 || normalized === 'XX') return '🌍';
+      const codePoints = normalized
         .toUpperCase()
         .split('')
         .map(char => 127397 + char.charCodeAt(0));
