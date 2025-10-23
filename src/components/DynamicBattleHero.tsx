@@ -125,7 +125,7 @@ export const DynamicBattleHero = () => {
     queryFn: async () => {
       if (!battle?.barber1_id || !battle?.barber2_id) return [];
 
-      // Fetch barber profiles by id (battles store barber_profiles.id in barber1_id/barber2_id)
+      // Fetch barber profiles with live status and video IDs
       const {
         data: barberProfiles,
         error: barberError
@@ -133,14 +133,10 @@ export const DynamicBattleHero = () => {
         .from('barber_profiles')
         .select('id, user_id, name, country_code, is_live, live_video_id, featured_video_id')
         .in('id', [battle.barber1_id, battle.barber2_id]);
-      if (barberError) {
-        throw barberError;
-      }
+      if (barberError) throw barberError;
 
-      // Extract user_ids to fetch profile data
-      const userIds = (barberProfiles || []).map(b => b.user_id);
-      
       // Fetch user profiles for country_code and avatar_url
+      const userIds = barberProfiles?.map(b => b.user_id) || [];
       const {
         data: userProfiles,
         error: profileError
@@ -148,63 +144,49 @@ export const DynamicBattleHero = () => {
         .from('profiles')
         .select('user_id, country_code, avatar_url, display_name')
         .in('user_id', userIds);
-      if (profileError) {
-        throw profileError;
-      }
+      if (profileError) throw profileError;
 
-      // Create map for fast lookup
-      const profileMap = new Map(userProfiles?.map(p => [p.user_id, p]) || []);
-      
       // Merge the data, prioritizing barber_profiles country_code and adding avatar
-      const merged = barberProfiles?.map(barber => {
-        const userProfile = profileMap.get(barber.user_id);
+      const mergedData = barberProfiles?.map(barber => {
+        const userProfile = userProfiles?.find(p => p.user_id === barber.user_id);
         return {
           ...barber,
           country_code: barber.country_code || userProfile?.country_code || 'us',
           avatar_url: userProfile?.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${barber.id}`,
           display_name: userProfile?.display_name || barber.name
         };
-      }) || [];
-      
-      // Preserve barber order: barber1 first, barber2 second
-      const ordered = [battle.barber1_id, battle.barber2_id]
-        .map(id => merged.find(b => b.id === id))
-        .filter(Boolean);
-      return ordered;
+      });
+      return mergedData;
     },
     enabled: !!battle?.barber1_id && !!battle?.barber2_id
   });
 
-  // Get barber user_ids for like state queries
-  const barber1UserId = barbers?.find(b => b.id === battle?.barber1_id)?.user_id;
-  const barber2UserId = barbers?.find(b => b.id === battle?.barber2_id)?.user_id;
-  
-  // Get like states for real barbers (using user_id as creator_id)
+  // Get like states for real barbers
   const barber1LikeQuery = useQuery({
-    queryKey: ['user_like', barber1UserId, user?.id],
+    queryKey: ['user_like', battle?.barber1_id, user?.id],
     queryFn: async () => {
-      if (!user || !barber1UserId) return false;
+      if (!user || !battle?.barber1_id) return false;
       const {
         data,
         error
-      } = await supabase.from('creator_likes').select('id').eq('creator_id', barber1UserId).eq('user_id', user.id).maybeSingle();
+      } = await supabase.from('creator_likes').select('id').eq('creator_id', battle.barber1_id).eq('user_id', user.id).maybeSingle();
       if (error) throw error;
       return !!data;
     },
-    enabled: !!user && !!barber1UserId
+    enabled: !!user && !!battle?.barber1_id
   });
   const barber2LikeQuery = useQuery({
-    queryKey: ['user_like', barber2UserId, user?.id],
+    queryKey: ['user_like', battle?.barber2_id, user?.id],
     queryFn: async () => {
-      if (!user || !barber2UserId) return false;
+      if (!user || !battle?.barber2_id) return false;
       const {
         data,
         error
-      } = await supabase.from('creator_likes').select('id').eq('creator_id', barber2UserId).eq('user_id', user.id).maybeSingle();
+      } = await supabase.from('creator_likes').select('id').eq('creator_id', battle.barber2_id).eq('user_id', user.id).maybeSingle();
       if (error) throw error;
       return !!data;
     },
-    enabled: !!user && !!barber2UserId
+    enabled: !!user && !!battle?.barber2_id
   });
 
   // Fetch battle submissions
@@ -330,9 +312,9 @@ export const DynamicBattleHero = () => {
       return;
     }
     let isLiked = false;
-    if (barberId === barber1UserId) {
+    if (barberId === battle?.barber1_id) {
       isLiked = barber1LikeQuery.data || false;
-    } else if (barberId === barber2UserId) {
+    } else if (barberId === battle?.barber2_id) {
       isLiked = barber2LikeQuery.data || false;
     }
     toggleLike.mutate({
@@ -457,7 +439,7 @@ export const DynamicBattleHero = () => {
   }
 
   // Fallback wireframe when no real battle exists (keeps layout/buttons/ads)
-  if (!battle) {
+  if (!battle || !barbers || barbers.length < 2) {
     return <div className="pt-20 sm:pt-24 lg:pt-32 pb-4 sm:pb-6 lg:pb-8 px-1 sm:px-2 lg:px-4 max-w-[95vw] sm:max-w-4xl lg:max-w-5xl mx-auto">
         <div className="w-full portrait:aspect-[3/4] sm:portrait:aspect-[4/5] landscape:aspect-[16/10] lg:landscape:aspect-[16/9] bg-card rounded-lg sm:rounded-xl lg:rounded-2xl shadow-xl sm:shadow-2xl border border-primary/30 sm:border-2 sm:border-primary/50 animate-glow overflow-hidden relative transform-gpu will-change-transform mx-0 my-[24px] py-0 px-0">
           <div className="h-full flex">
@@ -928,7 +910,7 @@ export const DynamicBattleHero = () => {
               <div className="flex-1 relative overflow-hidden" onClick={() => handleVote(barber2?.user_id || '')}>
                 {/* Flag Background */}
                 <div className="absolute inset-0" style={{
-                backgroundImage: `url(${getFlagImageUrl(barber2?.country_code || 'us')})`,
+                backgroundImage: `url(${getFlagImageUrl(barber2?.country_code || 'ca')})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 opacity: 0.3
