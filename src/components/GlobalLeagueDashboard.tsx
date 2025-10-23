@@ -113,29 +113,31 @@ export const GlobalLeagueDashboard = () => {
             </p>
           </div>
           
-          <div className="flex justify-center py-8">
+          <div className="flex justify-center py-8 px-4">
             {isLoadingContenders ? (
               <div className="flex flex-col items-center gap-4">
-                <Skeleton className="w-[650px] h-[650px] rounded-full" />
+                <Skeleton className="w-full max-w-[650px] aspect-square rounded-full" />
                 <p className="text-sm text-muted-foreground">Loading contenders...</p>
               </div>
             ) : contenders.length > 0 ? (
-              <SphereImageGrid
-                images={contenders}
-                containerSize={650}
-                sphereRadius={280}
-                autoRotate={true}
-                autoRotateSpeed={0.25}
-                dragSensitivity={0.7}
-                baseImageScale={0.14}
-                hoverScale={1.3}
-                perspective={1200}
-                championId={championId || undefined}
-                grandPrize="$25,000"
-                showCountryFlags={true}
-                showChampionCrown={true}
-                className="mx-auto"
-              />
+              <div className="w-full max-w-[650px]">
+                <SphereImageGrid
+                  images={contenders}
+                  containerSize={typeof window !== 'undefined' ? Math.min(650, window.innerWidth - 32) : 650}
+                  sphereRadius={typeof window !== 'undefined' ? Math.min(280, (window.innerWidth - 32) * 0.43) : 280}
+                  autoRotate={true}
+                  autoRotateSpeed={0.25}
+                  dragSensitivity={0.7}
+                  baseImageScale={0.14}
+                  hoverScale={1.3}
+                  perspective={1200}
+                  championId={championId || undefined}
+                  grandPrize="$25,000"
+                  showCountryFlags={true}
+                  showChampionCrown={true}
+                  className="mx-auto"
+                />
+              </div>
             ) : (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">No contenders registered yet</p>

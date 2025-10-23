@@ -664,10 +664,10 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
   const renderCenterPrize = () => {
     if (!grandPrize) return null;
 
-    // Responsive coin size: 16% of container, min 80px, max 120px
-    const coinSize = Math.min(Math.max(containerSize * 0.16, 80), 120);
+    // Responsive coin size: 20% smaller - 12.8% of container, min 64px, max 96px
+    const coinSize = Math.min(Math.max(containerSize * 0.128, 64), 96);
     const fontSize = {
-      trophy: `${coinSize * 0.3}px`,
+      logo: `${coinSize * 0.35}px`,
       label: `${coinSize * 0.095}px`,
       amount: `${coinSize * 0.2}px`
     };
@@ -720,13 +720,20 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
             {/* Coin Content */}
             <div className="relative text-center z-10 px-2">
               <div 
-                className="drop-shadow-lg leading-none"
+                className="drop-shadow-lg leading-none flex items-center justify-center"
                 style={{ 
-                  fontSize: fontSize.trophy,
-                  marginBottom: `${coinSize * 0.02}px`
+                  width: `${coinSize * 0.4}px`,
+                  height: `${coinSize * 0.4}px`,
+                  marginBottom: `${coinSize * 0.02}px`,
+                  marginLeft: 'auto',
+                  marginRight: 'auto'
                 }}
               >
-                🏆
+                <img 
+                  src="/lovable-uploads/c5bbb6c4-149e-41f8-9e68-1580ee1afdf8.png" 
+                  alt="Logo"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div 
                 className="text-yellow-900 font-bold tracking-wider uppercase leading-none"
