@@ -167,14 +167,29 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
   const updateProfileMutation = useMutation({
     mutationFn: async (data: typeof profileForm) => {
       if (!user?.id) throw new Error('No user');
-      const { error } = await supabase
+      
+      // Update profiles
+      const { error: profileError } = await supabase
         .from('profiles')
         .update(data)
         .eq('user_id', user.id);
-      if (error) throw error;
+      
+      if (profileError) throw profileError;
+      
+      // Also update barber_profiles.country_code if barber exists
+      if (barberProfile?.id) {
+        const { error: barberError } = await supabase
+          .from('barber_profiles')
+          .update({ country_code: data.country_code })
+          .eq('user_id', user.id);
+        
+        if (barberError) throw barberError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['barberProfile', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['public-barber-profile'] });
       toast.success('Profile updated successfully!');
     },
     onError: (error: any) => {
@@ -401,14 +416,28 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
                   </div>
                 </div>
 
-                <div>
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    value={barberForm.location}
-                    onChange={(e) => setBarberForm(prev => ({ ...prev, location: e.target.value }))}
-                    placeholder="City, State/Country"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="location">Location</Label>
+                    <Input
+                      id="location"
+                      value={barberForm.location}
+                      onChange={(e) => setBarberForm(prev => ({ ...prev, location: e.target.value }))}
+                      placeholder="City, State/Country"
+                    />
+                  </div>
+
+                  <div>
+                    <Label>Professional Country</Label>
+                    <CountrySelector
+                      value={barberForm.country_code}
+                      onChange={(country_code) => setBarberForm(prev => ({ ...prev, country_code: country_code || '' }))}
+                      placeholder="Select your professional country"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      This country will be displayed on your barber profile
+                    </p>
+                  </div>
                 </div>
 
                 <div>

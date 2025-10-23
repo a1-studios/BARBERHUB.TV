@@ -134,9 +134,18 @@ export default function BarberPublicProfile() {
           Back
         </Button>
 
-        {/* Hero Section */}
-        <Card className="bg-gradient-to-br from-primary/20 to-primary/5 border-primary/30">
-          <CardContent className="p-8">
+        {/* Hero Section with Flag Background */}
+        <Card className="relative overflow-hidden border-primary/30">
+          {barberData.country_code && barberData.country_code !== 'XX' && (
+            <div 
+              className="absolute inset-0 opacity-30 bg-cover bg-center"
+              style={{
+                backgroundImage: `url(https://flagcdn.com/w1280/${barberData.country_code.toLowerCase()}.png)`,
+              }}
+            />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-br from-background/90 via-background/80 to-primary/20" />
+          <CardContent className="relative p-8 z-10">
             <div className="flex flex-col md:flex-row gap-6 items-start">
               <Avatar className="w-32 h-32 border-4 border-primary/30">
                 <AvatarImage src={barberData.avatar_url || undefined} />

@@ -180,20 +180,35 @@ const Profile = () => {
   const updateProfileMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       if (!user?.id) throw new Error('No user');
-      const {
-        error
-      } = await supabase.from('profiles').update({
-        display_name: data.display_name,
-        bio: data.bio,
-        username: data.username,
-        country_code: data.country_code
-      }).eq('user_id', user.id);
-      if (error) throw error;
+      
+      // Update profiles table
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          display_name: data.display_name,
+          bio: data.bio,
+          username: data.username,
+          country_code: data.country_code
+        })
+        .eq('user_id', user.id);
+      
+      if (profileError) throw profileError;
+      
+      // If user is a barber, ALSO update barber_profiles.country_code
+      if (isUserBarber && barberProfile?.id) {
+        const { error: barberError } = await supabase
+          .from('barber_profiles')
+          .update({ country_code: data.country_code })
+          .eq('user_id', user.id);
+        
+        if (barberError) throw barberError;
+      }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['profile', user?.id]
-      });
+      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['barberProfile', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['public-barber-profile'] });
+      queryClient.invalidateQueries({ queryKey: ['global-contenders'] });
       toast.success('Profile updated successfully!');
       setIsEditing(false);
     },
