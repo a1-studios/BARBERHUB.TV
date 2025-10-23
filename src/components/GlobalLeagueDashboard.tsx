@@ -65,7 +65,7 @@ export const GlobalLeagueDashboard = () => {
       }
 
       // Transform to ImageData format
-      const contenders = (barbers || []).map((barber): ImageData => {
+      const contenders = (barbers || []).map((barber, index): ImageData => {
         const profile = avatarMap.get(barber.user_id);
         const barberStats = statsMap.get(barber.id);
         
@@ -78,6 +78,8 @@ export const GlobalLeagueDashboard = () => {
           countryCode: barber.country_code || 'XX',
           isChampion: barber.id === championId,
           rating: barber.rating || 0,
+          rank: index + 1,
+          location: barber.country_code || 'XX',
           stats: barberStats ? {
             followers: barberStats.followers,
             likes: barberStats.likes

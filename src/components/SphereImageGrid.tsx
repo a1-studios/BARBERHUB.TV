@@ -42,6 +42,8 @@ export interface ImageData {
   countryCode?: string;
   isChampion?: boolean;
   rating?: number;
+  rank?: number;
+  location?: string;
   stats?: {
     followers: number;
     likes: number;
@@ -559,7 +561,7 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
         }}
       >
         <div
-          className="bg-card rounded-xl max-w-4xl w-full overflow-hidden border-2 border-primary/30 shadow-2xl cursor-pointer hover:border-primary/60 transition-all"
+          className="bg-card rounded-xl max-w-2xl w-full overflow-hidden border-2 border-primary/30 shadow-2xl cursor-pointer hover:border-primary/60 transition-all"
           onClick={(e) => {
             e.stopPropagation();
             // Navigate to barber profile (barberId is stored in image.id)
@@ -581,50 +583,70 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
           </button>
 
           {/* 50/50 Split Layout */}
-          <div className="flex flex-col md:flex-row min-h-[400px]">
-            {/* LEFT: Large Country Flag */}
-            <div className="w-full md:w-1/2 bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 flex items-center justify-center p-8 md:p-12">
-              <div className="text-center">
-                <div className="text-[6rem] md:text-[10rem] lg:text-[12rem] leading-none mb-4 drop-shadow-2xl">
-                  {countryFlagEmoji}
-                </div>
-                <p className="text-2xl md:text-3xl font-bold text-foreground tracking-wider">
-                  {countryCode}
-                </p>
+          <div className="flex flex-col sm:flex-row h-auto">
+            {/* LEFT: Country Flag (50%) */}
+            <div className="w-full sm:w-1/2 bg-gradient-to-br from-primary/5 to-primary/10 flex flex-col items-center justify-center p-6 min-h-[180px]">
+              <div className="text-[4rem] md:text-[5rem] leading-none mb-2">
+                {countryFlagEmoji}
               </div>
+              <p className="text-lg font-bold text-foreground tracking-wider">
+                {countryCode}
+              </p>
             </div>
 
-            {/* RIGHT: Barber Information */}
-            <div className="w-full md:w-1/2 p-6 md:p-8 flex flex-col justify-center space-y-6 border-l border-border/50">
-              {/* Avatar & Name */}
-              <div className="flex items-start gap-4">
-                <img
-                  src={selectedImage.src}
-                  alt={selectedImage.alt}
-                  className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover border-4 border-primary/40 shadow-lg flex-shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-2xl md:text-3xl font-bold text-foreground mb-1 truncate">
-                    {selectedImage.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground uppercase tracking-wide font-semibold">
-                    {countryCode} Contender
-                  </p>
-                </div>
+            {/* RIGHT: Stats (50%) */}
+            <div className="w-full sm:w-1/2 p-6 flex flex-col justify-center space-y-3 border-l border-border/50">
+              {/* Name */}
+              <div>
+                <h3 className="text-xl font-bold text-foreground truncate">
+                  {selectedImage.title}
+                </h3>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide">
+                  {countryCode} Contender
+                </p>
               </div>
 
-              {/* Bio/Description */}
-              {selectedImage.description && (
-                <p className="text-muted-foreground text-sm md:text-base leading-relaxed line-clamp-4">
-                  {selectedImage.description.replace(/Country:\s*[A-Z]{2}\s*-\s*/, '')}
-                </p>
-              )}
+              {/* Stats Grid */}
+              <div className="space-y-2 text-sm">
+                {/* Location */}
+                {selectedImage.location && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">📍</span>
+                    <span className="text-foreground">{selectedImage.location}</span>
+                  </div>
+                )}
+                
+                {/* Followers */}
+                {selectedImage.stats && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">👥</span>
+                    <span className="text-foreground font-medium">{selectedImage.stats.followers.toLocaleString()}</span>
+                    <span className="text-muted-foreground text-xs">followers</span>
+                  </div>
+                )}
+                
+                {/* Likes */}
+                {selectedImage.stats && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">❤️</span>
+                    <span className="text-foreground font-medium">{selectedImage.stats.likes.toLocaleString()}</span>
+                    <span className="text-muted-foreground text-xs">likes</span>
+                  </div>
+                )}
+                
+                {/* Rank */}
+                {selectedImage.rank && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">🏆</span>
+                    <span className="text-foreground font-medium">Rank #{selectedImage.rank}</span>
+                  </div>
+                )}
+              </div>
 
               {/* CTA */}
-              <div className="pt-4 border-t border-border">
-                <p className="text-center md:text-left text-sm text-muted-foreground flex items-center justify-center md:justify-start gap-2">
-                  <span>Click to view full profile</span>
-                  <span className="text-primary">→</span>
+              <div className="pt-3 border-t border-border">
+                <p className="text-xs text-muted-foreground text-center">
+                  Click to view full profile →
                 </p>
               </div>
             </div>
