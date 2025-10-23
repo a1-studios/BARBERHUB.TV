@@ -354,7 +354,7 @@ const Profile = () => {
                       <CountrySelector value={formData.country_code} onChange={country_code => setFormData(prev => ({
                       ...prev,
                       country_code
-                    }))} placeholder="Select your country" disabled={!isEditing} />
+                    }))} placeholder="Select your country" disabled={false} />
                     </div>
 
                     {/* Only show bio for barbers */}

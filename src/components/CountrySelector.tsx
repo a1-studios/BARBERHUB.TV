@@ -206,7 +206,7 @@ export const CountrySelector = ({ value, onChange, placeholder = "Select country
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between"
+          className="w-full justify-between bg-primary/10 border-primary/20 hover:bg-primary/20 text-primary"
           disabled={disabled}
         >
           <div className="flex items-center gap-2">
