@@ -3,9 +3,11 @@ import { Trophy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Globe3D from '@/components/Globe3D';
+import { useUserRole } from '@/hooks/useUserRole';
 
 export const PrizePoolCard = () => {
   const navigate = useNavigate();
+  const { isBarber } = useUserRole();
 
   return (
     <Card className="relative overflow-hidden border-2 border-primary/50 bg-gradient-to-br from-primary/5 via-background to-secondary/5">
@@ -30,13 +32,15 @@ export const PrizePoolCard = () => {
           Which Nation Takes the Crown?
         </p>
 
-        <Button
-          size="lg"
-          onClick={() => navigate('/portal')}
-          className="text-base sm:text-lg px-6 sm:px-8"
-        >
-          Enter the League
-        </Button>
+        {isBarber && (
+          <Button
+            size="lg"
+            onClick={() => navigate('/portal')}
+            className="text-base sm:text-lg px-6 sm:px-8"
+          >
+            Enter the League
+          </Button>
+        )}
 
         <div className="grid grid-cols-3 gap-4 mt-8 max-w-2xl mx-auto">
           <div>
