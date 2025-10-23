@@ -125,6 +125,8 @@ export const DynamicBattleHero = () => {
     queryFn: async () => {
       if (!battle?.barber1_id || !battle?.barber2_id) return [];
 
+      console.log('Fetching barbers with IDs:', battle.barber1_id, battle.barber2_id);
+
       // Fetch barber profiles by id (battles store barber_profiles.id in barber1_id/barber2_id)
       const {
         data: barberProfiles,
@@ -133,10 +135,16 @@ export const DynamicBattleHero = () => {
         .from('barber_profiles')
         .select('id, user_id, name, country_code, is_live, live_video_id, featured_video_id')
         .in('id', [battle.barber1_id, battle.barber2_id]);
-      if (barberError) throw barberError;
+      
+      console.log('Barber profiles fetched:', barberProfiles);
+      if (barberError) {
+        console.error('Barber fetch error:', barberError);
+        throw barberError;
+      }
 
       // Extract user_ids to fetch profile data
       const userIds = (barberProfiles || []).map(b => b.user_id);
+      console.log('User IDs to fetch:', userIds);
       
       // Fetch user profiles for country_code and avatar_url
       const {
@@ -146,7 +154,12 @@ export const DynamicBattleHero = () => {
         .from('profiles')
         .select('user_id, country_code, avatar_url, display_name')
         .in('user_id', userIds);
-      if (profileError) throw profileError;
+      
+      console.log('User profiles fetched:', userProfiles);
+      if (profileError) {
+        console.error('Profile fetch error:', profileError);
+        throw profileError;
+      }
 
       // Create map for fast lookup
       const profileMap = new Map(userProfiles?.map(p => [p.user_id, p]) || []);
@@ -167,6 +180,7 @@ export const DynamicBattleHero = () => {
         .map(id => merged.find(b => b.id === id))
         .filter(Boolean);
       
+      console.log('Final ordered barbers:', ordered);
       return ordered;
     },
     enabled: !!battle?.barber1_id && !!battle?.barber2_id
