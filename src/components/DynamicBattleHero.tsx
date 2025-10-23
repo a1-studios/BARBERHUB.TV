@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarberVideoSection } from "@/components/barber/BarberVideoSection";
 import { LiveViewerComparison } from "@/components/battles/LiveViewerComparison";
+import { LiveBattleIndicator } from "@/components/battles/LiveBattleIndicator";
+import { BattleStatsCard } from "@/components/battles/BattleStatsCard";
 import { useRealtimeBattleViewers } from "@/hooks/useRealtimeBattleViewers";
 import { Heart, Users } from "lucide-react";
 
@@ -155,20 +157,33 @@ export const DynamicBattleHero = () => {
   const isActiveBattle = battle?.status === 'voting';
 
   return (
-    <div className="pt-20 sm:pt-24 lg:pt-32 pb-4 sm:pb-6 lg:pb-8 px-1 sm:px-2 lg:px-4 max-w-[95vw] sm:max-w-4xl lg:max-w-5xl mx-auto">
+    <div className="pt-20 sm:pt-24 lg:pt-32 pb-4 sm:pb-6 lg:pb-8 px-1 sm:px-2 lg:px-4 max-w-[95vw] sm:max-w-4xl lg:max-w-5xl mx-auto space-y-4">
+      {/* Live Battle Indicator */}
+      {isActiveBattle && (
+        <div className="flex justify-center">
+          <LiveBattleIndicator />
+        </div>
+      )}
+      
       {/* Live Viewer Comparison - Only show during active battles */}
       {isActiveBattle && (
-        <div className="mb-4">
-          <LiveViewerComparison 
-            barber1Name={barber1.display_name || barber1.name}
-            barber2Name={barber2.display_name || barber2.name}
-            barber1Viewers={viewerData.barber1}
-            barber2Viewers={viewerData.barber2}
-            barber1Peak={viewerData.peak1}
-            barber2Peak={viewerData.peak2}
-            lastUpdate={viewerData.lastUpdate}
-          />
-        </div>
+        <LiveViewerComparison 
+          barber1Name={barber1.display_name || barber1.name}
+          barber2Name={barber2.display_name || barber2.name}
+          barber1Viewers={viewerData.barber1}
+          barber2Viewers={viewerData.barber2}
+          barber1Peak={viewerData.peak1}
+          barber2Peak={viewerData.peak2}
+          lastUpdate={viewerData.lastUpdate}
+        />
+      )}
+      
+      {/* Battle Stats Card */}
+      {isActiveBattle && (viewerData.barber1 > 0 || viewerData.barber2 > 0) && (
+        <BattleStatsCard
+          totalViewers={viewerData.barber1 + viewerData.barber2}
+          peakViewers={Math.max(viewerData.peak1, viewerData.peak2)}
+        />
       )}
       <div className="w-full portrait:aspect-[3/4] sm:portrait:aspect-[4/5] landscape:aspect-[16/10] lg:landscape:aspect-[16/9] bg-card rounded-lg sm:rounded-xl lg:rounded-2xl shadow-xl sm:shadow-2xl border border-primary/30 sm:border-2 sm:border-primary/50 animate-glow overflow-hidden relative">
         <div className="h-full flex">

@@ -52,14 +52,23 @@ export const BarberVideoSection = ({
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute top-2 right-2 z-10 bg-black/70 backdrop-blur-sm px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/20"
+          className="absolute top-2 right-2 z-10 bg-black/80 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/30 shadow-lg"
         >
-          <Users className="w-4 h-4 text-white" />
+          <motion.div
+            animate={{ 
+              scale: [1, 1.2, 1],
+              opacity: [1, 0.7, 1]
+            }}
+            transition={{ duration: 2, repeat: Infinity }}
+          >
+            <Users className="w-4 h-4 text-red-500" />
+          </motion.div>
           <motion.span 
             key={viewerCount}
-            initial={{ scale: 1.2 }}
-            animate={{ scale: 1 }}
-            className="text-white font-semibold text-sm"
+            initial={{ scale: 1.3, color: '#22c55e' }}
+            animate={{ scale: 1, color: '#ffffff' }}
+            transition={{ duration: 0.3 }}
+            className="text-white font-bold text-sm"
           >
             {viewerCount.toLocaleString()}
           </motion.span>
