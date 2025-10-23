@@ -14,7 +14,11 @@ export const BarberVideoSection = ({
   aspectRatio = 'landscape',
   className = ''
 }: BarberVideoSectionProps) => {
-  const aspectClass = aspectRatio === 'portrait' ? 'aspect-[9/16]' : 'aspect-video';
+  const aspectClass = className.includes('aspect-square') 
+    ? 'aspect-square' 
+    : aspectRatio === 'portrait' 
+      ? 'aspect-[9/16]' 
+      : 'aspect-video';
   
   if (!videoId) {
     return (

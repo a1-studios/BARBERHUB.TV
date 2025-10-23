@@ -22,6 +22,8 @@ interface BarberProfile {
   featured_video_id?: string;
   live_video_id?: string;
   is_live?: boolean;
+  followers?: number;
+  likes?: number;
 }
 
 export const DynamicBattleHero = () => {
@@ -70,9 +72,17 @@ export const DynamicBattleHero = () => {
       
       if (profileError) throw profileError;
 
+      // Fetch barber stats
+      const barberIds = barberProfiles?.map(b => b.id) || [];
+      const { data: barberStats } = await supabase
+        .from('barber_stats')
+        .select('barber_id, follower_count, like_count')
+        .in('barber_id', barberIds);
+
       // Merge data
       const mergedData = barberProfiles?.map(barber => {
         const userProfile = userProfiles?.find(p => p.user_id === barber.user_id);
+        const stats = barberStats?.find(s => s.barber_id === barber.id);
         return {
           ...barber,
           avatar_url: userProfile?.avatar_url || undefined,
@@ -80,7 +90,9 @@ export const DynamicBattleHero = () => {
           country_code: barber.country_code || userProfile?.country_code || 'us',
           featured_video_id: barber.featured_video_id,
           live_video_id: barber.live_video_id,
-          is_live: barber.is_live
+          is_live: barber.is_live,
+          followers: stats?.follower_count || 0,
+          likes: stats?.like_count || 0
         };
       });
 
@@ -115,8 +127,16 @@ export const DynamicBattleHero = () => {
       
       if (profileError) throw profileError;
 
+      // Fetch barber stats
+      const barberIds = barberProfiles?.map(b => b.id) || [];
+      const { data: barberStats } = await supabase
+        .from('barber_stats')
+        .select('barber_id, follower_count, like_count')
+        .in('barber_id', barberIds);
+
       const mergedData = barberProfiles?.map(barber => {
         const userProfile = userProfiles?.find(p => p.user_id === barber.user_id);
+        const stats = barberStats?.find(s => s.barber_id === barber.id);
         return {
           ...barber,
           avatar_url: userProfile?.avatar_url || undefined,
@@ -124,7 +144,9 @@ export const DynamicBattleHero = () => {
           country_code: barber.country_code || userProfile?.country_code || 'us',
           featured_video_id: barber.featured_video_id,
           live_video_id: barber.live_video_id,
-          is_live: barber.is_live
+          is_live: barber.is_live,
+          followers: stats?.follower_count || 0,
+          likes: stats?.like_count || 0
         };
       });
 
@@ -207,13 +229,26 @@ export const DynamicBattleHero = () => {
                 {barber1.display_name}
               </h3>
 
-              {/* Video Preview */}
-              <div className="w-full max-w-[200px] sm:max-w-[250px]">
+              {/* Spacer - 10% down */}
+              <div className="h-[10%]" />
+
+              {/* Barber Stats */}
+              <div className="flex gap-4 text-white text-xs sm:text-sm">
+                <div className="bg-black/50 backdrop-blur-sm rounded-full px-3 py-1">
+                  <span className="font-semibold">{barber1.likes}</span> Likes
+                </div>
+                <div className="bg-black/50 backdrop-blur-sm rounded-full px-3 py-1">
+                  <span className="font-semibold">{barber1.followers}</span> Followers
+                </div>
+              </div>
+
+              {/* Video Preview - 1:1 ratio */}
+              <div className="w-full max-w-[180px] sm:max-w-[200px]">
                 <BarberVideoSection 
                   videoId={barber1.is_live ? barber1.live_video_id : barber1.featured_video_id}
                   isLive={barber1.is_live}
-                  aspectRatio="landscape"
-                  className="rounded-md"
+                  aspectRatio="portrait"
+                  className="rounded-md aspect-square"
                 />
               </div>
             </div>
@@ -261,13 +296,26 @@ export const DynamicBattleHero = () => {
                 {barber2.display_name}
               </h3>
 
-              {/* Video Preview */}
-              <div className="w-full max-w-[200px] sm:max-w-[250px]">
+              {/* Spacer - 10% down */}
+              <div className="h-[10%]" />
+
+              {/* Barber Stats */}
+              <div className="flex gap-4 text-white text-xs sm:text-sm">
+                <div className="bg-black/50 backdrop-blur-sm rounded-full px-3 py-1">
+                  <span className="font-semibold">{barber2.likes}</span> Likes
+                </div>
+                <div className="bg-black/50 backdrop-blur-sm rounded-full px-3 py-1">
+                  <span className="font-semibold">{barber2.followers}</span> Followers
+                </div>
+              </div>
+
+              {/* Video Preview - 1:1 ratio */}
+              <div className="w-full max-w-[180px] sm:max-w-[200px]">
                 <BarberVideoSection 
                   videoId={barber2.is_live ? barber2.live_video_id : barber2.featured_video_id}
                   isLive={barber2.is_live}
-                  aspectRatio="landscape"
-                  className="rounded-md"
+                  aspectRatio="portrait"
+                  className="rounded-md aspect-square"
                 />
               </div>
             </div>
