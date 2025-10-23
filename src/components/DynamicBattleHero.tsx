@@ -33,8 +33,6 @@ interface BarberProfile {
 
 export const DynamicBattleHero = () => {
   const navigate = useNavigate();
-  
-  // Track live battle viewers
 
   // Fetch active battle (voting or upcoming)
   const { data: battle, isLoading: battleLoading } = useQuery({
@@ -126,6 +124,10 @@ export const DynamicBattleHero = () => {
     return `https://flagcdn.com/w1600/${countryCode.toLowerCase()}.jpg`;
   };
 
+  // IMPORTANT: Call hooks before any conditional returns
+  // Get real-time viewer counts - always call this hook regardless of battle state
+  const viewerData = useRealtimeBattleViewers(battle?.id || '');
+
   // Loading state
   if (battleLoading || barbersLoading) {
     return (
@@ -151,9 +153,6 @@ export const DynamicBattleHero = () => {
 
   const barber1 = displayBarbers[0];
   const barber2 = displayBarbers[1];
-  
-  // Get real-time viewer counts if this is an active battle
-  const viewerData = useRealtimeBattleViewers(battle?.id || '');
   const isActiveBattle = battle?.status === 'voting';
 
   return (
