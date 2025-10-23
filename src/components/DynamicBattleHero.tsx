@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarberVideoSection } from "@/components/barber/BarberVideoSection";
+import { Heart, Users } from "lucide-react";
 
 interface Battle {
   id: string;
@@ -233,12 +234,14 @@ export const DynamicBattleHero = () => {
               <div className="h-[10%]" />
 
               {/* Barber Stats */}
-              <div className="flex gap-4 text-white text-xs sm:text-sm">
-                <div className="bg-black/50 backdrop-blur-sm rounded-full px-3 py-1">
-                  <span className="font-semibold">{barber1.likes}</span> Likes
+              <div className="flex gap-3 text-white text-xs sm:text-sm">
+                <div className="bg-black/50 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1.5">
+                  <Heart className="w-3 h-3" fill="currentColor" />
+                  <span className="font-semibold">{barber1.likes}</span>
                 </div>
-                <div className="bg-black/50 backdrop-blur-sm rounded-full px-3 py-1">
-                  <span className="font-semibold">{barber1.followers}</span> Followers
+                <div className="bg-black/50 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1.5">
+                  <Users className="w-3 h-3" />
+                  <span className="font-semibold">{barber1.followers}</span>
                 </div>
               </div>
 
@@ -300,12 +303,14 @@ export const DynamicBattleHero = () => {
               <div className="h-[10%]" />
 
               {/* Barber Stats */}
-              <div className="flex gap-4 text-white text-xs sm:text-sm">
-                <div className="bg-black/50 backdrop-blur-sm rounded-full px-3 py-1">
-                  <span className="font-semibold">{barber2.likes}</span> Likes
+              <div className="flex gap-3 text-white text-xs sm:text-sm">
+                <div className="bg-black/50 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1.5">
+                  <Heart className="w-3 h-3" fill="currentColor" />
+                  <span className="font-semibold">{barber2.likes}</span>
                 </div>
-                <div className="bg-black/50 backdrop-blur-sm rounded-full px-3 py-1">
-                  <span className="font-semibold">{barber2.followers}</span> Followers
+                <div className="bg-black/50 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1.5">
+                  <Users className="w-3 h-3" />
+                  <span className="font-semibold">{barber2.followers}</span>
                 </div>
               </div>
 
