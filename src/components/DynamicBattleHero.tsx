@@ -13,6 +13,7 @@ import { YouTubeStreamPlayer } from "./battles/YouTubeStreamPlayer";
 import { BarberVideoSection } from "./barber/BarberVideoSection";
 import { BattleVotingView } from "./battles/BattleVotingView";
 import { BattleResultsView } from "./battles/BattleResultsView";
+import { FullscreenBattleVideoModal } from "./battles/FullscreenBattleVideoModal";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useLikes } from "@/hooks/useLikes";
@@ -84,6 +85,7 @@ export const DynamicBattleHero = () => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [previousStatus, setPreviousStatus] = useState<string | null>(null);
   const [userVotedFor, setUserVotedFor] = useState<string | null>(null);
+  const [isFullscreenVideoOpen, setIsFullscreenVideoOpen] = useState(false);
 
   // Fetch active battle
   const {
@@ -332,6 +334,38 @@ export const DynamicBattleHero = () => {
     setSelectedBarberId(barberId);
     setSelectedBarberName(barberName);
     setIsDonationModalOpen(true);
+  };
+
+  const handleFollow = async (barberId: string) => {
+    if (!user) {
+      toast.error("Please sign in to follow barbers");
+      return;
+    }
+    
+    try {
+      const { data: existingFollow } = await supabase
+        .from('creator_follows')
+        .select('id')
+        .eq('creator_id', barberId)
+        .eq('follower_id', user.id)
+        .maybeSingle();
+      
+      if (existingFollow) {
+        await supabase
+          .from('creator_follows')
+          .delete()
+          .eq('id', existingFollow.id);
+        toast.success("Unfollowed successfully");
+      } else {
+        await supabase
+          .from('creator_follows')
+          .insert({ creator_id: barberId, follower_id: user.id });
+        toast.success("Following successfully");
+      }
+    } catch (error) {
+      toast.error("Failed to update follow status");
+      console.error("Follow error:", error);
+    }
   };
   const handleShare = async () => {
     try {
@@ -737,7 +771,13 @@ export const DynamicBattleHero = () => {
                 </div>
 
                 {/* Portrait Video Box - Shows live stream or featured video */}
-                <div className="absolute top-[55%] left-1/2 transform -translate-x-1/2 w-28 h-40 sm:w-36 sm:h-52 lg:w-44 lg:h-64 rounded-lg overflow-hidden shadow-2xl">
+                <div 
+                  className="absolute top-[55%] left-1/2 transform -translate-x-1/2 w-28 h-40 sm:w-36 sm:h-52 lg:w-44 lg:h-64 rounded-lg overflow-hidden shadow-2xl cursor-pointer hover:ring-4 hover:ring-primary/50 transition-all"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsFullscreenVideoOpen(true);
+                  }}
+                >
                   {(() => {
                   const submission = getBarberSubmission(barber1?.user_id || '');
                   const barberData = barbers?.find(b => b.user_id === barber1?.user_id);
@@ -886,7 +926,13 @@ export const DynamicBattleHero = () => {
                 </div>
 
                 {/* Portrait Video Box - Shows live stream or featured video */}
-                <div className="absolute top-[55%] right-1/2 transform translate-x-1/2 w-28 h-40 sm:w-36 sm:h-52 lg:w-44 lg:h-64 rounded-lg overflow-hidden shadow-2xl">
+                <div 
+                  className="absolute top-[55%] right-1/2 transform translate-x-1/2 w-28 h-40 sm:w-36 sm:h-52 lg:w-44 lg:h-64 rounded-lg overflow-hidden shadow-2xl cursor-pointer hover:ring-4 hover:ring-primary/50 transition-all"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsFullscreenVideoOpen(true);
+                  }}
+                >
                   {(() => {
                   const submission = getBarberSubmission(barber2?.user_id || '');
                   const barberData = barbers?.find(b => b.user_id === barber2?.user_id);
@@ -1026,5 +1072,39 @@ export const DynamicBattleHero = () => {
             </div>
           </div>
         </div>}
+
+      {/* Fullscreen Video Modal */}
+      {isFullscreenVideoOpen && barbers && barbers.length >= 2 && (
+        <FullscreenBattleVideoModal
+          isOpen={isFullscreenVideoOpen}
+          onClose={() => setIsFullscreenVideoOpen(false)}
+          barber1={{
+            id: barbers[0]?.id || '',
+            user_id: barbers[0]?.user_id || '',
+            name: barbers[0]?.display_name || barbers[0]?.name || 'Barber 1',
+            country_code: barbers[0]?.country_code,
+            photo: barber1Photo,
+            videoUrl: getBarberSubmission(barbers[0]?.user_id || '')?.youtube_vod_url,
+            isLive: barbers[0]?.is_live,
+            submission: getBarberSubmission(barbers[0]?.user_id || '')
+          }}
+          barber2={{
+            id: barbers[1]?.id || '',
+            user_id: barbers[1]?.user_id || '',
+            name: barbers[1]?.display_name || barbers[1]?.name || 'Barber 2',
+            country_code: barbers[1]?.country_code,
+            photo: barber2Photo,
+            videoUrl: getBarberSubmission(barbers[1]?.user_id || '')?.youtube_vod_url,
+            isLive: barbers[1]?.is_live,
+            submission: getBarberSubmission(barbers[1]?.user_id || '')
+          }}
+          percentages={percentages}
+          userVotedFor={userVotedFor}
+          onVote={handleVote}
+          onLike={handleLike}
+          onDonate={handleDonate}
+          onFollow={handleFollow}
+        />
+      )}
     </div>;
 };
