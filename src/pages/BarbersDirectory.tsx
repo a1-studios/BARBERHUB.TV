@@ -18,22 +18,14 @@ export default function BarbersDirectory() {
   const [liveFilter, setLiveFilter] = useState('all');
   const [sortBy, setSortBy] = useState('recent');
 
-  // Fetch all barbers
+  // Fetch all barbers using unified view
   const { data: barbers, isLoading } = useQuery({
     queryKey: ['barbers-directory'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('barber_profiles')
-        .select(`
-          *,
-          profiles:user_id (
-            display_name,
-            avatar_url,
-            bio,
-            country_code
-          )
-        `)
-        .order('created_at', { ascending: false });
+        .from('public_barber_profiles')
+        .select('*')
+        .order('barber_created_at', { ascending: false });
       
       if (error) throw error;
       return data;
@@ -42,18 +34,17 @@ export default function BarbersDirectory() {
 
   // Get unique specialties and countries
   const specialties = [...new Set(barbers?.map(b => b.specialty).filter(Boolean))] as string[];
-  const countries = [...new Set(barbers?.map(b => (b.profiles as any)?.country_code).filter(Boolean))] as string[];
+  const countries = [...new Set(barbers?.map(b => b.country_code).filter(Boolean))] as string[];
 
   // Filter and sort barbers
   const filteredBarbers = barbers?.filter(barber => {
-    const profile = barber.profiles as any;
     const matchesSearch = 
-      barber.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      profile?.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      barber.barber_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      barber.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       barber.specialty?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesSpecialty = specialtyFilter === 'all' || barber.specialty === specialtyFilter;
-    const matchesCountry = countryFilter === 'all' || profile?.country_code === countryFilter;
+    const matchesCountry = countryFilter === 'all' || barber.country_code === countryFilter;
     const matchesLive = liveFilter === 'all' || 
       (liveFilter === 'live' && barber.is_live) ||
       (liveFilter === 'offline' && !barber.is_live);
@@ -65,12 +56,12 @@ export default function BarbersDirectory() {
   const sortedBarbers = filteredBarbers?.sort((a, b) => {
     switch (sortBy) {
       case 'name':
-        return a.name.localeCompare(b.name);
+        return (a.barber_name || '').localeCompare(b.barber_name || '');
       case 'experience':
         return (b.years_experience || 0) - (a.years_experience || 0);
       case 'recent':
       default:
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        return new Date(b.barber_created_at || 0).getTime() - new Date(a.barber_created_at || 0).getTime();
     }
   });
 
@@ -185,9 +176,9 @@ export default function BarbersDirectory() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {sortedBarbers.map((barber) => (
               <BarberProfileCard
-                key={barber.id}
-                barberId={barber.id}
-                userId={barber.user_id}
+                key={barber.barber_id}
+                barberId={barber.barber_id!}
+                userId={barber.user_id!}
                 layout="full"
                 showVideo={false}
                 showActions={true}
