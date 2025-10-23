@@ -24,17 +24,19 @@ import { CreationUpload } from '@/components/creations/CreationUpload';
 import BarberDashboard from '@/components/barber/BarberDashboard';
 import { BarberSettings } from '@/components/profiles/BarberSettings';
 import { AvatarUpload } from '@/components/profiles/AvatarUpload';
-
 const Profile = () => {
-  const { user } = useAuth();
-  const { isBarber: isUserBarber } = useUserRole();
+  const {
+    user
+  } = useAuth();
+  const {
+    isBarber: isUserBarber
+  } = useUserRole();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [showProfileSetup, setShowProfileSetup] = useState(false);
   const [showCreationUpload, setShowCreationUpload] = useState(false);
   const [showBarberSettings, setShowBarberSettings] = useState(false);
-
   const {
     userProfile,
     barberProfile,
@@ -47,27 +49,27 @@ const Profile = () => {
   } = useProfileSetup();
 
   // Fetch user profile
-  const { data: profile, isLoading } = useQuery({
+  const {
+    data: profile,
+    isLoading
+  } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       if (!user?.id) return null;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-      
+      const {
+        data,
+        error
+      } = await supabase.from('profiles').select('*').eq('user_id', user.id).single();
       if (error) throw error;
       return data;
     },
     enabled: !!user?.id
   });
-
   const [formData, setFormData] = useState({
     display_name: '',
     bio: '',
     username: '',
-    country_code: null as string | null,
+    country_code: null as string | null
   });
 
   // Update form data when profile loads
@@ -77,36 +79,37 @@ const Profile = () => {
         display_name: profile.display_name || '',
         bio: profile.bio || '',
         username: profile.username || '',
-        country_code: profile.country_code || null,
+        country_code: profile.country_code || null
       });
     }
   }, [profile]);
 
   // Fetch battles where user is a participant (for barbers only)
-  const { data: myBattles } = useQuery({
+  const {
+    data: myBattles
+  } = useQuery({
     queryKey: ['myBattles', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      
+
       // Get participant records
-      const { data: participants, error: partError } = await supabase
-        .from('battle_participants')
-        .select('id, battle_id, joined_at')
-        .eq('user_id', user.id)
-        .order('joined_at', { ascending: false });
-      
+      const {
+        data: participants,
+        error: partError
+      } = await supabase.from('battle_participants').select('id, battle_id, joined_at').eq('user_id', user.id).order('joined_at', {
+        ascending: false
+      });
       if (partError) throw partError;
       if (!participants || participants.length === 0) return [];
-      
+
       // Get battle details for those battles
       const battleIds = participants.map(p => p.battle_id);
-      const { data: battles, error: battleError } = await supabase
-        .from('battles')
-        .select('id, title, description, status, prize_amount, currency, category, starts_at, voting_ends_at')
-        .in('id', battleIds);
-      
+      const {
+        data: battles,
+        error: battleError
+      } = await supabase.from('battles').select('id, title, description, status, prize_amount, currency, category, starts_at, voting_ends_at').in('id', battleIds);
       if (battleError) throw battleError;
-      
+
       // Combine the data
       return participants.map(p => ({
         ...p,
@@ -117,15 +120,16 @@ const Profile = () => {
   });
 
   // Fetch battle submissions for the user
-  const { data: mySubmissions } = useQuery({
+  const {
+    data: mySubmissions
+  } = useQuery({
     queryKey: ['mySubmissions', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      const { data, error } = await supabase
-        .from('battle_submissions')
-        .select('battle_id, status, created_at')
-        .eq('user_id', user.id);
-      
+      const {
+        data,
+        error
+      } = await supabase.from('battle_submissions').select('battle_id, status, created_at').eq('user_id', user.id);
       if (error) throw error;
       return data;
     },
@@ -133,16 +137,16 @@ const Profile = () => {
   });
 
   // Fetch barber stats (must be at top level, not inside JSX!)
-  const { data: barberStats } = useQuery({
+  const {
+    data: barberStats
+  } = useQuery({
     queryKey: ['barber-own-stats', barberProfile?.id],
     queryFn: async () => {
       if (!barberProfile?.id) return null;
-      const { data, error } = await supabase
-        .from('barber_stats')
-        .select('*')
-        .eq('barber_id', barberProfile.id)
-        .maybeSingle();
-      
+      const {
+        data,
+        error
+      } = await supabase.from('barber_stats').select('*').eq('barber_id', barberProfile.id).maybeSingle();
       if (error) throw error;
       return data || {
         follower_count: 0,
@@ -168,37 +172,28 @@ const Profile = () => {
   };
 
   // Categorize battles
-  const activeBattles = myBattles?.filter((b: any) => 
-    b.battles && (b.battles.status === 'voting' || b.battles.status === 'active')
-  ) || [];
-  
-  const upcomingBattles = myBattles?.filter((b: any) => 
-    b.battles && b.battles.status === 'upcoming'
-  ) || [];
-  
-  const pastBattles = myBattles?.filter((b: any) => 
-    b.battles && b.battles.status === 'completed'
-  ) || [];
+  const activeBattles = myBattles?.filter((b: any) => b.battles && (b.battles.status === 'voting' || b.battles.status === 'active')) || [];
+  const upcomingBattles = myBattles?.filter((b: any) => b.battles && b.battles.status === 'upcoming') || [];
+  const pastBattles = myBattles?.filter((b: any) => b.battles && b.battles.status === 'completed') || [];
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       if (!user?.id) throw new Error('No user');
-      
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          display_name: data.display_name,
-          bio: data.bio,
-          username: data.username,
-          country_code: data.country_code,
-        })
-        .eq('user_id', user.id);
-      
+      const {
+        error
+      } = await supabase.from('profiles').update({
+        display_name: data.display_name,
+        bio: data.bio,
+        username: data.username,
+        country_code: data.country_code
+      }).eq('user_id', user.id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+      queryClient.invalidateQueries({
+        queryKey: ['profile', user?.id]
+      });
       toast.success('Profile updated successfully!');
       setIsEditing(false);
     },
@@ -209,41 +204,35 @@ const Profile = () => {
       } else {
         toast.error('Failed to update profile: ' + error.message);
       }
-    },
+    }
   });
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     updateProfileMutation.mutate(formData);
   };
-
   const handleCancel = () => {
     if (profile) {
       setFormData({
         display_name: profile.display_name || '',
         bio: profile.bio || '',
         username: profile.username || '',
-        country_code: profile.country_code || null,
+        country_code: profile.country_code || null
       });
     }
     setIsEditing(false);
   };
-
   if (isLoading || profileLoading) {
-    return (
-      <div className="min-h-screen">
+    return <div className="min-h-screen">
         <Header />
         <div className="pt-20 flex items-center justify-center min-h-[50vh]">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
-      </div>
-    );
+      </div>;
   }
 
   // Show specialized profile setup if needed
   if (needsProfileSetup && !showProfileSetup) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5">
+    return <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5">
         <Header />
         <main className="pt-24 pb-12 px-4">
           <div className="container mx-auto max-w-2xl">
@@ -252,85 +241,57 @@ const Profile = () => {
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl">Complete Your Profile</CardTitle>
                 <CardDescription>
-                  {isBarber 
-                    ? 'Set up your professional barber profile to start competing' 
-                    : 'Complete your profile to start voting and engaging with battles'
-                  }
+                  {isBarber ? 'Set up your professional barber profile to start competing' : 'Complete your profile to start voting and engaging with battles'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <Button 
-                  onClick={() => setShowProfileSetup(true)}
-                  className="w-full"
-                  size="lg"
-                >
+                <Button onClick={() => setShowProfileSetup(true)} className="w-full" size="lg">
                   {isBarber ? 'Create Barber Profile' : 'Complete Profile'}
                 </Button>
               </CardContent>
             </Card>
           </div>
         </main>
-      </div>
-    );
+      </div>;
   }
-
   if (showProfileSetup) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5">
+    return <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5">
         <Header />
         <main className="pt-24 pb-12 px-4">
           <div className="container mx-auto max-w-2xl">
             <BackButton className="mb-6" />
-            <Button 
-              variant="ghost" 
-              onClick={() => setShowProfileSetup(false)}
-              className="mb-4"
-            >
+            <Button variant="ghost" onClick={() => setShowProfileSetup(false)} className="mb-4">
               ← Back to Profile
             </Button>
             
-            {isBarber ? (
-              <BarberProfileForm 
-                onProfileCreated={() => {
-                  setShowProfileSetup(false);
-                  refreshProfiles();
-                }}
-                existingProfile={barberProfile}
-              />
-            ) : (
-              <ClientProfileForm 
-                onProfileCreated={() => {
-                  setShowProfileSetup(false);
-                  refreshProfiles();
-                }}
-                existingProfile={clientProfile}
-              />
-            )}
+            {isBarber ? <BarberProfileForm onProfileCreated={() => {
+            setShowProfileSetup(false);
+            refreshProfiles();
+          }} existingProfile={barberProfile} /> : <ClientProfileForm onProfileCreated={() => {
+            setShowProfileSetup(false);
+            refreshProfiles();
+          }} existingProfile={clientProfile} />}
           </div>
         </main>
-      </div>
-    );
+      </div>;
   }
 
   // Show barber settings if requested
   if (showBarberSettings && isBarber) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5">
+    return <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5">
         <Header />
         <main className="pt-24 pb-12 px-4">
           <div className="container mx-auto max-w-6xl">
             <BarberSettings onBack={() => setShowBarberSettings(false)} />
           </div>
         </main>
-      </div>
-    );
+      </div>;
   }
 
   // Barbers can access BarberDashboard via /portal route
   // This allows them to see their full profile with YouTube integration here
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5">
+  return <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5">
       <Header />
       <main className="pt-20 sm:pt-24 pb-12 px-4">
         <div className="container mx-auto max-w-4xl">
@@ -357,38 +318,29 @@ const Profile = () => {
                 <CardContent className="space-y-6">
                   {/* Avatar Upload Section */}
                   <div className="flex flex-col items-center pb-6 border-b">
-                    <AvatarUpload
-                      currentAvatar={profile?.avatar_url || ''}
-                      onAvatarChange={(url) => {
-                        queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
-                      }}
-                      size="lg"
-                    />
+                    <AvatarUpload currentAvatar={profile?.avatar_url || ''} onAvatarChange={url => {
+                    queryClient.invalidateQueries({
+                      queryKey: ['profile', user?.id]
+                    });
+                  }} size="lg" />
                   </div>
 
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="display_name">Display Name</Label>
-                        <Input
-                          id="display_name"
-                          value={formData.display_name}
-                          onChange={(e) => setFormData(prev => ({ ...prev, display_name: e.target.value }))}
-                          disabled={!isEditing}
-                          className="w-full"
-                        />
+                        <Input id="display_name" value={formData.display_name} onChange={e => setFormData(prev => ({
+                        ...prev,
+                        display_name: e.target.value
+                      }))} disabled={!isEditing} className="w-full" />
                       </div>
                       
                       <div className="space-y-2">
                         <Label htmlFor="username">Username</Label>
-                        <Input
-                          id="username"
-                          value={formData.username}
-                          onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value }))}
-                          disabled={!isEditing}
-                          placeholder="@username"
-                          className="w-full"
-                        />
+                        <Input id="username" value={formData.username} onChange={e => setFormData(prev => ({
+                        ...prev,
+                        username: e.target.value
+                      }))} disabled={!isEditing} placeholder="@username" className="w-full" />
                         <p className="text-xs text-muted-foreground">
                           Choose a unique username
                         </p>
@@ -397,29 +349,20 @@ const Profile = () => {
 
                     <div className="space-y-2">
                       <Label>Country</Label>
-                      <CountrySelector
-                        value={formData.country_code}
-                        onChange={(country_code) => setFormData(prev => ({ ...prev, country_code }))}
-                        placeholder="Select your country"
-                        disabled={!isEditing}
-                      />
+                      <CountrySelector value={formData.country_code} onChange={country_code => setFormData(prev => ({
+                      ...prev,
+                      country_code
+                    }))} placeholder="Select your country" disabled={!isEditing} />
                     </div>
 
                     {/* Only show bio for barbers */}
-                    {isBarber && (
-                      <div className="space-y-2">
+                    {isBarber && <div className="space-y-2">
                         <Label htmlFor="bio">Personal Bio</Label>
-                        <Textarea
-                          id="bio"
-                          value={formData.bio}
-                          onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
-                          disabled={!isEditing}
-                          placeholder="Tell people about yourself..."
-                          rows={3}
-                          className="resize-none w-full"
-                        />
-                      </div>
-                    )}
+                        <Textarea id="bio" value={formData.bio} onChange={e => setFormData(prev => ({
+                      ...prev,
+                      bio: e.target.value
+                    }))} disabled={!isEditing} placeholder="Tell people about yourself..." rows={3} className="resize-none w-full" />
+                      </div>}
 
                     <div className="space-y-2">
                       <Label>Email</Label>
@@ -430,82 +373,44 @@ const Profile = () => {
                       <Label>Account Type</Label>
                       <div className="flex items-center gap-2">
                         <Badge variant={isBarber ? "default" : "secondary"} className="text-sm px-3 py-1">
-                          {isBarber ? (
-                            <>
+                          {isBarber ? <>
                               <Scissors className="w-4 h-4 mr-1.5" />
                               Barber
-                            </>
-                          ) : (
-                            <>
+                            </> : <>
                               <Users className="w-4 h-4 mr-1.5" />
                               Fan
-                            </>
-                          )}
+                            </>}
                         </Badge>
                         <RoleBadge size="sm" />
                       </div>
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
-                      {isEditing ? (
-                        <>
-                          <Button 
-                            type="submit" 
-                            disabled={updateProfileMutation.isPending}
-                            className="w-full sm:w-auto"
-                          >
-                            {updateProfileMutation.isPending && (
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            )}
+                      {isEditing ? <>
+                          <Button type="submit" disabled={updateProfileMutation.isPending} className="w-full sm:w-auto">
+                            {updateProfileMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                             Save Profile
                           </Button>
-                          <Button 
-                            type="button" 
-                            variant="outline" 
-                            onClick={handleCancel}
-                            className="w-full sm:w-auto"
-                          >
+                          <Button type="button" variant="outline" onClick={handleCancel} className="w-full sm:w-auto">
                             Cancel
                           </Button>
-                        </>
-                      ) : (
-                        <Button 
-                          type="button" 
-                          onClick={() => setIsEditing(true)}
-                          className="w-full sm:w-auto"
-                        >
+                        </> : <Button type="button" onClick={() => setIsEditing(true)} className="w-full sm:w-auto">
                           Edit Profile
-                        </Button>
-                      )}
+                        </Button>}
                       
-                      {isBarber && (
-                        <Button
-                          variant="outline"
-                          size="default"
-                          onClick={() => setShowBarberSettings(true)}
-                          className="w-full sm:w-auto sm:ml-auto"
-                        >
+                      {isBarber && <Button variant="outline" size="default" onClick={() => setShowBarberSettings(true)} className="w-full sm:w-auto sm:ml-auto">
                           <Settings className="h-4 w-4 mr-2" />
                           Barber Settings
-                        </Button>
-                      )}
-                      {(barberProfile || clientProfile) && (
-                        <Button
-                          variant="outline"
-                          size="default"
-                          onClick={() => setShowProfileSetup(true)}
-                          className="w-full sm:w-auto"
-                        >
+                        </Button>}
+                      {(barberProfile || clientProfile) && <Button variant="outline" size="default" onClick={() => setShowProfileSetup(true)} className="w-full sm:w-auto">
                           <Edit3 className="h-4 w-4 mr-2" />
                           Edit {isBarber ? 'Barber' : 'Client'} Profile
-                        </Button>
-                      )}
+                        </Button>}
                     </div>
                   </form>
 
                   {/* Specialized Profile Info */}
-                  {barberProfile && (
-                    <div className="mt-6 pt-6 border-t">
+                  {barberProfile && <div className="mt-6 pt-6 border-t">
                       <h4 className="font-semibold mb-4">Barber Profile</h4>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
@@ -527,8 +432,7 @@ const Profile = () => {
                           <p className="font-medium">{barberProfile.rating || 0}/5</p>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    </div>}
 
                   {/* Fan stats section removed - keep it minimal */}
                 </CardContent>
@@ -536,251 +440,34 @@ const Profile = () => {
             </div>
 
             {/* Quick Actions Sidebar */}
-            <div className="space-y-4 sm:space-y-6">
-              {/* Quick Actions for Barbers */}
-              {isBarber && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <Button 
-                      variant="default" 
-                      className="w-full justify-start text-sm"
-                      size="sm"
-                      onClick={() => navigate('/portal')}
-                    >
-                      <Zap className="w-4 h-4 mr-2 flex-shrink-0" />
-                      <span className="truncate">Go to Portal</span>
-                    </Button>
-
-                    {activeBattles.length > 0 && needsSubmission(activeBattles[0]?.battles) && (
-                      <Button 
-                        variant="outline" 
-                        className="w-full justify-start border-orange-500 text-orange-500 hover:bg-orange-500/10 text-sm"
-                        size="sm"
-                        onClick={() => navigate(`/battles/${activeBattles[0]?.battles?.id}`)}
-                      >
-                        <Upload className="w-4 h-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Upload to Active Battle</span>
-                      </Button>
-                    )}
-
-                    <Button 
-                      variant="outline" 
-                      className="w-full justify-start text-sm"
-                      size="sm"
-                      onClick={() => navigate('/battles/create')}
-                    >
-                      <Plus className="w-4 h-4 mr-2 flex-shrink-0" />
-                      <span className="truncate">Create Battle</span>
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Quick Actions for Fans */}
-              {!isBarber && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <Link to="/creator-hub" className="block">
-                      <Button variant="outline" className="w-full justify-start text-sm" size="sm">
-                        <Trophy className="w-4 h-4 mr-2 flex-shrink-0" />
-                        <span className="truncate">Watch Battles</span>
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              )}
-
-              {isBarber && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base sm:text-lg">Barber Tools</CardTitle>
-                    <CardDescription className="text-xs sm:text-sm">
-                      Professional features for barbers
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      • Create and manage battles
-                    </p>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      • Showcase your work
-                    </p>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      • Build your reputation
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* YouTube Integration - Barbers Only */}
-              {isBarber && barberProfile && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg flex-wrap">
-                      <span className="truncate">YouTube Integration</span>
-                      {barberProfile.is_live && (
-                        <Badge variant="destructive" className="animate-pulse text-xs">
-                          🔴 LIVE
-                        </Badge>
-                      )}
-                    </CardTitle>
-                    <CardDescription className="text-xs sm:text-sm">
-                      Connect your YouTube channel and featured video
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label htmlFor="youtube_channel_id" className="text-sm">YouTube Channel ID</Label>
-                      <Input
-                        id="youtube_channel_id"
-                        placeholder="UCxxx..."
-                        defaultValue={barberProfile.youtube_channel_id || ''}
-                        className="text-sm"
-                        onBlur={async (e) => {
-                          const { error } = await supabase
-                            .from('barber_profiles')
-                            .update({ youtube_channel_id: e.target.value })
-                            .eq('user_id', user?.id);
-                          
-                          if (error) {
-                            toast.error('Failed to update channel ID');
-                          } else {
-                            toast.success('Channel ID updated');
-                          }
-                        }}
-                      />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="featured_video" className="text-sm">Featured Video URL</Label>
-                      <Input
-                        id="featured_video"
-                        placeholder="https://www.youtube.com/watch?v=..."
-                        className="text-sm"
-                        onKeyDown={async (e) => {
-                          if (e.key === 'Enter') {
-                            const input = e.target as HTMLInputElement;
-                            try {
-                              const { data, error } = await supabase.functions.invoke('set-featured-video', {
-                                body: { youtube_url: input.value }
-                              });
-                              
-                              if (error) throw error;
-                              toast.success('Featured video updated!');
-                              queryClient.invalidateQueries({ queryKey: ['barber-profile'] });
-                            } catch (error) {
-                              toast.error('Failed to set featured video');
-                            }
-                          }
-                        }}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Press Enter to save
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Stats Dashboard - Barbers Only */}
-              {isBarber && barberProfile && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base sm:text-lg">Your Stats</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="text-center p-3 bg-primary/5 rounded-lg">
-                        <Users className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 text-primary" />
-                        <div className="text-xl sm:text-2xl font-bold text-white">{barberStats?.follower_count || 0}</div>
-                        <div className="text-xs text-muted-foreground">Followers</div>
-                      </div>
-                      <div className="text-center p-3 bg-primary/5 rounded-lg">
-                        <Heart className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 text-primary" />
-                        <div className="text-xl sm:text-2xl font-bold text-white">{barberStats?.like_count || 0}</div>
-                        <div className="text-xs text-muted-foreground">Likes</div>
-                      </div>
-                      <div className="text-center p-3 bg-primary/5 rounded-lg">
-                        <Bell className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 text-primary" />
-                        <div className="text-xl sm:text-2xl font-bold text-white">{barberStats?.subscription_count || 0}</div>
-                        <div className="text-xs text-muted-foreground">Subscribers</div>
-                      </div>
-                      <div className="text-center p-3 bg-primary/5 rounded-lg">
-                        <DollarSign className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1 text-primary" />
-                        <div className="text-xl sm:text-2xl font-bold text-white">
-                          ${((barberStats?.total_donations_cents || 0) / 100).toFixed(2)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Donations</div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {!isBarber && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Fan Features</CardTitle>
-                    <CardDescription>
-                      Engage with the community
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <p className="text-sm text-muted-foreground">
-                      • Vote on battles
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      • Follow your favorite barbers
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      • Join the conversation
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+            
           </div>
 
           {/* My Battles Section - Barbers Only */}
-          {isBarber && myBattles && myBattles.length > 0 && (
-            <div className="mt-8">
+          {isBarber && myBattles && myBattles.length > 0 && <div className="mt-8">
               <h3 className="text-2xl font-bold mb-6">My Battles</h3>
               
               {/* Active Battles */}
-              {activeBattles.length > 0 && (
-                <div className="mb-8">
+              {activeBattles.length > 0 && <div className="mb-8">
                   <h4 className="text-xl font-semibold mb-4 text-primary">Active Battles</h4>
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {activeBattles.map(({ battles }: any) => {
-                      const hasSubmission = !needsSubmission(battles);
-                      return (
-                        <Card 
-                          key={battles.id}
-                          className="border-primary/50 hover:border-primary cursor-pointer"
-                          onClick={() => navigate(`/battles/${battles.id}`)}
-                        >
+                    {activeBattles.map(({
+                battles
+              }: any) => {
+                const hasSubmission = !needsSubmission(battles);
+                return <Card key={battles.id} className="border-primary/50 hover:border-primary cursor-pointer" onClick={() => navigate(`/battles/${battles.id}`)}>
                           <CardHeader>
                             <div className="flex items-center justify-between mb-2">
                               <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
                                 Active
                               </Badge>
-                              {hasSubmission ? (
-                                <Badge className="bg-green-500 text-white">
+                              {hasSubmission ? <Badge className="bg-green-500 text-white">
                                   <CheckCircle className="w-3 h-3 mr-1" />
                                   Submitted
-                                </Badge>
-                              ) : (
-                                <Badge variant="outline" className="border-orange-500 text-orange-500">
+                                </Badge> : <Badge variant="outline" className="border-orange-500 text-orange-500">
                                   <Clock className="w-3 h-3 mr-1" />
                                   Pending
-                                </Badge>
-                              )}
+                                </Badge>}
                             </div>
                             <CardTitle className="text-lg">{battles.title}</CardTitle>
                             <CardDescription className="line-clamp-2">
@@ -794,31 +481,23 @@ const Profile = () => {
                                 ${battles.prize_amount}
                               </span>
                             </div>
-                            {!hasSubmission && (
-                              <Button className="w-full mt-3" size="sm" variant="outline">
+                            {!hasSubmission && <Button className="w-full mt-3" size="sm" variant="outline">
                                 <Upload className="w-4 h-4 mr-2" />
                                 Upload Submission
-                              </Button>
-                            )}
+                              </Button>}
                           </CardContent>
-                        </Card>
-                      );
-                    })}
+                        </Card>;
+              })}
                   </div>
-                </div>
-              )}
+                </div>}
 
               {/* Upcoming Battles */}
-              {upcomingBattles.length > 0 && (
-                <div className="mb-8">
+              {upcomingBattles.length > 0 && <div className="mb-8">
                   <h4 className="text-xl font-semibold mb-4">Upcoming Battles</h4>
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {upcomingBattles.map(({ battles }: any) => (
-                      <Card 
-                        key={battles.id}
-                        className="hover:border-primary cursor-pointer"
-                        onClick={() => navigate(`/battles/${battles.id}`)}
-                      >
+                    {upcomingBattles.map(({
+                battles
+              }: any) => <Card key={battles.id} className="hover:border-primary cursor-pointer" onClick={() => navigate(`/battles/${battles.id}`)}>
                         <CardHeader>
                           <div className="flex items-center justify-between mb-2">
                             <Badge variant="secondary">Upcoming</Badge>
@@ -831,31 +510,23 @@ const Profile = () => {
                         </CardHeader>
                         <CardContent>
                           <div className="text-sm text-muted-foreground">
-                            {battles.starts_at && (
-                              <div>Starts: {new Date(battles.starts_at).toLocaleDateString()}</div>
-                            )}
+                            {battles.starts_at && <div>Starts: {new Date(battles.starts_at).toLocaleDateString()}</div>}
                             <div className="text-primary font-semibold mt-2">
                               Prize: ${battles.prize_amount}
                             </div>
                           </div>
                         </CardContent>
-                      </Card>
-                    ))}
+                      </Card>)}
                   </div>
-                </div>
-              )}
+                </div>}
 
               {/* Past Battles */}
-              {pastBattles.length > 0 && (
-                <div>
+              {pastBattles.length > 0 && <div>
                   <h4 className="text-xl font-semibold mb-4">Past Battles</h4>
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {pastBattles.map(({ battles }: any) => (
-                      <Card 
-                        key={battles.id}
-                        className="opacity-80 hover:opacity-100 cursor-pointer"
-                        onClick={() => navigate(`/battles/${battles.id}`)}
-                      >
+                    {pastBattles.map(({
+                battles
+              }: any) => <Card key={battles.id} className="opacity-80 hover:opacity-100 cursor-pointer" onClick={() => navigate(`/battles/${battles.id}`)}>
                         <CardHeader>
                           <div className="flex items-center justify-between mb-2">
                             <Badge variant="outline">
@@ -874,30 +545,18 @@ const Profile = () => {
                             View Results
                           </Button>
                         </CardContent>
-                      </Card>
-                    ))}
+                      </Card>)}
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                </div>}
+            </div>}
 
           {/* Empty State for Barbers with No Battles */}
-          {isBarber && (!myBattles || myBattles.length === 0) && (
-            <div className="mt-8">
-              <EmptyState
-                icon={Trophy}
-                title="No Battles Yet"
-                description="Create your first battle or join a tournament to start competing!"
-                actionLabel="Go to Portal"
-                onAction={() => navigate('/portal')}
-              />
-            </div>
-          )}
+          {isBarber && (!myBattles || myBattles.length === 0) && <div className="mt-8">
+              <EmptyState icon={Trophy} title="No Battles Yet" description="Create your first battle or join a tournament to start competing!" actionLabel="Go to Portal" onAction={() => navigate('/portal')} />
+            </div>}
 
           {/* Creation Upload Modal */}
-          {showCreationUpload && isBarber && barberProfile && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          {showCreationUpload && isBarber && barberProfile && <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
               <div className="bg-background rounded-lg max-w-2xl w-full max-h-[90vh] overflow-auto">
                 <div className="p-4 border-b flex justify-between items-center">
                   <h3 className="text-lg font-semibold">Upload New Creation</h3>
@@ -906,21 +565,15 @@ const Profile = () => {
                   </Button>
                 </div>
                 <div className="p-4">
-                  <CreationUpload
-                    barberProfileId={barberProfile.id}
-                    onCreationUploaded={() => {
-                      setShowCreationUpload(false);
-                      toast.success('Creation uploaded successfully!');
-                    }}
-                  />
+                  <CreationUpload barberProfileId={barberProfile.id} onCreationUploaded={() => {
+                setShowCreationUpload(false);
+                toast.success('Creation uploaded successfully!');
+              }} />
                 </div>
               </div>
-            </div>
-          )}
+            </div>}
         </div>
       </main>
-    </div>
-  );
+    </div>;
 };
-
 export default Profile;
