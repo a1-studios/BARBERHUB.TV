@@ -171,6 +171,38 @@ export const DynamicBattleHero = () => {
     enabled: !!battle?.barber1_id && !!battle?.barber2_id
   });
 
+  // Fallback: featured barbers when no battle with both barbers
+  const { data: featuredBarbers } = useQuery({
+    queryKey: ['featuredBarbers'],
+    queryFn: async () => {
+      const { data: barberProfiles, error } = await supabase
+        .from('barber_profiles')
+        .select('id, user_id, name, country_code, is_live, live_video_id, featured_video_id')
+        .order('updated_at', { ascending: false })
+        .limit(2);
+      if (error) throw error;
+      if (!barberProfiles || barberProfiles.length === 0) return [];
+
+      const userIds = barberProfiles.map(b => b.user_id);
+      const { data: userProfiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('user_id, country_code, avatar_url, display_name')
+        .in('user_id', userIds);
+      if (profileError) throw profileError;
+
+      return barberProfiles.map(barber => {
+        const up = userProfiles?.find(p => p.user_id === barber.user_id);
+        return {
+          ...barber,
+          country_code: barber.country_code || up?.country_code || 'us',
+          avatar_url: up?.avatar_url || undefined,
+          display_name: up?.display_name || barber.name
+        };
+      });
+    },
+    enabled: !battle?.barber1_id || !battle?.barber2_id
+  });
+
   // Get barber user_ids for likes (extract from barbers array)
   const barber1UserId = barbers?.find(b => b.id === battle?.barber1_id)?.user_id;
   const barber2UserId = barbers?.find(b => b.id === battle?.barber2_id)?.user_id;
@@ -453,13 +485,90 @@ export const DynamicBattleHero = () => {
       </div>;
   }
 
-  // If no battle or barbers, show nothing (can add a message if desired)
+  // Fallback highlight: show two barbers from database in head-to-head when no battle
   if (!battle || !barbers || barbers.length < 2) {
-    return <div className="pt-24 lg:pt-28 pb-8 px-4 max-w-7xl mx-auto">
-        <div className="aspect-video bg-card rounded-2xl shadow-2xl border-2 border-primary/50 flex items-center justify-center">
-          <div className="text-lg text-muted-foreground">No active battle at the moment</div>
+    if (!featuredBarbers || featuredBarbers.length < 2) {
+      return (
+        <div className="pt-24 lg:pt-28 pb-8 px-4 max-w-7xl mx-auto">
+          <div className="aspect-video bg-card rounded-2xl shadow-2xl border-2 border-primary/50 flex items-center justify-center">
+            <div className="text-lg text-muted-foreground">No barbers to showcase yet</div>
+          </div>
         </div>
-      </div>;
+      );
+    }
+    const fb1 = featuredBarbers[0];
+    const fb2 = featuredBarbers[1];
+    const fb1Photo = fb1?.avatar_url;
+    const fb2Photo = fb2?.avatar_url;
+
+    return (
+      <div className="pt-24 lg:pt-28 pb-8 px-2 sm:px-4 max-w-5xl mx-auto">
+        <div className="w-full aspect-[16/9] sm:aspect-[16/10] bg-card rounded-xl sm:rounded-2xl shadow-2xl border-2 border-primary/50 overflow-hidden relative">
+          <div className="h-full flex">
+            {/* Left Barber */}
+            <div className="flex-1 relative overflow-hidden">
+              <div className="absolute inset-0" style={{
+                backgroundImage: `url(${getFlagImageUrl(fb1?.country_code || 'us')})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                opacity: 0.3
+              }} />
+              <div className="absolute top-[25%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl bg-gray-700/50">
+                {fb1Photo && <img src={fb1Photo} alt={fb1?.display_name || fb1?.name} className="w-full h-full object-cover" />}
+              </div>
+              <div className="absolute top-[40%] left-1/2 transform -translate-x-1/2 text-center z-10">
+                <h3 className="text-white text-xs sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">{fb1?.display_name || fb1?.name || 'Barber 1'}</h3>
+              </div>
+              <div className="absolute top-[55%] left-1/2 transform -translate-x-1/2 w-28 h-40 sm:w-36 sm:h-52 lg:w-44 lg:h-64 rounded-lg overflow-hidden shadow-2xl bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                <Play className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-white/60" />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/60" />
+              <div className="absolute top-3 sm:top-6 left-3 sm:left-6 z-10">
+                <div className="bg-white/20 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1 sm:py-1.5">
+                  <span className="text-white font-bold text-sm sm:text-lg lg:text-xl">50%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Center VS */}
+            <div className="absolute left-1/2 top-0 bottom-0 transform -translate-x-1/2 z-20 w-16 sm:w-20 lg:w-24 flex flex-col">
+              <div className="flex-1" />
+              <div className="h-16 sm:h-20 lg:h-24 flex items-center justify-center">
+                <div className="bg-white rounded-full w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 flex items-center justify-center shadow-2xl border-2 border-primary">
+                  <span className="text-xs sm:text-sm font-bold text-primary">VS</span>
+                </div>
+              </div>
+              <div className="flex-1" />
+            </div>
+
+            {/* Right Barber */}
+            <div className="flex-1 relative overflow-hidden">
+              <div className="absolute inset-0" style={{
+                backgroundImage: `url(${getFlagImageUrl(fb2?.country_code || 'us')})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                opacity: 0.3
+              }} />
+              <div className="absolute top-[25%] right-1/2 transform translate-x-1/2 -translate-y-1/2 w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl bg-gray-700/50">
+                {fb2Photo && <img src={fb2Photo} alt={fb2?.display_name || fb2?.name} className="w-full h-full object-cover" />}
+              </div>
+              <div className="absolute top-[40%] right-1/2 transform translate-x-1/2 text-center z-10">
+                <h3 className="text-white text-xs sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-2 py-1">{fb2?.display_name || fb2?.name || 'Barber 2'}</h3>
+              </div>
+              <div className="absolute top-[55%] right-1/2 transform translate-x-1/2 w-28 h-40 sm:w-36 sm:h-52 lg:w-44 lg:h-64 rounded-lg overflow-hidden shadow-2xl bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
+                <Play className="w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 text-white/60" />
+              </div>
+              <div className="absolute inset-0 bg-gradient-to-l from-black/60 via-black/40 to-black/60" />
+              <div className="absolute top-3 sm:top-6 right-3 sm:right-6 z-10">
+                <div className="bg-white/20 backdrop-blur-sm rounded-full px-2 sm:px-3 py-1 sm:py-1.5">
+                  <span className="text-white font-bold text-sm sm:text-lg lg:text-xl">50%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
   const barber1 = barbers.find(b => b.id === battle.barber1_id);
   const barber2 = barbers.find(b => b.id === battle.barber2_id);
@@ -715,25 +824,7 @@ export const DynamicBattleHero = () => {
                   </div>
                 </div>
 
-                {/* Vertical Stats Bar */}
-                <div className="absolute left-3 sm:left-6 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-2 bg-black/60 backdrop-blur-sm rounded-lg p-2">
-                  <div className="flex items-center gap-1 text-white text-xs">
-                    <TrendingUp className="w-3 h-3" />
-                    <span>#5</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-white text-xs">
-                    <Heart className="w-3 h-3" />
-                    <span>{battle.vote_count1}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-white text-xs">
-                    <Users className="w-3 h-3" />
-                    <span>1.2k</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-white text-xs">
-                    <DollarSign className="w-3 h-3" />
-                    <span>$320</span>
-                  </div>
-                </div>
+                {/* Vertical Stats Bar - removed per request */}
 
               </div>
 
@@ -870,25 +961,7 @@ export const DynamicBattleHero = () => {
                   </div>
                 </div>
 
-                {/* Vertical Stats Bar */}
-                <div className="absolute right-3 sm:right-6 top-1/2 transform -translate-y-1/2 z-10 flex flex-col gap-2 bg-black/60 backdrop-blur-sm rounded-lg p-2">
-                  <div className="flex items-center gap-1 text-white text-xs">
-                    <TrendingUp className="w-3 h-3" />
-                    <span>#3</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-white text-xs">
-                    <Heart className="w-3 h-3" />
-                    <span>{battle.vote_count2}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-white text-xs">
-                    <Users className="w-3 h-3" />
-                    <span>2.1k</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-white text-xs">
-                    <DollarSign className="w-3 h-3" />
-                    <span>$890</span>
-                  </div>
-                </div>
+                {/* Vertical Stats Bar - removed per request */}
 
               </div>
             </div>
