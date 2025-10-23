@@ -405,18 +405,21 @@ const Profile = () => {
                       />
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="bio">Personal Bio</Label>
-                      <Textarea
-                        id="bio"
-                        value={formData.bio}
-                        onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
-                        disabled={!isEditing}
-                        placeholder="Tell people about yourself..."
-                        rows={3}
-                        className="resize-none w-full"
-                      />
-                    </div>
+                    {/* Only show bio for barbers */}
+                    {isBarber && (
+                      <div className="space-y-2">
+                        <Label htmlFor="bio">Personal Bio</Label>
+                        <Textarea
+                          id="bio"
+                          value={formData.bio}
+                          onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
+                          disabled={!isEditing}
+                          placeholder="Tell people about yourself..."
+                          rows={3}
+                          className="resize-none w-full"
+                        />
+                      </div>
+                    )}
 
                     <div className="space-y-2">
                       <Label>Email</Label>
@@ -527,25 +530,7 @@ const Profile = () => {
                     </div>
                   )}
 
-                  {clientProfile && (
-                    <div className="mt-6 pt-6 border-t">
-                      <h4 className="font-semibold mb-4">Voting Profile</h4>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Username:</span>
-                          <p className="font-medium">{clientProfile.username}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Total Votes Cast:</span>
-                          <p className="font-medium">{clientProfile.total_votes_cast || 0}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Voting Power:</span>
-                          <p className="font-medium">{clientProfile.voting_power || 1}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                  {/* Fan stats section removed - keep it minimal */}
                 </CardContent>
               </Card>
             </div>
