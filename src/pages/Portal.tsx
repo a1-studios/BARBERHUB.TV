@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { TournamentRegistration } from "@/components/tournament/TournamentRegistration";
 import { LiveMatchCounter } from "@/components/tournament/LiveMatchCounter";
 import { MyBattlesSection } from "@/components/barber/MyBattlesSection";
-import { Trophy, Users, Clock, Vote, Plus, DollarSign, Play, Calendar, Target } from "lucide-react";
+import { Trophy, Users, Clock, Vote, DollarSign, Play, Calendar, Target } from "lucide-react";
 interface Battle {
   id: string;
   title: string;
@@ -32,8 +32,6 @@ const Portal = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isCreatingBattle, setIsCreatingBattle] = useState(false);
-
-  // Fetch upcoming battles
   const {
     data: upcomingBattles,
     refetch: refetchBattles
@@ -70,9 +68,7 @@ const Portal = () => {
     },
     enabled: !!user
   });
-  const handleCreateBattle = () => {
-    navigate('/battles/create');
-  };
+
   const handleEnterTournament = async () => {
     if (!user) return;
     setIsCreatingBattle(true);
@@ -122,112 +118,84 @@ const Portal = () => {
       <main className="pt-20 sm:pt-24 pb-12">
         <div className="container mx-auto px-4">
           {/* Portal Header */}
-          <div className="text-center mb-12">
-            <div className="flex items-center justify-center gap-4 mb-4">
-              <h1 className="text-4xl font-bold text-foreground">Barber Battle Portal</h1>
+          <div className="text-center mb-8">
+            <div className="flex items-center justify-center gap-4 mb-3">
+              <h1 className="text-3xl font-bold text-foreground">Barber Battle Portal</h1>
               <LiveMatchCounter />
             </div>
-            <p className="text-xl text-muted-foreground mb-2">
+            <p className="text-lg text-muted-foreground mb-1">
               Year-round single-elimination tournament
             </p>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               Live battles every Sunday, 10:00 AM - 6:00 PM
             </p>
           </div>
 
-          {/* Role-based Action Section */}
-          <div className="mb-12">
-            <Card className="bg-gradient-to-r from-primary/10 to-secondary/10">
-              <CardHeader>
-                <CardTitle className="text-2xl text-center">
-                  {isBarber ? 'Barber Dashboard' : 'Fan Hub'}
-                </CardTitle>
-                <CardDescription className="text-center text-lg">
-                  {isBarber ? 'Manage your battles and tournament participation' : 'Watch live battles, vote, and support your favorite barbers'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-4 justify-center">
-                  {isBarber && <>
-                      <Button size="lg" onClick={handleCreateBattle} className="text-lg px-8">
-                        <Plus className="mr-2 h-5 w-5" />
-                        Create a Battle
-                      </Button>
-                      <TournamentRegistration />
-                    </>}
-                  {isFan && <>
-                      <Button size="lg" onClick={() => liveBattles && liveBattles.length > 0 ? navigate(`/battles/${liveBattles[0].id}`) : toast({
-                    title: "No live battles",
-                    description: "Check back on Sunday!"
-                  })} className="text-lg px-8">
-                        <Play className="mr-2 h-5 w-5" />
-                        Watch Live
-                      </Button>
-                      <Button size="lg" variant="outline" onClick={() => navigate('/battles')} className="text-lg px-8">
-                        <Vote className="mr-2 h-5 w-5" />
-                        Vote
-                      </Button>
-                      <Button size="lg" variant="secondary" onClick={() => toast({
-                    title: "Coming Soon",
-                    description: "Donation feature will be available soon!"
-                  })} className="text-lg px-8">
-                        <DollarSign className="mr-2 h-5 w-5" />
-                        Donate
-                      </Button>
-                    </>}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Fan Hub - Show only for fans */}
+          {isFan && (
+            <div className="mb-8">
+              <Card className="bg-gradient-to-r from-primary/10 to-secondary/10">
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl text-center">Fan Hub</CardTitle>
+                  <CardDescription className="text-center">
+                    Watch live battles, vote, and support your favorite barbers
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="flex flex-wrap gap-3 justify-center">
+                    <Button size="lg" onClick={() => liveBattles && liveBattles.length > 0 ? navigate(`/battles/${liveBattles[0].id}`) : toast({
+                      title: "No live battles",
+                      description: "Check back on Sunday!"
+                    })} className="px-6">
+                      <Play className="mr-2 h-4 w-4" />
+                      Watch Live
+                    </Button>
+                    <Button size="lg" variant="outline" onClick={() => navigate('/battles')} className="px-6">
+                      <Vote className="mr-2 h-4 w-4" />
+                      Vote
+                    </Button>
+                    <Button size="lg" variant="secondary" onClick={() => toast({
+                      title: "Coming Soon",
+                      description: "Donation feature will be available soon!"
+                    })} className="px-6">
+                      <DollarSign className="mr-2 h-4 w-4" />
+                      Donate
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* My Battles Section - Barber Only */}
           {isBarber && user && (
-            <div className="mb-12">
-              <h2 className="text-3xl font-bold text-foreground mb-6 text-center">
-                My Active Battles
-              </h2>
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-2xl font-bold text-foreground">
+                  My Active Battles
+                </h2>
+                <TournamentRegistration />
+              </div>
               <MyBattlesSection userId={user.id} />
             </div>
           )}
 
           {/* Live Battles Section */}
-          {liveBattles && liveBattles.length > 0 && <div className="mb-12">
-              <h2 className="text-3xl font-bold text-foreground mb-6 text-center">
+          {liveBattles && liveBattles.length > 0 && <div className="mb-8">
+              <h2 className="text-2xl font-bold text-foreground mb-4 text-center">
                 🔴 Live Now
               </h2>
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {liveBattles.map(battle => <Card key={battle.id} className="border-red-500 border-2">
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <Badge variant="destructive" className="animate-pulse">
-                          LIVE
-                        </Badge>
-                        <Badge variant="outline">{battle.category}</Badge>
-                      </div>
-                      <CardTitle>{battle.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Trophy className="mr-2 h-4 w-4" />
-                          Prize: {battle.currency} ${battle.prize_amount}
-                        </div>
-                        <Button className="w-full" onClick={() => navigate(`/battles/${battle.id}`)}>
-                          <Play className="mr-2 h-4 w-4" />
-                          Watch Battle
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>)}
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+...
               </div>
             </div>}
 
           {/* Sunday Schedule */}
-          <div className="mb-12">
-            <h2 className="text-3xl font-bold text-foreground mb-6 text-center">
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-foreground mb-4 text-center">
               This Sunday's Schedule
             </h2>
-            {upcomingBattles && upcomingBattles.length > 0 ? <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {upcomingBattles && upcomingBattles.length > 0 ? <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {upcomingBattles.map(battle => <Card key={battle.id}>
                     <CardHeader>
                       <div className="flex items-center justify-between">
@@ -264,15 +232,15 @@ const Portal = () => {
           </div>
 
           {/* Tournament Bracket Placeholder */}
-          <div className="mb-12">
-            <h2 className="text-3xl font-bold text-foreground mb-6 text-center">
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-foreground mb-4 text-center">
               Tournament Bracket
             </h2>
             <Card>
-              <CardContent className="text-center py-12">
-                <Target className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Coming Soon</h3>
-                <p className="text-muted-foreground">
+              <CardContent className="text-center py-8">
+                <Target className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
+                <h3 className="text-lg font-semibold mb-1">Coming Soon</h3>
+                <p className="text-sm text-muted-foreground">
                   Interactive tournament bracket will be displayed here
                 </p>
               </CardContent>
@@ -280,7 +248,7 @@ const Portal = () => {
           </div>
 
           {/* Portal Stats */}
-          <div className="grid gap-6 md:grid-cols-3 mb-12">
+          <div className="grid gap-4 md:grid-cols-3 mb-8">
             <Card>
               <CardHeader className="text-center">
                 <CardTitle className="text-3xl font-bold text-primary">

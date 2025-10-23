@@ -106,14 +106,13 @@ export const MyBattlesSection = ({ userId }: MyBattlesSectionProps) => {
   if (!myBattles || myBattles.length === 0) {
     return (
       <Card>
-        <CardContent className="text-center py-12">
-          <Trophy className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-xl font-semibold mb-2">No Active Battles</h3>
-          <p className="text-muted-foreground">
+        <CardContent className="text-center py-8">
+          <Trophy className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
+          <h3 className="text-lg font-semibold mb-2">No Active Battles</h3>
+          <p className="text-sm text-muted-foreground mb-4">
             You don't have any battles awaiting submission or voting at the moment.
           </p>
           <Button 
-            className="mt-4" 
             onClick={() => navigate('/battles/create')}
           >
             Create a Battle
@@ -124,15 +123,15 @@ export const MyBattlesSection = ({ userId }: MyBattlesSectionProps) => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Active Battles - Awaiting Submissions */}
       {activeBattles.length > 0 && (
         <div>
-          <h3 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
-            <Upload className="h-6 w-6 text-primary" />
+          <h3 className="text-xl font-bold text-foreground mb-3 flex items-center gap-2">
+            <Upload className="h-5 w-5 text-primary" />
             Pending Submissions
           </h3>
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2">
             {activeBattles.map(battle => {
               const opponent = getOpponentInfo(battle);
               const userSubmitted = hasUserSubmitted(battle);
@@ -221,11 +220,11 @@ export const MyBattlesSection = ({ userId }: MyBattlesSectionProps) => {
       {/* Battles Currently in Voting */}
       {votingBattles.length > 0 && (
         <div>
-          <h3 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
-            <Trophy className="h-6 w-6 text-green-500" />
+          <h3 className="text-xl font-bold text-foreground mb-3 flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-green-500" />
             Live for Voting
           </h3>
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-2">
             {votingBattles.map(battle => {
               const opponent = getOpponentInfo(battle);
 
