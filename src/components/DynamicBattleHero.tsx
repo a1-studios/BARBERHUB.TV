@@ -195,10 +195,10 @@ export const DynamicBattleHero = () => {
                 backgroundImage: `url(${getFlagImageUrl(barber1.country_code)})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                opacity: 0.85
+                opacity: 0.6
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-br from-black/50 via-transparent to-black/30" />
+            <div className="absolute inset-0 bg-gradient-to-br from-black/50 via-transparent to-black/30 opacity-100" />
 
             {/* Content */}
             <div className="relative h-full flex flex-col items-center justify-start pt-[5%] p-4 sm:p-6 lg:p-8 space-y-3">
@@ -265,10 +265,10 @@ export const DynamicBattleHero = () => {
                 backgroundImage: `url(${getFlagImageUrl(barber2.country_code)})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                opacity: 0.85
+                opacity: 0.6
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-bl from-black/50 via-transparent to-black/30" />
+            <div className="absolute inset-0 bg-gradient-to-bl from-black/50 via-transparent to-black/30 opacity-100" />
 
             {/* Content */}
             <div className="relative h-full flex flex-col items-center justify-start pt-[5%] p-4 sm:p-6 lg:p-8 space-y-3">
