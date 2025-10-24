@@ -89,7 +89,15 @@ export const LiveBattleFeed = () => {
         })
       );
 
-      return battlesWithData;
+      // Filter out battles with incomplete data
+      return battlesWithData.filter(battle => 
+        battle.barber1 && 
+        battle.barber2 && 
+        battle.barber1.name && 
+        battle.barber2.name &&
+        battle.barber1_id &&
+        battle.barber2_id
+      );
     },
     refetchInterval: 10000
   });
