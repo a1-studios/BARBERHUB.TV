@@ -1,11 +1,21 @@
-import { Trophy, Users, Swords, TrendingUp } from 'lucide-react';
+import { Trophy, Users, Swords, TrendingUp, Send, MessageCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import Globe3D from '@/components/Globe3D';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AnimatedCounter } from '@/components/battles/AnimatedCounter';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import { formatDistanceToNow } from 'date-fns';
 
 export const PrizePoolCard = () => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [noteContent, setNoteContent] = useState('');
+
   // Fetch real community stats
   const { data: stats } = useQuery({
     queryKey: ['community-stats'],
@@ -22,8 +32,67 @@ export const PrizePoolCard = () => {
         activeBattles: battlesRes.count || 0
       };
     },
-    refetchInterval: 10000 // Refresh every 10 seconds for dynamic feel
+    refetchInterval: 10000
   });
+
+  // Fetch community notes
+  const { data: notes } = useQuery({
+    queryKey: ['community-notes'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('community_notes')
+        .select(`
+          id,
+          content,
+          created_at,
+          user_id,
+          profiles:user_id (display_name, avatar_url, username)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 5000
+  });
+
+  // Post community note mutation
+  const postNoteMutation = useMutation({
+    mutationFn: async (content: string) => {
+      if (!user) throw new Error('Must be logged in');
+      
+      const { data, error } = await supabase
+        .from('community_notes')
+        .insert({ user_id: user.id, content })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['community-notes'] });
+      setNoteContent('');
+      toast.success('Note posted!');
+    },
+    onError: (error) => {
+      toast.error('Failed to post note');
+      console.error(error);
+    }
+  });
+
+  const handlePostNote = () => {
+    if (!noteContent.trim()) {
+      toast.error('Please write something');
+      return;
+    }
+    if (!user) {
+      toast.error('Please sign in to post');
+      return;
+    }
+    postNoteMutation.mutate(noteContent);
+  };
 
   return (
     <Card className="relative overflow-hidden border-2 border-primary/50 bg-gradient-to-br from-primary/5 via-background to-secondary/5">
@@ -32,68 +101,133 @@ export const PrizePoolCard = () => {
       
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent animate-pulse" />
 
-      <CardContent className="relative z-10 text-center py-8 sm:py-12">
+      <CardContent className="relative z-10 py-6 sm:py-8">
         {/* Grand Prize Display */}
-        <div className="mx-auto mb-6 w-16 h-16 sm:w-24 sm:h-24 bg-gradient-to-br from-primary to-orange-500 rounded-full flex items-center justify-center shadow-[0_0_50px_hsl(var(--primary)/0.5)] animate-pulse">
-          <Trophy className="w-8 h-8 sm:w-12 sm:h-12 text-white" />
+        <div className="text-center mb-6">
+          <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-primary to-orange-500 rounded-full flex items-center justify-center shadow-[0_0_50px_hsl(var(--primary)/0.5)] animate-pulse">
+            <Trophy className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-primary via-orange-500 to-primary bg-clip-text text-transparent mb-2">
+            $25,000
+          </h2>
+          <p className="text-lg text-foreground font-semibold">Grand Prize Pool</p>
         </div>
 
-        <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-primary via-orange-500 to-primary bg-clip-text text-transparent mb-4">
-          $25,000
-        </h2>
-        <p className="text-xl sm:text-2xl text-foreground font-semibold mb-2">
-          Grand Prize Pool
-        </p>
-
-        <p className="text-lg sm:text-xl text-muted-foreground mb-8">
-          Global Community Championship
-        </p>
-
-        {/* Real-Time Community Stats */}
-        <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto">
-          <div className="group relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent rounded-lg blur-xl group-hover:blur-2xl transition-all" />
-            <div className="relative bg-background/50 backdrop-blur-sm p-4 rounded-lg border border-primary/20 hover:border-primary/50 transition-all">
-              <Users className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-2 text-primary" />
-              <p className="text-2xl sm:text-3xl font-bold text-primary">
+        {/* Compact Stats - Icons Only */}
+        <div className="flex items-center justify-center gap-6 mb-6">
+          <div className="group relative flex items-center gap-2">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-transparent rounded-lg blur-lg group-hover:blur-xl transition-all" />
+            <div className="relative flex items-center gap-2 bg-background/50 backdrop-blur-sm px-3 py-2 rounded-lg border border-primary/20">
+              <Users className="w-5 h-5 text-primary" />
+              <span className="text-xl font-bold text-primary">
                 <AnimatedCounter value={stats?.totalUsers || 0} duration={2000} />
-              </p>
-              <p className="text-xs sm:text-sm text-muted-foreground">Members</p>
+              </span>
             </div>
           </div>
           
-          <div className="group relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-transparent rounded-lg blur-xl group-hover:blur-2xl transition-all" />
-            <div className="relative bg-background/50 backdrop-blur-sm p-4 rounded-lg border border-primary/20 hover:border-primary/50 transition-all">
-              <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-2 text-orange-500" />
-              <p className="text-2xl sm:text-3xl font-bold text-orange-500">
+          <div className="group relative flex items-center gap-2">
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-transparent rounded-lg blur-lg group-hover:blur-xl transition-all" />
+            <div className="relative flex items-center gap-2 bg-background/50 backdrop-blur-sm px-3 py-2 rounded-lg border border-primary/20">
+              <TrendingUp className="w-5 h-5 text-orange-500" />
+              <span className="text-xl font-bold text-orange-500">
                 <AnimatedCounter value={stats?.totalBarbers || 0} duration={2000} />
-              </p>
-              <p className="text-xs sm:text-sm text-muted-foreground">Creators</p>
+              </span>
             </div>
           </div>
           
-          <div className="group relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-transparent rounded-lg blur-xl group-hover:blur-2xl transition-all" />
-            <div className="relative bg-background/50 backdrop-blur-sm p-4 rounded-lg border border-primary/20 hover:border-primary/50 transition-all">
-              <Swords className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-2 text-green-500" />
-              <p className="text-2xl sm:text-3xl font-bold text-green-500">
+          <div className="group relative flex items-center gap-2">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500/20 to-transparent rounded-lg blur-lg group-hover:blur-xl transition-all" />
+            <div className="relative flex items-center gap-2 bg-background/50 backdrop-blur-sm px-3 py-2 rounded-lg border border-primary/20">
+              <Swords className="w-5 h-5 text-green-500" />
+              <span className="text-xl font-bold text-green-500">
                 <AnimatedCounter value={stats?.activeBattles || 0} duration={2000} />
-              </p>
-              <p className="text-xs sm:text-sm text-muted-foreground">Live Now</p>
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Dynamic Community Pulse Indicator */}
-        <div className="mt-6 flex items-center justify-center gap-2">
-          <div className="relative">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <div className="absolute inset-0 w-2 h-2 bg-green-500 rounded-full animate-ping" />
+        {/* Community Notes Section */}
+        <div className="max-w-2xl mx-auto space-y-4">
+          <div className="flex items-center gap-2 mb-3">
+            <MessageCircle className="w-5 h-5 text-primary" />
+            <h3 className="text-lg font-semibold">Community Notes</h3>
+            <div className="flex-1 h-px bg-gradient-to-r from-primary/50 to-transparent" />
           </div>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Community Live & Growing
-          </p>
+
+          {/* Post Note Input */}
+          {user && (
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent rounded-lg blur-xl" />
+              <div className="relative bg-background/80 backdrop-blur-sm border border-primary/30 rounded-lg p-3">
+                <Textarea
+                  placeholder="Share your thoughts, tag creators with @username..."
+                  value={noteContent}
+                  onChange={(e) => setNoteContent(e.target.value)}
+                  className="min-h-[80px] bg-transparent border-0 focus-visible:ring-0 resize-none"
+                  maxLength={500}
+                />
+                <div className="flex items-center justify-between mt-2">
+                  <span className="text-xs text-muted-foreground">
+                    {noteContent.length}/500
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={handlePostNote}
+                    disabled={postNoteMutation.isPending || !noteContent.trim()}
+                    className="gap-2"
+                  >
+                    <Send className="w-4 h-4" />
+                    Post
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Recent Notes Feed */}
+          <div className="space-y-3 max-h-[400px] overflow-y-auto">
+            {notes?.map((note: any) => (
+              <div
+                key={note.id}
+                className="group relative bg-background/50 backdrop-blur-sm border border-primary/20 rounded-lg p-3 hover:border-primary/40 transition-all"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative flex gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-orange-500 flex-shrink-0 flex items-center justify-center text-white font-semibold text-sm">
+                    {note.profiles?.display_name?.[0] || note.profiles?.username?.[0] || 'U'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2 mb-1">
+                      <span className="font-semibold text-sm truncate">
+                        {note.profiles?.display_name || note.profiles?.username || 'Anonymous'}
+                      </span>
+                      <span className="text-xs text-muted-foreground flex-shrink-0">
+                        {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
+                      </span>
+                    </div>
+                    <p className="text-sm text-foreground/90 break-words">{note.content}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+            {(!notes || notes.length === 0) && (
+              <div className="text-center py-8 text-muted-foreground">
+                <MessageCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">No community notes yet. Be the first to share!</p>
+              </div>
+            )}
+          </div>
+
+          {/* Live Indicator */}
+          <div className="flex items-center justify-center gap-2 pt-2">
+            <div className="relative">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <div className="absolute inset-0 w-2 h-2 bg-green-500 rounded-full animate-ping" />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Community Live & Growing
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>

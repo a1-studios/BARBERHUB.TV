@@ -671,6 +671,33 @@ export type Database = {
           },
         ]
       }
+      community_notes: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          tagged_creator_ids: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          tagged_creator_ids?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          tagged_creator_ids?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       creations: {
         Row: {
           barber_id: string
