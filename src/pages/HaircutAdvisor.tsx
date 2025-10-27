@@ -41,14 +41,6 @@ const HaircutAdvisor = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Auto-start camera on mount
-  useEffect(() => {
-    startCamera();
-    return () => {
-      stopCamera();
-    };
-  }, []);
-
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -63,8 +55,32 @@ const HaircutAdvisor = () => {
     } catch (error) {
       console.error('Error accessing camera:', error);
       setIsCameraActive(false);
+      // Show friendly message to user
+      toast({
+        title: "Camera Access Denied",
+        description: "Please upload a photo instead to get your personalized hairstyle recommendations.",
+        variant: "destructive",
+      });
     }
   };
+
+  // Auto-start camera on mount (only once)
+  useEffect(() => {
+    let mounted = true;
+    
+    const initCamera = async () => {
+      if (mounted) {
+        await startCamera();
+      }
+    };
+    
+    initCamera();
+    
+    return () => {
+      mounted = false;
+      stopCamera();
+    };
+  }, []);
 
   const stopCamera = () => {
     if (streamRef.current) {
