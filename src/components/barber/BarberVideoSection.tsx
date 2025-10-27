@@ -1,6 +1,11 @@
 import { Badge } from '@/components/ui/badge';
-import { Play, Users } from 'lucide-react';
+import { Play, Users, Upload, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 
 interface BarberVideoSectionProps {
   videoId?: string | null;
@@ -8,6 +13,9 @@ interface BarberVideoSectionProps {
   viewerCount?: number;
   aspectRatio?: 'portrait' | 'landscape';
   className?: string;
+  barberUserId?: string;
+  isOwner?: boolean;
+  onVideoUploaded?: () => void;
 }
 
 export const BarberVideoSection = ({ 
@@ -15,15 +23,116 @@ export const BarberVideoSection = ({
   isLive = false,
   viewerCount = 0,
   aspectRatio = 'landscape',
-  className = ''
+  className = '',
+  barberUserId,
+  isOwner = false,
+  onVideoUploaded
 }: BarberVideoSectionProps) => {
+  const { user } = useAuth();
+  const [uploading, setUploading] = useState(false);
+  
   const aspectClass = className.includes('aspect-square') 
     ? 'aspect-square' 
     : aspectRatio === 'portrait' 
       ? 'aspect-[9/16]' 
       : 'aspect-video';
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('video/')) {
+      toast.error('Please select a video file');
+      return;
+    }
+
+    // Validate file size (100MB max)
+    const maxSize = 100 * 1024 * 1024; // 100MB in bytes
+    if (file.size > maxSize) {
+      toast.error('Video must be under 100MB');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      // Upload to Supabase storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user?.id}-${Date.now()}.${fileExt}`;
+      const filePath = `barber-videos/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('videos')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('videos')
+        .getPublicUrl(filePath);
+
+      // Update barber profile with video URL
+      const { error: updateError } = await supabase
+        .from('barber_profiles')
+        .update({ 
+          featured_video_id: publicUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user?.id);
+
+      if (updateError) throw updateError;
+
+      toast.success('Video uploaded successfully!');
+      onVideoUploaded?.();
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload video');
+    } finally {
+      setUploading(false);
+    }
+  };
   
   if (!videoId) {
+    // Show upload interface if owner
+    if (isOwner && user?.id === barberUserId) {
+      return (
+        <div className={`${aspectClass} bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg border border-primary/20 flex items-center justify-center ${className}`}>
+          <div className="text-center space-y-3 p-4">
+            {uploading ? (
+              <>
+                <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
+                <p className="text-sm text-muted-foreground">Uploading...</p>
+              </>
+            ) : (
+              <>
+                <Upload className="w-12 h-12 mx-auto text-primary/40" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Upload Video</p>
+                  <p className="text-xs text-muted-foreground">Max 100MB</p>
+                </div>
+                <Button
+                  size="sm"
+                  className="relative"
+                  onClick={() => document.getElementById('video-upload')?.click()}
+                >
+                  Choose File
+                </Button>
+                <input
+                  id="video-upload"
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                />
+              </>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Show empty state for non-owners
     return (
       <div className={`${aspectClass} bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg border border-primary/20 flex items-center justify-center ${className}`}>
         <div className="text-center space-y-2">

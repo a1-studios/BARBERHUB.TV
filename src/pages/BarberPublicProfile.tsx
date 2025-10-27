@@ -280,6 +280,9 @@ export default function BarberPublicProfile() {
                   videoId={barberData.is_live ? barberData.live_video_id : barberData.featured_video_id}
                   isLive={barberData.is_live}
                   aspectRatio="landscape"
+                  barberUserId={userId}
+                  isOwner={true}
+                  onVideoUploaded={() => window.location.reload()}
                 />
               </CardContent>
             </Card>
