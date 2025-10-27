@@ -375,37 +375,39 @@ export default function BarberPublicProfile() {
           <TabsContent value="portfolio">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Portfolio</CardTitle>
-                  {isOwner && (
-                    <div className="flex items-center gap-2">
-                      <div className="text-xs text-muted-foreground">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <CardTitle>Portfolio</CardTitle>
+                    {isOwner && (
+                      <p className="text-xs text-muted-foreground mt-1">
                         {imageCount}/5 images • {videoCount}/1 video
-                      </div>
-                      <div className="flex gap-2">
-                        {imageCount < 5 && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={uploading}
-                            onClick={() => document.getElementById('portfolio-image-upload')?.click()}
-                          >
-                            <ImageIcon className="w-4 h-4 mr-1" />
-                            Add Image
-                          </Button>
-                        )}
-                        {videoCount < 1 && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={uploading}
-                            onClick={() => document.getElementById('portfolio-video-upload')?.click()}
-                          >
-                            <Video className="w-4 h-4 mr-1" />
-                            Add Video
-                          </Button>
-                        )}
-                      </div>
+                      </p>
+                    )}
+                  </div>
+                  {isOwner && (
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant={imageCount < 5 ? "default" : "outline"}
+                        disabled={uploading || imageCount >= 5}
+                        onClick={() => document.getElementById('portfolio-image-upload')?.click()}
+                        className="flex-1 sm:flex-none"
+                      >
+                        <ImageIcon className="w-4 h-4 mr-2" />
+                        Upload Image
+                        {imageCount >= 5 && <span className="ml-1 text-xs">(Max)</span>}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={videoCount < 1 ? "default" : "outline"}
+                        disabled={uploading || videoCount >= 1}
+                        onClick={() => document.getElementById('portfolio-video-upload')?.click()}
+                        className="flex-1 sm:flex-none"
+                      >
+                        <Video className="w-4 h-4 mr-2" />
+                        Upload Video
+                        {videoCount >= 1 && <span className="ml-1 text-xs">(Max)</span>}
+                      </Button>
                       <input
                         id="portfolio-image-upload"
                         type="file"
@@ -426,50 +428,118 @@ export default function BarberPublicProfile() {
               </CardHeader>
               <CardContent>
                 {uploading && (
-                  <div className="text-center py-4 text-muted-foreground">
-                    <Upload className="w-8 h-8 mx-auto mb-2 animate-bounce" />
-                    <p className="text-sm">Uploading...</p>
+                  <div className="text-center py-8 bg-primary/5 rounded-lg border border-primary/20 mb-4">
+                    <Upload className="w-10 h-10 mx-auto mb-3 text-primary animate-bounce" />
+                    <p className="text-sm font-medium">Uploading your file...</p>
+                    <p className="text-xs text-muted-foreground mt-1">Please wait</p>
                   </div>
                 )}
+                
                 {portfolio && portfolio.length > 0 ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {portfolio.map((creation) => {
-                      const isVideo = creation.media_url?.match(/\.(mp4|mov|avi|webm)$/i);
-                      return (
-                        <div 
-                          key={creation.id}
-                          className="aspect-square rounded-lg overflow-hidden border border-primary/20 hover:border-primary/50 transition-colors cursor-pointer relative group"
-                        >
-                          {isVideo ? (
-                            <video 
-                              src={creation.media_url} 
-                              className="w-full h-full object-cover"
-                              controls
-                            />
-                          ) : (
-                            <img 
-                              src={creation.thumbnail_url || creation.media_url} 
-                              alt={creation.title || 'Portfolio item'}
-                              className="w-full h-full object-cover"
-                            />
-                          )}
-                          {isVideo && (
-                            <Badge className="absolute top-2 right-2 bg-black/70">
-                              <Video className="w-3 h-3" />
-                            </Badge>
-                          )}
-                        </div>
-                      );
-                    })}
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {portfolio.map((creation) => {
+                        const isVideo = creation.media_url?.match(/\.(mp4|mov|avi|webm)$/i);
+                        return (
+                          <div 
+                            key={creation.id}
+                            className="aspect-square rounded-lg overflow-hidden border border-primary/20 hover:border-primary/50 transition-all hover:shadow-lg cursor-pointer relative group"
+                          >
+                            {isVideo ? (
+                              <>
+                                <video 
+                                  src={creation.media_url} 
+                                  className="w-full h-full object-cover"
+                                  controls
+                                />
+                                <Badge className="absolute top-2 right-2 bg-black/80 text-white border-0">
+                                  <Video className="w-3 h-3 mr-1" />
+                                  Video
+                                </Badge>
+                              </>
+                            ) : (
+                              <img 
+                                src={creation.thumbnail_url || creation.media_url} 
+                                alt={creation.title || 'Portfolio item'}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    {/* Show upload prompts if under limit */}
+                    {isOwner && (imageCount < 5 || videoCount < 1) && (
+                      <div className="flex gap-4 pt-4 border-t border-primary/10">
+                        {imageCount < 5 && (
+                          <button
+                            onClick={() => document.getElementById('portfolio-image-upload')?.click()}
+                            disabled={uploading}
+                            className="flex-1 border-2 border-dashed border-primary/30 rounded-lg p-6 hover:border-primary/60 hover:bg-primary/5 transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            <ImageIcon className="w-8 h-8 mx-auto mb-2 text-primary/60" />
+                            <p className="text-sm font-medium">Add More Images</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {5 - imageCount} slot{5 - imageCount !== 1 ? 's' : ''} left • Max 5MB
+                            </p>
+                          </button>
+                        )}
+                        {videoCount < 1 && (
+                          <button
+                            onClick={() => document.getElementById('portfolio-video-upload')?.click()}
+                            disabled={uploading}
+                            className="flex-1 border-2 border-dashed border-primary/30 rounded-lg p-6 hover:border-primary/60 hover:bg-primary/5 transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            <Video className="w-8 h-8 mx-auto mb-2 text-primary/60" />
+                            <p className="text-sm font-medium">Add Video</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              1 video slot • Max 100MB
+                            </p>
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <div className="text-center py-12">
-                    <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground mb-2">
-                      {isOwner ? 'Upload your best work' : 'No portfolio items yet'}
-                    </p>
-                    {isOwner && (
-                      <p className="text-xs text-muted-foreground">Max 5 images + 1 video</p>
+                  <div className="py-16">
+                    {isOwner ? (
+                      <div className="max-w-md mx-auto space-y-6">
+                        <div className="text-center">
+                          <Upload className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+                          <h3 className="text-lg font-semibold mb-2">Build Your Portfolio</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Showcase your best work with up to 5 images and 1 video
+                          </p>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <button
+                            onClick={() => document.getElementById('portfolio-image-upload')?.click()}
+                            disabled={uploading}
+                            className="border-2 border-dashed border-primary/30 rounded-lg p-6 hover:border-primary/60 hover:bg-primary/5 transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            <ImageIcon className="w-10 h-10 mx-auto mb-3 text-primary" />
+                            <p className="font-medium mb-1">Upload Images</p>
+                            <p className="text-xs text-muted-foreground">Max 5 photos, 5MB each</p>
+                          </button>
+                          
+                          <button
+                            onClick={() => document.getElementById('portfolio-video-upload')?.click()}
+                            disabled={uploading}
+                            className="border-2 border-dashed border-primary/30 rounded-lg p-6 hover:border-primary/60 hover:bg-primary/5 transition-all cursor-pointer disabled:opacity-50"
+                          >
+                            <Video className="w-10 h-10 mx-auto mb-3 text-primary" />
+                            <p className="font-medium mb-1">Upload Video</p>
+                            <p className="text-xs text-muted-foreground">Max 1 video, 100MB</p>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center">
+                        <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                        <p className="text-muted-foreground">No portfolio items yet</p>
+                      </div>
                     )}
                   </div>
                 )}
