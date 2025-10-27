@@ -7,7 +7,7 @@ import { AnimatedCounter } from '@/components/battles/AnimatedCounter';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -35,7 +35,7 @@ export const PrizePoolCard = () => {
     refetchInterval: 10000
   });
 
-  // Fetch community notes
+  // Fetch community notes with role information
   const { data: notes } = useQuery({
     queryKey: ['community-notes'],
     queryFn: async () => {
@@ -49,13 +49,51 @@ export const PrizePoolCard = () => {
           profiles:user_id (display_name, avatar_url, username)
         `)
         .order('created_at', { ascending: false })
-        .limit(5);
+        .limit(10);
 
       if (error) throw error;
+      
+      // Fetch roles for all users in the notes
+      if (data && data.length > 0) {
+        const userIds = data.map((note: any) => note.user_id);
+        const { data: roles } = await supabase
+          .from('user_roles')
+          .select('user_id, role')
+          .in('user_id', userIds);
+        
+        // Attach roles to notes
+        return data.map((note: any) => ({
+          ...note,
+          role: roles?.find((r: any) => r.user_id === note.user_id)?.role || 'fan'
+        }));
+      }
+      
       return data;
-    },
-    refetchInterval: 5000
+    }
   });
+
+  // Real-time subscription for community notes
+  useEffect(() => {
+    const channel = supabase
+      .channel('community-notes-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'community_notes'
+        },
+        () => {
+          // Refetch notes when any change occurs
+          queryClient.invalidateQueries({ queryKey: ['community-notes'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   // Post community note mutation
   const postNoteMutation = useMutation({
@@ -186,30 +224,54 @@ export const PrizePoolCard = () => {
 
           {/* Recent Notes Feed */}
           <div className="space-y-3 max-h-[400px] overflow-y-auto">
-            {notes?.map((note: any) => (
-              <div
-                key={note.id}
-                className="group relative bg-background/50 backdrop-blur-sm border border-primary/20 rounded-lg p-3 hover:border-primary/40 transition-all"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="relative flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-orange-500 flex-shrink-0 flex items-center justify-center text-white font-semibold text-sm">
-                    {note.profiles?.display_name?.[0] || note.profiles?.username?.[0] || 'U'}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2 mb-1">
-                      <span className="font-semibold text-sm truncate">
-                        {note.profiles?.display_name || note.profiles?.username || 'Anonymous'}
-                      </span>
-                      <span className="text-xs text-muted-foreground flex-shrink-0">
-                        {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
-                      </span>
+            {notes?.map((note: any) => {
+              const isBarber = note.role === 'barber';
+              const isFan = note.role === 'fan';
+              const avatarGradient = isBarber 
+                ? 'from-orange-500 to-orange-600' 
+                : 'from-green-500 to-green-600';
+              const borderColor = isBarber 
+                ? 'border-orange-500/30 hover:border-orange-500/50' 
+                : 'border-green-500/30 hover:border-green-500/50';
+              const bgGlow = isBarber 
+                ? 'from-orange-500/5' 
+                : 'from-green-500/5';
+
+              return (
+                <div
+                  key={note.id}
+                  className={`group relative bg-background/50 backdrop-blur-sm border ${borderColor} rounded-lg p-3 transition-all`}
+                >
+                  <div className={`absolute inset-0 bg-gradient-to-br ${bgGlow} to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity`} />
+                  <div className="relative flex gap-3">
+                    <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${avatarGradient} flex-shrink-0 flex items-center justify-center text-white font-semibold text-sm shadow-lg`}>
+                      {note.profiles?.display_name?.[0] || note.profiles?.username?.[0] || 'U'}
                     </div>
-                    <p className="text-sm text-foreground/90 break-words">{note.content}</p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2 mb-1">
+                        <span className="font-semibold text-sm truncate">
+                          {note.profiles?.display_name || note.profiles?.username || 'Anonymous'}
+                        </span>
+                        {isBarber && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-500 font-semibold flex-shrink-0">
+                            BARBER
+                          </span>
+                        )}
+                        {isFan && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-500 font-semibold flex-shrink-0">
+                            FAN
+                          </span>
+                        )}
+                        <span className="text-xs text-muted-foreground flex-shrink-0">
+                          {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
+                        </span>
+                      </div>
+                      <p className="text-sm text-foreground/90 break-words">{note.content}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {(!notes || notes.length === 0) && (
               <div className="text-center py-8 text-muted-foreground">
                 <MessageCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
