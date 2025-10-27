@@ -36,7 +36,7 @@ export const PrizePoolCard = () => {
   });
 
   // Fetch community notes with role information
-  const { data: notes } = useQuery({
+  const { data: notes, error: notesError } = useQuery({
     queryKey: ['community-notes'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -51,15 +51,22 @@ export const PrizePoolCard = () => {
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching notes:', error);
+        throw error;
+      }
       
       // Fetch roles for all users in the notes
       if (data && data.length > 0) {
         const userIds = data.map((note: any) => note.user_id);
-        const { data: roles } = await supabase
+        const { data: roles, error: rolesError } = await supabase
           .from('user_roles')
           .select('user_id, role')
           .in('user_id', userIds);
+        
+        if (rolesError) {
+          console.error('Error fetching roles:', rolesError);
+        }
         
         // Attach roles to notes
         return data.map((note: any) => ({
@@ -68,9 +75,13 @@ export const PrizePoolCard = () => {
         }));
       }
       
-      return data;
+      return data || [];
     }
   });
+
+  // Log for debugging
+  console.log('Community notes:', notes);
+  console.log('Notes error:', notesError);
 
   // Real-time subscription for community notes
   useEffect(() => {
