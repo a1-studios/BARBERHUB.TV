@@ -145,7 +145,9 @@ Be accurate.`;
       }
     };
 
-    // Generate images for selected categories
+    // Generate images for selected categories using the first uploaded image as reference
+    const referenceImage = images[0]; // Use first uploaded image as base
+    
     for (const category of selectedCategories) {
       if (!categoryPrompts[category]) continue;
 
@@ -165,7 +167,16 @@ Be accurate.`;
             messages: [
               {
                 role: 'user',
-                content: prompt
+                content: [
+                  {
+                    type: 'text',
+                    text: `Keep this EXACT person - same face, features, skin tone, facial hair. ONLY change their hairstyle to: ${prompt}. Do not change anything else about their appearance.`
+                  },
+                  {
+                    type: 'image_url',
+                    image_url: { url: referenceImage }
+                  }
+                ]
               }
             ],
             modalities: ['image', 'text']
