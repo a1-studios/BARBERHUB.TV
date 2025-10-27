@@ -838,9 +838,6 @@ const SphereImageGrid: React.FC<SphereImageGridProps> = ({
         <div className="relative w-full h-full" style={{ zIndex: 10 }}>
           {images.map((image, index) => renderImageNode(image, index))}
         </div>
-        
-        {/* Center Grand Prize Display */}
-        {renderCenterPrize()}
       </div>
 
       {renderSpotlightModal()}
