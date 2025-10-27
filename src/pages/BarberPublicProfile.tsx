@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, MapPin, Award, Upload, Image as ImageIcon, Video } from 'lucide-react';
+import { ArrowLeft, MapPin, Award, Upload, Image as ImageIcon, Video, Trash2 } from 'lucide-react';
 import { BarberVideoSection } from '@/components/barber/BarberVideoSection';
 import { BarberActionButtons } from '@/components/barber/BarberActionButtons';
 import { useState } from 'react';
@@ -89,6 +89,39 @@ export default function BarberPublicProfile() {
   // Count images and videos in portfolio
   const imageCount = portfolio?.filter(p => p.media_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i))?.length || 0;
   const videoCount = portfolio?.filter(p => p.media_url?.match(/\.(mp4|mov|avi|webm)$/i))?.length || 0;
+
+  const handleDeletePortfolioItem = async (creationId: string, mediaUrl: string) => {
+    if (!confirm('Are you sure you want to delete this item?')) return;
+
+    try {
+      // Extract file path from URL
+      const urlParts = mediaUrl.split('/');
+      const bucket = urlParts[urlParts.length - 2]; // 'portfolios' or 'videos'
+      const fileName = urlParts[urlParts.length - 1];
+      const filePath = `${bucket}/${fileName}`;
+
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from(bucket)
+        .remove([filePath]);
+
+      if (storageError) throw storageError;
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('creations')
+        .delete()
+        .eq('id', creationId);
+
+      if (dbError) throw dbError;
+
+      toast.success('Item deleted successfully');
+      refetchPortfolio();
+    } catch (error) {
+      console.error('Delete error:', error);
+      toast.error('Failed to delete item');
+    }
+  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
     const file = event.target.files?.[0];
@@ -443,7 +476,7 @@ export default function BarberPublicProfile() {
                         return (
                           <div 
                             key={creation.id}
-                            className="aspect-square rounded-lg overflow-hidden border border-primary/20 hover:border-primary/50 transition-all hover:shadow-lg cursor-pointer relative group"
+                            className="aspect-square rounded-lg overflow-hidden border border-primary/20 hover:border-primary/50 transition-all hover:shadow-lg relative group"
                           >
                             {isVideo ? (
                               <>
@@ -463,6 +496,16 @@ export default function BarberPublicProfile() {
                                 alt={creation.title || 'Portfolio item'}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                               />
+                            )}
+                            {isOwner && (
+                              <Button
+                                size="icon"
+                                variant="destructive"
+                                className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                                onClick={() => handleDeletePortfolioItem(creation.id, creation.media_url)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                             )}
                           </div>
                         );
