@@ -185,36 +185,33 @@ export const PrizePoolCard = () => {
         </div>
 
         {/* Community Notes Section */}
-        <div className="max-w-2xl mx-auto space-y-4">
-          <div className="flex items-center gap-2 mb-3">
-            <MessageCircle className="w-5 h-5 text-primary" />
-            <h3 className="text-lg font-semibold">Community Notes</h3>
-            <div className="flex-1 h-px bg-gradient-to-r from-primary/50 to-transparent" />
+        <div className="max-w-4xl mx-auto space-y-4">
+          <div className="flex items-center gap-3 mb-4">
+            <MessageCircle className="w-6 h-6 text-primary" />
+            <h3 className="text-2xl font-bold">Community Notes</h3>
           </div>
 
           {/* Post Note Input */}
           {user && (
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent rounded-lg blur-xl" />
-              <div className="relative bg-background/80 backdrop-blur-sm border border-primary/30 rounded-lg p-3">
+            <div className="relative mb-6">
+              <div className="relative bg-background/80 backdrop-blur-sm border border-border rounded-lg p-4">
                 <Textarea
-                  placeholder="Share your thoughts, tag creators with @username..."
+                  placeholder="Share your thoughts with the community..."
                   value={noteContent}
                   onChange={(e) => setNoteContent(e.target.value)}
-                  className="min-h-[80px] bg-transparent border-0 focus-visible:ring-0 resize-none"
+                  className="min-h-[100px] bg-transparent border-0 focus-visible:ring-0 resize-none text-base"
                   maxLength={500}
                 />
-                <div className="flex items-center justify-between mt-2">
+                <div className="flex items-center justify-between mt-3">
                   <span className="text-xs text-muted-foreground">
                     {noteContent.length}/500
                   </span>
                   <Button
-                    size="sm"
+                    size="default"
                     onClick={handlePostNote}
                     disabled={postNoteMutation.isPending || !noteContent.trim()}
                     className="gap-2"
                   >
-                    <Send className="w-4 h-4" />
                     Post
                   </Button>
                 </div>
@@ -227,48 +224,26 @@ export const PrizePoolCard = () => {
             {notes?.map((note: any) => {
               const isBarber = note.role === 'barber';
               const isFan = note.role === 'fan';
-              const avatarGradient = isBarber 
-                ? 'from-orange-500 to-orange-600' 
-                : 'from-green-500 to-green-600';
-              const borderColor = isBarber 
-                ? 'border-orange-500/30 hover:border-orange-500/50' 
-                : 'border-green-500/30 hover:border-green-500/50';
-              const bgGlow = isBarber 
-                ? 'from-orange-500/5' 
-                : 'from-green-500/5';
+              const usernameColor = isBarber ? 'text-orange-500' : 'text-green-500';
+              const username = note.profiles?.username || note.profiles?.display_name?.toLowerCase().replace(/\s+/g, '_') || 'anonymous';
 
               return (
                 <div
                   key={note.id}
-                  className={`group relative bg-background/50 backdrop-blur-sm border ${borderColor} rounded-lg p-3 transition-all`}
+                  className="group relative bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg p-4 transition-all hover:bg-background/90"
                 >
-                  <div className={`absolute inset-0 bg-gradient-to-br ${bgGlow} to-transparent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity`} />
-                  <div className="relative flex gap-3">
-                    <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${avatarGradient} flex-shrink-0 flex items-center justify-center text-white font-semibold text-sm shadow-lg`}>
-                      {note.profiles?.display_name?.[0] || note.profiles?.username?.[0] || 'U'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-2 mb-1">
-                        <span className="font-semibold text-sm truncate">
-                          {note.profiles?.display_name || note.profiles?.username || 'Anonymous'}
-                        </span>
-                        {isBarber && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-orange-500/20 text-orange-500 font-semibold flex-shrink-0">
-                            BARBER
-                          </span>
-                        )}
-                        {isFan && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-500 font-semibold flex-shrink-0">
-                            FAN
-                          </span>
-                        )}
-                        <span className="text-xs text-muted-foreground flex-shrink-0">
-                          {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
-                        </span>
-                      </div>
-                      <p className="text-sm text-foreground/90 break-words">{note.content}</p>
-                    </div>
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <button
+                      onClick={() => window.location.href = `/barber/${note.user_id}`}
+                      className={`font-bold ${usernameColor} hover:underline cursor-pointer text-base`}
+                    >
+                      @{username}
+                    </button>
+                    <span className="text-xs text-muted-foreground flex-shrink-0">
+                      {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
+                    </span>
                   </div>
+                  <p className="text-sm text-foreground break-words leading-relaxed">{note.content}</p>
                 </div>
               );
             })}
