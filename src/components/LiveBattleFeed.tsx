@@ -120,20 +120,7 @@ export const LiveBattleFeed = () => {
   }, [refetch]);
 
   if (!liveBattles || liveBattles.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <Calendar className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-muted-foreground" />
-        <h3 className="text-xl sm:text-2xl font-bold mb-2">No battles scheduled</h3>
-        <p className="text-muted-foreground mb-6">
-          Check back on Sunday for live battles!
-        </p>
-        {isBarber && (
-          <Button onClick={() => navigate('/battles/create')}>
-            Create the First Battle
-          </Button>
-        )}
-      </div>
-    );
+    return null;
   }
 
   return (
