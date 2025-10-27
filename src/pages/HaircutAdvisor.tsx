@@ -43,23 +43,42 @@ const HaircutAdvisor = () => {
 
   const startCamera = async () => {
     try {
+      // Stop any existing stream before requesting a new one
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
       });
       
+      // Store stream immediately, render video, then attach in effect
+      streamRef.current = stream;
+      setIsCameraActive(true);
+
+      // If the element is already mounted, attach now too
       if (videoRef.current) {
+        videoRef.current.muted = true;
+        (videoRef.current as any).playsInline = true;
         videoRef.current.srcObject = stream;
-        streamRef.current = stream;
-        setIsCameraActive(true);
+        try { await videoRef.current.play(); } catch { /* ignore */ }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error accessing camera:', error);
       setIsCameraActive(false);
-      // Show friendly message to user
+      const name = error?.name || '';
+      const descMap: Record<string, string> = {
+        NotAllowedError: 'Camera permission was denied. Enable it in your browser settings or upload a photo instead.',
+        NotFoundError: 'No camera found on this device. Please upload a photo instead.',
+        NotReadableError: 'Your camera is in use by another app. Close it and try again, or upload a photo.',
+        OverconstrainedError: 'Camera constraints not supported. Try again or upload a photo.',
+      };
       toast({
-        title: "Camera Access Denied",
-        description: "Please upload a photo instead to get your personalized hairstyle recommendations.",
-        variant: "destructive",
+        title: 'Camera Access Problem',
+        description: descMap[name] || 'Please upload a photo instead to get your personalized hairstyle recommendations.',
+        variant: 'destructive',
       });
     }
   };
@@ -88,7 +107,19 @@ const HaircutAdvisor = () => {
       streamRef.current = null;
     }
     setIsCameraActive(false);
-  };
+};
+
+  // When camera view mounts, attach the stream to the element
+  useEffect(() => {
+    if (isCameraActive && videoRef.current && streamRef.current) {
+      try {
+        videoRef.current.muted = true;
+        (videoRef.current as any).playsInline = true;
+        videoRef.current.srcObject = streamRef.current;
+        videoRef.current.play?.().catch(() => {});
+      } catch {}
+    }
+  }, [isCameraActive]);
 
   const capturePhoto = () => {
     if (videoRef.current && canvasRef.current && capturedImages.length < 3) {
@@ -299,6 +330,7 @@ const HaircutAdvisor = () => {
                     ref={videoRef}
                     autoPlay
                     playsInline
+                    muted
                     className="w-full h-full object-cover"
                   />
                 </div>
@@ -352,6 +384,7 @@ const HaircutAdvisor = () => {
               ref={fileInputRef}
               type="file"
               accept="image/*"
+              capture="user"
               multiple
               onChange={handleFileUpload}
               className="hidden"
