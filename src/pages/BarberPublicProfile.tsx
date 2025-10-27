@@ -8,16 +8,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, MapPin, Award, Calendar, Instagram, Facebook, Twitter, Youtube } from 'lucide-react';
+import { ArrowLeft, MapPin, Award, Upload, Image as ImageIcon, Video } from 'lucide-react';
 import { BarberVideoSection } from '@/components/barber/BarberVideoSection';
 import { BarberActionButtons } from '@/components/barber/BarberActionButtons';
 import { useState } from 'react';
 import { DonationModal } from '@/components/DonationModal';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 export default function BarberPublicProfile() {
   const { userId } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  
+  const isOwner = user?.id === userId;
 
   // Fetch barber profile using unified view
   const { data: barberData, isLoading } = useQuery({
@@ -63,7 +69,7 @@ export default function BarberPublicProfile() {
   });
 
   // Fetch portfolio using barber_id from view
-  const { data: portfolio } = useQuery({
+  const { data: portfolio, refetch: refetchPortfolio } = useQuery({
     queryKey: ['barber-portfolio', barberData?.barber_id],
     queryFn: async () => {
       if (!barberData?.barber_id) return [];
@@ -79,6 +85,84 @@ export default function BarberPublicProfile() {
     },
     enabled: !!barberData?.barber_id
   });
+
+  // Count images and videos in portfolio
+  const imageCount = portfolio?.filter(p => p.media_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i))?.length || 0;
+  const videoCount = portfolio?.filter(p => p.media_url?.match(/\.(mp4|mov|avi|webm)$/i))?.length || 0;
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (type === 'image' && !file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+    if (type === 'video' && !file.type.startsWith('video/')) {
+      toast.error('Please select a video file');
+      return;
+    }
+
+    // Check limits
+    if (type === 'image' && imageCount >= 5) {
+      toast.error('Maximum 5 images allowed');
+      return;
+    }
+    if (type === 'video' && videoCount >= 1) {
+      toast.error('Maximum 1 video allowed');
+      return;
+    }
+
+    // Validate file size
+    const maxSize = type === 'video' ? 100 * 1024 * 1024 : 5 * 1024 * 1024; // 100MB for video, 5MB for image
+    if (file.size > maxSize) {
+      toast.error(`File must be under ${type === 'video' ? '100MB' : '5MB'}`);
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user?.id}-${Date.now()}.${fileExt}`;
+      const bucket = type === 'image' ? 'portfolios' : 'videos';
+      const filePath = `${bucket}/${fileName}`;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(filePath);
+
+      // Create portfolio entry
+      const { error: createError } = await supabase
+        .from('creations')
+        .insert({
+          barber_id: barberData?.barber_id,
+          media_url: publicUrl,
+          category: type === 'image' ? 'haircut' : 'video',
+          title: file.name
+        });
+
+      if (createError) throw createError;
+
+      toast.success(`${type === 'image' ? 'Image' : 'Video'} uploaded successfully!`);
+      refetchPortfolio();
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload file');
+    } finally {
+      setUploading(false);
+      // Reset input
+      event.target.value = '';
+    }
+  };
 
   const getCountryFlag = (countryCode: string | null) => {
     if (!countryCode) return null;
@@ -291,26 +375,103 @@ export default function BarberPublicProfile() {
           <TabsContent value="portfolio">
             <Card>
               <CardHeader>
-                <CardTitle>Portfolio</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Portfolio</CardTitle>
+                  {isOwner && (
+                    <div className="flex items-center gap-2">
+                      <div className="text-xs text-muted-foreground">
+                        {imageCount}/5 images • {videoCount}/1 video
+                      </div>
+                      <div className="flex gap-2">
+                        {imageCount < 5 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={uploading}
+                            onClick={() => document.getElementById('portfolio-image-upload')?.click()}
+                          >
+                            <ImageIcon className="w-4 h-4 mr-1" />
+                            Add Image
+                          </Button>
+                        )}
+                        {videoCount < 1 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={uploading}
+                            onClick={() => document.getElementById('portfolio-video-upload')?.click()}
+                          >
+                            <Video className="w-4 h-4 mr-1" />
+                            Add Video
+                          </Button>
+                        )}
+                      </div>
+                      <input
+                        id="portfolio-image-upload"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleFileUpload(e, 'image')}
+                      />
+                      <input
+                        id="portfolio-video-upload"
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={(e) => handleFileUpload(e, 'video')}
+                      />
+                    </div>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
+                {uploading && (
+                  <div className="text-center py-4 text-muted-foreground">
+                    <Upload className="w-8 h-8 mx-auto mb-2 animate-bounce" />
+                    <p className="text-sm">Uploading...</p>
+                  </div>
+                )}
                 {portfolio && portfolio.length > 0 ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {portfolio.map((creation) => (
-                      <div 
-                        key={creation.id}
-                        className="aspect-square rounded-lg overflow-hidden border border-primary/20 hover:border-primary/50 transition-colors cursor-pointer"
-                      >
-                        <img 
-                          src={creation.thumbnail_url || creation.media_url} 
-                          alt={creation.title || 'Portfolio item'}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    ))}
+                    {portfolio.map((creation) => {
+                      const isVideo = creation.media_url?.match(/\.(mp4|mov|avi|webm)$/i);
+                      return (
+                        <div 
+                          key={creation.id}
+                          className="aspect-square rounded-lg overflow-hidden border border-primary/20 hover:border-primary/50 transition-colors cursor-pointer relative group"
+                        >
+                          {isVideo ? (
+                            <video 
+                              src={creation.media_url} 
+                              className="w-full h-full object-cover"
+                              controls
+                            />
+                          ) : (
+                            <img 
+                              src={creation.thumbnail_url || creation.media_url} 
+                              alt={creation.title || 'Portfolio item'}
+                              className="w-full h-full object-cover"
+                            />
+                          )}
+                          {isVideo && (
+                            <Badge className="absolute top-2 right-2 bg-black/70">
+                              <Video className="w-3 h-3" />
+                            </Badge>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 ) : (
-                  <p className="text-center text-muted-foreground py-8">No portfolio items yet</p>
+                  <div className="text-center py-12">
+                    <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground mb-2">
+                      {isOwner ? 'Upload your best work' : 'No portfolio items yet'}
+                    </p>
+                    {isOwner && (
+                      <p className="text-xs text-muted-foreground">Max 5 images + 1 video</p>
+                    )}
+                  </div>
                 )}
               </CardContent>
             </Card>
