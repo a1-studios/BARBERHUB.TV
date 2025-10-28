@@ -244,16 +244,11 @@ const LandingHero = () => {
 
             {/* Branding section - Below sign up */}
             <div className="text-center space-y-4">
-              <div className="flex items-center justify-center">
-                <h1 className="text-3xl md:text-4xl font-bold">
-                  <span className="text-white">BARBER</span>
-                  <span className="text-primary">-HUB</span>
-                </h1>
-              </div>
-              
-              <p className="text-xl md:text-2xl text-white max-w-2xl mx-auto">
-                where barbers become legends
-              </p>
+              <h1 className="text-3xl md:text-5xl font-bold max-w-2xl mx-auto">
+                <span className="text-white">where </span>
+                <span className="text-primary">barbers</span>
+                <span className="text-white"> become legends</span>
+              </h1>
                 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center max-w-2xl mx-auto">
                 <div>
