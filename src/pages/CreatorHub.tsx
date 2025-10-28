@@ -8,21 +8,12 @@ import { BackButton } from '@/components/ui/BackButton';
 import Header from '@/components/Header';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { FeaturedCreatorCard } from '@/components/FeaturedCreatorCard';
 import { toast } from 'sonner';
-import { format } from 'date-fns';
-import { Link } from 'react-router-dom';
-import { useEffect } from 'react';
 import { 
   Crown,
   Scissors,
-  Trophy, 
-  Users, 
-  Calendar, 
-  User, 
-  Star 
+  User
 } from 'lucide-react';
 
 export default function CreatorHub() {
@@ -77,58 +68,6 @@ export default function CreatorHub() {
       toast.error(`Failed to update favorite: ${error.message}`);
     }
   });
-
-  // Fetch battles with real-time updates
-  const { data: battles, isLoading: battlesLoading, refetch } = useQuery({
-    queryKey: ['battles'],
-    queryFn: async () => {
-      // Fetch battles without profile join
-      const { data: battlesData, error } = await supabase
-        .from('battles')
-        .select(`
-          *,
-          battle_participants(count)
-        `)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      if (!battlesData || battlesData.length === 0) return [];
-
-      // Fetch public profiles for all organizers
-      const organizerIds = [...new Set(battlesData.map(b => b.organizer_id))];
-      const { data: profilesData, error: profilesError } = await supabase
-        .rpc('get_multiple_public_profiles', { user_ids: organizerIds });
-      
-      if (profilesError) throw profilesError;
-
-      // Merge battle data with organizer profiles
-      return battlesData.map(battle => ({
-        ...battle,
-        profiles: profilesData?.find(p => p.user_id === battle.organizer_id) || null
-      }));
-    },
-    enabled: !!user
-  });
-
-  // Real-time updates for battles
-  useEffect(() => {
-    if (!user) return;
-    
-    const channel = supabase
-      .channel('battles-realtime')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'battles'
-      }, () => {
-        refetch();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [refetch, user]);
 
   if (loading) {
     return (
@@ -244,153 +183,6 @@ export default function CreatorHub() {
               />
             </div>
           )}
-
-          {/* Battles Section - View & Vote Only */}
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-bold text-white mb-2">
-                Live Battles & Voting
-              </h2>
-              <p className="text-muted-foreground">
-                Watch amazing barber skills unfold and vote for your favorites
-              </p>
-            </div>
-
-            {/* Battles Grid */}
-            {battlesLoading ? (
-              <div className="flex justify-center items-center min-h-[200px]">
-                <div className="text-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                  <p className="text-muted-foreground">Loading battles...</p>
-                </div>
-              </div>
-            ) : battles && battles.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {battles.map((battle) => (
-                  <Card key={battle.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                    <div className="aspect-video relative">
-                      {battle.cover_image_url ? (
-                        <img
-                          src={battle.cover_image_url}
-                          alt={battle.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
-                          <Trophy className="w-12 h-12 text-primary/50" />
-                        </div>
-                      )}
-                      <div className="absolute top-4 left-4">
-                        <Badge variant={
-                          battle.status === 'upcoming' ? 'secondary' :
-                          battle.status === 'active' ? 'default' :
-                          battle.status === 'voting' ? 'destructive' :
-                          'outline'
-                        }>
-                          {battle.status.toUpperCase()}
-                        </Badge>
-                      </div>
-                      {battle.category && (
-                        <div className="absolute top-4 right-4">
-                          <Badge variant="outline">{battle.category}</Badge>
-                        </div>
-                      )}
-                    </div>
-
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg text-white line-clamp-1">
-                        {battle.title}
-                      </CardTitle>
-                      {battle.description && (
-                        <CardDescription className="line-clamp-2">
-                          {battle.description}
-                        </CardDescription>
-                      )}
-                    </CardHeader>
-
-                    <CardContent className="space-y-4">
-                      {/* Battle Info */}
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Users className="w-4 h-4" />
-                          <span>{battle.battle_participants?.[0]?.count || 0} participants</span>
-                          {battle.max_participants && (
-                            <span>/ {battle.max_participants} max</span>
-                          )}
-                        </div>
-
-                        {battle.starts_at && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Calendar className="w-4 h-4" />
-                            <span>Starts {format(new Date(battle.starts_at), 'MMM d, yyyy')}</span>
-                          </div>
-                        )}
-
-                        {battle.prize_amount > 0 && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Trophy className="w-4 h-4" />
-                            <span>Prize: {battle.currency} {battle.prize_amount}</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Organizer */}
-                      {battle.profiles && (
-                        <div className="flex items-center gap-2">
-                          {battle.profiles.avatar_url ? (
-                            <img
-                              src={battle.profiles.avatar_url}
-                              alt={battle.profiles.display_name || 'Organizer'}
-                              className="w-6 h-6 rounded-full"
-                            />
-                          ) : (
-                            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
-                              <Users className="w-3 h-3 text-primary" />
-                            </div>
-                          )}
-                          <span className="text-sm text-muted-foreground">
-                            by {battle.profiles.display_name || 'Anonymous'}
-                          </span>
-                        </div>
-                      )}
-
-                       {/* Action Button */}
-                       <Button asChild className="w-full">
-                         <Link to={`/battles/${battle.id}`}>
-                           {battle.status === 'voting' ? (
-                             <>
-                               <Trophy className="w-4 h-4 mr-2" />
-                               Vote Now
-                             </>
-                           ) : battle.status === 'active' ? (
-                             <>
-                               <Users className="w-4 h-4 mr-2" />
-                               Watch Battle
-                             </>
-                           ) : (
-                             'View Details'
-                           )}
-                         </Link>
-                       </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <Trophy className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-xl font-semibold text-white mb-2">No battles available</h3>
-                <p className="text-muted-foreground mb-6">
-                  Check back soon for exciting barber battles to watch and vote on!
-                </p>
-                <Button asChild variant="outline">
-                  <Link to="/battles">
-                    Browse All Battles
-                  </Link>
-                </Button>
-              </div>
-            )}
-          </div>
 
           <div className="grid lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
