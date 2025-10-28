@@ -1,18 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Scissors, MapPin, Heart } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { HaircutAdvisorModal } from '@/components/HaircutAdvisorModal';
-import { DonationModal } from '@/components/DonationModal';
 export const FanActionZone = () => {
   const navigate = useNavigate();
   const [showHaircutAdvisor, setShowHaircutAdvisor] = useState(false);
-  const [showDonation, setShowDonation] = useState(false);
   return <>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 my-8">
-        
-
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 my-8">
         <Card className="border-2 border-orange-500/30 hover:border-orange-500/50 transition-colors">
           <CardHeader>
             <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center mb-3">
@@ -29,27 +25,8 @@ export const FanActionZone = () => {
             </Button>
           </CardContent>
         </Card>
-
-        <Card className="border-2 border-pink-500/30 hover:border-pink-500/50 transition-colors">
-          <CardHeader>
-            <div className="w-12 h-12 rounded-full bg-pink-500/20 flex items-center justify-center mb-3">
-              <Heart className="w-6 h-6 text-pink-500" />
-            </div>
-            <CardTitle>Fuel the League</CardTitle>
-            <CardDescription>
-              Support Your Nation's Stylists. Help your favorite barbers compete and grow their careers.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button variant="outline" className="w-full" onClick={() => setShowDonation(true)}>
-              Support Barbers
-            </Button>
-          </CardContent>
-        </Card>
       </div>
 
       <HaircutAdvisorModal isOpen={showHaircutAdvisor} onClose={() => setShowHaircutAdvisor(false)} />
-      
-      {/* Note: DonationModal requires creatorId and creatorName props - this is a placeholder */}
     </>;
 };
