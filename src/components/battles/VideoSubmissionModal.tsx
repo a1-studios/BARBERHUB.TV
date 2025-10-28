@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { SubmissionGuidelines } from './SubmissionGuidelines';
 import { z } from 'zod';
+import { extractYouTubeVideoId } from '@/utils/youtubeHelpers';
 
 interface VideoSubmissionModalProps {
   battleId: string;
@@ -31,13 +32,7 @@ export const VideoSubmissionModal = ({ battleId, isOpen, onClose, onSuccess }: V
 
   // Validation schema
   const videoSubmissionSchema = z.object({
-    videoUrl: z.string()
-      .trim()
-      .url({ message: "Please enter a valid URL" })
-      .regex(
-        /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-        { message: "Please enter a valid YouTube URL" }
-      ),
+    videoUrl: z.string().trim().min(1, { message: "YouTube URL or Video ID is required" }),
     title: z.string().trim().max(100, { message: "Title must be less than 100 characters" }).optional(),
     description: z.string().trim().max(500, { message: "Description must be less than 500 characters" }).optional(),
   });
@@ -48,16 +43,14 @@ export const VideoSubmissionModal = ({ battleId, isOpen, onClose, onSuccess }: V
       return false;
     }
 
-    try {
-      videoSubmissionSchema.shape.videoUrl.parse(url);
-      setUrlError('');
-      return true;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        setUrlError(error.errors[0].message);
-      }
+    const videoId = extractYouTubeVideoId(url);
+    if (!videoId) {
+      setUrlError('Please enter a valid YouTube URL or Video ID');
       return false;
     }
+    
+    setUrlError('');
+    return true;
   };
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,11 +98,18 @@ export const VideoSubmissionModal = ({ battleId, isOpen, onClose, onSuccess }: V
         throw new Error('Not authenticated');
       }
 
+      // Extract video ID from URL or use as-is if it's already an ID
+      const videoId = extractYouTubeVideoId(videoUrl.trim());
+      if (!videoId) {
+        throw new Error('Invalid YouTube URL or Video ID');
+      }
+
       // Call the edge function to submit the video
       const { data, error } = await supabase.functions.invoke('submit-battle-video', {
         body: {
           battleId,
           videoUrl: videoUrl.trim(),
+          videoId,
           title: title.trim() || undefined,
           description: description.trim() || undefined
         }
@@ -151,7 +151,7 @@ export const VideoSubmissionModal = ({ battleId, isOpen, onClose, onSuccess }: V
     }
   };
 
-  const isValidUrl = videoUrl && !urlError && /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/.test(videoUrl);
+  const isValidUrl = videoUrl && !urlError && extractYouTubeVideoId(videoUrl) !== null;
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -187,15 +187,16 @@ export const VideoSubmissionModal = ({ battleId, isOpen, onClose, onSuccess }: V
                 <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
                   <li>Go live on YouTube for your battle performance</li>
                   <li>After your stream ends, YouTube saves it as a VOD</li>
-                  <li>Copy the public URL of your saved video</li>
-                  <li>Paste the URL below and submit</li>
+                  <li>Copy the public URL or just the Video ID</li>
+                  <li>Paste it below and submit</li>
                 </ol>
                 <Alert className="mt-3">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription className="text-xs">
                     <strong>Supported formats:</strong><br/>
-                    • https://youtube.com/watch?v=VIDEO_ID<br/>
-                    • https://youtu.be/VIDEO_ID
+                    • Full URL: https://youtube.com/watch?v=VIDEO_ID<br/>
+                    • Short URL: https://youtu.be/VIDEO_ID<br/>
+                    • Just the ID: dQw4w9WgXcQ
                   </AlertDescription>
                 </Alert>
               </div>
@@ -211,13 +212,16 @@ export const VideoSubmissionModal = ({ battleId, isOpen, onClose, onSuccess }: V
                 </Label>
                 <Input
                   id="videoUrl"
-                  type="url"
-                  placeholder="https://youtube.com/watch?v=..."
+                  type="text"
+                  placeholder="https://youtube.com/watch?v=... or dQw4w9WgXcQ"
                   value={videoUrl}
                   onChange={handleUrlChange}
                   disabled={isSubmitting}
                   className={urlError ? 'border-destructive' : isValidUrl ? 'border-green-500' : ''}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Paste your YouTube Live Stream URL or just the video ID
+                </p>
                 {urlError && (
                   <p className="text-sm text-destructive flex items-center gap-1">
                     <AlertCircle className="h-3 w-3" />
