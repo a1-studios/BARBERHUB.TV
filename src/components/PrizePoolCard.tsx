@@ -108,30 +108,61 @@ export const PrizePoolCard = () => {
       
       return data || [];
     },
-    refetchInterval: 5000 // Refetch every 5 seconds for real-time feel
+    refetchInterval: 2000 // Refetch every 2 seconds for faster real-time updates
   });
 
   // Log for debugging
   console.log('Community notes:', notes);
   console.log('Notes error:', notesError);
 
-  // Real-time subscription for community notes
+  // Real-time subscription for community notes with instant updates
   useEffect(() => {
     const channel = supabase
-      .channel('community-notes-changes')
+      .channel('community-notes-realtime', {
+        config: {
+          broadcast: { self: true }
+        }
+      })
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'INSERT',
           schema: 'public',
           table: 'community_notes'
         },
-        () => {
-          // Refetch notes when any change occurs
+        (payload) => {
+          console.log('New note received:', payload);
+          // Immediately refetch to show new note
           queryClient.invalidateQueries({ queryKey: ['community-notes'] });
         }
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'community_notes'
+        },
+        (payload) => {
+          console.log('Note updated:', payload);
+          queryClient.invalidateQueries({ queryKey: ['community-notes'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'community_notes'
+        },
+        (payload) => {
+          console.log('Note deleted:', payload);
+          queryClient.invalidateQueries({ queryKey: ['community-notes'] });
+        }
+      )
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
