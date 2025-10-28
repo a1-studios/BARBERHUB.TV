@@ -78,35 +78,36 @@ serve(async (req) => {
 
     const accepterUsername = accepterProfile?.username || accepterProfile?.display_name || 'Unknown';
 
-    // Create battle record
+    if (!challenge.battle_id) {
+      return new Response(
+        JSON.stringify({ error: 'Challenge has no associated battle' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    console.log('Updating existing battle:', challenge.battle_id);
+
+    // Update existing battle with barber2 details
     const { data: battle, error: battleError } = await supabase
       .from('battles')
-      .insert({
-        organizer_id: user.id,
-        barber1_id: challenge.challenger_id,
+      .update({
         barber2_id: user.id,
-        barber_1_video_url: challenge.challenger_stream_url,
         barber_2_video_url: accepter_stream_url,
-        barber1_youtube_video_id: challenge.challenger_youtube_video_id,
         barber2_youtube_video_id: accepter_youtube_video_id,
-        title: challenge.title,
-        category: challenge.title,
-        description: `Open Challenge: ${challenge.title}`,
         status: 'voting',
         voting_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
-        starts_at: new Date().toISOString(),
-        prize_amount: 0,
-        currency: 'USD'
+        starts_at: new Date().toISOString()
       })
+      .eq('id', challenge.battle_id)
       .select()
       .single();
 
     if (battleError || !battle) {
-      console.error('Battle creation error:', battleError);
-      throw new Error('Failed to create battle');
+      console.error('Battle update error:', battleError);
+      throw new Error('Failed to update battle');
     }
 
-    console.log('Battle created:', battle.id);
+    console.log('Battle updated:', battle.id);
 
     // Update challenge record
     const { error: updateError } = await supabase

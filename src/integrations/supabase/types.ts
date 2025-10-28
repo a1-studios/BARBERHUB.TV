@@ -1241,6 +1241,9 @@ export type Database = {
           accepted_by_id: string | null
           accepted_by_username: string | null
           battle_id: string | null
+          bounty_amount: number | null
+          bounty_currency: string | null
+          bounty_description: string | null
           challenger_id: string
           challenger_stream_url: string
           challenger_username: string
@@ -1255,6 +1258,9 @@ export type Database = {
           accepted_by_id?: string | null
           accepted_by_username?: string | null
           battle_id?: string | null
+          bounty_amount?: number | null
+          bounty_currency?: string | null
+          bounty_description?: string | null
           challenger_id: string
           challenger_stream_url: string
           challenger_username: string
@@ -1269,6 +1275,9 @@ export type Database = {
           accepted_by_id?: string | null
           accepted_by_username?: string | null
           battle_id?: string | null
+          bounty_amount?: number | null
+          bounty_currency?: string | null
+          bounty_description?: string | null
           challenger_id?: string
           challenger_stream_url?: string
           challenger_username?: string

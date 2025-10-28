@@ -9,6 +9,7 @@ import GrantsSection from "@/components/GrantsSection";
 import { GlobalLeagueDashboard } from "@/components/GlobalLeagueDashboard";
 import { VirtualHaircutTryOn } from "@/components/VirtualHaircutTryOn";
 import { OpenChallengeQueue } from "@/components/battles/OpenChallengeQueue";
+import { LiveBarberStreams } from "@/components/battles/LiveBarberStreams";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { FEATURES } from "@/config/features";
@@ -37,6 +38,9 @@ const Index = () => {
           
           {/* Global League Dashboard */}
           <GlobalLeagueDashboard />
+          
+          {/* Live Streaming Barbers - Watch active streams */}
+          <LiveBarberStreams />
           
           {/* Open Challenge Queue - Spontaneous Battles */}
           <OpenChallengeQueue />

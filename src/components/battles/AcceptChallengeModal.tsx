@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Youtube, Swords, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { extractYouTubeVideoId } from '@/utils/youtubeHelpers';
+import { extractYouTubeVideoId, buildYouTubeWatchUrl } from '@/utils/youtubeHelpers';
 
 interface Challenge {
   id: string;
@@ -61,7 +61,7 @@ export const AcceptChallengeModal = ({ challenge, isOpen, onClose }: AcceptChall
       const { data, error } = await supabase.functions.invoke('complete-open-challenge', {
         body: {
           challenge_id: challenge.id,
-          accepter_stream_url: streamUrl,
+          accepter_stream_url: buildYouTubeWatchUrl(videoId),
           accepter_youtube_video_id: videoId
         }
       });

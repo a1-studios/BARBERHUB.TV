@@ -1,13 +1,15 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ExternalLink, Swords, DollarSign, Clock, Users } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Users, ExternalLink, Swords, Clock } from 'lucide-react';
+import { AcceptChallengeModal } from './AcceptChallengeModal';
+import { buildYouTubeWatchUrl } from '@/utils/youtubeHelpers';
 import { formatDistanceToNow } from 'date-fns';
 import { useEffect, useState } from 'react';
-import { AcceptChallengeModal } from './AcceptChallengeModal';
 
 interface Challenge {
   id: string;
@@ -16,6 +18,9 @@ interface Challenge {
   title: string;
   challenger_stream_url: string;
   challenger_youtube_video_id: string;
+  bounty_amount: number | null;
+  bounty_currency: string | null;
+  bounty_description: string | null;
   created_at: string;
   status: string;
 }
@@ -33,6 +38,7 @@ export const ChallengeFeed = () => {
         .from('open_challenges')
         .select('*')
         .eq('status', 'waiting_for_opponent')
+        .order('bounty_amount', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -90,16 +96,26 @@ export const ChallengeFeed = () => {
           const canAccept = isBarber && !isOwnChallenge;
 
           const streamUrl = challenge.challenger_youtube_video_id 
-            ? `https://www.youtube.com/watch?v=${challenge.challenger_youtube_video_id}`
+            ? buildYouTubeWatchUrl(challenge.challenger_youtube_video_id)
             : challenge.challenger_stream_url;
 
           return (
             <Card 
               key={challenge.id}
-              className="bg-card/50 backdrop-blur-sm border-border hover:border-primary/50 transition-all duration-300 p-6"
+              className="bg-card/50 backdrop-blur-sm border-border hover:border-primary/50 transition-all duration-300 p-6 relative overflow-hidden"
             >
+              {/* Bounty Banner */}
+              {challenge.bounty_amount && (
+                <div className="absolute top-0 right-0 bg-gradient-to-r from-yellow-500 to-orange-500 px-4 py-1 rounded-bl-lg">
+                  <div className="flex items-center gap-1 text-white font-bold text-sm">
+                    <DollarSign className="w-4 h-4" />
+                    <span>${challenge.bounty_amount}</span>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
+                <div className="flex-1 pr-16">
                   <div className="flex items-center gap-2 mb-2">
                     <Swords className="w-5 h-5 text-primary" />
                     <span className="font-bold text-foreground">
@@ -109,13 +125,21 @@ export const ChallengeFeed = () => {
                   <h4 className="text-lg font-bold text-foreground mb-2">
                     {challenge.title}
                   </h4>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Clock className="w-4 h-4" />
+                    {formatDistanceToNow(new Date(challenge.created_at), { addSuffix: true })}
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-                <Clock className="w-4 h-4" />
-                {formatDistanceToNow(new Date(challenge.created_at), { addSuffix: true })}
-              </div>
+              {/* Bounty Description */}
+              {challenge.bounty_description && (
+                <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                  <p className="text-sm font-medium text-yellow-600 dark:text-yellow-400">
+                    "{challenge.bounty_description}"
+                  </p>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <a

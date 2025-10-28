@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Youtube, Flame, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Youtube, Flame, AlertCircle, CheckCircle2, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { extractYouTubeVideoId } from '@/utils/youtubeHelpers';
+import { extractYouTubeVideoId, buildYouTubeWatchUrl } from '@/utils/youtubeHelpers';
 
 export const IssueChallenge = () => {
   const { user } = useAuth();
@@ -15,6 +16,8 @@ export const IssueChallenge = () => {
   const [streamUrl, setStreamUrl] = useState('');
   const [videoIdError, setVideoIdError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [bountyAmount, setBountyAmount] = useState('');
+  const [bountyDescription, setBountyDescription] = useState('');
 
   const handleStreamUrlChange = (value: string) => {
     setStreamUrl(value);
@@ -53,28 +56,51 @@ export const IssueChallenge = () => {
 
       const username = profile?.username || profile?.display_name || 'Unknown';
 
-      // Create challenge
-      const { error } = await supabase
+      // Step 1: Create battle immediately (instant go-live)
+      const { data: battle, error: battleError } = await supabase
+        .from('battles')
+        .insert({
+          organizer_id: user.id,
+          barber1_id: user.id,
+          barber1_youtube_video_id: videoId,
+          title,
+          status: 'waiting_for_opponent',
+          prize_amount: bountyAmount ? parseInt(bountyAmount) : 0,
+          currency: 'USD'
+        })
+        .select()
+        .single();
+
+      if (battleError) throw battleError;
+
+      // Step 2: Create challenge linked to battle
+      const { error: challengeError } = await supabase
         .from('open_challenges')
         .insert({
           challenger_id: user.id,
           challenger_username: username,
           title,
-          challenger_stream_url: streamUrl,
+          challenger_stream_url: buildYouTubeWatchUrl(videoId),
           challenger_youtube_video_id: videoId,
+          battle_id: battle.id,
+          bounty_amount: bountyAmount ? parseInt(bountyAmount) : null,
+          bounty_currency: 'USD',
+          bounty_description: bountyDescription || null,
           status: 'waiting_for_opponent'
         });
 
-      if (error) throw error;
+      if (challengeError) throw challengeError;
 
       toast({
-        title: "Challenge Issued! 🔥",
-        description: "Your challenge is now live. Waiting for an opponent..."
+        title: "🔴 LIVE NOW! Challenge Issued! 🔥",
+        description: "Your stream is live! Waiting for an opponent to accept..."
       });
 
       // Reset form
       setTitle('');
       setStreamUrl('');
+      setBountyAmount('');
+      setBountyDescription('');
       
     } catch (error: any) {
       console.error('Error issuing challenge:', error);
@@ -157,12 +183,45 @@ export const IssueChallenge = () => {
           </p>
         </div>
 
+        {/* Bounty Section */}
+        <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-lg p-4 space-y-3">
+          <div className="flex items-center gap-2 text-yellow-500">
+            <DollarSign className="w-5 h-5" />
+            <h4 className="font-semibold">Add a Bounty (Optional)</h4>
+          </div>
+          
+          <div>
+            <Label htmlFor="bountyAmount">Prize Amount ($)</Label>
+            <Input
+              id="bountyAmount"
+              type="number"
+              value={bountyAmount}
+              onChange={(e) => setBountyAmount(e.target.value)}
+              placeholder="250"
+              min="0"
+              className="mt-1"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="bountyDescription">Challenge Message</Label>
+            <Textarea
+              id="bountyDescription"
+              value={bountyDescription}
+              onChange={(e) => setBountyDescription(e.target.value)}
+              placeholder="I can beat you doing a flat top!"
+              className="mt-1"
+              rows={2}
+            />
+          </div>
+        </div>
+
         <Button
           type="submit"
           disabled={isSubmitting || !title || !streamUrl || !!videoIdError}
           className="w-full bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-600"
         >
-          {isSubmitting ? 'Issuing Challenge...' : 'Issue My Challenge'}
+          {isSubmitting ? 'Going Live...' : '🔴 Go Live & Issue Challenge'}
         </Button>
       </form>
     </div>

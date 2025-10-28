@@ -40,6 +40,14 @@ export const isValidYouTubeInput = (input: string): boolean => {
 };
 
 /**
+ * Build a public YouTube watch URL from video ID
+ * This ensures we always use the public watch page, not studio URLs
+ */
+export const buildYouTubeWatchUrl = (videoId: string): string => {
+  return `https://www.youtube.com/watch?v=${videoId}`;
+};
+
+/**
  * Format YouTube video ID input helper text
  */
 export const getYouTubeInputHelperText = () => {
