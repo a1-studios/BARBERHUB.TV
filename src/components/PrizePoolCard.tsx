@@ -1,4 +1,4 @@
-import { Trophy, Users, Swords, TrendingUp, Send, MessageCircle } from 'lucide-react';
+import { Trophy, Users, Swords, TrendingUp, Send, MessageCircle, AtSign } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import Globe3D from '@/components/Globe3D';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -7,14 +7,19 @@ import { AnimatedCounter } from '@/components/battles/AnimatedCounter';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 export const PrizePoolCard = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [noteContent, setNoteContent] = useState('');
+  const [showMentions, setShowMentions] = useState(false);
+  const [mentionSearch, setMentionSearch] = useState('');
+  const [cursorPosition, setCursorPosition] = useState(0);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Fetch real community stats
   const { data: stats } = useQuery({
@@ -35,6 +40,32 @@ export const PrizePoolCard = () => {
     refetchInterval: 10000
   });
 
+  // Fetch users for mentions
+  const { data: allUsers } = useQuery({
+    queryKey: ['all-users-for-mentions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('user_id, username, display_name')
+        .not('username', 'is', null)
+        .limit(100);
+      
+      if (error) throw error;
+      
+      // Fetch roles for users
+      const userIds = data?.map(u => u.user_id) || [];
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('user_id, role')
+        .in('user_id', userIds);
+      
+      return data?.map(u => ({
+        ...u,
+        role: roles?.find(r => r.user_id === u.user_id)?.role || 'fan'
+      })) || [];
+    }
+  });
+
   // Fetch community notes with role information
   const { data: notes, error: notesError } = useQuery({
     queryKey: ['community-notes'],
@@ -49,7 +80,7 @@ export const PrizePoolCard = () => {
           profiles:user_id (display_name, avatar_url, username)
         `)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(20);
 
       if (error) {
         console.error('Error fetching notes:', error);
@@ -76,7 +107,8 @@ export const PrizePoolCard = () => {
       }
       
       return data || [];
-    }
+    },
+    refetchInterval: 5000 // Refetch every 5 seconds for real-time feel
   });
 
   // Log for debugging
@@ -106,14 +138,87 @@ export const PrizePoolCard = () => {
     };
   }, [queryClient]);
 
+  // Handle textarea change with @mention detection
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    const cursorPos = e.target.selectionStart;
+    
+    setNoteContent(value);
+    setCursorPosition(cursorPos);
+    
+    // Check if user is typing @mention
+    const textBeforeCursor = value.slice(0, cursorPos);
+    const lastAtSymbol = textBeforeCursor.lastIndexOf('@');
+    
+    if (lastAtSymbol !== -1) {
+      const textAfterAt = textBeforeCursor.slice(lastAtSymbol + 1);
+      // Check if there's no space after @ (still typing username)
+      if (!textAfterAt.includes(' ') && textAfterAt.length > 0) {
+        setMentionSearch(textAfterAt);
+        setShowMentions(true);
+      } else if (textAfterAt.length === 0) {
+        setMentionSearch('');
+        setShowMentions(true);
+      } else {
+        setShowMentions(false);
+      }
+    } else {
+      setShowMentions(false);
+    }
+  };
+
+  // Insert mention into textarea
+  const insertMention = (username: string) => {
+    const textBeforeCursor = noteContent.slice(0, cursorPosition);
+    const textAfterCursor = noteContent.slice(cursorPosition);
+    const lastAtSymbol = textBeforeCursor.lastIndexOf('@');
+    
+    const newText = 
+      textBeforeCursor.slice(0, lastAtSymbol) + 
+      `@${username} ` + 
+      textAfterCursor;
+    
+    setNoteContent(newText);
+    setShowMentions(false);
+    setMentionSearch('');
+    
+    // Focus back on textarea
+    setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 0);
+  };
+
+  // Filter users for mention suggestions
+  const filteredUsers = allUsers?.filter(u => 
+    u.username?.toLowerCase().includes(mentionSearch.toLowerCase()) ||
+    u.display_name?.toLowerCase().includes(mentionSearch.toLowerCase())
+  ).slice(0, 5) || [];
+
+  // Extract mentioned user IDs from content
+  const extractMentionedUserIds = (content: string): string[] => {
+    const mentionRegex = /@(\w+)/g;
+    const matches = content.match(mentionRegex) || [];
+    const usernames = matches.map(m => m.slice(1));
+    
+    return allUsers
+      ?.filter(u => usernames.includes(u.username || ''))
+      .map(u => u.user_id) || [];
+  };
+
   // Post community note mutation
   const postNoteMutation = useMutation({
     mutationFn: async (content: string) => {
       if (!user) throw new Error('Must be logged in');
       
+      const taggedUserIds = extractMentionedUserIds(content);
+      
       const { data, error } = await supabase
         .from('community_notes')
-        .insert({ user_id: user.id, content })
+        .insert({ 
+          user_id: user.id, 
+          content,
+          tagged_creator_ids: taggedUserIds 
+        })
         .select()
         .single();
 
@@ -141,6 +246,26 @@ export const PrizePoolCard = () => {
       return;
     }
     postNoteMutation.mutate(noteContent);
+  };
+
+  // Render note content with highlighted @mentions
+  const renderNoteContent = (content: string) => {
+    const parts = content.split(/(@\w+)/g);
+    
+    return parts.map((part, index) => {
+      if (part.startsWith('@')) {
+        const username = part.slice(1);
+        const mentionedUser = allUsers?.find(u => u.username === username);
+        const roleColor = mentionedUser?.role === 'barber' ? 'text-orange-500' : 'text-green-500';
+        
+        return (
+          <span key={index} className={`${roleColor} font-semibold hover:underline cursor-pointer`}>
+            {part}
+          </span>
+        );
+      }
+      return <span key={index}>{part}</span>;
+    });
   };
 
   return (
@@ -206,23 +331,64 @@ export const PrizePoolCard = () => {
           {user && (
             <div className="relative mb-6">
               <div className="relative bg-background/80 backdrop-blur-sm border border-border rounded-lg p-4">
-                <Textarea
-                  placeholder="Share your thoughts with the community..."
-                  value={noteContent}
-                  onChange={(e) => setNoteContent(e.target.value)}
-                  className="min-h-[100px] bg-transparent border-0 focus-visible:ring-0 resize-none text-base"
-                  maxLength={500}
-                />
+                <div className="relative">
+                  <Textarea
+                    ref={textareaRef}
+                    placeholder="Share your thoughts... Use @username to mention someone!"
+                    value={noteContent}
+                    onChange={handleTextareaChange}
+                    className="min-h-[100px] bg-transparent border-0 focus-visible:ring-0 resize-none text-base"
+                    maxLength={500}
+                  />
+                  
+                  {/* @Mention Dropdown */}
+                  {showMentions && filteredUsers.length > 0 && (
+                    <div className="absolute bottom-full left-0 mb-2 w-64 bg-background border border-border rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                      <div className="p-2 space-y-1">
+                        <div className="px-2 py-1 text-xs text-muted-foreground flex items-center gap-1">
+                          <AtSign className="w-3 h-3" />
+                          Mention someone
+                        </div>
+                        {filteredUsers.map((u) => {
+                          const roleColor = u.role === 'barber' ? 'text-orange-500' : 'text-green-500';
+                          return (
+                            <button
+                              key={u.user_id}
+                              onClick={() => insertMention(u.username || '')}
+                              className="w-full text-left px-2 py-2 rounded hover:bg-accent flex items-center gap-2 transition-colors"
+                            >
+                              <span className={`font-semibold ${roleColor}`}>
+                                @{u.username}
+                              </span>
+                              {u.display_name && (
+                                <span className="text-xs text-muted-foreground">
+                                  {u.display_name}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
                 <div className="flex items-center justify-between mt-3">
-                  <span className="text-xs text-muted-foreground">
-                    {noteContent.length}/500
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {noteContent.length}/500
+                    </span>
+                    <span className="text-xs text-muted-foreground/70">
+                      • Type @ to mention users
+                    </span>
+                  </div>
                   <Button
                     size="default"
                     onClick={handlePostNote}
                     disabled={postNoteMutation.isPending || !noteContent.trim()}
                     className="gap-2"
                   >
+                    <Send className="w-4 h-4" />
                     Post
                   </Button>
                 </div>
@@ -231,7 +397,7 @@ export const PrizePoolCard = () => {
           )}
 
           {/* Recent Notes Feed */}
-          <div className="space-y-3 max-h-[400px] overflow-y-auto">
+          <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
             {notes?.map((note: any) => {
               const isBarber = note.role === 'barber';
               const isFan = note.role === 'fan';
@@ -241,20 +407,23 @@ export const PrizePoolCard = () => {
               return (
                 <div
                   key={note.id}
-                  className="group relative bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg p-4 transition-all hover:bg-background/90"
+                  className="group relative bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg p-4 transition-all hover:bg-background/90 hover:border-primary/30 animate-in fade-in slide-in-from-bottom-2 duration-300"
                 >
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <button
                       onClick={() => window.location.href = `/barber/${note.user_id}`}
-                      className={`font-bold ${usernameColor} hover:underline cursor-pointer text-base`}
+                      className={`font-bold ${usernameColor} hover:underline cursor-pointer text-base flex items-center gap-1`}
                     >
                       @{username}
+                      {isBarber && <span className="text-xs">✂️</span>}
                     </button>
                     <span className="text-xs text-muted-foreground flex-shrink-0">
                       {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
                     </span>
                   </div>
-                  <p className="text-sm text-foreground break-words leading-relaxed">{note.content}</p>
+                  <div className="text-sm text-foreground break-words leading-relaxed">
+                    {renderNoteContent(note.content)}
+                  </div>
                 </div>
               );
             })}
