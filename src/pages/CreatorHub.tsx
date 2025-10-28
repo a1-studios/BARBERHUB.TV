@@ -18,7 +18,6 @@ import { useEffect } from 'react';
 import { 
   Crown,
   Scissors,
-  Plus, 
   Trophy, 
   Users, 
   Calendar, 
@@ -246,50 +245,16 @@ export default function CreatorHub() {
             </div>
           )}
 
-          {/* Battles Section */}
+          {/* Battles Section - View & Vote Only */}
           <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-2xl font-bold text-white mb-2">
-                  {isFan ? 'Vote in Epic Battles' : 'Barber Battles'}
-                </h2>
-                <p className="text-muted-foreground">
-                  {isFan 
-                    ? 'Support your favorite barbers and watch amazing skills unfold'
-                    : 'Showcase your skills and compete with the best barbers worldwide'
-                  }
-                </p>
-              </div>
-              
-              {/* Barber-only Create Button */}
-              {isBarber && (
-                <Button asChild size="lg">
-                  <Link to="/battles/create">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Battle
-                  </Link>
-                </Button>
-              )}
+            <div>
+              <h2 className="text-2xl font-bold text-white mb-2">
+                Live Battles & Voting
+              </h2>
+              <p className="text-muted-foreground">
+                Watch amazing barber skills unfold and vote for your favorites
+              </p>
             </div>
-
-            {/* Barber Info Card */}
-            {isBarber && user && (
-              <Card className="bg-blue-500/5 border-blue-500/20">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center">
-                      <Trophy className="w-6 h-6 text-blue-400" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-white">Barber Dashboard</h3>
-                      <p className="text-muted-foreground">
-                        Create battles, join competitions, and showcase your skills to the world.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Battles Grid */}
             {battlesLoading ? (
@@ -389,33 +354,24 @@ export default function CreatorHub() {
                         </div>
                       )}
 
-                      {/* Action Button */}
-                      <Button asChild className="w-full">
-                        <Link to={`/battles/${battle.id}`}>
-                          {battle.status === 'voting' ? (
-                            <>
-                              <Trophy className="w-4 h-4 mr-2" />
-                              {isFan ? 'Vote Now' : 'View Results'}
-                            </>
-                          ) : battle.status === 'active' ? (
-                            <>
-                              {isFan ? (
-                                <>
-                                  <Users className="w-4 h-4 mr-2" />
-                                  Watch Battle
-                                </>
-                              ) : (
-                                <>
-                                  <Users className="w-4 h-4 mr-2" />
-                                  Join Battle
-                                </>
-                              )}
-                            </>
-                          ) : (
-                            'View Details'
-                          )}
-                        </Link>
-                      </Button>
+                       {/* Action Button */}
+                       <Button asChild className="w-full">
+                         <Link to={`/battles/${battle.id}`}>
+                           {battle.status === 'voting' ? (
+                             <>
+                               <Trophy className="w-4 h-4 mr-2" />
+                               Vote Now
+                             </>
+                           ) : battle.status === 'active' ? (
+                             <>
+                               <Users className="w-4 h-4 mr-2" />
+                               Watch Battle
+                             </>
+                           ) : (
+                             'View Details'
+                           )}
+                         </Link>
+                       </Button>
                     </CardContent>
                   </Card>
                 ))}
@@ -423,21 +379,15 @@ export default function CreatorHub() {
             ) : (
               <div className="text-center py-12">
                 <Trophy className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-                <h3 className="text-xl font-semibold text-white mb-2">No battles yet</h3>
+                <h3 className="text-xl font-semibold text-white mb-2">No battles available</h3>
                 <p className="text-muted-foreground mb-6">
-                  {isBarber 
-                    ? "Be the first to create an epic barber battle!"
-                    : "Battles will appear here once barbers start competing."
-                  }
+                  Check back soon for exciting barber battles to watch and vote on!
                 </p>
-                {isBarber && (
-                  <Button asChild size="lg">
-                    <Link to="/battles/create">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create First Battle
-                    </Link>
-                  </Button>
-                )}
+                <Button asChild variant="outline">
+                  <Link to="/battles">
+                    Browse All Battles
+                  </Link>
+                </Button>
               </div>
             )}
           </div>
