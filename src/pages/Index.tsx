@@ -8,6 +8,7 @@ import { CreatorHub } from "@/components/creator/CreatorHub";
 import GrantsSection from "@/components/GrantsSection";
 import { GlobalLeagueDashboard } from "@/components/GlobalLeagueDashboard";
 import { VirtualHaircutTryOn } from "@/components/VirtualHaircutTryOn";
+import { OpenChallengeQueue } from "@/components/battles/OpenChallengeQueue";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { FEATURES } from "@/config/features";
@@ -36,6 +37,9 @@ const Index = () => {
           
           {/* Global League Dashboard */}
           <GlobalLeagueDashboard />
+          
+          {/* Open Challenge Queue - Spontaneous Battles */}
+          <OpenChallengeQueue />
           
           {/* Main Battles Section with all navigation and features */}
           <BattlesSection />

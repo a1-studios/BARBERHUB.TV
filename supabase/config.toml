@@ -38,6 +38,9 @@ verify_jwt = true
 [functions.complete-match]
 verify_jwt = true
 
+[functions.complete-open-challenge]
+verify_jwt = true
+
 [functions.create-battle-entry]
 verify_jwt = true
 

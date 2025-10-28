@@ -1235,6 +1235,59 @@ export type Database = {
         }
         Relationships: []
       }
+      open_challenges: {
+        Row: {
+          accepted_at: string | null
+          accepted_by_id: string | null
+          accepted_by_username: string | null
+          battle_id: string | null
+          challenger_id: string
+          challenger_stream_url: string
+          challenger_username: string
+          challenger_youtube_video_id: string | null
+          created_at: string | null
+          id: string
+          status: string | null
+          title: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by_id?: string | null
+          accepted_by_username?: string | null
+          battle_id?: string | null
+          challenger_id: string
+          challenger_stream_url: string
+          challenger_username: string
+          challenger_youtube_video_id?: string | null
+          created_at?: string | null
+          id?: string
+          status?: string | null
+          title: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by_id?: string | null
+          accepted_by_username?: string | null
+          battle_id?: string | null
+          challenger_id?: string
+          challenger_stream_url?: string
+          challenger_username?: string
+          challenger_youtube_video_id?: string | null
+          created_at?: string | null
+          id?: string
+          status?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "open_challenges_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           amount: number
