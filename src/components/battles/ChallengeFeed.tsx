@@ -15,6 +15,7 @@ interface Challenge {
   challenger_username: string;
   title: string;
   challenger_stream_url: string;
+  challenger_youtube_video_id: string;
   created_at: string;
   status: string;
 }
@@ -88,6 +89,10 @@ export const ChallengeFeed = () => {
           const isOwnChallenge = user?.id === challenge.challenger_id;
           const canAccept = isBarber && !isOwnChallenge;
 
+          const streamUrl = challenge.challenger_youtube_video_id 
+            ? `https://www.youtube.com/watch?v=${challenge.challenger_youtube_video_id}`
+            : challenge.challenger_stream_url;
+
           return (
             <Card 
               key={challenge.id}
@@ -114,7 +119,7 @@ export const ChallengeFeed = () => {
 
               <div className="space-y-2">
                 <a
-                  href={challenge.challenger_stream_url}
+                  href={streamUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -124,7 +129,7 @@ export const ChallengeFeed = () => {
                     size="sm"
                   >
                     <ExternalLink className="w-4 h-4 mr-2" />
-                    View Stream
+                    View Live Stream
                   </Button>
                 </a>
 
