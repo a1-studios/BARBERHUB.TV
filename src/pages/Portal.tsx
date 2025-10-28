@@ -13,7 +13,9 @@ import { useToast } from "@/hooks/use-toast";
 import { TournamentRegistration } from "@/components/tournament/TournamentRegistration";
 import { LiveMatchCounter } from "@/components/tournament/LiveMatchCounter";
 import { MyBattlesSection } from "@/components/barber/MyBattlesSection";
-import { Trophy, Users, Clock, Vote, DollarSign, Play, Calendar, Target } from "lucide-react";
+import { Trophy, Users, Clock, Vote, DollarSign, Play, Calendar, Target, Scissors } from "lucide-react";
+import DisplayCards from "@/components/ui/display-cards";
+import { formatDistanceToNow } from "date-fns";
 interface Battle {
   id: string;
   title: string;
@@ -190,37 +192,34 @@ const Portal = () => {
               </div>
             </div>}
 
-          {/* Sunday Schedule */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-foreground mb-4 text-center">
+          {/* Sunday Schedule with Stacked Cards */}
+          <div className="mb-12">
+            <h2 className="text-2xl font-bold text-foreground mb-8 text-center">
               This Sunday's Schedule
             </h2>
-            {upcomingBattles && upcomingBattles.length > 0 ? <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {upcomingBattles.map(battle => <Card key={battle.id}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <Badge variant="secondary">{battle.status}</Badge>
-                        <Badge variant="outline">{battle.category}</Badge>
-                      </div>
-                      <CardTitle>{battle.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {battle.starts_at ? new Date(battle.starts_at).toLocaleString() : 'Time TBD'}
-                        </div>
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Trophy className="mr-2 h-4 w-4" />
-                          Prize: {battle.currency} ${battle.prize_amount}
-                        </div>
-                        <Button variant="outline" className="w-full" onClick={() => navigate(`/battles/${battle.id}`)}>
-                          View Details
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>)}
-              </div> : <Card>
+            {upcomingBattles && upcomingBattles.length > 0 ? (
+              <div className="flex justify-center">
+                <DisplayCards
+                  cards={upcomingBattles.slice(0, 3).map((battle, index) => ({
+                    icon: <Scissors className="size-4 text-orange-300" />,
+                    title: battle.title,
+                    description: `Prize: ${battle.currency} $${battle.prize_amount}`,
+                    date: battle.starts_at 
+                      ? formatDistanceToNow(new Date(battle.starts_at), { addSuffix: true })
+                      : 'Time TBD',
+                    iconClassName: "bg-orange-800",
+                    titleClassName: "text-orange-500",
+                    onClick: () => navigate(`/battles/${battle.id}`),
+                    className: index === 0 
+                      ? "[grid-area:stack] hover:-translate-y-10 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0"
+                      : index === 1
+                      ? "[grid-area:stack] translate-x-16 translate-y-10 hover:-translate-y-1 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0"
+                      : "[grid-area:stack] translate-x-32 translate-y-20 hover:translate-y-10"
+                  }))}
+                />
+              </div>
+            ) : (
+              <Card>
                 <CardContent className="text-center py-12">
                   <Calendar className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
                   <h3 className="text-xl font-semibold mb-2">No battles scheduled</h3>
@@ -228,7 +227,8 @@ const Portal = () => {
                     Check back later for this Sunday's battle lineup!
                   </p>
                 </CardContent>
-              </Card>}
+              </Card>
+            )}
           </div>
 
           {/* Tournament Bracket Placeholder */}
