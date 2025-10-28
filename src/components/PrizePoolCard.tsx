@@ -45,40 +45,40 @@ export const PrizePoolCard = () => {
     queryKey: ['all-users-for-mentions'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('user_id, username, display_name')
+        .from('public_user_profiles')
+        .select('user_id, username, display_name, user_type')
         .not('username', 'is', null)
         .limit(100);
       
       if (error) throw error;
       
-      // Fetch roles for users
+      // Fetch barber status to determine role
       const userIds = data?.map(u => u.user_id) || [];
-      const { data: roles } = await supabase
-        .from('user_roles')
-        .select('user_id, role')
+      const { data: barbers, error: barberError } = await supabase
+        .from('barber_profiles')
+        .select('user_id')
         .in('user_id', userIds);
+      
+      if (barberError) {
+        console.error('Error fetching barber profiles:', barberError);
+      }
+      
+      const barberSet = new Set((barbers || []).map((b: any) => b.user_id));
       
       return data?.map(u => ({
         ...u,
-        role: roles?.find(r => r.user_id === u.user_id)?.role || 'fan'
+        role: barberSet.has(u.user_id) ? 'barber' : 'fan'
       })) || [];
     }
   });
 
-  // Fetch community notes with role information
+  // Fetch community notes with role and public profile information
   const { data: notes, error: notesError } = useQuery({
     queryKey: ['community-notes'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('community_notes')
-        .select(`
-          id,
-          content,
-          created_at,
-          user_id,
-          profiles:user_id (display_name, avatar_url, username)
-        `)
+        .select('id, content, created_at, user_id')
         .order('created_at', { ascending: false })
         .limit(20);
 
@@ -87,22 +87,36 @@ export const PrizePoolCard = () => {
         throw error;
       }
       
-      // Fetch roles for all users in the notes
       if (data && data.length > 0) {
         const userIds = data.map((note: any) => note.user_id);
-        const { data: roles, error: rolesError } = await supabase
-          .from('user_roles')
-          .select('user_id, role')
+
+        // Fetch public profile info
+        const { data: profiles, error: profilesError } = await supabase
+          .from('public_user_profiles')
+          .select('user_id, display_name, avatar_url, username, user_type')
           .in('user_id', userIds);
         
-        if (rolesError) {
-          console.error('Error fetching roles:', rolesError);
+        if (profilesError) {
+          console.error('Error fetching public profiles:', profilesError);
         }
         
-        // Attach roles to notes
+        // Fetch barber status to determine role
+        const { data: barberRows, error: barberError } = await supabase
+          .from('barber_profiles')
+          .select('user_id')
+          .in('user_id', userIds);
+        
+        if (barberError) {
+          console.error('Error fetching barber profiles:', barberError);
+        }
+        
+        const barberSet = new Set((barberRows || []).map((b: any) => b.user_id));
+        
+        // Attach public profile and role to notes
         return data.map((note: any) => ({
           ...note,
-          role: roles?.find((r: any) => r.user_id === note.user_id)?.role || 'fan'
+          profiles: profiles?.find((p: any) => p.user_id === note.user_id) || null,
+          role: barberSet.has(note.user_id) ? 'barber' : 'fan'
         }));
       }
       
@@ -374,7 +388,7 @@ export const PrizePoolCard = () => {
                   
                   {/* @Mention Dropdown */}
                   {showMentions && filteredUsers.length > 0 && (
-                    <div className="absolute bottom-full left-0 mb-2 w-64 bg-background border border-border rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
+                    <div className="absolute bottom-full left-0 mb-2 w-full sm:w-64 bg-background border border-border rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
                       <div className="p-2 space-y-1">
                         <div className="px-2 py-1 text-xs text-muted-foreground flex items-center gap-1">
                           <AtSign className="w-3 h-3" />
