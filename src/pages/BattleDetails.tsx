@@ -46,6 +46,10 @@ const BattleDetails = () => {
     return <Navigate to="/battles" replace />;
   }
 
+  // Get live viewer data - MUST be called before any conditional returns
+  // The hook itself handles the case where id is undefined
+  const viewerData = useRealtimeBattleViewers(id || '');
+
   // Fetch battle details
   const { data: battle, isLoading: battleLoading } = useQuery({
     queryKey: ['battle', id],
@@ -279,8 +283,7 @@ const BattleDetails = () => {
   const canVote = user && battle.status === 'voting';
   const totalWeightedVotes = voteResults?.reduce((sum, result) => sum + result.weighted_votes, 0) || 0;
   
-  // Get live viewer data if battle is active
-  const viewerData = useRealtimeBattleViewers(battle.id);
+  // Check if battle has live viewers
   const isLiveBattle = battle.status === 'voting';
   const hasLiveViewers = isLiveBattle && (viewerData.barber1 > 0 || viewerData.barber2 > 0);
 
