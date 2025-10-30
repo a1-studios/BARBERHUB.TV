@@ -9,6 +9,7 @@ import { BattleStatsCard } from "@/components/battles/BattleStatsCard";
 import { useRealtimeBattleViewers } from "@/hooks/useRealtimeBattleViewers";
 import { Heart, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 
 interface Battle {
   id: string;
@@ -34,6 +35,7 @@ interface BarberProfile {
 
 export const DynamicBattleHero = () => {
   const navigate = useNavigate();
+  const [rotationIndex, setRotationIndex] = useState(0);
 
   // Fetch active battle (voting or upcoming)
   const { data: battle, isLoading: battleLoading } = useQuery({
@@ -91,7 +93,7 @@ export const DynamicBattleHero = () => {
     enabled: !!battle?.barber1_id && !!battle?.barber2_id
   });
 
-  // Fallback: fetch latest 2 barbers if no battle using unified view
+  // Fallback: fetch all barbers for rotation if no battle using unified view
   const { data: featuredBarbers } = useQuery({
     queryKey: ['featuredBarbers'],
     queryFn: async () => {
@@ -99,7 +101,7 @@ export const DynamicBattleHero = () => {
         .from('public_barber_profiles')
         .select('*')
         .order('barber_updated_at', { ascending: false })
-        .limit(2);
+        .limit(10); // Fetch more barbers for rotation
       
       if (error) throw error;
 
@@ -120,6 +122,16 @@ export const DynamicBattleHero = () => {
     enabled: !battle || !barbers || barbers.length < 2
   });
 
+  // Rotate through barber profiles every 8 seconds
+  useEffect(() => {
+    if (!battle && featuredBarbers && featuredBarbers.length > 2) {
+      const interval = setInterval(() => {
+        setRotationIndex(prev => (prev + 2) % featuredBarbers.length);
+      }, 8000);
+      return () => clearInterval(interval);
+    }
+  }, [battle, featuredBarbers]);
+
   const getFlagImageUrl = (countryCode?: string) => {
     if (!countryCode) return "";
     return `https://flagcdn.com/w1600/${countryCode.toLowerCase()}.jpg`;
@@ -138,8 +150,15 @@ export const DynamicBattleHero = () => {
     );
   }
 
-  // Determine which barbers to display
-  const displayBarbers = barbers && barbers.length >= 2 ? barbers : featuredBarbers || [];
+  // Determine which barbers to display with rotation
+  let displayBarbers = barbers && barbers.length >= 2 ? barbers : [];
+  
+  if (displayBarbers.length < 2 && featuredBarbers && featuredBarbers.length >= 2) {
+    // Use rotation to show different pairs
+    const start = rotationIndex % featuredBarbers.length;
+    const end = (start + 1) % featuredBarbers.length;
+    displayBarbers = [featuredBarbers[start], featuredBarbers[end]];
+  }
 
   // If no barbers at all
   if (displayBarbers.length < 2) {
@@ -202,10 +221,11 @@ export const DynamicBattleHero = () => {
             <div className="absolute inset-0 bg-gradient-to-br from-black/50 via-transparent to-black/30 opacity-100" />
 
             {/* Content */}
-            <div className="relative h-full flex flex-col items-center justify-start pt-[5%] p-4 sm:p-6 lg:p-8 space-y-3">
+            <div className="relative h-full flex flex-col items-center justify-start pt-[3%] p-4 sm:p-6 lg:p-8 space-y-2">
               {/* Photo */}
               <div 
-                className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl cursor-pointer hover:border-white transition-all"
+                onClick={() => navigate(`/barber/${barber1.user_id}`)}
+                className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-full overflow-hidden border-4 border-white/90 shadow-2xl cursor-pointer hover:border-white hover:scale-105 transition-all"
               >
                 {barber1.avatar_url ? (
                   <img 
@@ -221,44 +241,44 @@ export const DynamicBattleHero = () => {
               {/* Name - Clickable */}
               <h3 
                 onClick={() => navigate(`/barber/${barber1.user_id}`)}
-                className="text-white text-sm sm:text-base lg:text-lg font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-4 py-2 cursor-pointer hover:bg-black/70 transition-all"
+                className="text-white text-xs sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/60 backdrop-blur-sm rounded-full px-3 py-1.5 cursor-pointer hover:bg-black/80 transition-all"
               >
                 {barber1.display_name}
               </h3>
 
-              {/* Spacer - 10% down */}
-              <div className="h-[10%]" />
-
-              {/* Barber Stats */}
-              <div className="flex gap-3 text-white text-xs sm:text-sm">
-                <div className="bg-black/50 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1.5">
-                  <Heart className="w-3 h-3" fill="currentColor" />
+              {/* Barber Stats - Closer to profile */}
+              <div className="flex gap-2 text-white text-[10px] sm:text-xs">
+                <div className="bg-black/60 backdrop-blur-sm rounded-full px-2.5 py-1 flex items-center gap-1">
+                  <Heart className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="currentColor" />
                   <span className="font-semibold">{barber1.likes}</span>
                 </div>
-                <div className="bg-black/50 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1.5">
-                  <Users className="w-3 h-3" />
+                <div className="bg-black/60 backdrop-blur-sm rounded-full px-2.5 py-1 flex items-center gap-1">
+                  <Users className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                   <span className="font-semibold">{barber1.followers}</span>
                 </div>
               </div>
 
-              {/* Video Preview - 1:1 ratio */}
-              <div className="w-full max-w-[180px] sm:max-w-[200px]">
+              {/* Spacer */}
+              <div className="h-[2%]" />
+
+              {/* Video Preview - Larger */}
+              <div className="w-full max-w-[220px] sm:max-w-[260px] lg:max-w-[300px]">
                 <BarberVideoSection 
                   videoId={barber1.is_live ? barber1.live_video_id : barber1.featured_video_id}
                   isLive={barber1.is_live}
                   viewerCount={isActiveBattle ? viewerData.barber1 : undefined}
                   aspectRatio="portrait"
-                  className="rounded-md aspect-square"
+                  className="rounded-lg aspect-square shadow-xl"
                 />
               </div>
 
-              {/* Vote Button */}
+              {/* Vote Button - Very Visible */}
               {isActiveBattle && (
                 <Button 
                   onClick={() => navigate(`/battle/${battle?.id}`)}
-                  className="w-full max-w-[180px] sm:max-w-[200px] bg-primary hover:bg-primary/90 text-white font-bold text-base sm:text-lg py-4 sm:py-6 rounded-lg shadow-lg mt-2"
+                  className="w-full max-w-[220px] sm:max-w-[260px] lg:max-w-[300px] bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-black text-lg sm:text-xl lg:text-2xl py-5 sm:py-7 rounded-xl shadow-2xl hover:shadow-orange-500/50 transition-all hover:scale-105 border-2 border-orange-400"
                 >
-                  VOTE
+                  🔥 VOTE NOW 🔥
                 </Button>
               )}
             </div>
@@ -282,10 +302,11 @@ export const DynamicBattleHero = () => {
             <div className="absolute inset-0 bg-gradient-to-bl from-black/50 via-transparent to-black/30 opacity-100" />
 
             {/* Content */}
-            <div className="relative h-full flex flex-col items-center justify-start pt-[5%] p-4 sm:p-6 lg:p-8 space-y-3">
+            <div className="relative h-full flex flex-col items-center justify-start pt-[3%] p-4 sm:p-6 lg:p-8 space-y-2">
               {/* Photo */}
               <div 
-                className="w-24 h-24 sm:w-32 sm:h-32 lg:w-40 lg:h-40 rounded-full overflow-hidden border-4 border-white/80 shadow-2xl cursor-pointer hover:border-white transition-all"
+                onClick={() => navigate(`/barber/${barber2.user_id}`)}
+                className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 rounded-full overflow-hidden border-4 border-white/90 shadow-2xl cursor-pointer hover:border-white hover:scale-105 transition-all"
               >
                 {barber2.avatar_url ? (
                   <img 
@@ -301,44 +322,44 @@ export const DynamicBattleHero = () => {
               {/* Name - Clickable */}
               <h3 
                 onClick={() => navigate(`/barber/${barber2.user_id}`)}
-                className="text-white text-sm sm:text-base lg:text-lg font-bold drop-shadow-lg bg-black/50 backdrop-blur-sm rounded-full px-4 py-2 cursor-pointer hover:bg-black/70 transition-all"
+                className="text-white text-xs sm:text-sm lg:text-base font-bold drop-shadow-lg bg-black/60 backdrop-blur-sm rounded-full px-3 py-1.5 cursor-pointer hover:bg-black/80 transition-all"
               >
                 {barber2.display_name}
               </h3>
 
-              {/* Spacer - 10% down */}
-              <div className="h-[10%]" />
-
-              {/* Barber Stats */}
-              <div className="flex gap-3 text-white text-xs sm:text-sm">
-                <div className="bg-black/50 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1.5">
-                  <Heart className="w-3 h-3" fill="currentColor" />
+              {/* Barber Stats - Closer to profile */}
+              <div className="flex gap-2 text-white text-[10px] sm:text-xs">
+                <div className="bg-black/60 backdrop-blur-sm rounded-full px-2.5 py-1 flex items-center gap-1">
+                  <Heart className="w-2.5 h-2.5 sm:w-3 sm:h-3" fill="currentColor" />
                   <span className="font-semibold">{barber2.likes}</span>
                 </div>
-                <div className="bg-black/50 backdrop-blur-sm rounded-full px-3 py-1 flex items-center gap-1.5">
-                  <Users className="w-3 h-3" />
+                <div className="bg-black/60 backdrop-blur-sm rounded-full px-2.5 py-1 flex items-center gap-1">
+                  <Users className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                   <span className="font-semibold">{barber2.followers}</span>
                 </div>
               </div>
 
-              {/* Video Preview - 1:1 ratio */}
-              <div className="w-full max-w-[180px] sm:max-w-[200px]">
+              {/* Spacer */}
+              <div className="h-[2%]" />
+
+              {/* Video Preview - Larger */}
+              <div className="w-full max-w-[220px] sm:max-w-[260px] lg:max-w-[300px]">
                 <BarberVideoSection 
                   videoId={barber2.is_live ? barber2.live_video_id : barber2.featured_video_id}
                   isLive={barber2.is_live}
                   viewerCount={isActiveBattle ? viewerData.barber2 : undefined}
                   aspectRatio="portrait"
-                  className="rounded-md aspect-square"
+                  className="rounded-lg aspect-square shadow-xl"
                 />
               </div>
 
-              {/* Vote Button */}
+              {/* Vote Button - Very Visible */}
               {isActiveBattle && (
                 <Button 
                   onClick={() => navigate(`/battle/${battle?.id}`)}
-                  className="w-full max-w-[180px] sm:max-w-[200px] bg-primary hover:bg-primary/90 text-white font-bold text-base sm:text-lg py-4 sm:py-6 rounded-lg shadow-lg mt-2"
+                  className="w-full max-w-[220px] sm:max-w-[260px] lg:max-w-[300px] bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-black text-lg sm:text-xl lg:text-2xl py-5 sm:py-7 rounded-xl shadow-2xl hover:shadow-orange-500/50 transition-all hover:scale-105 border-2 border-orange-400"
                 >
-                  VOTE
+                  🔥 VOTE NOW 🔥
                 </Button>
               )}
             </div>
