@@ -1,16 +1,74 @@
-
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Menu, X, Trophy, Plus, User, LogOut, Sparkles, Zap, Scissors } from 'lucide-react';
+import { Menu, X, Trophy, Plus, User, LogOut, Sparkles, Zap, Scissors, Swords, Crown, CreditCard } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import barberPole from '@/assets/barber-pole.png';
+import { cn } from '@/lib/utils';
+
+interface QuickAction {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  path: string;
+  requiresAuth: boolean;
+  barberOnly?: boolean;
+}
+
+const quickActions: QuickAction[] = [
+  {
+    id: 'battles',
+    label: 'View Battles',
+    icon: <Swords className="w-5 h-5" />,
+    path: '/battles',
+    requiresAuth: true
+  },
+  {
+    id: 'create-battle',
+    label: 'Create Battle',
+    icon: <Plus className="w-5 h-5" />,
+    path: '/battles/create',
+    requiresAuth: true,
+    barberOnly: true
+  },
+  {
+    id: 'haircut-advisor',
+    label: 'Haircut Advisor',
+    icon: <Scissors className="w-5 h-5" />,
+    path: '/haircut-advisor',
+    requiresAuth: true
+  },
+  {
+    id: 'profile',
+    label: 'Profile',
+    icon: <User className="w-5 h-5" />,
+    path: '/profile',
+    requiresAuth: true
+  },
+  {
+    id: 'creator-hub',
+    label: 'Creator Hub',
+    icon: <Crown className="w-5 h-5" />,
+    path: '/creator-hub',
+    requiresAuth: true,
+    barberOnly: true
+  },
+  {
+    id: 'add-funds',
+    label: 'Add Funds',
+    icon: <CreditCard className="w-5 h-5" />,
+    path: '/portal',
+    requiresAuth: true
+  }
+];
 
 const Header = () => {
   const { user, signOut } = useAuth();
   const { isBarber, isFan } = useUserRole();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [quickActionsOpen, setQuickActionsOpen] = useState(false);
+  const quickActionsRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
@@ -26,17 +84,104 @@ const Header = () => {
 
   const closeMobileMenu = () => setMobileMenuOpen(false);
 
+  // Filter actions based on auth and user type
+  const availableActions = quickActions.filter(action => {
+    if (action.requiresAuth && !user) return false;
+    if (action.barberOnly && !isBarber) return false;
+    return true;
+  });
+
+  const handleQuickActionClick = (action: QuickAction) => {
+    if (action.requiresAuth && !user) {
+      navigate('/');
+      setQuickActionsOpen(false);
+      return;
+    }
+    
+    navigate(action.path);
+    setQuickActionsOpen(false);
+  };
+
+  // Close quick actions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (quickActionsRef.current && !quickActionsRef.current.contains(event.target as Node)) {
+        setQuickActionsOpen(false);
+      }
+    };
+
+    const handleEscapeKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setQuickActionsOpen(false);
+      }
+    };
+
+    if (quickActionsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleEscapeKey);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscapeKey);
+    };
+  }, [quickActionsOpen]);
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-2 border-primary/30 rounded-xl mx-4 mt-2">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">
-          {/* Logo Icon */}
-          <div className="flex items-center">
-            <img 
-              src={barberPole} 
-              alt="Barber Hub Logo" 
-              className="h-10 w-10 animate-spin-slow"
-            />
+          {/* Logo Icon with Quick Actions */}
+          <div className="flex items-center relative" ref={quickActionsRef}>
+            <button
+              onClick={() => setQuickActionsOpen(!quickActionsOpen)}
+              className={cn(
+                "relative group transition-all duration-300",
+                quickActionsOpen && "scale-110"
+              )}
+              aria-label="Quick Actions"
+            >
+              <img 
+                src={barberPole} 
+                alt="Barber Hub Logo" 
+                className={cn(
+                  "h-12 w-12 transition-all duration-500",
+                  "hover:scale-110 hover:drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]",
+                  quickActionsOpen ? "animate-pulse" : "animate-[spin_4s_linear_infinite]"
+                )}
+              />
+              {/* Glow effect on hover */}
+              <div className="absolute inset-0 rounded-full bg-primary/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10" />
+            </button>
+
+            {/* Quick Actions Menu */}
+            {quickActionsOpen && user && (
+              <div className="absolute top-full left-0 mt-2 z-50">
+                <div className="flex flex-col space-y-2 animate-scale-in">
+                  {availableActions.map((action, index) => (
+                    <Button
+                      key={action.id}
+                      onClick={() => handleQuickActionClick(action)}
+                      variant="default"
+                      size="sm"
+                      className={cn(
+                        "w-48 justify-start gap-3 bg-card/95 backdrop-blur-sm",
+                        "border border-border/50 hover:border-primary/50",
+                        "shadow-lg hover:shadow-glow",
+                        "transition-all duration-300",
+                        "animate-fade-in"
+                      )}
+                      style={{
+                        animationDelay: `${index * 0.05}s`
+                      }}
+                    >
+                      {action.icon}
+                      <span className="text-sm font-medium">{action.label}</span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Centered Brand */}

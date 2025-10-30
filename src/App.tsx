@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { BarberGuard } from "@/components/auth/BarberGuard";
-import { QuickActionsMenu } from "@/components/QuickActionsMenu";
 import { useFollowedBarbersNotifications } from "@/hooks/useFollowedBarbersNotifications";
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
@@ -93,7 +92,6 @@ const AppContent = () => {
             <Route path="/barbers" element={<BarbersDirectory />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
-          <QuickActionsMenu />
     </>
   );
 };
