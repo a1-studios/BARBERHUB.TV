@@ -5,7 +5,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Scissors, Menu, X, Trophy, Plus, User, LogOut, Sparkles, Zap } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
-import { NotificationBell } from '@/components/NotificationBell';
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -30,8 +29,10 @@ const Header = () => {
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-2 border-primary/30 rounded-xl mx-4 mt-2">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16 sm:h-20">
-          {/* Spacer for layout balance */}
-          <div className="w-10"></div>
+          {/* Logo Icon */}
+          <div className="flex items-center">
+            <Scissors className="h-8 w-8 text-primary" />
+          </div>
 
           {/* Centered Brand */}
           <button
@@ -44,10 +45,8 @@ const Header = () => {
             </span>
           </button>
 
-          {/* Right Side - Notifications & Menu */}
+          {/* Right Side - Menu */}
           <div className="flex items-center gap-2">
-            {user && <NotificationBell />}
-            
             {/* Hamburger Menu Button */}
             <button
               className="p-2 -mr-2"
