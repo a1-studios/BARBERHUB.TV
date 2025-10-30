@@ -34,10 +34,14 @@ export const ChallengeFeed = () => {
   const { data: challenges = [], isLoading } = useQuery({
     queryKey: ['open-challenges'],
     queryFn: async () => {
+      const twoHoursAgo = new Date();
+      twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
+
       const { data, error } = await supabase
         .from('open_challenges')
         .select('*')
         .eq('status', 'waiting_for_opponent')
+        .gte('created_at', twoHoursAgo.toISOString())
         .order('bounty_amount', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
 
@@ -83,7 +87,7 @@ export const ChallengeFeed = () => {
       <div className="text-center py-12 bg-card/30 backdrop-blur-sm rounded-lg border border-border">
         <Users className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
         <h3 className="text-xl font-bold text-foreground mb-2">No Active Challenges</h3>
-        <p className="text-muted-foreground">Be the first to issue a challenge!</p>
+        <p className="text-muted-foreground">Be the first to issue a challenge! Challenges expire after 2 hours.</p>
       </div>
     );
   }
