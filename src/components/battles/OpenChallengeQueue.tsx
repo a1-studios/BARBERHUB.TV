@@ -8,7 +8,8 @@ export const OpenChallengeQueue = () => {
   const { user } = useAuth();
   const { isBarber } = useUserRole();
 
-  if (!user) return null;
+  // Only show to barbers
+  if (!user || !isBarber) return null;
 
   return (
     <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-background via-muted/30 to-background relative overflow-hidden">
