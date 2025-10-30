@@ -8,6 +8,7 @@ import { LiveBattleIndicator } from "@/components/battles/LiveBattleIndicator";
 import { BattleStatsCard } from "@/components/battles/BattleStatsCard";
 import { useRealtimeBattleViewers } from "@/hooks/useRealtimeBattleViewers";
 import { Heart, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface Battle {
   id: string;
@@ -250,6 +251,16 @@ export const DynamicBattleHero = () => {
                   className="rounded-md aspect-square"
                 />
               </div>
+
+              {/* Vote Button */}
+              {isActiveBattle && (
+                <Button 
+                  onClick={() => navigate(`/battle/${battle?.id}`)}
+                  className="w-full max-w-[180px] sm:max-w-[200px] bg-primary hover:bg-primary/90 text-white font-bold text-base sm:text-lg py-4 sm:py-6 rounded-lg shadow-lg mt-2"
+                >
+                  VOTE
+                </Button>
+              )}
             </div>
           </div>
 
@@ -320,6 +331,16 @@ export const DynamicBattleHero = () => {
                   className="rounded-md aspect-square"
                 />
               </div>
+
+              {/* Vote Button */}
+              {isActiveBattle && (
+                <Button 
+                  onClick={() => navigate(`/battle/${battle?.id}`)}
+                  className="w-full max-w-[180px] sm:max-w-[200px] bg-primary hover:bg-primary/90 text-white font-bold text-base sm:text-lg py-4 sm:py-6 rounded-lg shadow-lg mt-2"
+                >
+                  VOTE
+                </Button>
+              )}
             </div>
           </div>
         </div>
