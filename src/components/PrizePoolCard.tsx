@@ -442,7 +442,8 @@ export const PrizePoolCard = () => {
           )}
 
           {/* Recent Notes Feed */}
-          <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+          <div className="relative">
+            <div className="space-y-3 max-h-[280px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
             {notes?.map((note: any) => {
               const isBarber = note.role === 'barber';
               const isFan = note.role === 'fan';
@@ -477,6 +478,10 @@ export const PrizePoolCard = () => {
                 <MessageCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">No community notes yet. Be the first to share!</p>
               </div>
+            )}
+            </div>
+            {notes && notes.length > 3 && (
+              <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none" />
             )}
           </div>
 
