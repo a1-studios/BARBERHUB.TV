@@ -21,7 +21,6 @@ interface Profile {
   id: string;
   username: string | null;
   display_name: string | null;
-  is_creator: boolean;
   creator_level: string;
   barber_bucks: number;
   total_earnings: number;
@@ -99,18 +98,6 @@ export function CreatorDashboard() {
     }
   };
 
-  const becomeCreator = async () => {
-    if (!user) return;
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_creator: true })
-      .eq('user_id', user.id);
-
-    if (!error) {
-      fetchProfile();
-    }
-  };
 
   const getLevelProgress = (level: string, totalEarnings: number) => {
     const levels = {
@@ -148,28 +135,6 @@ export function CreatorDashboard() {
       <Card>
         <CardContent className="p-6">
           <div className="text-center">Error loading profile</div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!profile.is_creator) {
-    return (
-      <Card className="card-gradient">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Crown className="h-5 w-5" />
-            Become a Creator
-          </CardTitle>
-          <CardDescription>
-            Start sharing your barbering skills and earn Barber Bucks
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button onClick={becomeCreator} className="w-full">
-            <Plus className="mr-2 h-4 w-4" />
-            Activate Creator Mode
-          </Button>
         </CardContent>
       </Card>
     );

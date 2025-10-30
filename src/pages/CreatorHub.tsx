@@ -1,4 +1,6 @@
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { AuthDialog } from '@/components/auth/AuthDialog';
 import { CreatorDashboard } from '@/components/creator/CreatorDashboard';
@@ -18,6 +20,8 @@ import {
 
 export default function CreatorHub() {
   const { user, loading } = useAuth();
+  const { isBarber, isFan, isLoading: rolesLoading } = useUserRole();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   // Fetch user profile
@@ -69,7 +73,14 @@ export default function CreatorHub() {
     }
   });
 
-  if (loading) {
+  // Redirect non-barbers after loading completes
+  if (!loading && !rolesLoading && user && !isBarber) {
+    navigate('/', { replace: true });
+    toast.error('Creator Hub is only accessible to barbers');
+    return null;
+  }
+
+  if (loading || rolesLoading) {
     return (
       <div className="min-h-screen pt-24 px-4">
         <div className="container mx-auto text-center">
@@ -114,9 +125,6 @@ export default function CreatorHub() {
       </>
     );
   }
-
-  const isBarber = profile?.user_type === 'barber';
-  const isFan = profile?.user_type === 'fan' || !profile?.user_type;
 
   // Get featured creator for fans
   const getFeaturedCreator = () => {

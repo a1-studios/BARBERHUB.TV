@@ -86,7 +86,16 @@ const AppContent = () => {
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/payment-canceled" element={<PaymentCanceled />} />
             <Route path="/grants" element={<Grants />} />
-            <Route path="/creator-hub" element={<CreatorHub />} />
+            <Route 
+              path="/creator-hub" 
+              element={
+                <AuthGuard>
+                  <BarberGuard>
+                    <CreatorHub />
+                  </BarberGuard>
+                </AuthGuard>
+              } 
+            />
             <Route path="/tournaments/:tournamentId" element={<TournamentDetails />} />
             <Route path="/barber/:userId" element={<BarberPublicProfile />} />
             <Route path="/barbers" element={<BarbersDirectory />} />

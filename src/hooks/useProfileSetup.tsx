@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 
 export function useProfileSetup() {
   const { user } = useAuth();
+  const { isBarber, isFan } = useUserRole();
   const [userProfile, setUserProfile] = useState<any>(null);
   const [barberProfile, setBarberProfile] = useState<any>(null);
   const [clientProfile, setClientProfile] = useState<any>(null);
@@ -73,7 +75,7 @@ export function useProfileSetup() {
     loading,
     needsProfileSetup,
     refreshProfiles,
-    isBarber: userProfile?.user_type === 'barber',
-    isClient: userProfile?.user_type === 'fan'
+    isBarber,
+    isClient: isFan
   };
 }
