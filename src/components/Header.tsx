@@ -3,8 +3,9 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Scissors, Menu, X, Trophy, Plus, User, LogOut, Sparkles, Zap } from 'lucide-react';
+import { Menu, X, Trophy, Plus, User, LogOut, Sparkles, Zap, Scissors } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
+import barberPole from '@/assets/barber-pole.png';
 
 const Header = () => {
   const { user, signOut } = useAuth();
@@ -31,7 +32,11 @@ const Header = () => {
         <div className="flex items-center justify-between h-16 sm:h-20">
           {/* Logo Icon */}
           <div className="flex items-center">
-            <Scissors className="h-8 w-8 text-primary" />
+            <img 
+              src={barberPole} 
+              alt="Barber Hub Logo" 
+              className="h-10 w-10 animate-spin-slow"
+            />
           </div>
 
           {/* Centered Brand */}
