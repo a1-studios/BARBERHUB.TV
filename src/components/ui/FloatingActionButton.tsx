@@ -12,8 +12,8 @@ export function FloatingActionButton({ onClick, isOpen, className }: FloatingAct
     <button
       onClick={onClick}
       className={cn(
-        "fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50",
-        "w-14 h-14 rounded-full",
+        "fixed top-6 left-8 z-50",
+        "w-12 h-12 rounded-full",
         "bg-transparent hover:bg-primary/20",
         "hover:shadow-glow",
         "transition-all duration-200 ease-in-out",
@@ -27,7 +27,7 @@ export function FloatingActionButton({ onClick, isOpen, className }: FloatingAct
         src="/lovable-uploads/c5bbb6c4-149e-41f8-9e68-1580ee1afdf8.png" 
         alt="Quick Actions"
         className={cn(
-          "w-13 h-13 object-contain",
+          "w-11 h-11 object-contain",
           "transition-transform duration-200",
           isOpen && "rotate-45"
         )}
