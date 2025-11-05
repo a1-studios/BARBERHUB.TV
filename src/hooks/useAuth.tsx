@@ -59,18 +59,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error };
       }
 
-      if (data.user && countryCode) {
-        // Update the profile with country code after successful sign up
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ country_code: countryCode })
-          .eq('user_id', data.user.id);
-
-        if (profileError) {
-          console.error('Profile update error:', profileError);
-        }
-      }
-
       if (data.user) {
         toast.success('Check your email to confirm your account!');
       }
