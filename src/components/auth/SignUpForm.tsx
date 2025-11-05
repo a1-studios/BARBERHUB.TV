@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Instagram } from 'lucide-react';
 import RoleSelection from './RoleSelection';
+import InstagramFollowVerification from './InstagramFollowVerification';
 import { CountrySelector } from '@/components/CountrySelector';
 
 interface SignUpFormProps {
@@ -17,7 +18,7 @@ interface SignUpFormProps {
 }
 
 const SignUpForm = ({ onSuccess, onSwitchToSignIn }: SignUpFormProps) => {
-  const [showRoleSelection, setShowRoleSelection] = useState(false);
+  const [currentStep, setCurrentStep] = useState<'form' | 'role' | 'instagram'>('form');
   const [selectedRole, setSelectedRole] = useState<'barber' | 'fan' | null>(null);
   const [formData, setFormData] = useState({
     email: '',
@@ -61,11 +62,15 @@ const SignUpForm = ({ onSuccess, onSwitchToSignIn }: SignUpFormProps) => {
     
     if (!validateForm()) return;
     
-    setShowRoleSelection(true);
+    setCurrentStep('role');
   };
 
   const handleRoleSelect = async (role: 'barber' | 'fan') => {
     setSelectedRole(role);
+    setCurrentStep('instagram');
+  };
+
+  const completeSignup = async (role: 'barber' | 'fan') => {
     setIsLoading(true);
 
     try {
@@ -93,19 +98,23 @@ const SignUpForm = ({ onSuccess, onSwitchToSignIn }: SignUpFormProps) => {
     } catch (error: any) {
       console.error('Signup error:', error);
       toast.error(error.message || 'Failed to create account');
-      setShowRoleSelection(false);
+      setCurrentStep('role');
       setSelectedRole(null);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleOAuthSignUp = async (provider: 'google' | 'facebook' | 'twitter') => {
+  const handleOAuthSignUp = async (provider: 'google') => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
+          redirectTo: `${window.location.origin}/`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
         }
       });
 
@@ -116,7 +125,24 @@ const SignUpForm = ({ onSuccess, onSwitchToSignIn }: SignUpFormProps) => {
     }
   };
 
-  if (showRoleSelection) {
+  const handleInstagramVerified = async () => {
+    if (!selectedRole) return;
+    await completeSignup(selectedRole);
+  };
+
+  // Show Instagram verification step
+  if (currentStep === 'instagram') {
+    return (
+      <InstagramFollowVerification
+        onVerified={handleInstagramVerified}
+        onBack={() => setCurrentStep('role')}
+        isLoading={isLoading}
+      />
+    );
+  }
+
+  // Show role selection step
+  if (currentStep === 'role') {
     return (
       <div className="w-full">
         <RoleSelection 
@@ -126,7 +152,7 @@ const SignUpForm = ({ onSuccess, onSwitchToSignIn }: SignUpFormProps) => {
         <div className="text-center mt-6">
           <Button 
             variant="ghost" 
-            onClick={() => setShowRoleSelection(false)}
+            onClick={() => setCurrentStep('form')}
             disabled={isLoading}
           >
             ← Back to form
@@ -162,24 +188,6 @@ const SignUpForm = ({ onSuccess, onSwitchToSignIn }: SignUpFormProps) => {
             Continue with Google
           </Button>
           
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => handleOAuthSignUp('facebook')}
-              className="flex-1"
-              disabled={isLoading}
-            >
-              Facebook
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => handleOAuthSignUp('twitter')}
-              className="flex-1"
-              disabled={isLoading}
-            >
-              Twitter
-            </Button>
-          </div>
         </div>
 
         <div className="relative">
