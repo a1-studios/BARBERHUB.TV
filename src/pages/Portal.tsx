@@ -7,13 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useProfileValidator } from "@/hooks/useProfileValidator";
+import { ProfileSetupPrompt } from "@/components/auth/ProfileSetupPrompt";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TournamentRegistration } from "@/components/tournament/TournamentRegistration";
 import { LiveMatchCounter } from "@/components/tournament/LiveMatchCounter";
 import { MyBattlesSection } from "@/components/barber/MyBattlesSection";
-import { Trophy, Users, Clock, Vote, DollarSign, Play, Calendar, Target, Scissors } from "lucide-react";
+import { Trophy, Users, Clock, Vote, DollarSign, Play, Calendar, Target, Scissors, Loader2 } from "lucide-react";
 import DisplayCards from "@/components/ui/display-cards";
 import { formatDistanceToNow } from "date-fns";
 interface Battle {
@@ -29,8 +31,9 @@ interface Battle {
   organizer_id: string;
 }
 const Portal = () => {
-  const { user } = useAuth();
-  const { isBarber, isFan } = useUserRole();
+  const { user, loading } = useAuth();
+  const { isBarber, isFan, isLoading: rolesLoading } = useUserRole();
+  const { hasProfile, needsSetup, isLoading: validationLoading, profileType } = useProfileValidator();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isCreatingBattle, setIsCreatingBattle] = useState(false);
@@ -100,6 +103,14 @@ const Portal = () => {
       setIsCreatingBattle(false);
     }
   };
+  if (loading || rolesLoading || validationLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   if (!user) {
     return <div className="min-h-screen">
         <Header />
@@ -114,6 +125,11 @@ const Portal = () => {
         </main>
         <Footer />
       </div>;
+  }
+
+  // Show profile setup if specialized profile doesn't exist
+  if (needsSetup && profileType) {
+    return <ProfileSetupPrompt type={profileType} />;
   }
   return <div className="min-h-screen">
       <Header />

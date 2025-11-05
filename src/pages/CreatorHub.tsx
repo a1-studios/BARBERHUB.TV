@@ -1,8 +1,10 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useProfileValidator } from '@/hooks/useProfileValidator';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { AuthDialog } from '@/components/auth/AuthDialog';
+import { ProfileSetupPrompt } from '@/components/auth/ProfileSetupPrompt';
 import { CreatorDashboard } from '@/components/creator/CreatorDashboard';
 import { EarningSystem } from '@/components/creator/EarningSystem';
 import { ReferralProgram } from '@/components/creator/ReferralProgram';
@@ -21,6 +23,7 @@ import {
 export default function CreatorHub() {
   const { user, loading } = useAuth();
   const { isBarber, isFan, isLoading: rolesLoading } = useUserRole();
+  const { hasProfile, needsSetup, isLoading: validationLoading, profileType } = useProfileValidator();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -80,7 +83,12 @@ export default function CreatorHub() {
     return null;
   }
 
-  if (loading || rolesLoading) {
+  // Show profile setup prompt if needed
+  if (!loading && !rolesLoading && !validationLoading && user && isBarber && needsSetup) {
+    return <ProfileSetupPrompt type="barber" />;
+  }
+
+  if (loading || rolesLoading || validationLoading) {
     return (
       <div className="min-h-screen pt-24 px-4">
         <div className="container mx-auto text-center">

@@ -1,4 +1,5 @@
-
+import { useProfileValidator } from '@/hooks/useProfileValidator';
+import { ProfileSetupPrompt } from '@/components/auth/ProfileSetupPrompt';
 import { BackButton } from '@/components/ui/BackButton';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -80,6 +81,7 @@ const categories = [
 
 const CreateBattle = () => {
   const { user, loading } = useAuth();
+  const { needsSetup, profileType, isLoading: validationLoading } = useProfileValidator();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
 
@@ -117,7 +119,7 @@ const CreateBattle = () => {
   });
 
   useEffect(() => {
-    if (!loading && !profileLoading) {
+    if (!loading && !profileLoading && !validationLoading) {
       if (!user) {
         navigate('/');
       } else if (profile && profile.user_type !== 'barber') {
@@ -125,7 +127,7 @@ const CreateBattle = () => {
         toast.error('Only barbers can create battles');
       }
     }
-  }, [user, profile, loading, profileLoading, navigate]);
+  }, [user, profile, loading, profileLoading, validationLoading, navigate]);
 
   const onSubmit = async (data: BattleFormData) => {
     if (!user) return;
@@ -178,7 +180,12 @@ const CreateBattle = () => {
     }
   };
 
-  if (loading) {
+  // Show profile setup if barber profile doesn't exist
+  if (!loading && !validationLoading && needsSetup && profileType === 'barber') {
+    return <ProfileSetupPrompt type="barber" />;
+  }
+
+  if (loading || validationLoading) {
     return (
       <div className="min-h-screen">
         <Header />
