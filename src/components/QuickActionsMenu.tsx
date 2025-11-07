@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import { useUserRole } from '@/hooks/useUserRole';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { Button } from '@/components/ui/button';
 import { 
@@ -75,27 +74,9 @@ const quickActions: QuickAction[] = [
 export function QuickActionsMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
+  const { isBarber } = useUserRole();
   const navigate = useNavigate();
   const menuRef = useRef<HTMLDivElement>(null);
-
-  // Get user profile to check if they're a barber
-  const { data: userProfile } = useQuery({
-    queryKey: ['userProfile', user?.id],
-    queryFn: async () => {
-      if (!user) return null;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('user_type')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user
-  });
-
-  const isBarber = userProfile?.user_type === 'barber';
 
   // Filter actions based on auth and user type
   const availableActions = quickActions.filter(action => {

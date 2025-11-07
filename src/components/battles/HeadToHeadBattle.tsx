@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
+import { UserVotePowerIndicator } from '@/components/UserVotePowerIndicator';
 import { toast } from 'sonner';
 import { Clock, Users, Trophy } from 'lucide-react';
 
@@ -15,12 +17,16 @@ interface Battle {
   starts_at: string;
   ends_at: string;
   voting_ends_at: string;
-  vote_count1: number;
-  vote_count2: number;
   creation1_id: string;
   creation2_id: string;
   barber1_id: string;
   barber2_id: string;
+}
+
+interface VoteResult {
+  submission_id: string;
+  weighted_votes: number;
+  raw_votes: number;
 }
 
 interface Creation {
@@ -41,28 +47,53 @@ interface HeadToHeadBattleProps {
 
 export function HeadToHeadBattle({ battle, onVote }: HeadToHeadBattleProps) {
   const { user } = useAuth();
+  const { isFan } = useUserRole();
   const [loading, setLoading] = useState(false);
-  const [userProfile, setUserProfile] = useState<any>(null);
   const [creation1, setCreation1] = useState<Creation | null>(null);
   const [creation2, setCreation2] = useState<Creation | null>(null);
   const [hasVoted, setHasVoted] = useState(false);
+  const [voteResults, setVoteResults] = useState<VoteResult[]>([]);
 
   useEffect(() => {
-    fetchUserProfile();
     fetchCreations();
     checkIfUserVoted();
-  }, [user, battle.id]);
+    fetchVoteResults();
+  }, [battle.id]);
 
-  const fetchUserProfile = async () => {
-    if (!user) return;
-    
-    const { data } = await supabase
-      .from('profiles')
-      .select('user_type')
-      .eq('user_id', user.id)
-      .single();
-    
-    setUserProfile(data);
+  const fetchVoteResults = async () => {
+    try {
+      // Get weighted votes
+      const { data: weightedData, error: weightedError } = await supabase.rpc('get_battle_vote_results', {
+        _battle_id: battle.id
+      });
+
+      if (weightedError) throw weightedError;
+      
+      // Get raw vote counts
+      const { data: rawData, error: rawError } = await supabase
+        .from('battle_votes')
+        .select('submission_id')
+        .eq('battle_id', battle.id);
+      
+      if (rawError) throw rawError;
+      
+      // Count votes per submission
+      const voteCounts: Record<string, number> = {};
+      rawData?.forEach(vote => {
+        voteCounts[vote.submission_id] = (voteCounts[vote.submission_id] || 0) + 1;
+      });
+      
+      // Merge weighted and raw counts
+      const results = (weightedData || []).map((r: any) => ({
+        submission_id: r.submission_id,
+        weighted_votes: r.weighted_votes,
+        raw_votes: voteCounts[r.submission_id] || 0
+      }));
+      
+      setVoteResults(results);
+    } catch (error) {
+      console.error('Error fetching vote results:', error);
+    }
   };
 
   const fetchCreations = async () => {
@@ -109,10 +140,10 @@ export function HeadToHeadBattle({ battle, onVote }: HeadToHeadBattleProps) {
   };
 
   const handleVote = async (creationId: string) => {
-    if (!user || !userProfile) return;
+    if (!user) return;
 
-    // Check if user can vote (client/fan only)
-    if (userProfile.user_type !== 'fan') {
+    // Check if user can vote (fans only)
+    if (!isFan) {
       toast.error('Only fans can vote in battles');
       return;
     }
@@ -150,6 +181,7 @@ export function HeadToHeadBattle({ battle, onVote }: HeadToHeadBattleProps) {
 
       toast.success('Vote cast successfully!');
       setHasVoted(true);
+      fetchVoteResults(); // Refresh vote counts
       onVote?.();
     } catch (error: any) {
       console.error('Error voting:', error);
@@ -168,13 +200,26 @@ export function HeadToHeadBattle({ battle, onVote }: HeadToHeadBattleProps) {
     }
   };
 
-  const canVote = userProfile?.user_type === 'fan' && battle.status === 'voting' && !hasVoted;
+  const canVote = isFan && battle.status === 'voting' && !hasVoted;
+  
+  const getWeightedVotes = (creationId: string) => {
+    const result = voteResults.find(r => r.submission_id === creationId);
+    return result ? result.weighted_votes : 0;
+  };
+  
+  const getRawVotes = (creationId: string) => {
+    const result = voteResults.find(r => r.submission_id === creationId);
+    return result ? result.raw_votes : 0;
+  };
 
   return (
     <Card className="w-full">
       <CardContent className="p-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold">{battle.title}</h3>
+          <div className="flex-1">
+            <h3 className="text-xl font-bold">{battle.title}</h3>
+            {user && <UserVotePowerIndicator />}
+          </div>
           <Badge className={getStatusColor(battle.status)}>
             {battle.status.toUpperCase()}
           </Badge>
@@ -214,9 +259,15 @@ export function HeadToHeadBattle({ battle, onVote }: HeadToHeadBattleProps) {
                   )}
                   
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1">
-                      <Users className="h-4 w-4" />
-                      <span className="text-sm">{battle.vote_count1} votes</span>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-1">
+                        <Trophy className="h-4 w-4 text-yellow-500" />
+                        <span className="text-sm font-semibold">{getWeightedVotes(creation1.id)} points</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Users className="h-4 w-4" />
+                        <span className="text-xs text-muted-foreground">{getRawVotes(creation1.id)} votes</span>
+                      </div>
                     </div>
                     
                     {canVote && (
@@ -274,9 +325,15 @@ export function HeadToHeadBattle({ battle, onVote }: HeadToHeadBattleProps) {
                   )}
                   
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1">
-                      <Users className="h-4 w-4" />
-                      <span className="text-sm">{battle.vote_count2} votes</span>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-1">
+                        <Trophy className="h-4 w-4 text-yellow-500" />
+                        <span className="text-sm font-semibold">{getWeightedVotes(creation2.id)} points</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Users className="h-4 w-4" />
+                        <span className="text-xs text-muted-foreground">{getRawVotes(creation2.id)} votes</span>
+                      </div>
                     </div>
                     
                     {canVote && (
@@ -315,9 +372,14 @@ export function HeadToHeadBattle({ battle, onVote }: HeadToHeadBattleProps) {
             </div>
             
             <div className="text-right">
-              <div>Total votes: {battle.vote_count1 + battle.vote_count2}</div>
+              <div className="flex flex-col gap-1">
+                <span className="text-sm">Total: {voteResults.reduce((sum, r) => sum + r.weighted_votes, 0)} points</span>
+                <span className="text-xs text-muted-foreground">
+                  {voteResults.reduce((sum, r) => sum + r.raw_votes, 0)} votes cast
+                </span>
+              </div>
               {hasVoted && (
-                <div className="text-green-600 font-medium">✓ You voted</div>
+                <div className="text-green-600 font-medium mt-2">✓ You voted</div>
               )}
             </div>
           </div>

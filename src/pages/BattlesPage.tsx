@@ -3,6 +3,7 @@ import { BackButton } from '@/components/ui/BackButton';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +16,7 @@ import { toast } from 'sonner';
 
 const BattlesPage = () => {
   const { user } = useAuth();
+  const { isBarber, isFan } = useUserRole();
   const queryClient = useQueryClient();
 
   // Fetch user profile
@@ -113,9 +115,6 @@ const BattlesPage = () => {
       supabase.removeChannel(channel);
     };
   }, [refetch]);
-
-  const isBarber = profile?.user_type === 'barber';
-  const isFan = profile?.user_type === 'fan' || !profile?.user_type;
 
   // Get featured creator for fans
   const getFeaturedCreator = () => {

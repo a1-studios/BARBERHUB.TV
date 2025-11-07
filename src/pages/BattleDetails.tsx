@@ -4,6 +4,7 @@ import { useParams, Navigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { useRealtimeBattleViewers } from '@/hooks/useRealtimeBattleViewers';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +24,7 @@ import { useEffect } from 'react';
 const BattleDetails = () => {
   const { id } = useParams();
   const { user } = useAuth();
+  const { isBarber, isFan } = useUserRole();
   const queryClient = useQueryClient();
 
   // Fetch user profile
@@ -275,8 +277,6 @@ const BattleDetails = () => {
     return <Navigate to="/battles" replace />;
   }
 
-  const isBarber = profile?.user_type === 'barber';
-  const isFan = profile?.user_type === 'fan' || !profile?.user_type;
   const isParticipant = participants?.some(p => p.user_id === user?.id);
   const isOrganizer = battle.organizer_id === user?.id;
   const canJoin = isBarber && !isParticipant && battle.status === 'upcoming';
@@ -591,11 +591,6 @@ const BattleDetails = () => {
                           Joined {format(new Date(participant.joined_at), 'MMM d')}
                         </p>
                       </div>
-                      {participant.profiles?.user_type === 'barber' && (
-                        <Badge variant="outline" className="text-xs">
-                          Barber
-                        </Badge>
-                      )}
                     </div>
                   ))}
                 </div>
