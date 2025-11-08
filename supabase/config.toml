@@ -64,3 +64,6 @@ verify_jwt = false
 
 [functions.verify-tournament-payment]
 verify_jwt = false
+
+[functions.tournament-matchmaker]
+verify_jwt = false

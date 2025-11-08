@@ -1526,6 +1526,84 @@ export type Database = {
           },
         ]
       }
+      tournament_queue: {
+        Row: {
+          barber_profile_id: string
+          category: string
+          country_code: string
+          created_at: string
+          id: string
+          matched_battle_id: string | null
+          payment_id: string | null
+          queue_timestamp: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          barber_profile_id: string
+          category: string
+          country_code: string
+          created_at?: string
+          id?: string
+          matched_battle_id?: string | null
+          payment_id?: string | null
+          queue_timestamp?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          barber_profile_id?: string
+          category?: string
+          country_code?: string
+          created_at?: string
+          id?: string
+          matched_battle_id?: string | null
+          payment_id?: string | null
+          queue_timestamp?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_queue_barber_profile_id_fkey"
+            columns: ["barber_profile_id"]
+            isOneToOne: false
+            referencedRelation: "barber_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_queue_barber_profile_id_fkey"
+            columns: ["barber_profile_id"]
+            isOneToOne: false
+            referencedRelation: "barber_stats"
+            referencedColumns: ["barber_id"]
+          },
+          {
+            foreignKeyName: "tournament_queue_barber_profile_id_fkey"
+            columns: ["barber_profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_barber_profiles"
+            referencedColumns: ["barber_id"]
+          },
+          {
+            foreignKeyName: "tournament_queue_matched_battle_id_fkey"
+            columns: ["matched_battle_id"]
+            isOneToOne: false
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_queue_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tournament_standings: {
         Row: {
           barber_id: string
