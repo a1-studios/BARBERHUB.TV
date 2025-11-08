@@ -24,6 +24,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { extractYouTubeVideoId, getYouTubeInputHelperText } from '@/utils/youtubeHelpers';
+import { TOURNAMENT_CATEGORIES } from '@/config/categories';
 
 const battleSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
@@ -68,16 +69,8 @@ const battleSchema = z.object({
 
 type BattleFormData = z.infer<typeof battleSchema>;
 
-const categories = [
-  'Fade Mastery',
-  'Creative Color',
-  'Speed Cutting',
-  'Beard Styling',
-  'Hair Art',
-  'Classic Cuts',
-  'Texture Work',
-  'Avant-garde'
-];
+// Categories are now imported from centralized config
+// Use TOURNAMENT_CATEGORIES for standardized 5-category tournament system
 
 const CreateBattle = () => {
   const { user, loading } = useAuth();
@@ -272,9 +265,9 @@ const CreateBattle = () => {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {categories.map((category) => (
-                                <SelectItem key={category} value={category}>
-                                  {category}
+                              {TOURNAMENT_CATEGORIES.map((category) => (
+                                <SelectItem key={category.id} value={category.shortName}>
+                                  {category.icon} {category.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>

@@ -11,6 +11,7 @@ import { HeadToHeadBattle } from '@/components/battles/HeadToHeadBattle';
 import { BackButton } from '@/components/ui/BackButton';
 import Header from '@/components/Header';
 import { Loader2, Trophy, Clock, Users } from 'lucide-react';
+import { TOURNAMENT_CATEGORIES } from '@/config/categories';
 
 export default function HeadToHeadBattles() {
   const { user } = useAuth();
@@ -165,11 +166,11 @@ export default function HeadToHeadBattles() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="fade">Fade</SelectItem>
-                <SelectItem value="classic">Classic Cut</SelectItem>
-                <SelectItem value="beard">Beard Work</SelectItem>
-                <SelectItem value="color">Color</SelectItem>
-                <SelectItem value="creative">Creative</SelectItem>
+                {TOURNAMENT_CATEGORIES.map((category) => (
+                  <SelectItem key={category.id} value={category.shortName}>
+                    {category.icon} {category.shortName}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
