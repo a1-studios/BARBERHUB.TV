@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TournamentRegistration } from "@/components/tournament/TournamentRegistration";
+import { TournamentQueueStatus } from "@/components/tournament/TournamentQueueStatus";
 import { LiveMatchCounter } from "@/components/tournament/LiveMatchCounter";
 import { MyBattlesSection } from "@/components/barber/MyBattlesSection";
 import { Trophy, Users, Clock, Vote, DollarSign, Play, Calendar, Target, Scissors, Loader2 } from "lucide-react";
@@ -187,13 +188,19 @@ const Portal = () => {
 
           {/* My Battles Section - Barber Only */}
           {isBarber && user && (
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-4">
+            <div className="mb-8 space-y-6">
+              <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-foreground">
                   My Active Battles
                 </h2>
-                <TournamentRegistration />
               </div>
+              
+              {/* Tournament Registration & Queue Status */}
+              <div className="space-y-4">
+                <TournamentRegistration />
+                <TournamentQueueStatus />
+              </div>
+              
               <MyBattlesSection userId={user.id} />
             </div>
           )}

@@ -1,138 +1,114 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.56.0";
-import Stripe from 'https://esm.sh/stripe@14.21.0';
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import Stripe from "https://esm.sh/stripe@14.21.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface StripeEvent {
-  id: string;
-  type: string;
-  data: {
-    object: {
-      id: string;
-      customer: string;
-      payment_status: string;
-      metadata: {
-        user_id?: string;
-        product_type?: string;
-      };
-    };
-  };
-}
-
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') as string, {
-      apiVersion: '2023-10-16',
+    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+      apiVersion: "2023-10-16",
     });
 
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const { session_id } = await req.json();
 
-    const signature = req.headers.get('stripe-signature');
-    const body = await req.text();
-    
-    if (!signature) {
-      console.error('No stripe signature found');
-      return new Response('No signature', { status: 400 });
+    if (!session_id) {
+      throw new Error("Missing session_id");
     }
 
-    // Verify webhook signature
-    let event: StripeEvent;
-    try {
-      event = stripe.webhooks.constructEvent(
-        body,
-        signature,
-        Deno.env.get('STRIPE_WEBHOOK_SECRET') ?? ''
-      ) as StripeEvent;
-    } catch (err) {
-      console.error('Webhook signature verification failed:', err);
-      return new Response(`Webhook Error: ${err}`, { status: 400 });
+    // Retrieve the Stripe session
+    const session = await stripe.checkout.sessions.retrieve(session_id);
+
+    if (session.payment_status !== "paid") {
+      throw new Error("Payment not completed");
     }
 
-    console.log('Received Stripe event:', event.type);
+    // Get metadata from session
+    const metadata = session.metadata || {};
+    const barberProfileId = metadata.barber_profile_id;
+    const category = metadata.category;
+    const countryCode = metadata.country_code;
+    const userId = metadata.user_id;
 
-    // Handle successful checkout for tournament entry
-    if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
-      
-      console.log('Processing tournament payment for session:', session.id);
+    if (!barberProfileId || !category || !countryCode || !userId) {
+      throw new Error("Missing required metadata");
+    }
 
-      if (session.payment_status === 'paid') {
-        const metadata = session.metadata || {};
-        
-        if (metadata.product_type === 'tournament_entry') {
-          const userId = metadata.user_id;
-          
-          if (!userId) {
-            console.error('No user_id found in session metadata');
-            return new Response('No user ID found', { status: 400 });
-          }
+    // Create Supabase client
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-          // Calculate expiration date (12 months from now)
-          const expirationDate = new Date();
-          expirationDate.setFullYear(expirationDate.getFullYear() + 1);
+    // Update order status
+    const { error: orderError } = await supabase
+      .from("orders")
+      .update({ status: "completed" })
+      .eq("stripe_session_id", session_id);
 
-          // Update user's verification status and 3x vote power
-          const { error: updateError } = await supabase
-            .from('profiles')
-            .update({
-              is_verified_by_competition: true,
-              three_x_vote_expires_at: expirationDate.toISOString(),
-            })
-            .eq('user_id', userId);
+    if (orderError) {
+      console.error("Error updating order:", orderError);
+    }
 
-          if (updateError) {
-            console.error('Error updating user verification status:', updateError);
-            return new Response('Database update failed', { status: 500 });
-          }
+    // Add entry to tournament_queue
+    const { data: queueEntry, error: queueError } = await supabase
+      .from("tournament_queue")
+      .insert({
+        user_id: userId,
+        barber_profile_id: barberProfileId,
+        category: category,
+        country_code: countryCode,
+        status: "waiting",
+        payment_id: session_id,
+      })
+      .select()
+      .single();
 
-          // Update order status
-          const { error: orderError } = await supabase
-            .from('orders')
-            .update({ status: 'completed' })
-            .eq('stripe_session_id', session.id);
+    if (queueError) {
+      console.error("Error creating queue entry:", queueError);
+      throw queueError;
+    }
 
-          if (orderError) {
-            console.error('Error updating order status:', orderError);
-          }
+    // Create notification
+    await supabase.from("notifications").insert({
+      user_id: userId,
+      type: "tournament_entry",
+      title: "Tournament Entry Confirmed! 🎉",
+      message: `You've successfully joined the ${category} tournament queue. We'll notify you when an opponent is found!`,
+      data: {
+        queue_id: queueEntry.id,
+        category: category,
+        session_id: session_id,
+      },
+    });
 
-          console.log(`Successfully verified user ${userId} for tournament entry`);
-          
-          return new Response(JSON.stringify({ 
-            success: true, 
-            message: 'User verification status updated successfully',
-            user_id: userId,
-            expires_at: expirationDate.toISOString()
-          }), {
-            status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          });
-        }
+    return new Response(
+      JSON.stringify({
+        success: true,
+        queue_entry: queueEntry,
+        message: "Payment verified and added to tournament queue",
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
       }
-    }
-
-    return new Response(JSON.stringify({ received: true }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
+    );
   } catch (error) {
-    console.error('Error in verify-tournament-payment:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    return new Response(JSON.stringify({ error: errorMessage }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error("Error:", error);
+    return new Response(
+      JSON.stringify({
+        error: error.message,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      }
+    );
   }
 });
