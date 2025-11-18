@@ -1535,6 +1535,7 @@ export type Database = {
           id: string
           matched_battle_id: string | null
           payment_id: string | null
+          preferred_time_slot: string | null
           queue_timestamp: string
           status: string
           updated_at: string
@@ -1548,6 +1549,7 @@ export type Database = {
           id?: string
           matched_battle_id?: string | null
           payment_id?: string | null
+          preferred_time_slot?: string | null
           queue_timestamp?: string
           status?: string
           updated_at?: string
@@ -1561,6 +1563,7 @@ export type Database = {
           id?: string
           matched_battle_id?: string | null
           payment_id?: string | null
+          preferred_time_slot?: string | null
           queue_timestamp?: string
           status?: string
           updated_at?: string
