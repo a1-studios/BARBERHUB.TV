@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Trophy, ArrowRight } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
@@ -15,12 +16,33 @@ const PaymentSuccess = () => {
   const sessionId = searchParams.get('session_id');
 
   useEffect(() => {
-    if (sessionId) {
-      toast({
-        title: "Payment Successful!",
-        description: "Your tournament entry has been processed successfully.",
-      });
-    }
+    const verifyPayment = async () => {
+      if (!sessionId) return;
+      
+      try {
+        const { data, error } = await supabase.functions.invoke("verify-tournament-payment", {
+          body: { session_id: sessionId }
+        });
+
+        if (error) {
+          console.error("Payment verification error:", error);
+          toast({
+            title: "Verification Issue",
+            description: "Payment received but verification pending. Check your queue status.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Payment Successful!",
+            description: "You've been added to the tournament queue!",
+          });
+        }
+      } catch (err) {
+        console.error("Payment verification failed:", err);
+      }
+    };
+
+    verifyPayment();
   }, [sessionId, toast]);
 
   return (

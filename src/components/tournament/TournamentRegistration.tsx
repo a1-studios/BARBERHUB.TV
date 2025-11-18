@@ -77,11 +77,8 @@ export const TournamentRegistration = () => {
         body: {
           amount: TOURNAMENT_CONFIG.ENTRY_FEE_CENTS,
           category: selectedCategory,
-          metadata: {
-            barber_profile_id: barberProfile.id,
-            country_code: barberProfile.country_code,
-            user_id: user.id,
-          },
+          barber_profile_id: barberProfile.id,
+          country_code: barberProfile.country_code,
         },
       });
 

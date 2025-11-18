@@ -44,8 +44,11 @@ serve(async (req) => {
 
     // Get request body
     const body = await req.json();
-    const { amount = 5000, category = 'general' } = body; // Default $50.00
-    logStep("Request body parsed", { amount, category });
+    const { amount = 5000, category = 'general', barber_profile_id, country_code } = body; // Default $50.00
+    logStep("Request body parsed", { amount, category, barber_profile_id, country_code });
+    
+    if (!barber_profile_id) throw new Error("barber_profile_id is required");
+    if (!country_code) throw new Error("country_code is required");
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 
@@ -89,7 +92,9 @@ serve(async (req) => {
       metadata: {
         user_id: user.id,
         product_type: 'tournament_entry',
-        category: category
+        category: category,
+        barber_profile_id: barber_profile_id,
+        country_code: country_code
       }
     });
 
@@ -107,7 +112,9 @@ serve(async (req) => {
         product_type: 'tournament_entry',
         metadata: {
           category: category,
-          tournament_entry: true
+          tournament_entry: true,
+          barber_profile_id: barber_profile_id,
+          country_code: country_code
         }
       });
 
