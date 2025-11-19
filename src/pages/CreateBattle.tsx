@@ -27,6 +27,7 @@ import { extractYouTubeVideoId, getYouTubeInputHelperText } from '@/utils/youtub
 import { TOURNAMENT_CATEGORIES } from '@/config/categories';
 import { useSubscriptionLimits } from '@/hooks/useSubscriptionLimits';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { UpgradePrompt } from '@/components/barber/UpgradePrompt';
 
 const battleSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
@@ -79,6 +80,7 @@ const CreateBattle = () => {
   const { needsSetup, profileType, isLoading: validationLoading } = useProfileValidator();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const { 
     canCreateBattle, 
     battlesRemaining, 
@@ -135,7 +137,8 @@ const CreateBattle = () => {
     if (!user) return;
 
     // Check subscription limits before creating battle
-    if (!checkLimit()) {
+    if (!canCreateBattle) {
+      setShowUpgradePrompt(true);
       return;
     }
 
@@ -656,6 +659,13 @@ const CreateBattle = () => {
       </main>
       
       <Footer />
+
+      {/* Upgrade Prompt */}
+      <UpgradePrompt 
+        isOpen={showUpgradePrompt}
+        onClose={() => setShowUpgradePrompt(false)}
+        reason="battle_limit"
+      />
     </div>
   );
 };
