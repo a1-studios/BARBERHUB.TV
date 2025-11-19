@@ -14,6 +14,7 @@ import BattlesPage from "./pages/BattlesPage";
 import CreateBattle from "./pages/CreateBattle";
 import BattleDetails from "./pages/BattleDetails";
 import HaircutAdvisor from "./pages/HaircutAdvisor";
+import Analytics from "./pages/Analytics";
 import Portal from "./pages/Portal";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCanceled from "./pages/PaymentCanceled";
@@ -99,6 +100,16 @@ const AppContent = () => {
             <Route path="/tournaments/:tournamentId" element={<TournamentDetails />} />
             <Route path="/barber/:userId" element={<BarberPublicProfile />} />
             <Route path="/barbers" element={<BarbersDirectory />} />
+            <Route 
+              path="/analytics" 
+              element={
+                <AuthGuard>
+                  <BarberGuard>
+                    <Analytics />
+                  </BarberGuard>
+                </AuthGuard>
+              } 
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
     </>
