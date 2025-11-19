@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Trophy, Users, Target, DollarSign, Upload, Eye, TrendingUp, Award, Calendar, Zap, Crown, ShoppingBag, FileText, BarChart3, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { CreationUpload } from '@/components/creations/CreationUpload';
+import { SubscriptionStatusCard } from './SubscriptionStatusCard';
 interface BarberStats {
   battles_created: number;
   battles_won: number;
@@ -93,8 +94,11 @@ const BarberDashboard = () => {
         {/* Top Row - Hero Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
-          {/* Left Panel - Battle Status */}
-          <Card className="card-gradient border-primary/20">
+          {/* Left Panel - Subscription & Rank */}
+          <div className="space-y-6">
+            <SubscriptionStatusCard />
+            
+            <Card className="card-gradient border-primary/20">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-primary">
                 <Trophy className="h-5 w-5" />
@@ -133,6 +137,7 @@ const BarberDashboard = () => {
               </Link>
             </CardContent>
           </Card>
+          </div>
 
           {/* Center Panel - Character/Avatar */}
           <Card className="card-gradient border-primary/20">

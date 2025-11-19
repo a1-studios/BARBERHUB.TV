@@ -19,12 +19,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Loader2, Trophy, Youtube } from 'lucide-react';
+import { CalendarIcon, Loader2, Trophy, Youtube, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { extractYouTubeVideoId, getYouTubeInputHelperText } from '@/utils/youtubeHelpers';
 import { TOURNAMENT_CATEGORIES } from '@/config/categories';
+import { useSubscriptionLimits } from '@/hooks/useSubscriptionLimits';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const battleSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters'),
@@ -77,6 +79,13 @@ const CreateBattle = () => {
   const { needsSetup, profileType, isLoading: validationLoading } = useProfileValidator();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
+  const { 
+    canCreateBattle, 
+    battlesRemaining, 
+    isUnlimited, 
+    tierName, 
+    checkLimit 
+  } = useSubscriptionLimits();
 
   // Check user profile and role
   const { data: profile, isLoading: profileLoading } = useQuery({
@@ -124,6 +133,11 @@ const CreateBattle = () => {
 
   const onSubmit = async (data: BattleFormData) => {
     if (!user) return;
+
+    // Check subscription limits before creating battle
+    if (!checkLimit()) {
+      return;
+    }
 
     try {
       setSubmitting(true);
@@ -214,6 +228,24 @@ const CreateBattle = () => {
               <CardDescription>
                 Fill in the information for your barber battle
               </CardDescription>
+              
+              {!canCreateBattle && !isUnlimited && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    You've reached your monthly limit. Upgrade your {tierName} subscription to create more battles.
+                  </AlertDescription>
+                </Alert>
+              )}
+              
+              {canCreateBattle && !isUnlimited && (
+                <Alert className="mt-4 border-primary/50 bg-primary/5">
+                  <Trophy className="h-4 w-4 text-primary" />
+                  <AlertDescription className="text-foreground">
+                    {battlesRemaining} battle{battlesRemaining !== 1 ? 's' : ''} remaining this month ({tierName} tier)
+                  </AlertDescription>
+                </Alert>
+              )}
             </CardHeader>
             
             <CardContent>
@@ -609,11 +641,11 @@ const CreateBattle = () => {
                     </Button>
                     <Button
                       type="submit"
-                      disabled={submitting}
+                      disabled={submitting || !canCreateBattle}
                       className="flex-1"
                     >
                       {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Create Battle
+                      {canCreateBattle ? 'Create Battle' : 'Upgrade to Create More'}
                     </Button>
                   </div>
                 </form>
