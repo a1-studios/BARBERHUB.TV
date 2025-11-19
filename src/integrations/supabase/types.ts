@@ -14,14 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      barber_bucks_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          created_at: string
+          description: string | null
+          id: string
+          reference_id: string | null
+          stripe_payment_id: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          stripe_payment_id?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          stripe_payment_id?: string | null
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       barber_profiles: {
         Row: {
+          active_subscription_tier: string | null
+          battles_created_this_month: number
           bio: string | null
           country_code: string | null
           created_at: string
           featured_video_id: string | null
           id: string
           is_live: boolean | null
+          last_battle_reset: string
           last_live_check: string | null
           live_video_id: string | null
           location: string | null
@@ -30,18 +69,22 @@ export type Database = {
           portfolio_url: string | null
           rating: number | null
           specialty: string | null
+          subscription_expires_at: string | null
           updated_at: string
           user_id: string
           years_experience: number | null
           youtube_channel_id: string | null
         }
         Insert: {
+          active_subscription_tier?: string | null
+          battles_created_this_month?: number
           bio?: string | null
           country_code?: string | null
           created_at?: string
           featured_video_id?: string | null
           id?: string
           is_live?: boolean | null
+          last_battle_reset?: string
           last_live_check?: string | null
           live_video_id?: string | null
           location?: string | null
@@ -50,18 +93,22 @@ export type Database = {
           portfolio_url?: string | null
           rating?: number | null
           specialty?: string | null
+          subscription_expires_at?: string | null
           updated_at?: string
           user_id: string
           years_experience?: number | null
           youtube_channel_id?: string | null
         }
         Update: {
+          active_subscription_tier?: string | null
+          battles_created_this_month?: number
           bio?: string | null
           country_code?: string | null
           created_at?: string
           featured_video_id?: string | null
           id?: string
           is_live?: boolean | null
+          last_battle_reset?: string
           last_live_check?: string | null
           live_video_id?: string | null
           location?: string | null
@@ -70,6 +117,7 @@ export type Database = {
           portfolio_url?: string | null
           rating?: number | null
           specialty?: string | null
+          subscription_expires_at?: string | null
           updated_at?: string
           user_id?: string
           years_experience?: number | null
@@ -112,6 +160,89 @@ export type Database = {
           total_haircuts?: number
         }
         Relationships: []
+      }
+      barber_subscription_tiers: {
+        Row: {
+          created_at: string
+          display_name: string
+          features: Json
+          id: string
+          price_monthly_cents: number
+          tier_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name: string
+          features?: Json
+          id?: string
+          price_monthly_cents: number
+          tier_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          features?: Json
+          id?: string
+          price_monthly_cents?: number
+          tier_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      barber_subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean
+          canceled_at: string | null
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          tier_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cancel_at_period_end?: boolean
+          canceled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          tier_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cancel_at_period_end?: boolean
+          canceled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          tier_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "barber_subscriptions_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "barber_subscription_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       battle_participants: {
         Row: {
@@ -1336,6 +1467,107 @@ export type Database = {
         }
         Relationships: []
       }
+      product_orders: {
+        Row: {
+          created_at: string
+          discount_applied: number
+          id: string
+          product_id: string
+          quantity: number
+          shipping_address: Json | null
+          status: string
+          stripe_payment_id: string | null
+          total_bb_cost: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          discount_applied?: number
+          id?: string
+          product_id: string
+          quantity?: number
+          shipping_address?: Json | null
+          status?: string
+          stripe_payment_id?: string | null
+          total_bb_cost: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          discount_applied?: number
+          id?: string
+          product_id?: string
+          quantity?: number
+          shipping_address?: Json | null
+          status?: string
+          stripe_payment_id?: string | null
+          total_bb_cost?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_orders_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          barber_discount_percent: number
+          category: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          is_premium_gear: boolean
+          name: string
+          price_bb: number
+          price_usd_cents: number | null
+          stock_quantity: number | null
+          tier_required: string | null
+          updated_at: string
+        }
+        Insert: {
+          barber_discount_percent?: number
+          category: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_premium_gear?: boolean
+          name: string
+          price_bb: number
+          price_usd_cents?: number | null
+          stock_quantity?: number | null
+          tier_required?: string | null
+          updated_at?: string
+        }
+        Update: {
+          barber_discount_percent?: number
+          category?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          is_premium_gear?: boolean
+          name?: string
+          price_bb?: number
+          price_usd_cents?: number | null
+          stock_quantity?: number | null
+          tier_required?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1535,6 +1767,7 @@ export type Database = {
           id: string
           matched_battle_id: string | null
           payment_id: string | null
+          preferred_time_slot: string | null
           queue_timestamp: string
           status: string
           updated_at: string
@@ -1548,6 +1781,7 @@ export type Database = {
           id?: string
           matched_battle_id?: string | null
           payment_id?: string | null
+          preferred_time_slot?: string | null
           queue_timestamp?: string
           status?: string
           updated_at?: string
@@ -1561,6 +1795,7 @@ export type Database = {
           id?: string
           matched_battle_id?: string | null
           payment_id?: string | null
+          preferred_time_slot?: string | null
           queue_timestamp?: string
           status?: string
           updated_at?: string
@@ -1917,6 +2152,7 @@ export type Database = {
         Returns: undefined
       }
       generate_referral_code: { Args: never; Returns: string }
+      get_barber_bucks_balance: { Args: { user_uuid: string }; Returns: number }
       get_battle_vote_results: {
         Args: {
           _barber_weight?: number
@@ -2003,6 +2239,8 @@ export type Database = {
           user_type: string
         }[]
       }
+      get_subscription_tier: { Args: { user_uuid: string }; Returns: string }
+      has_active_subscription: { Args: { user_uuid: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2043,6 +2281,7 @@ export type Database = {
         Returns: number
       }
       refresh_barber_stats: { Args: never; Returns: undefined }
+      reset_monthly_battle_counters: { Args: never; Returns: undefined }
       update_tournament_standings: {
         Args: { battle_id_param: string }
         Returns: undefined
