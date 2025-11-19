@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Vote, Users, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { UserVotePowerIndicator } from './UserVotePowerIndicator';
 
 interface VotingCardProps {
   submission: {
@@ -71,7 +72,12 @@ const VotingCard = ({
         
         {/* Vote overlay for quick voting */}
         {canVote && (
-          <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors flex flex-col items-center justify-center gap-2">
+            {!hasUserVoted && (
+              <div className="opacity-0 hover:opacity-100 transition-opacity">
+                <UserVotePowerIndicator />
+              </div>
+            )}
             <Button
               size="lg"
               variant={hasUserVoted ? "default" : "secondary"}
@@ -178,7 +184,10 @@ const VotingCard = ({
           </div>
         ) : (
           /* Vote to see results */
-          <div className="text-center py-2">
+          <div className="space-y-2">
+            <div className="flex justify-center">
+              <UserVotePowerIndicator />
+            </div>
             <Button
               onClick={() => onVote(submission.id)}
               disabled={isVoting}
