@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { DonationModal } from './DonationModal';
+import { SubscriptionBadge } from './SubscriptionBadge';
 
 interface Creator {
   user_id: string;
@@ -52,6 +53,21 @@ export const FeaturedCreatorCard = ({ creator, isFavorite, onSetFavorite }: Feat
       };
     },
     enabled: !!user?.id
+  });
+
+  // Fetch subscription tier
+  const { data: subscriptionData } = useQuery({
+    queryKey: ['creator-subscription-tier', creator.user_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('barber_profiles')
+        .select('active_subscription_tier')
+        .eq('user_id', creator.user_id)
+        .single();
+      
+      if (error) return null;
+      return data;
+    }
   });
 
   // Follow/Unfollow mutation
@@ -176,10 +192,13 @@ export const FeaturedCreatorCard = ({ creator, isFavorite, onSetFavorite }: Feat
                 </AvatarFallback>
               </Avatar>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <CardTitle className="text-lg text-white">
                     {creator.display_name || creator.username || 'Anonymous Creator'}
                   </CardTitle>
+                  {subscriptionData?.active_subscription_tier && (
+                    <SubscriptionBadge tier={subscriptionData.active_subscription_tier} size="sm" />
+                  )}
                   {creator.country_code && (
                     <span className="text-lg" title={`Country: ${creator.country_code}`}>
                       {getCountryFlag(creator.country_code)}

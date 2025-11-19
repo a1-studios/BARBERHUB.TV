@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { DonationModal } from '../DonationModal';
 import { BarberVideoSection } from './BarberVideoSection';
 import { BarberActionButtons } from './BarberActionButtons';
+import { SubscriptionBadge } from '../SubscriptionBadge';
 
 interface BarberProfileCardProps {
   barberId: string;
@@ -48,6 +49,22 @@ export const BarberProfileCard = ({
       if (error) throw error;
       return data;
     }
+  });
+
+  // Fetch subscription tier separately
+  const { data: subscriptionData } = useQuery({
+    queryKey: ['barber-subscription', userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('barber_profiles')
+        .select('active_subscription_tier')
+        .eq('user_id', userId)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId
   });
 
   // Check user's relationship with barber
@@ -196,10 +213,13 @@ export const BarberProfileCard = ({
               </AvatarFallback>
             </Avatar>
             <div className="flex-1">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <CardTitle className="text-lg text-white">
                   {displayName}
                 </CardTitle>
+                {subscriptionData?.active_subscription_tier && (
+                  <SubscriptionBadge tier={subscriptionData.active_subscription_tier} size="sm" />
+                )}
                 {barberProfile.country_code && (
                   <span className="text-lg" title={`Country: ${barberProfile.country_code}`}>
                     {getCountryFlag(barberProfile.country_code)}

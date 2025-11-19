@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, MapPin, Award, Upload, Image as ImageIcon, Video, Trash2 } from 'lucide-react';
 import { BarberVideoSection } from '@/components/barber/BarberVideoSection';
 import { BarberActionButtons } from '@/components/barber/BarberActionButtons';
+import { SubscriptionBadge } from '@/components/SubscriptionBadge';
 import { useState } from 'react';
 import { DonationModal } from '@/components/DonationModal';
 import { useAuth } from '@/hooks/useAuth';
@@ -34,6 +35,22 @@ export default function BarberPublicProfile() {
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId
+  });
+
+  // Fetch subscription tier separately
+  const { data: subscriptionData } = useQuery({
+    queryKey: ['barber-subscription-tier', userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('barber_profiles')
+        .select('active_subscription_tier')
+        .eq('user_id', userId)
+        .single();
       
       if (error) throw error;
       return data;
@@ -275,6 +292,9 @@ export default function BarberPublicProfile() {
                 <div>
                   <div className="flex items-center gap-3 flex-wrap">
                     <h1 className="text-4xl font-bold text-white">{displayName}</h1>
+                    {subscriptionData?.active_subscription_tier && (
+                      <SubscriptionBadge tier={subscriptionData.active_subscription_tier} size="md" />
+                    )}
                     {barberData.country_code && (
                       <span className="text-3xl">{getCountryFlag(barberData.country_code)}</span>
                     )}
