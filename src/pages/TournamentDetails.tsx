@@ -3,12 +3,16 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { StandingsTable } from "@/components/tournament/StandingsTable";
 import { TournamentBracket } from "@/components/tournament/TournamentBracket";
+import { PrizePoolCard } from "@/components/tournament/PrizePoolCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Trophy, Users, ExternalLink } from "lucide-react";
+import { Calendar, Trophy, Users, DollarSign, MapPin } from "lucide-react";
 import { format } from "date-fns";
+import { Helmet } from "react-helmet";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 export default function TournamentDetails() {
   const { tournamentId } = useParams<{ tournamentId: string }>();
@@ -46,11 +50,7 @@ export default function TournamentDetails() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("battles")
-        .select(`
-          *,
-          barber1:barber_profiles!battles_barber1_id_fkey(name, country_code),
-          barber2:barber_profiles!battles_barber2_id_fkey(name, country_code)
-        `)
+        .select("*")
         .eq("tournament_id", tournamentId)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -63,171 +63,109 @@ export default function TournamentDetails() {
 
   if (tournamentLoading || phasesLoading) {
     return (
-      <div className="container mx-auto py-8 space-y-6">
-        <Skeleton className="h-32 w-full" />
-        <Skeleton className="h-96 w-full" />
-      </div>
+      <>
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <Skeleton className="h-32 w-full mb-4" />
+          <Skeleton className="h-96 w-full" />
+        </div>
+        <Footer />
+      </>
     );
   }
 
   if (!tournament) {
     return (
-      <div className="container mx-auto py-8 text-center">
-        <h1 className="text-2xl font-bold">Tournament not found</h1>
-      </div>
+      <>
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <Card className="p-12 text-center">
+            <Trophy className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+            <h2 className="text-2xl font-bold mb-2">Tournament Not Found</h2>
+          </Card>
+        </div>
+        <Footer />
+      </>
     );
   }
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      registration: "secondary",
-      qualification: "default",
-      elimination: "default",
-      completed: "outline",
-    };
-    return <Badge variant={variants[status] || "outline"}>{status.toUpperCase()}</Badge>;
-  };
-
   return (
-    <div className="container mx-auto py-8 space-y-6">
-      {/* Tournament Header */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div>
-              <CardTitle className="text-3xl flex items-center gap-3">
-                <Trophy className="h-8 w-8" />
-                {tournament.name}
-              </CardTitle>
-              <CardDescription className="text-lg mt-2">
-                Season {tournament.season}
-              </CardDescription>
+    <>
+      <Helmet>
+        <title>{tournament.name} | Barber Tournament</title>
+        <meta name="description" content="Elite barber competition" />
+      </Helmet>
+      
+      <Header />
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background">
+        <div className="container mx-auto px-4 py-8 max-w-7xl space-y-8">
+          {/* Hero */}
+          <div className="bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-xl p-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Trophy className="h-6 w-6 text-primary" />
+              <Badge>{tournament.status}</Badge>
             </div>
-            {getStatusBadge(tournament.status)}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm text-muted-foreground">Start Date</p>
-                <p className="font-medium">{format(new Date(tournament.start_date), "PPP")}</p>
+            <h1 className="text-4xl font-bold mb-2">{tournament.name}</h1>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+              <div className="bg-background/50 rounded-lg p-3">
+                <Calendar className="h-5 w-5 mb-2" />
+                <p className="text-sm">{format(new Date(tournament.start_date), "MMM d")}</p>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm text-muted-foreground">Participants</p>
-                <p className="font-medium">{tournament.total_registered} / {tournament.min_participants}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Trophy className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm text-muted-foreground">Current Phase</p>
-                <p className="font-medium">{currentPhase?.phase_name || "Not started"}</p>
+              <div className="bg-background/50 rounded-lg p-3">
+                <Users className="h-5 w-5 mb-2" />
+                <p className="text-sm">{tournament.min_participants || "Open"}</p>
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Tabs for different views */}
-      <Tabs defaultValue="standings" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="standings">Standings</TabsTrigger>
-          <TabsTrigger value="matches">Matches</TabsTrigger>
-          <TabsTrigger value="bracket">Bracket</TabsTrigger>
-        </TabsList>
+          <Tabs defaultValue="standings">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="standings">Standings</TabsTrigger>
+              <TabsTrigger value="bracket">Bracket</TabsTrigger>
+              <TabsTrigger value="matches">Matches</TabsTrigger>
+            </TabsList>
 
-        <TabsContent value="standings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tournament Standings</CardTitle>
-              <CardDescription>
-                {currentPhase?.phase_name || "Overall"} standings
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <StandingsTable 
-                tournamentId={tournamentId!} 
-                phaseId={currentPhase?.id}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
+            <TabsContent value="standings">
+              <Card>
+                <CardHeader><CardTitle>Standings</CardTitle></CardHeader>
+                <CardContent>
+                  <StandingsTable tournamentId={tournamentId!} phaseId={currentPhase?.id} />
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-        <TabsContent value="matches" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Match Schedule</CardTitle>
-              <CardDescription>All tournament matches</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {matchesLoading ? (
-                <div className="space-y-2">
-                  {[...Array(5)].map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
-                  ))}
-                </div>
-              ) : matches && matches.length > 0 ? (
-                <div className="space-y-3">
-                  {matches.map((match) => (
-                    <div
-                      key={match.id}
-                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex-1">
-                        <p className="font-medium">
-                          {match.barber1?.name || "TBD"} vs {match.barber2?.name || "TBD"}
-                        </p>
-                        <p className="text-sm text-muted-foreground">{match.title}</p>
-                        {match.starts_at && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {format(new Date(match.starts_at), "PPP p")}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {match.youtube_stream_url && (
-                          <a
-                            href={match.youtube_stream_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:underline flex items-center gap-1"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        )}
-                        <Badge variant={match.status === "completed" ? "outline" : "default"}>
-                          {match.status}
-                        </Badge>
-                      </div>
+            <TabsContent value="bracket">
+              <Card>
+                <CardHeader><CardTitle>Bracket</CardTitle></CardHeader>
+                <CardContent>
+                  <TournamentBracket tournamentId={tournamentId!} phaseId={currentPhase?.id} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="matches">
+              <Card>
+                <CardHeader><CardTitle>Matches</CardTitle></CardHeader>
+                <CardContent>
+                  {matches?.length ? (
+                    <div className="space-y-4">
+                      {matches.map((m: any) => (
+                        <div key={m.id} className="border p-4 rounded-lg">
+                          <p className="font-semibold">{m.title}</p>
+                          <Badge>{m.status}</Badge>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-muted-foreground py-8">
-                  No matches scheduled yet
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="bracket" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Elimination Bracket</CardTitle>
-              <CardDescription>Tournament bracket view</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <TournamentBracket tournamentId={tournamentId!} phaseId={currentPhase?.id} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+                  ) : (
+                    <p className="text-center text-muted-foreground">No matches yet</p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+      <Footer />
+    </>
   );
 }
