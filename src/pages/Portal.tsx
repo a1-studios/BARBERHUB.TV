@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +17,7 @@ import { TournamentQueueStatus } from "@/components/tournament/TournamentQueueSt
 import { LiveMatchCounter } from "@/components/tournament/LiveMatchCounter";
 import { MyBattlesSection } from "@/components/barber/MyBattlesSection";
 import { SubscriptionStatusCard } from "@/components/barber/SubscriptionStatusCard";
-import { Trophy, Users, Clock, Vote, DollarSign, Play, Calendar, Target, Scissors, Loader2 } from "lucide-react";
+import { Trophy, Users, Clock, Vote, DollarSign, Play, Calendar, Target, Scissors, Loader2, BarChart3 } from "lucide-react";
 import DisplayCards from "@/components/ui/display-cards";
 import { formatDistanceToNow } from "date-fns";
 interface Battle {
@@ -154,7 +154,20 @@ const Portal = () => {
           {/* Subscription Status for Barbers */}
           {isBarber && (
             <div className="mb-8">
-              <SubscriptionStatusCard />
+              <div className="flex items-start gap-4">
+                <div className="flex-1">
+                  <SubscriptionStatusCard />
+                </div>
+                <Link to="/analytics">
+                  <Button variant="outline" size="lg" className="h-full">
+                    <BarChart3 className="w-5 h-5 mr-2" />
+                    <div className="text-left">
+                      <div className="font-semibold">Analytics</div>
+                      <div className="text-xs text-muted-foreground">View Stats</div>
+                    </div>
+                  </Button>
+                </Link>
+              </div>
             </div>
           )}
 
