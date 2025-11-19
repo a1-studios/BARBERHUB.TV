@@ -16,6 +16,7 @@ import { TournamentRegistration } from "@/components/tournament/TournamentRegist
 import { TournamentQueueStatus } from "@/components/tournament/TournamentQueueStatus";
 import { LiveMatchCounter } from "@/components/tournament/LiveMatchCounter";
 import { MyBattlesSection } from "@/components/barber/MyBattlesSection";
+import { SubscriptionStatusCard } from "@/components/barber/SubscriptionStatusCard";
 import { Trophy, Users, Clock, Vote, DollarSign, Play, Calendar, Target, Scissors, Loader2 } from "lucide-react";
 import DisplayCards from "@/components/ui/display-cards";
 import { formatDistanceToNow } from "date-fns";
@@ -149,6 +150,13 @@ const Portal = () => {
               Live battles every Sunday, 10:00 AM - 6:00 PM
             </p>
           </div>
+
+          {/* Subscription Status for Barbers */}
+          {isBarber && (
+            <div className="mb-8">
+              <SubscriptionStatusCard />
+            </div>
+          )}
 
           {/* Fan Hub - Show only for fans */}
           {isFan && (

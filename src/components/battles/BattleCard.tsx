@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Users, Eye } from 'lucide-react';
 import { AnimatedCounter } from './AnimatedCounter';
 import { useRealtimeBattleViewers } from '@/hooks/useRealtimeBattleViewers';
+import { SubscriptionBadge } from '../SubscriptionBadge';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface BattleCardProps {
   battleId: string;
@@ -14,11 +17,13 @@ interface BattleCardProps {
     name: string;
     avatar_url?: string;
     country_code?: string;
+    user_id?: string;
   } | null;
   barber2: {
     name: string;
     avatar_url?: string;
     country_code?: string;
+    user_id?: string;
   } | null;
   barber1Votes: number;
   barber2Votes: number;
@@ -50,6 +55,35 @@ export const BattleCard = ({
   const isLive = status === 'voting';
   const viewerData = useRealtimeBattleViewers(isLive ? battleId : '');
   const hasViewers = isLive && (viewerData.barber1 > 0 || viewerData.barber2 > 0);
+
+  // Fetch subscription tiers for both barbers
+  const { data: barber1Tier } = useQuery({
+    queryKey: ['barber-tier', barber1?.user_id],
+    queryFn: async () => {
+      if (!barber1?.user_id) return null;
+      const { data } = await supabase
+        .from('barber_profiles')
+        .select('active_subscription_tier')
+        .eq('user_id', barber1.user_id)
+        .single();
+      return data?.active_subscription_tier || null;
+    },
+    enabled: !!barber1?.user_id
+  });
+
+  const { data: barber2Tier } = useQuery({
+    queryKey: ['barber-tier', barber2?.user_id],
+    queryFn: async () => {
+      if (!barber2?.user_id) return null;
+      const { data } = await supabase
+        .from('barber_profiles')
+        .select('active_subscription_tier')
+        .eq('user_id', barber2.user_id)
+        .single();
+      return data?.active_subscription_tier || null;
+    },
+    enabled: !!barber2?.user_id
+  });
 
   return (
     <motion.div
@@ -93,9 +127,14 @@ export const BattleCard = ({
                   {barber1?.name?.charAt(0) || '?'}
                 </AvatarFallback>
               </Avatar>
-              <p className="font-semibold text-sm truncate mb-1">
-                {barber1?.name || 'Unknown'}
-              </p>
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <p className="font-semibold text-sm truncate">
+                  {barber1?.name || 'Unknown'}
+                </p>
+                {barber1Tier && (
+                  <SubscriptionBadge tier={barber1Tier} size="sm" showTooltip={false} />
+                )}
+              </div>
               <span className="text-xl">
                 {getCountryFlag(barber1?.country_code || null)}
               </span>
@@ -138,9 +177,14 @@ export const BattleCard = ({
                   {barber2?.name?.charAt(0) || '?'}
                 </AvatarFallback>
               </Avatar>
-              <p className="font-semibold text-sm truncate mb-1">
-                {barber2?.name || 'Unknown'}
-              </p>
+              <div className="flex items-center justify-center gap-1 mb-1">
+                <p className="font-semibold text-sm truncate">
+                  {barber2?.name || 'Unknown'}
+                </p>
+                {barber2Tier && (
+                  <SubscriptionBadge tier={barber2Tier} size="sm" showTooltip={false} />
+                )}
+              </div>
               <span className="text-xl">
                 {getCountryFlag(barber2?.country_code || null)}
               </span>
