@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { AddFundsModal } from './AddFundsModal';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { NotificationBell } from './NotificationBell';
 
 interface QuickAction {
   id: string;
@@ -201,6 +202,9 @@ const Header = () => {
 
           {/* Right Side - BB Balance & Menu */}
           <div className="flex items-center gap-3">
+            {/* Notification Bell */}
+            {user && <NotificationBell />}
+            
             {/* Barber Bucks Balance */}
             {user && (
               <TooltipProvider>
