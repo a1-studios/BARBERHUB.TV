@@ -20,7 +20,8 @@ import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCanceled from "./pages/PaymentCanceled";
 import Grants from "./pages/Grants";
 import CreatorHub from "./pages/CreatorHub";
-import TournamentDetails from "./pages/TournamentDetails";
+import Tournaments from "@/pages/Tournaments";
+import TournamentDetails from "@/pages/TournamentDetails";
 import NotFound from "./pages/NotFound";
 import BarberPublicProfile from "./pages/BarberPublicProfile";
 import BarbersDirectory from "./pages/BarbersDirectory";
@@ -97,7 +98,8 @@ const AppContent = () => {
                 </AuthGuard>
               } 
             />
-            <Route path="/tournaments/:tournamentId" element={<TournamentDetails />} />
+          <Route path="/tournaments" element={<Tournaments />} />
+          <Route path="/tournaments/:tournamentId" element={<TournamentDetails />} />
             <Route path="/barber/:userId" element={<BarberPublicProfile />} />
             <Route path="/barbers" element={<BarbersDirectory />} />
             <Route 
