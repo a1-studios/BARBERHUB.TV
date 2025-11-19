@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Search, MapPin, Scissors } from 'lucide-react';
+import { Search, MapPin, Scissors, Crown, Sparkles, Star } from 'lucide-react';
 import { BarberProfileCard } from '@/components/barber/BarberProfileCard';
 import { BackButton } from '@/components/ui/BackButton';
 
@@ -16,7 +16,8 @@ export default function BarbersDirectory() {
   const [specialtyFilter, setSpecialtyFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
   const [liveFilter, setLiveFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('recent');
+  const [tierFilter, setTierFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('tier');
 
   // Fetch all barbers using unified view
   const { data: barbers, isLoading } = useQuery({
@@ -31,6 +32,22 @@ export default function BarbersDirectory() {
       return data;
     }
   });
+
+  // Fetch subscription tiers for all barbers
+  const { data: subscriptionTiers } = useQuery({
+    queryKey: ['barbers-subscription-tiers'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('barber_profiles')
+        .select('user_id, active_subscription_tier');
+      
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Create a map of user_id to tier for quick lookup
+  const tierMap = new Map(subscriptionTiers?.map(t => [t.user_id, t.active_subscription_tier]) || []);
 
   // Get unique specialties and countries
   const specialties = [...new Set(barbers?.map(b => b.specialty).filter(Boolean))] as string[];
@@ -48,17 +65,35 @@ export default function BarbersDirectory() {
     const matchesLive = liveFilter === 'all' || 
       (liveFilter === 'live' && barber.is_live) ||
       (liveFilter === 'offline' && !barber.is_live);
+    
+    const barberTier = tierMap.get(barber.user_id);
+    const matchesTier = tierFilter === 'all' || 
+      (tierFilter === 'free' && !barberTier) ||
+      (tierFilter !== 'free' && barberTier?.toLowerCase() === tierFilter);
 
-    return matchesSearch && matchesSpecialty && matchesCountry && matchesLive;
+    return matchesSearch && matchesSpecialty && matchesCountry && matchesLive && matchesTier;
   });
 
   // Sort barbers
   const sortedBarbers = filteredBarbers?.sort((a, b) => {
+    // Helper to get tier priority (Gold > Silver > Bronze > Free)
+    const getTierPriority = (userId: string) => {
+      const tier = tierMap.get(userId)?.toLowerCase();
+      if (tier === 'gold') return 4;
+      if (tier === 'silver') return 3;
+      if (tier === 'bronze') return 2;
+      return 1; // free
+    };
+
     switch (sortBy) {
+      case 'tier':
+        return getTierPriority(b.user_id) - getTierPriority(a.user_id);
       case 'name':
         return (a.barber_name || '').localeCompare(b.barber_name || '');
       case 'experience':
         return (b.years_experience || 0) - (a.years_experience || 0);
+      case 'followers':
+        return (b.follower_count || 0) - (a.follower_count || 0);
       case 'recent':
       default:
         return new Date(b.barber_created_at || 0).getTime() - new Date(a.barber_created_at || 0).getTime();
@@ -85,7 +120,7 @@ export default function BarbersDirectory() {
         {/* Filters */}
         <Card className="mb-8">
           <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
               {/* Search */}
               <div className="lg:col-span-2 relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -96,6 +131,35 @@ export default function BarbersDirectory() {
                   className="pl-10"
                 />
               </div>
+
+              {/* Tier Filter */}
+              <Select value={tierFilter} onValueChange={setTierFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Tier" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Tiers</SelectItem>
+                  <SelectItem value="gold">
+                    <div className="flex items-center gap-2">
+                      <Crown className="w-4 h-4 text-yellow-500" />
+                      Gold
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="silver">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-slate-400" />
+                      Silver
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="bronze">
+                    <div className="flex items-center gap-2">
+                      <Star className="w-4 h-4 text-orange-500" />
+                      Bronze
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="free">Free</SelectItem>
+                </SelectContent>
+              </Select>
 
               {/* Specialty Filter */}
               <Select value={specialtyFilter} onValueChange={setSpecialtyFilter}>
@@ -150,6 +214,13 @@ export default function BarbersDirectory() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="tier">
+                    <div className="flex items-center gap-2">
+                      <Crown className="w-4 h-4" />
+                      Tier (High to Low)
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="followers">Most Followers</SelectItem>
                   <SelectItem value="recent">Most Recent</SelectItem>
                   <SelectItem value="name">Name (A-Z)</SelectItem>
                   <SelectItem value="experience">Experience</SelectItem>

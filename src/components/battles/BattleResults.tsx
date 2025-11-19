@@ -1,8 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, TrendingUp, Users, Award } from 'lucide-react';
+import { Trophy, TrendingUp, Users, Award, Zap, ArrowRight } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { useUserProfile } from '@/hooks/useUserProfile';
+import { useNavigate } from 'react-router-dom';
 
 interface BattleResultsProps {
   battle: any;
@@ -12,6 +15,8 @@ interface BattleResultsProps {
 }
 
 export const BattleResults = ({ battle, submissions, voteResults, profiles }: BattleResultsProps) => {
+  const { isVerified, isFan } = useUserProfile();
+  const navigate = useNavigate();
   const totalWeightedVotes = voteResults?.reduce((sum, result) => sum + result.weighted_votes, 0) || 0;
   
   // Sort submissions by votes (highest first)
@@ -178,6 +183,36 @@ export const BattleResults = ({ battle, submissions, voteResults, profiles }: Ba
                   Points have been awarded and standings updated
                 </p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Subscription Upsell for Non-Verified Users */}
+      {isFan && !isVerified && (
+        <Card className="border-2 border-yellow-500/30 bg-gradient-to-br from-yellow-500/5 to-amber-600/5">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="p-3 rounded-full bg-yellow-500/10 border border-yellow-500/20">
+                  <Zap className="w-6 h-6 text-yellow-500" />
+                </div>
+                <div>
+                  <p className="font-bold text-foreground text-lg mb-1">
+                    You voted with 1x power
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Get <span className="text-yellow-500 font-semibold">3x vote power</span> with verification or subscription
+                  </p>
+                </div>
+              </div>
+              <Button 
+                onClick={() => navigate('/portal')}
+                className="bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500"
+              >
+                Unlock 3x Power
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
             </div>
           </CardContent>
         </Card>
