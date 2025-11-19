@@ -27,6 +27,25 @@ export const useBarberBucks = () => {
     enabled: !!user
   });
 
+  // Get transaction history
+  const { data: transactions } = useQuery({
+    queryKey: ['barber_bucks_transactions', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from('barber_bucks_transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user
+  });
+
   // Check if user has enough funds for donation
   const checkFunds = (amount: number) => {
     if (!user) {
@@ -64,35 +83,36 @@ export const useBarberBucks = () => {
     }
   });
 
-  // Add barber bucks (this would integrate with payment system)
-  const addBucks = useMutation({
-    mutationFn: async (amount: number) => {
+  // Purchase barber bucks via Stripe
+  const purchaseBucks = useMutation({
+    mutationFn: async (packageAmount: number) => {
       if (!user) throw new Error("Not authenticated");
       
-      const { error } = await supabase
-        .from('profiles')
-        .update({ barber_bucks: (barberBucks || 0) + amount })
-        .eq('user_id', user.id);
-      
+      const { data, error } = await supabase.functions.invoke('purchase-barber-bucks', {
+        body: { package_amount: packageAmount }
+      });
+
       if (error) throw error;
+      
+      if (data.url) {
+        window.location.href = data.url;
+      }
+      
+      return data;
     },
-    onSuccess: (_, amount) => {
-      queryClient.invalidateQueries({ queryKey: ['barber_bucks', user?.id] });
-      toast.success(`Added ${amount} Barber Bucks to your account!`);
-      setShowAddFundsModal(false);
-    },
-    onError: (error) => {
-      toast.error("Failed to add funds");
-      console.error("Add bucks error:", error);
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to initiate purchase");
+      console.error("Purchase bucks error:", error);
     }
   });
 
   return {
     barberBucks: barberBucks || 0,
+    transactions: transactions || [],
     isLoading,
     checkFunds,
     deductBucks,
-    addBucks,
+    purchaseBucks,
     showAddFundsModal,
     setShowAddFundsModal
   };

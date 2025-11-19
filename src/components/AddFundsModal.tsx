@@ -9,20 +9,15 @@ interface AddFundsModalProps {
 }
 
 export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
-  const [amount, setAmount] = useState("");
-  const { addBucks } = useBarberBucks();
+  const { purchaseBucks } = useBarberBucks();
 
   if (!isOpen) return null;
 
-  const handleAddFunds = () => {
-    const numAmount = parseInt(amount);
-    if (numAmount > 0) {
-      addBucks.mutate(numAmount);
-      setAmount("");
-    }
+  const handleAddFunds = (amount: number) => {
+    purchaseBucks.mutate(amount);
   };
 
-  const quickAmounts = [10, 25, 50, 100];
+  const quickAmounts = [100, 500, 1000, 2500];
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
@@ -35,50 +30,31 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
         </div>
 
         <div className="space-y-4">
-          <div>
-            <p className="text-sm text-muted-foreground mb-4">
-              Add Barber Bucks to your account to support barbers and participate in the community.
-            </p>
-            
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              {quickAmounts.map((quickAmount) => (
-                <Button
-                  key={quickAmount}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setAmount(quickAmount.toString())}
-                  className="text-sm"
-                >
-                  {quickAmount} BB
-                </Button>
-              ))}
-            </div>
-
-            <div className="flex gap-2">
-              <Input
-                type="number"
-                placeholder="Custom amount"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                min="1"
-                className="flex-1"
-              />
-              <span className="flex items-center text-sm text-muted-foreground">BB</span>
-            </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Purchase Barber Bucks to vote, enter tournaments, and support creators.
+          </p>
+          
+          <div className="grid grid-cols-2 gap-3">
+            {quickAmounts.map((amount) => (
+              <Button
+                key={amount}
+                variant="outline"
+                onClick={() => handleAddFunds(amount)}
+                disabled={purchaseBucks.isPending}
+                className="h-auto flex flex-col items-center py-4"
+              >
+                <span className="text-xl font-bold">{amount}</span>
+                <span className="text-xs text-muted-foreground">Barber Bucks</span>
+                <span className="text-sm font-semibold mt-1">
+                  ${(amount / 100).toFixed(2)}
+                </span>
+              </Button>
+            ))}
           </div>
 
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose} className="flex-1">
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleAddFunds}
-              disabled={!amount || parseInt(amount) <= 0 || addBucks.isPending}
-              className="flex-1"
-            >
-              {addBucks.isPending ? "Processing..." : "Add Funds"}
-            </Button>
-          </div>
+          <Button variant="outline" onClick={onClose} className="w-full">
+            Cancel
+          </Button>
         </div>
       </div>
     </div>
