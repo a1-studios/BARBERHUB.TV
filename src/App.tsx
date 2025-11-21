@@ -30,6 +30,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import BattleManagement from "./pages/admin/BattleManagement";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import BattleTheater from "./pages/BattleTheater";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,14 @@ const AppContent = () => {
               element={
                 <AuthGuard>
                   <BattleDetails />
+                </AuthGuard>
+              } 
+            />
+            <Route 
+              path="/battle/:id/theater" 
+              element={
+                <AuthGuard>
+                  <BattleTheater />
                 </AuthGuard>
               } 
             />

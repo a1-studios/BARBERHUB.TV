@@ -274,6 +274,41 @@ export type Database = {
           },
         ]
       }
+      battle_chat_messages: {
+        Row: {
+          battle_id: string | null
+          created_at: string | null
+          id: string
+          is_deleted: boolean | null
+          message: string
+          user_id: string | null
+        }
+        Insert: {
+          battle_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_deleted?: boolean | null
+          message: string
+          user_id?: string | null
+        }
+        Update: {
+          battle_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_deleted?: boolean | null
+          message?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_chat_messages_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       battle_participants: {
         Row: {
           battle_id: string
@@ -340,6 +375,62 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_user_profiles"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      battle_reactions: {
+        Row: {
+          barber_id: string | null
+          battle_id: string | null
+          created_at: string | null
+          emoji: string
+          id: string
+          user_id: string | null
+        }
+        Insert: {
+          barber_id?: string | null
+          battle_id?: string | null
+          created_at?: string | null
+          emoji: string
+          id?: string
+          user_id?: string | null
+        }
+        Update: {
+          barber_id?: string | null
+          battle_id?: string | null
+          created_at?: string | null
+          emoji?: string
+          id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_reactions_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barber_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_reactions_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barber_stats"
+            referencedColumns: ["barber_id"]
+          },
+          {
+            foreignKeyName: "battle_reactions_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "public_barber_profiles"
+            referencedColumns: ["barber_id"]
+          },
+          {
+            foreignKeyName: "battle_reactions_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -2062,6 +2153,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_vote_combos: {
+        Row: {
+          battle_id: string | null
+          bonus_bb_earned: number
+          combo_count: number
+          created_at: string | null
+          id: string
+          last_vote_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          battle_id?: string | null
+          bonus_bb_earned?: number
+          combo_count?: number
+          created_at?: string | null
+          id?: string
+          last_vote_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          battle_id?: string | null
+          bonus_bb_earned?: number
+          combo_count?: number
+          created_at?: string | null
+          id?: string
+          last_vote_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_vote_combos_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
