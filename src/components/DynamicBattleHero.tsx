@@ -275,7 +275,7 @@ export const DynamicBattleHero = () => {
               {/* Vote Button - Very Visible */}
               {isActiveBattle && (
                 <Button 
-                  onClick={() => navigate(`/battle/${battle?.id}`)}
+                  onClick={() => navigate(`/battle/${battle?.id}/theater`)}
                   className="w-full max-w-[220px] sm:max-w-[260px] lg:max-w-[300px] bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-black text-lg sm:text-xl lg:text-2xl py-5 sm:py-7 rounded-xl shadow-2xl hover:shadow-orange-500/50 transition-all hover:scale-105 border-2 border-orange-400"
                 >
                   🔥 VOTE NOW 🔥
@@ -356,7 +356,7 @@ export const DynamicBattleHero = () => {
               {/* Vote Button - Very Visible */}
               {isActiveBattle && (
                 <Button 
-                  onClick={() => navigate(`/battle/${battle?.id}`)}
+                  onClick={() => navigate(`/battle/${battle?.id}/theater`)}
                   className="w-full max-w-[220px] sm:max-w-[260px] lg:max-w-[300px] bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-black text-lg sm:text-xl lg:text-2xl py-5 sm:py-7 rounded-xl shadow-2xl hover:shadow-orange-500/50 transition-all hover:scale-105 border-2 border-orange-400"
                 >
                   🔥 VOTE NOW 🔥
