@@ -13,6 +13,7 @@ import Header from '@/components/Header';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { FeaturedCreatorCard } from '@/components/FeaturedCreatorCard';
+import { BarberProfileHeader } from '@/components/barber/BarberProfileHeader';
 import { toast } from 'sonner';
 import { 
   Crown,
@@ -42,6 +43,45 @@ export default function CreatorHub() {
       return data;
     },
     enabled: !!user?.id
+  });
+
+  // Fetch barber profile data for barbers
+  const { data: barberProfile } = useQuery({
+    queryKey: ['barberProfile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('barber_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id && isBarber
+  });
+
+  // Fetch barber stats
+  const { data: barberStats } = useQuery({
+    queryKey: ['barber-stats', barberProfile?.id],
+    queryFn: async () => {
+      if (!barberProfile?.id) return null;
+      const { data, error } = await supabase
+        .from('barber_stats')
+        .select('*')
+        .eq('barber_id', barberProfile.id)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data || {
+        follower_count: 0,
+        like_count: 0,
+        subscription_count: 0,
+        total_donations_cents: 0
+      };
+    },
+    enabled: !!barberProfile?.id
   });
 
   // Fetch creators for fan experience
@@ -173,6 +213,29 @@ export default function CreatorHub() {
               Welcome back! Manage your content, track earnings, and grow your barbering empire.
             </p>
           </div>
+
+          {/* Barber Profile Header - First Section for Barbers */}
+          {isBarber && barberProfile && barberStats && profile && (
+            <div className="mb-8">
+              <BarberProfileHeader
+                avatar_url={profile.avatar_url}
+                display_name={profile.display_name || barberProfile.name || 'Unknown'}
+                country_code={barberProfile.country_code}
+                specialty={barberProfile.specialty}
+                is_live={barberProfile.is_live || false}
+                subscription_tier={barberProfile.active_subscription_tier}
+                stats={{
+                  follower_count: barberStats.follower_count || 0,
+                  like_count: barberStats.like_count || 0,
+                  subscription_count: barberStats.subscription_count || 0,
+                  total_donations_cents: barberStats.total_donations_cents || 0
+                }}
+                barber_id={barberProfile.id}
+                onEditClick={() => navigate('/profile')}
+                showActions={true}
+              />
+            </div>
+          )}
 
           {/* Fan Experience - Featured Creator */}
           {isFan && user && featuredCreator && (
