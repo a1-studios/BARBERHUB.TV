@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { BarberGuard } from "@/components/auth/BarberGuard";
+import { AdminGuard } from "@/components/auth/AdminGuard";
 import { useFollowedBarbersNotifications } from "@/hooks/useFollowedBarbersNotifications";
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
@@ -25,6 +26,10 @@ import TournamentDetails from "@/pages/TournamentDetails";
 import NotFound from "./pages/NotFound";
 import BarberPublicProfile from "./pages/BarberPublicProfile";
 import BarbersDirectory from "./pages/BarbersDirectory";
+import AdminDashboard from "./pages/AdminDashboard";
+import UserManagement from "./pages/admin/UserManagement";
+import BattleManagement from "./pages/admin/BattleManagement";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
 
 const queryClient = new QueryClient();
 
@@ -109,6 +114,46 @@ const AppContent = () => {
                   <BarberGuard>
                     <Analytics />
                   </BarberGuard>
+                </AuthGuard>
+              } 
+            />
+            <Route 
+              path="/admin" 
+              element={
+                <AuthGuard>
+                  <AdminGuard>
+                    <AdminDashboard />
+                  </AdminGuard>
+                </AuthGuard>
+              } 
+            />
+            <Route 
+              path="/admin/users" 
+              element={
+                <AuthGuard>
+                  <AdminGuard>
+                    <UserManagement />
+                  </AdminGuard>
+                </AuthGuard>
+              } 
+            />
+            <Route 
+              path="/admin/battles" 
+              element={
+                <AuthGuard>
+                  <AdminGuard>
+                    <BattleManagement />
+                  </AdminGuard>
+                </AuthGuard>
+              } 
+            />
+            <Route 
+              path="/admin/analytics" 
+              element={
+                <AuthGuard>
+                  <AdminGuard>
+                    <AdminAnalytics />
+                  </AdminGuard>
                 </AuthGuard>
               } 
             />
