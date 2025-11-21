@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_action_logs: {
+        Row: {
+          action_type: string
+          admin_id: string
+          created_at: string | null
+          details: Json | null
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+        }
+        Insert: {
+          action_type: string
+          admin_id: string
+          created_at?: string | null
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+        }
+        Update: {
+          action_type?: string
+          admin_id?: string
+          created_at?: string | null
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
       barber_bucks_transactions: {
         Row: {
           amount: number
@@ -1710,6 +1740,42 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      system_announcements: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          created_by: string
+          expires_at: string | null
+          id: string
+          message: string
+          priority: number | null
+          title: string
+          type: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          message: string
+          priority?: number | null
+          title: string
+          type?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          message?: string
+          priority?: number | null
+          title?: string
+          type?: string | null
+        }
+        Relationships: []
       }
       tournament_phases: {
         Row: {

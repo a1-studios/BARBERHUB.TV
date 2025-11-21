@@ -69,7 +69,7 @@ const quickActions: QuickAction[] = [
 
 const Header = () => {
   const { user, signOut } = useAuth();
-  const { isBarber, isFan } = useUserRole();
+  const { isBarber, isFan, isAdmin } = useUserRole();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
   const quickActionsRef = useRef<HTMLDivElement>(null);
@@ -320,6 +320,16 @@ const Header = () => {
                         Create Battle
                       </Link>
                     </>
+                  )}
+                  {isAdmin && (
+                    <Link
+                      to="/admin"
+                      className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
+                      onClick={closeMobileMenu}
+                    >
+                      <Zap className="h-5 w-5 text-red-500" />
+                      <span className="text-red-500 font-bold">Admin Dashboard</span>
+                    </Link>
                   )}
                   {isFan && (
                     <Link
