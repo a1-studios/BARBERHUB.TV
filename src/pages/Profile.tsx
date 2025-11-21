@@ -24,6 +24,7 @@ import { CreationUpload } from '@/components/creations/CreationUpload';
 import BarberDashboard from '@/components/barber/BarberDashboard';
 import { BarberSettings } from '@/components/profiles/BarberSettings';
 import { AvatarUpload } from '@/components/profiles/AvatarUpload';
+import { BarberProfileHeader } from '@/components/barber/BarberProfileHeader';
 const Profile = () => {
   const {
     user
@@ -311,6 +312,29 @@ const Profile = () => {
       <main className="pt-20 sm:pt-24 pb-12 px-4">
         <div className="container mx-auto max-w-4xl">
           <BackButton className="mb-4 sm:mb-6" />
+          
+          {/* Barber Profile Header - First Section */}
+          {isBarber && barberProfile && barberStats && (
+            <div className="mb-6">
+              <BarberProfileHeader
+                avatar_url={profile?.avatar_url}
+                display_name={profile?.display_name || barberProfile.name || 'Unknown'}
+                country_code={barberProfile.country_code}
+                specialty={barberProfile.specialty}
+                is_live={barberProfile.is_live || false}
+                subscription_tier={barberProfile.active_subscription_tier}
+                stats={{
+                  follower_count: barberStats.follower_count || 0,
+                  like_count: barberStats.like_count || 0,
+                  subscription_count: barberStats.subscription_count || 0,
+                  total_donations_cents: barberStats.total_donations_cents || 0
+                }}
+                barber_id={barberProfile.id}
+                onEditClick={() => setShowBarberSettings(true)}
+                showActions={true}
+              />
+            </div>
+          )}
           
           <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
             {/* Profile Info */}
