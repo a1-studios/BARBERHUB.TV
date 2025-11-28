@@ -85,6 +85,7 @@ export type Database = {
           active_subscription_tier: string | null
           battles_created_this_month: number
           bio: string | null
+          can_stream: boolean | null
           country_code: string | null
           created_at: string
           featured_video_id: string | null
@@ -100,6 +101,8 @@ export type Database = {
           rating: number | null
           specialty: string | null
           subscription_expires_at: string | null
+          total_stream_minutes: number | null
+          total_streams: number | null
           updated_at: string
           user_id: string
           years_experience: number | null
@@ -109,6 +112,7 @@ export type Database = {
           active_subscription_tier?: string | null
           battles_created_this_month?: number
           bio?: string | null
+          can_stream?: boolean | null
           country_code?: string | null
           created_at?: string
           featured_video_id?: string | null
@@ -124,6 +128,8 @@ export type Database = {
           rating?: number | null
           specialty?: string | null
           subscription_expires_at?: string | null
+          total_stream_minutes?: number | null
+          total_streams?: number | null
           updated_at?: string
           user_id: string
           years_experience?: number | null
@@ -133,6 +139,7 @@ export type Database = {
           active_subscription_tier?: string | null
           battles_created_this_month?: number
           bio?: string | null
+          can_stream?: boolean | null
           country_code?: string | null
           created_at?: string
           featured_video_id?: string | null
@@ -148,6 +155,8 @@ export type Database = {
           rating?: number | null
           specialty?: string | null
           subscription_expires_at?: string | null
+          total_stream_minutes?: number | null
+          total_streams?: number | null
           updated_at?: string
           user_id?: string
           years_experience?: number | null
@@ -583,12 +592,18 @@ export type Database = {
           barber_1_video_url: string | null
           barber_2_video_url: string | null
           barber1_id: string | null
+          barber1_is_streaming: boolean | null
           barber1_live_viewers: number | null
           barber1_peak_viewers: number | null
+          barber1_stream_sid: string | null
+          barber1_stream_started_at: string | null
           barber1_youtube_video_id: string | null
           barber2_id: string | null
+          barber2_is_streaming: boolean | null
           barber2_live_viewers: number | null
           barber2_peak_viewers: number | null
+          barber2_stream_sid: string | null
+          barber2_stream_started_at: string | null
           barber2_youtube_video_id: string | null
           category: string | null
           cover_image_url: string | null
@@ -614,9 +629,11 @@ export type Database = {
           starts_at: string | null
           status: string
           stream_url: string | null
+          streaming_type: string | null
           submission_deadline: string | null
           title: string
           tournament_id: string | null
+          twilio_room_sid: string | null
           updated_at: string
           vote_count1: number | null
           vote_count2: number | null
@@ -629,12 +646,18 @@ export type Database = {
           barber_1_video_url?: string | null
           barber_2_video_url?: string | null
           barber1_id?: string | null
+          barber1_is_streaming?: boolean | null
           barber1_live_viewers?: number | null
           barber1_peak_viewers?: number | null
+          barber1_stream_sid?: string | null
+          barber1_stream_started_at?: string | null
           barber1_youtube_video_id?: string | null
           barber2_id?: string | null
+          barber2_is_streaming?: boolean | null
           barber2_live_viewers?: number | null
           barber2_peak_viewers?: number | null
+          barber2_stream_sid?: string | null
+          barber2_stream_started_at?: string | null
           barber2_youtube_video_id?: string | null
           category?: string | null
           cover_image_url?: string | null
@@ -660,9 +683,11 @@ export type Database = {
           starts_at?: string | null
           status?: string
           stream_url?: string | null
+          streaming_type?: string | null
           submission_deadline?: string | null
           title: string
           tournament_id?: string | null
+          twilio_room_sid?: string | null
           updated_at?: string
           vote_count1?: number | null
           vote_count2?: number | null
@@ -675,12 +700,18 @@ export type Database = {
           barber_1_video_url?: string | null
           barber_2_video_url?: string | null
           barber1_id?: string | null
+          barber1_is_streaming?: boolean | null
           barber1_live_viewers?: number | null
           barber1_peak_viewers?: number | null
+          barber1_stream_sid?: string | null
+          barber1_stream_started_at?: string | null
           barber1_youtube_video_id?: string | null
           barber2_id?: string | null
+          barber2_is_streaming?: boolean | null
           barber2_live_viewers?: number | null
           barber2_peak_viewers?: number | null
+          barber2_stream_sid?: string | null
+          barber2_stream_started_at?: string | null
           barber2_youtube_video_id?: string | null
           category?: string | null
           cover_image_url?: string | null
@@ -706,9 +737,11 @@ export type Database = {
           starts_at?: string | null
           status?: string
           stream_url?: string | null
+          streaming_type?: string | null
           submission_deadline?: string | null
           title?: string
           tournament_id?: string | null
+          twilio_room_sid?: string | null
           updated_at?: string
           vote_count1?: number | null
           vote_count2?: number | null
@@ -1829,6 +1862,89 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "public_user_profiles"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      stream_sessions: {
+        Row: {
+          barber_id: string | null
+          battle_id: string | null
+          created_at: string | null
+          duration_seconds: number | null
+          ended_at: string | null
+          error_message: string | null
+          id: string
+          participant_sid: string | null
+          peak_viewers: number | null
+          room_sid: string
+          started_at: string | null
+          status: string | null
+          total_views: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          barber_id?: string | null
+          battle_id?: string | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          error_message?: string | null
+          id?: string
+          participant_sid?: string | null
+          peak_viewers?: number | null
+          room_sid: string
+          started_at?: string | null
+          status?: string | null
+          total_views?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          barber_id?: string | null
+          battle_id?: string | null
+          created_at?: string | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          error_message?: string | null
+          id?: string
+          participant_sid?: string | null
+          peak_viewers?: number | null
+          room_sid?: string
+          started_at?: string | null
+          status?: string | null
+          total_views?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stream_sessions_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barber_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stream_sessions_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barber_stats"
+            referencedColumns: ["barber_id"]
+          },
+          {
+            foreignKeyName: "stream_sessions_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "public_barber_profiles"
+            referencedColumns: ["barber_id"]
+          },
+          {
+            foreignKeyName: "stream_sessions_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
           },
         ]
       }
