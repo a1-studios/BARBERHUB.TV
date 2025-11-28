@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
+import { useCameraPermission } from '@/hooks/useCameraPermission';
+import { CameraPermissionPrompt } from '@/components/camera/CameraPermissionPrompt';
 
 interface HairstyleRecommendation {
   name: string;
@@ -37,89 +39,54 @@ const HaircutAdvisor = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  
+  const {
+    status: permissionStatus,
+    stream,
+    requestPermission,
+    stopStream,
+    isGranted,
+  } = useCameraPermission();
 
+  // Start camera when permission is granted
   const startCamera = async () => {
-    try {
-      // Stop any existing stream before requesting a new one
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
+    const mediaStream = await requestPermission();
+    if (mediaStream && videoRef.current) {
+      videoRef.current.srcObject = mediaStream;
+      videoRef.current.muted = true;
+      (videoRef.current as any).playsInline = true;
+      try {
+        await videoRef.current.play();
+      } catch (e) {
+        console.error('Error playing video:', e);
       }
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-        audio: false,
-      });
-      
-      // Store stream immediately, render video, then attach in effect
-      streamRef.current = stream;
       setIsCameraActive(true);
-
-      // If the element is already mounted, attach now too
-      if (videoRef.current) {
-        videoRef.current.muted = true;
-        (videoRef.current as any).playsInline = true;
-        videoRef.current.srcObject = stream;
-        try { await videoRef.current.play(); } catch { /* ignore */ }
-      }
-    } catch (error: any) {
-      console.error('Error accessing camera:', error);
-      setIsCameraActive(false);
-      const name = error?.name || '';
-      const descMap: Record<string, string> = {
-        NotAllowedError: 'Camera permission was denied. Enable it in your browser settings or upload a photo instead.',
-        NotFoundError: 'No camera found on this device. Please upload a photo instead.',
-        NotReadableError: 'Your camera is in use by another app. Close it and try again, or upload a photo.',
-        OverconstrainedError: 'Camera constraints not supported. Try again or upload a photo.',
-      };
-      toast({
-        title: 'Camera Access Problem',
-        description: descMap[name] || 'Please upload a photo instead to get your personalized hairstyle recommendations.',
-        variant: 'destructive',
-      });
     }
   };
 
-  // Auto-start camera on mount (only once)
+  // Auto-start camera if permission was previously granted
   useEffect(() => {
-    let mounted = true;
-    
-    const initCamera = async () => {
-      if (mounted) {
-        await startCamera();
-      }
-    };
-    
-    initCamera();
-    
-    return () => {
-      mounted = false;
-      stopCamera();
-    };
-  }, []);
+    if (isGranted && currentStep === 'capture' && capturedImages.length < 3) {
+      startCamera();
+    }
+  }, [isGranted, currentStep]);
 
   const stopCamera = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
-    }
+    stopStream();
     setIsCameraActive(false);
-};
+  };
 
-  // When camera view mounts, attach the stream to the element
+  // When camera view mounts/updates, attach stream to video element
   useEffect(() => {
-    if (isCameraActive && videoRef.current && streamRef.current) {
-      try {
-        videoRef.current.muted = true;
-        (videoRef.current as any).playsInline = true;
-        videoRef.current.srcObject = streamRef.current;
-        videoRef.current.play?.().catch(() => {});
-      } catch {}
+    if (isCameraActive && videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.muted = true;
+      (videoRef.current as any).playsInline = true;
+      videoRef.current.play?.().catch(() => {});
     }
-  }, [isCameraActive]);
+  }, [isCameraActive, stream]);
 
   const capturePhoto = () => {
     if (videoRef.current && canvasRef.current && capturedImages.length < 3) {
@@ -322,6 +289,17 @@ const HaircutAdvisor = () => {
               </div>
             )}
 
+            {/* Camera Permission Prompt - Show when not granted and no images yet */}
+            {!isGranted && !isCameraActive && capturedImages.length === 0 && (
+              <div className="mb-6">
+                <CameraPermissionPrompt
+                  status={permissionStatus}
+                  onRequestPermission={startCamera}
+                  onUploadInstead={() => fileInputRef.current?.click()}
+                />
+              </div>
+            )}
+
             {/* Camera View */}
             {isCameraActive && capturedImages.length < 3 && (
               <div className="mb-4">
@@ -333,6 +311,11 @@ const HaircutAdvisor = () => {
                     muted
                     className="w-full h-full object-cover"
                   />
+                  {/* Live indicator */}
+                  <div className="absolute top-3 left-3 flex items-center gap-2 bg-black/50 px-2 py-1 rounded-full">
+                    <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                    <span className="text-xs text-white font-medium">LIVE</span>
+                  </div>
                 </div>
                 <div className="flex gap-4 mt-4">
                   <Button onClick={capturePhoto} className="flex-1" disabled={capturedImages.length >= 3}>
@@ -348,8 +331,8 @@ const HaircutAdvisor = () => {
               </div>
             )}
 
-            {/* Upload Options */}
-            {!isCameraActive && (
+            {/* Upload Options - Show when camera is not active but permission is granted */}
+            {!isCameraActive && (isGranted || capturedImages.length > 0) && (
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Button
