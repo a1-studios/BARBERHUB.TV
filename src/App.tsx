@@ -31,6 +31,7 @@ import UserManagement from "./pages/admin/UserManagement";
 import BattleManagement from "./pages/admin/BattleManagement";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import BattleTheater from "./pages/BattleTheater";
+import ContenderTheater from "./pages/ContenderTheater";
 
 const queryClient = new QueryClient();
 
@@ -78,6 +79,16 @@ const AppContent = () => {
               element={
                 <AuthGuard>
                   <BattleTheater />
+                </AuthGuard>
+              } 
+            />
+            <Route 
+              path="/battle/:id/contender" 
+              element={
+                <AuthGuard>
+                  <BarberGuard>
+                    <ContenderTheater />
+                  </BarberGuard>
                 </AuthGuard>
               } 
             />
