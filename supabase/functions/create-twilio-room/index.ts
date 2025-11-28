@@ -56,7 +56,7 @@ serve(async (req) => {
       throw new Error('battleId and barberPosition are required');
     }
 
-    // Verify user is a barber with active subscription
+    // Verify user is a barber
     const { data: barberProfile, error: barberError } = await supabaseClient
       .from('barber_profiles')
       .select('id, name, can_stream, active_subscription_tier')
@@ -68,9 +68,13 @@ serve(async (req) => {
       throw new Error('Barber profile not found. Only barbers can stream.');
     }
 
-    if (!barberProfile.can_stream) {
+    // Check if streaming is enabled (default to true if column doesn't exist yet)
+    const canStream = barberProfile.can_stream !== false;
+    if (!canStream) {
       throw new Error('Streaming is disabled for your account');
     }
+
+    console.log('[CREATE-TWILIO-ROOM] Barber verified:', barberProfile.name, 'Tier:', barberProfile.active_subscription_tier || 'free');
 
     // Verify battle exists and user is a participant
     const { data: battle, error: battleError } = await supabaseClient
