@@ -47,6 +47,15 @@ verify_jwt = true
 [functions.create-donation]
 verify_jwt = true
 
+[functions.create-twilio-room]
+verify_jwt = true
+
+[functions.end-twilio-stream]
+verify_jwt = true
+
+[functions.get-viewer-token]
+verify_jwt = true
+
 [functions.schedule-tournament-match]
 verify_jwt = true
 
@@ -62,11 +71,11 @@ verify_jwt = true
 [functions.sync-battle-viewers]
 verify_jwt = false
 
-[functions.verify-tournament-payment]
-verify_jwt = false
-
 [functions.tournament-matchmaker]
 verify_jwt = false
+
+[functions.update-stream-status]
+verify_jwt = true
 
 [functions.verify-tournament-payment]
 verify_jwt = false

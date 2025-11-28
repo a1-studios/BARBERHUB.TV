@@ -6,10 +6,12 @@ import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/hooks/useAuth';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Trophy, Users, Target, DollarSign, Upload, Eye, TrendingUp, Award, Calendar, Zap, Crown, ShoppingBag, FileText, BarChart3, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Trophy, Users, Target, DollarSign, Upload, Eye, TrendingUp, Award, Calendar, Zap, Crown, ShoppingBag, FileText, BarChart3, X, Radio, Video } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { CreationUpload } from '@/components/creations/CreationUpload';
 import { SubscriptionStatusCard } from './SubscriptionStatusCard';
+import { StreamControlPanel } from '@/components/streaming/StreamControlPanel';
+
 interface BarberStats {
   battles_created: number;
   battles_won: number;
@@ -22,11 +24,10 @@ interface BarberStats {
   win_rate: number;
 }
 const BarberDashboard = () => {
-  const {
-    user
-  } = useAuth();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [showCreationUpload, setShowCreationUpload] = useState(false);
-
+  const [showStreamPanel, setShowStreamPanel] = useState(false);
   // Fetch barber profile and stats
   const {
     data: barberProfile
@@ -58,6 +59,27 @@ const BarberDashboard = () => {
     },
     enabled: !!user?.id
   });
+
+  // Fetch active battles where this barber can stream
+  const { data: activeBattle } = useQuery({
+    queryKey: ['activeBattle', barberProfile?.id],
+    queryFn: async () => {
+      if (!barberProfile?.id) return null;
+      const { data, error } = await supabase
+        .from('battles')
+        .select('*')
+        .or(`barber1_id.eq.${barberProfile.id},barber2_id.eq.${barberProfile.id}`)
+        .in('status', ['upcoming', 'voting'])
+        .order('starts_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!barberProfile?.id,
+  });
+
+  const barberPosition = activeBattle?.barber1_id === barberProfile?.id ? 1 : 2;
 
   // Mock stats for now - in production these would come from database aggregations
   const stats: BarberStats = {
@@ -205,6 +227,43 @@ const BarberDashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Live Streaming Section */}
+        {activeBattle && (
+          <Card className="card-gradient border-red-500/30 bg-red-500/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center justify-between">
+                <span className="flex items-center gap-2 text-red-500">
+                  <Radio className="h-5 w-5 animate-pulse" />
+                  LIVE STREAMING
+                </span>
+                <Badge variant="outline" className="border-red-500/50 text-red-500">
+                  Battle Ready
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                <strong>{activeBattle.title}</strong> - You're barber #{barberPosition}
+              </p>
+              {showStreamPanel ? (
+                <StreamControlPanel
+                  battleId={activeBattle.id}
+                  barberPosition={barberPosition as 1 | 2}
+                  barberName={barberProfile?.name || 'Barber'}
+                />
+              ) : (
+                <Button 
+                  onClick={() => setShowStreamPanel(true)}
+                  className="w-full bg-red-600 hover:bg-red-700"
+                >
+                  <Video className="mr-2 h-4 w-4" />
+                  Open Stream Controls
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Bottom Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
