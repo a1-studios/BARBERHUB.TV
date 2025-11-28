@@ -6,7 +6,9 @@ import { BarberVideoSection } from "@/components/barber/BarberVideoSection";
 import { LiveViewerComparison } from "@/components/battles/LiveViewerComparison";
 import { LiveBattleIndicator } from "@/components/battles/LiveBattleIndicator";
 import { BattleStatsCard } from "@/components/battles/BattleStatsCard";
+import { BarberHeroStreamControls } from "@/components/streaming/BarberHeroStreamControls";
 import { useRealtimeBattleViewers } from "@/hooks/useRealtimeBattleViewers";
+import { useAuth } from "@/hooks/useAuth";
 import { Heart, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -35,7 +37,9 @@ interface BarberProfile {
 
 export const DynamicBattleHero = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [rotationIndex, setRotationIndex] = useState(0);
+  const [currentUserBarberPosition, setCurrentUserBarberPosition] = useState<1 | 2 | null>(null);
 
   // Fetch active battle (voting or upcoming)
   const { data: battle, isLoading: battleLoading } = useQuery({
@@ -132,6 +136,24 @@ export const DynamicBattleHero = () => {
     }
   }, [battle, featuredBarbers]);
 
+  // Detect if current user is a barber in this battle
+  useEffect(() => {
+    if (user && barbers && barbers.length >= 2 && battle) {
+      const barber1 = barbers[0];
+      const barber2 = barbers[1];
+      
+      if (barber1?.user_id === user.id) {
+        setCurrentUserBarberPosition(1);
+      } else if (barber2?.user_id === user.id) {
+        setCurrentUserBarberPosition(2);
+      } else {
+        setCurrentUserBarberPosition(null);
+      }
+    } else {
+      setCurrentUserBarberPosition(null);
+    }
+  }, [user, barbers, battle]);
+
   const getFlagImageUrl = (countryCode?: string) => {
     if (!countryCode) return "";
     return `https://flagcdn.com/w1600/${countryCode.toLowerCase()}.jpg`;
@@ -140,6 +162,9 @@ export const DynamicBattleHero = () => {
   // IMPORTANT: Call hooks before any conditional returns
   // Get real-time viewer counts - always call this hook regardless of battle state
   const viewerData = useRealtimeBattleViewers(battle?.id || '');
+
+  // Check if current battle is active (active status for streaming)
+  const isStreamableBattle = battle?.status === 'active' || battle?.status === 'voting' || battle?.status === 'upcoming';
 
   // Loading state
   if (battleLoading || barbersLoading) {
@@ -174,6 +199,8 @@ export const DynamicBattleHero = () => {
   const barber1 = displayBarbers[0];
   const barber2 = displayBarbers[1];
   const isActiveBattle = battle?.status === 'voting';
+  const isBarber1CurrentUser = currentUserBarberPosition === 1;
+  const isBarber2CurrentUser = currentUserBarberPosition === 2;
 
   return (
     <div className="pt-36 sm:pt-40 lg:pt-44 pb-4 sm:pb-6 lg:pb-8 px-1 sm:px-2 lg:px-4 max-w-[95vw] sm:max-w-4xl lg:max-w-5xl mx-auto space-y-4">
@@ -261,19 +288,27 @@ export const DynamicBattleHero = () => {
               {/* Spacer */}
               <div className="h-[2%]" />
 
-              {/* Video Preview - Larger */}
+              {/* Video Preview or Stream Controls */}
               <div className="w-full max-w-[220px] sm:max-w-[260px] lg:max-w-[300px]">
-                <BarberVideoSection 
-                  videoId={barber1.is_live ? barber1.live_video_id : barber1.featured_video_id}
-                  isLive={barber1.is_live}
-                  viewerCount={isActiveBattle ? viewerData.barber1 : undefined}
-                  aspectRatio="portrait"
-                  className="rounded-lg aspect-square shadow-xl"
-                />
+                {isBarber1CurrentUser && isStreamableBattle && battle ? (
+                  <BarberHeroStreamControls
+                    battleId={battle.id}
+                    barberName={barber1.display_name || barber1.name}
+                    onEnterBattle={() => navigate(`/battle/${battle.id}/contender`)}
+                  />
+                ) : (
+                  <BarberVideoSection 
+                    videoId={barber1.is_live ? barber1.live_video_id : barber1.featured_video_id}
+                    isLive={barber1.is_live}
+                    viewerCount={isActiveBattle ? viewerData.barber1 : undefined}
+                    aspectRatio="portrait"
+                    className="rounded-lg aspect-square shadow-xl"
+                  />
+                )}
               </div>
 
               {/* Vote Button - Very Visible */}
-              {isActiveBattle && (
+              {isActiveBattle && !isBarber1CurrentUser && (
                 <Button 
                   onClick={() => navigate(`/battle/${battle?.id}/theater`)}
                   className="w-full max-w-[220px] sm:max-w-[260px] lg:max-w-[300px] bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-black text-lg sm:text-xl lg:text-2xl py-5 sm:py-7 rounded-xl shadow-2xl hover:shadow-orange-500/50 transition-all hover:scale-105 border-2 border-orange-400"
@@ -342,19 +377,27 @@ export const DynamicBattleHero = () => {
               {/* Spacer */}
               <div className="h-[2%]" />
 
-              {/* Video Preview - Larger */}
+              {/* Video Preview or Stream Controls */}
               <div className="w-full max-w-[220px] sm:max-w-[260px] lg:max-w-[300px]">
-                <BarberVideoSection 
-                  videoId={barber2.is_live ? barber2.live_video_id : barber2.featured_video_id}
-                  isLive={barber2.is_live}
-                  viewerCount={isActiveBattle ? viewerData.barber2 : undefined}
-                  aspectRatio="portrait"
-                  className="rounded-lg aspect-square shadow-xl"
-                />
+                {isBarber2CurrentUser && isStreamableBattle && battle ? (
+                  <BarberHeroStreamControls
+                    battleId={battle.id}
+                    barberName={barber2.display_name || barber2.name}
+                    onEnterBattle={() => navigate(`/battle/${battle.id}/contender`)}
+                  />
+                ) : (
+                  <BarberVideoSection 
+                    videoId={barber2.is_live ? barber2.live_video_id : barber2.featured_video_id}
+                    isLive={barber2.is_live}
+                    viewerCount={isActiveBattle ? viewerData.barber2 : undefined}
+                    aspectRatio="portrait"
+                    className="rounded-lg aspect-square shadow-xl"
+                  />
+                )}
               </div>
 
               {/* Vote Button - Very Visible */}
-              {isActiveBattle && (
+              {isActiveBattle && !isBarber2CurrentUser && (
                 <Button 
                   onClick={() => navigate(`/battle/${battle?.id}/theater`)}
                   className="w-full max-w-[220px] sm:max-w-[260px] lg:max-w-[300px] bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-black text-lg sm:text-xl lg:text-2xl py-5 sm:py-7 rounded-xl shadow-2xl hover:shadow-orange-500/50 transition-all hover:scale-105 border-2 border-orange-400"
