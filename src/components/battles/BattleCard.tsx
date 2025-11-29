@@ -209,13 +209,18 @@ export const BattleCard = ({
             </div>
           </div>
 
-          {/* Action Button */}
+          {/* Action Button with Cyan Accent */}
           <Button
-            className="w-full"
+            className={`w-full font-bold ${
+              isLive 
+                ? 'bg-gradient-to-r from-primary to-orange-600 hover:from-primary/90 hover:to-orange-600/90' 
+                : 'border-cyan/30 hover:border-cyan/50 hover:bg-cyan/5'
+            }`}
             onClick={onViewBattle}
             variant={isLive ? 'default' : 'outline'}
           >
-            {isLive ? 'Vote Now' : 'View Battle'}
+            <Eye className={`mr-2 h-4 w-4 ${isLive ? 'text-cyan' : 'text-cyan'}`} />
+            <span className={isLive ? 'text-cyan' : ''}>{isLive ? 'Vote Now' : 'View Battle'}</span>
           </Button>
         </CardContent>
       </Card>

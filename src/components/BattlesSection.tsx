@@ -182,8 +182,8 @@ const BattlesSection = () => {
         {/* Elite Header */}
         <div className="text-center mb-16">
           <div className="inline-block mb-6">
-            <Badge className="px-6 py-2 text-sm font-semibold bg-gradient-to-r from-primary/20 to-secondary/20 border-primary/30">
-              <Trophy className="w-4 h-4 mr-2 inline" />
+            <Badge className="px-6 py-2 text-sm font-semibold bg-gradient-to-r from-primary/20 to-secondary/20 border-cyan/30">
+              <Trophy className="w-4 h-4 mr-2 inline text-cyan" />
               GLOBAL ARENA
             </Badge>
           </div>
@@ -205,31 +205,20 @@ const BattlesSection = () => {
               onClick={() => navigate('/portal')} 
               className="text-lg px-10 py-6 bg-gradient-to-r from-primary to-orange-600 hover:from-primary/90 hover:to-orange-600/90 shadow-2xl hover:shadow-primary/50 transform hover:scale-105 transition-all duration-300 font-bold"
             >
-              <Zap className="mr-2 h-6 w-6" />
-              Enter Battle Portal
+              <Zap className="mr-2 h-6 w-6 text-cyan" />
+              <span className="text-cyan">Enter Battle Portal</span>
             </Button>
           )}
 
           {isFan && (
-            <>
-              <Button 
-                size="lg" 
-                onClick={() => navigate('/battles')} 
-                className="text-lg px-10 py-6 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 shadow-2xl hover:shadow-green-500/50 transform hover:scale-105 transition-all duration-300 font-bold"
-              >
-                <Trophy className="mr-2 h-6 w-6" />
-                Watch Live Battles
-              </Button>
-              <Button 
-                size="lg" 
-                variant="outline"
-                onClick={() => navigate('/creator-hub')} 
-                className="text-lg px-10 py-6 border-2 border-primary/50 hover:border-primary hover:bg-primary/10 transform hover:scale-105 transition-all duration-300 font-bold"
-              >
-                <Users className="mr-2 h-6 w-6" />
-                Creator Hub
-              </Button>
-            </>
+            <Button 
+              size="lg" 
+              onClick={() => navigate('/battles')} 
+              className="text-lg px-10 py-6 bg-gradient-to-r from-primary to-orange-600 hover:from-primary/90 hover:to-orange-600/90 shadow-2xl hover:shadow-primary/50 transform hover:scale-105 transition-all duration-300 font-bold"
+            >
+              <Trophy className="mr-2 h-6 w-6 text-cyan" />
+              <span className="text-cyan">Watch Live Battles</span>
+            </Button>
           )}
         </div>
 
@@ -278,8 +267,8 @@ const BattlesSection = () => {
                       className="w-full bg-gradient-to-r from-primary to-orange-600 hover:from-primary/90 hover:to-orange-600/90 font-bold text-lg py-6 shadow-lg group-hover:shadow-xl group-hover:shadow-primary/30 transition-all" 
                       variant="default"
                     >
-                      <Trophy className="mr-2 h-5 w-5" />
-                      Enter Arena
+                      <Trophy className="mr-2 h-5 w-5 text-cyan" />
+                      <span className="text-cyan">Enter Arena</span>
                     </Button>
                   </CardContent>
                 </Card>
@@ -305,8 +294,8 @@ const BattlesSection = () => {
         {/* Elite Featured Battles */}
         {battles.length > 0 && <>
             <div className="text-center mb-12">
-              <Badge className="mb-4 px-4 py-2 bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/30">
-                <Scissors className="w-4 h-4 mr-2 inline" />
+              <Badge className="mb-4 px-4 py-2 bg-gradient-to-r from-primary/10 to-secondary/10 border-cyan/30">
+                <Scissors className="w-4 h-4 mr-2 inline text-cyan" />
                 FEATURED MATCHUPS
               </Badge>
               <h3 className="text-4xl font-bold text-white">Live & Upcoming Battles</h3>
@@ -357,22 +346,18 @@ const BattlesSection = () => {
                       </div>
                     </div>
                     
-                    {/* Action Button */}
+                    {/* Action Button with Cyan Accent */}
                     <Button 
-                      className={`w-full font-bold text-base py-6 transition-all duration-300 shadow-lg group-hover:shadow-xl ${
-                        battle.status === "voting" 
-                          ? "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 group-hover:shadow-green-500/30" 
-                          : "bg-gradient-to-r from-primary to-orange-600 hover:from-primary/90 hover:to-orange-600/90 group-hover:shadow-primary/30"
-                      }`}
+                      className="w-full font-bold text-base py-6 transition-all duration-300 shadow-lg group-hover:shadow-xl bg-gradient-to-r from-primary to-orange-600 hover:from-primary/90 hover:to-orange-600/90 group-hover:shadow-primary/30"
                       onClick={e => {
                         e.stopPropagation();
                         navigate(`/battles/${battle.id}`);
                       }}
                     >
-                      {battle.status === "voting" && <Vote className="mr-2 h-5 w-5" />}
-                      {battle.status === "active" && <Trophy className="mr-2 h-5 w-5" />}
-                      {battle.status === "upcoming" && <Clock className="mr-2 h-5 w-5" />}
-                      {getActionText(battle.status)}
+                      {battle.status === "voting" && <Vote className="mr-2 h-5 w-5 text-cyan" />}
+                      {battle.status === "active" && <Trophy className="mr-2 h-5 w-5 text-cyan" />}
+                      {battle.status === "upcoming" && <Clock className="mr-2 h-5 w-5 text-cyan" />}
+                      <span className="text-cyan">{getActionText(battle.status)}</span>
                     </Button>
                   </CardContent>
                 </Card>)}
