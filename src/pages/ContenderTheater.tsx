@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useTwilioStream } from '@/hooks/useTwilioStream';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,13 +22,38 @@ export default function ContenderTheater() {
   const { id: battleId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   
   const [isMicEnabled, setIsMicEnabled] = useState(true);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [showChat, setShowChat] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [barberPosition, setBarberPosition] = useState<1 | 2 | null>(null);
+  const [showControls, setShowControls] = useState(true);
+  const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Auto-hide controls on mobile after 3 seconds
+  useEffect(() => {
+    if (isMobile && showControls) {
+      controlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false);
+      }, 3000);
+      return () => {
+        if (controlsTimeoutRef.current) {
+          clearTimeout(controlsTimeoutRef.current);
+        }
+      };
+    }
+  }, [isMobile, showControls]);
+
+  // Toggle controls on tap (mobile)
+  const handleScreenTap = useCallback(() => {
+    if (isMobile) {
+      setShowControls(prev => !prev);
+    }
+  }, [isMobile]);
 
   // Fetch battle details
   const { data: battle, isLoading: battleLoading } = useQuery({
@@ -122,7 +148,7 @@ export default function ContenderTheater() {
   // Handle fullscreen toggle
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
+      containerRef.current?.requestFullscreen?.();
       setIsFullscreen(true);
     } else {
       document.exitFullscreen();
@@ -184,47 +210,57 @@ export default function ContenderTheater() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      {/* Top Bar */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/90 to-transparent p-4">
+    <div 
+      ref={containerRef}
+      className={cn(
+        "min-h-screen bg-black text-white",
+        isMobile && "theater-mode"
+      )}
+      onClick={handleScreenTap}
+    >
+      {/* Top Bar - auto-hide on mobile */}
+      <div className={cn(
+        "fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/90 to-transparent p-3 pt-safe controls-overlay",
+        isMobile && !showControls && "controls-hidden"
+      )}>
         <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 md:gap-4">
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={() => navigate(-1)}
-              className="text-white hover:bg-white/20"
+              onClick={(e) => { e.stopPropagation(); navigate(-1); }}
+              className="text-white hover:bg-white/20 w-10 h-10 md:w-10 md:h-10"
             >
               <ArrowLeft className="w-5 h-5" />
             </Button>
-            <div>
-              <h1 className="font-bold text-lg">{battle?.title}</h1>
-              <p className="text-white/60 text-sm">Contender Theater</p>
+            <div className="min-w-0">
+              <h1 className="font-bold text-sm md:text-lg truncate">{battle?.title}</h1>
+              <p className="text-white/60 text-xs hidden md:block">Contender Theater</p>
             </div>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 md:gap-3">
             {isStreaming && (
               <>
-                <Badge className="bg-red-600 text-white animate-pulse">
+                <Badge className="bg-red-600 text-white animate-pulse text-xs">
                   <Radio className="w-3 h-3 mr-1" />
                   LIVE
                 </Badge>
-                <div className="flex items-center gap-2 text-white/80">
+                <div className="hidden md:flex items-center gap-2 text-white/80">
                   <Users className="w-4 h-4" />
-                  <span className="font-mono">{viewerCount}</span>
+                  <span className="font-mono text-sm">{viewerCount}</span>
                 </div>
-                <div className="flex items-center gap-2 text-white/80">
+                <div className="hidden md:flex items-center gap-2 text-white/80">
                   <Clock className="w-4 h-4" />
-                  <span className="font-mono">{formattedDuration}</span>
+                  <span className="font-mono text-sm">{formattedDuration}</span>
                 </div>
               </>
             )}
             <Button
               variant="ghost"
               size="icon"
-              onClick={toggleFullscreen}
-              className="text-white hover:bg-white/20"
+              onClick={(e) => { e.stopPropagation(); toggleFullscreen(); }}
+              className="text-white hover:bg-white/20 w-10 h-10"
             >
               {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
             </Button>
@@ -232,25 +268,46 @@ export default function ContenderTheater() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="pt-20 pb-32 px-4 min-h-screen flex items-center justify-center">
-        <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {/* Main Content - Mobile optimized */}
+      <div className={cn(
+        "flex items-center justify-center",
+        isMobile 
+          ? "fixed inset-0 flex-col" 
+          : "pt-20 pb-32 px-4 min-h-screen"
+      )}>
+        <div className={cn(
+          "w-full",
+          isMobile 
+            ? "h-full flex flex-col" 
+            : "max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-4"
+        )}>
           {/* Your Camera - Large */}
-          <Card className="relative aspect-video bg-muted/10 border-2 border-primary/50 overflow-hidden">
+          <div className={cn(
+            "relative bg-muted/10 overflow-hidden",
+            isMobile 
+              ? "flex-[3] border-b border-cyan/20" 
+              : "aspect-video rounded-xl border-2 border-primary/50"
+          )}>
             {/* Your Side Label */}
-            <div className="absolute top-4 left-4 z-10 bg-primary text-primary-foreground px-3 py-1 rounded-full font-bold text-sm">
+            <div className={cn(
+              "absolute z-10 bg-primary text-primary-foreground px-2 py-0.5 md:px-3 md:py-1 rounded-full font-bold text-xs md:text-sm",
+              isMobile ? "top-16 left-3" : "top-4 left-4"
+            )}>
               YOUR CAMERA
             </div>
             
             {/* Live Status */}
             {isStreaming && (
-              <div className="absolute top-4 right-4 z-10 flex items-center gap-2 bg-red-600 text-white px-3 py-1 rounded-full">
+              <div className={cn(
+                "absolute z-10 flex items-center gap-1.5 md:gap-2 bg-red-600 text-white px-2 py-0.5 md:px-3 md:py-1 rounded-full",
+                isMobile ? "top-16 right-3" : "top-4 right-4"
+              )}>
                 <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                <span className="font-bold text-sm">LIVE</span>
+                <span className="font-bold text-xs md:text-sm">LIVE</span>
               </div>
             )}
             
-            {/* Video Preview */}
+            {/* Video Preview - Full bleed on mobile */}
             {localStream ? (
               <video
                 ref={videoRef}
@@ -263,110 +320,145 @@ export default function ContenderTheater() {
                 )}
               />
             ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-                <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center">
-                  <Video className="w-10 h-10 text-primary" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 md:gap-4">
+                <div className={cn(
+                  "rounded-full bg-primary/20 flex items-center justify-center",
+                  isMobile ? "w-16 h-16" : "w-20 h-20"
+                )}>
+                  <Video className={cn(isMobile ? "w-8 h-8" : "w-10 h-10", "text-primary")} />
                 </div>
-                <p className="text-muted-foreground">Camera not active</p>
+                <p className="text-muted-foreground text-sm md:text-base">Camera not active</p>
               </div>
             )}
             
             {/* Video disabled overlay */}
             {localStream && !isVideoEnabled && (
               <div className="absolute inset-0 bg-muted flex items-center justify-center">
-                <VideoOff className="w-16 h-16 text-muted-foreground" />
+                <VideoOff className={cn(isMobile ? "w-12 h-12" : "w-16 h-16", "text-muted-foreground")} />
               </div>
             )}
             
             {/* Barber name */}
-            <div className="absolute bottom-4 left-4 bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2">
-              <p className="font-bold">{currentBarber?.name || 'You'}</p>
-              <p className="text-xs text-white/60">Barber #{barberPosition}</p>
+            <div className={cn(
+              "absolute bg-black/70 backdrop-blur-sm rounded-lg px-2 py-1.5 md:px-3 md:py-2",
+              isMobile ? "bottom-3 left-3" : "bottom-4 left-4"
+            )}>
+              <p className="font-bold text-sm md:text-base">{currentBarber?.name || 'You'}</p>
+              <p className="text-[10px] md:text-xs text-white/60">Barber #{barberPosition}</p>
             </div>
-          </Card>
+          </div>
 
           {/* Opponent's Stream */}
-          <Card className="relative aspect-video bg-muted/10 border border-border overflow-hidden">
+          <div className={cn(
+            "relative bg-muted/10 overflow-hidden",
+            isMobile 
+              ? "flex-1 border-t border-border" 
+              : "aspect-video rounded-xl border border-border"
+          )}>
             {/* Opponent Label */}
-            <div className="absolute top-4 left-4 z-10 bg-white/20 backdrop-blur-sm text-white px-3 py-1 rounded-full font-bold text-sm">
+            <div className={cn(
+              "absolute z-10 bg-white/20 backdrop-blur-sm text-white px-2 py-0.5 md:px-3 md:py-1 rounded-full font-bold text-xs md:text-sm",
+              isMobile ? "top-2 left-2" : "top-4 left-4"
+            )}>
               OPPONENT
             </div>
             
             {/* Opponent Status */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4">
-              <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center">
-                <Users className="w-10 h-10 text-white/40" />
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 md:gap-4">
+              <div className={cn(
+                "rounded-full bg-white/10 flex items-center justify-center",
+                isMobile ? "w-12 h-12" : "w-20 h-20"
+              )}>
+                <Users className={cn(isMobile ? "w-6 h-6" : "w-10 h-10", "text-white/40")} />
               </div>
-              <p className="text-white/60 text-center px-4">
+              <p className="text-white/60 text-center px-4 text-xs md:text-base">
                 {opponentBarber?.name || 'Opponent'} 
                 <br />
-                <span className="text-sm">Waiting for stream...</span>
+                <span className="text-[10px] md:text-sm">Waiting for stream...</span>
               </p>
             </div>
             
             {/* Opponent name placeholder */}
-            <div className="absolute bottom-4 left-4 bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2">
-              <p className="font-bold">{opponentBarber?.name || 'Opponent'}</p>
-              <p className="text-xs text-white/60">Barber #{barberPosition === 1 ? 2 : 1}</p>
+            <div className={cn(
+              "absolute bg-black/70 backdrop-blur-sm rounded-lg px-2 py-1 md:px-3 md:py-2",
+              isMobile ? "bottom-2 left-2" : "bottom-4 left-4"
+            )}>
+              <p className="font-bold text-xs md:text-base">{opponentBarber?.name || 'Opponent'}</p>
+              <p className="text-[10px] md:text-xs text-white/60">Barber #{barberPosition === 1 ? 2 : 1}</p>
             </div>
-          </Card>
+          </div>
         </div>
       </div>
 
-      {/* Bottom Controls */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-black via-black/95 to-transparent p-6">
+      {/* Bottom Controls - auto-hide on mobile */}
+      <div className={cn(
+        "fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-black via-black/95 to-transparent controls-overlay",
+        isMobile ? "p-4 pb-safe" : "p-6",
+        isMobile && !showControls && "controls-hidden"
+      )}>
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-center justify-center gap-4">
+          <div className={cn(
+            "flex items-center justify-center",
+            isMobile ? "gap-3" : "gap-4"
+          )}>
             {/* Mic Toggle */}
             <Button
               variant="ghost"
               size="lg"
-              onClick={toggleMic}
+              onClick={(e) => { e.stopPropagation(); toggleMic(); }}
               disabled={!localStream}
               className={cn(
-                "w-14 h-14 rounded-full",
+                "rounded-full touch-manipulation",
+                isMobile ? "w-12 h-12" : "w-14 h-14",
                 isMicEnabled 
                   ? "bg-white/20 text-white hover:bg-white/30" 
                   : "bg-destructive text-white hover:bg-destructive/90"
               )}
             >
-              {isMicEnabled ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
+              {isMicEnabled ? <Mic className={cn(isMobile ? "w-5 h-5" : "w-6 h-6")} /> : <MicOff className={cn(isMobile ? "w-5 h-5" : "w-6 h-6")} />}
             </Button>
 
             {/* Video Toggle */}
             <Button
               variant="ghost"
               size="lg"
-              onClick={toggleVideo}
+              onClick={(e) => { e.stopPropagation(); toggleVideo(); }}
               disabled={!localStream}
               className={cn(
-                "w-14 h-14 rounded-full",
+                "rounded-full touch-manipulation",
+                isMobile ? "w-12 h-12" : "w-14 h-14",
                 isVideoEnabled 
                   ? "bg-white/20 text-white hover:bg-white/30" 
                   : "bg-destructive text-white hover:bg-destructive/90"
               )}
             >
-              {isVideoEnabled ? <Video className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
+              {isVideoEnabled ? <Video className={cn(isMobile ? "w-5 h-5" : "w-6 h-6")} /> : <VideoOff className={cn(isMobile ? "w-5 h-5" : "w-6 h-6")} />}
             </Button>
 
             {/* Go Live / End Stream Button */}
             {!isStreaming ? (
               <Button
-                onClick={handleGoLive}
+                onClick={(e) => { e.stopPropagation(); handleGoLive(); }}
                 disabled={!canStart}
-                className="h-14 px-8 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white font-bold text-lg rounded-full shadow-lg shadow-red-500/30"
+                className={cn(
+                  "bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white font-bold rounded-full shadow-lg shadow-red-500/30 touch-manipulation border border-cyan/20",
+                  isMobile ? "h-12 px-6 text-sm" : "h-14 px-8 text-lg"
+                )}
               >
-                <Radio className="w-5 h-5 mr-2" />
+                <Radio className={cn(isMobile ? "w-4 h-4 mr-1.5" : "w-5 h-5 mr-2")} />
                 GO LIVE
               </Button>
             ) : (
               <Button
-                onClick={handleEndStream}
+                onClick={(e) => { e.stopPropagation(); handleEndStream(); }}
                 variant="destructive"
-                className="h-14 px-8 font-bold text-lg rounded-full"
+                className={cn(
+                  "font-bold rounded-full touch-manipulation",
+                  isMobile ? "h-12 px-6 text-sm" : "h-14 px-8 text-lg"
+                )}
               >
-                <Square className="w-5 h-5 mr-2" />
-                END STREAM
+                <Square className={cn(isMobile ? "w-4 h-4 mr-1.5" : "w-5 h-5 mr-2")} />
+                END
               </Button>
             )}
 
@@ -374,37 +466,57 @@ export default function ContenderTheater() {
             <Button
               variant="ghost"
               size="lg"
-              onClick={() => setShowChat(!showChat)}
+              onClick={(e) => { e.stopPropagation(); setShowChat(!showChat); }}
               className={cn(
-                "w-14 h-14 rounded-full",
+                "rounded-full touch-manipulation",
+                isMobile ? "w-12 h-12" : "w-14 h-14",
                 showChat 
                   ? "bg-primary text-primary-foreground" 
                   : "bg-white/20 text-white hover:bg-white/30"
               )}
             >
-              <MessageCircle className="w-6 h-6" />
+              <MessageCircle className={cn(isMobile ? "w-5 h-5" : "w-6 h-6")} />
             </Button>
 
-            {/* Settings */}
-            <Button
-              variant="ghost"
-              size="lg"
-              className="w-14 h-14 rounded-full bg-white/20 text-white hover:bg-white/30"
-            >
-              <Settings className="w-6 h-6" />
-            </Button>
+            {/* Settings - hide on mobile for cleaner look */}
+            {!isMobile && (
+              <Button
+                variant="ghost"
+                size="lg"
+                onClick={(e) => e.stopPropagation()}
+                className="w-14 h-14 rounded-full bg-white/20 text-white hover:bg-white/30"
+              >
+                <Settings className="w-6 h-6" />
+              </Button>
+            )}
           </div>
 
-          {/* Stream Status Info */}
-          <div className="mt-4 text-center">
-            <p className="text-white/60 text-sm">
-              {streamStatus === 'idle' && 'Click "GO LIVE" to start broadcasting'}
-              {streamStatus === 'connecting' && 'Connecting to stream...'}
-              {streamStatus === 'live' && `Broadcasting to ${viewerCount} viewer${viewerCount !== 1 ? 's' : ''}`}
-              {streamStatus === 'ended' && 'Stream ended'}
-              {streamStatus === 'failed' && 'Stream failed - try again'}
-            </p>
-          </div>
+          {/* Stream Status Info - simplified on mobile */}
+          {!isMobile && (
+            <div className="mt-4 text-center">
+              <p className="text-white/60 text-sm">
+                {streamStatus === 'idle' && 'Click "GO LIVE" to start broadcasting'}
+                {streamStatus === 'connecting' && 'Connecting to stream...'}
+                {streamStatus === 'live' && `Broadcasting to ${viewerCount} viewer${viewerCount !== 1 ? 's' : ''}`}
+                {streamStatus === 'ended' && 'Stream ended'}
+                {streamStatus === 'failed' && 'Stream failed - try again'}
+              </p>
+            </div>
+          )}
+
+          {/* Mobile: Show live stats inline */}
+          {isMobile && isStreaming && (
+            <div className="flex items-center justify-center gap-4 mt-2 text-white/70 text-xs">
+              <div className="flex items-center gap-1">
+                <Users className="w-3 h-3" />
+                <span>{viewerCount}</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                <span>{formattedDuration}</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

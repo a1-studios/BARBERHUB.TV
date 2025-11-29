@@ -31,6 +31,10 @@
     --accent: 24 100% 52%; /* same as primary for consistency */
     --accent-foreground: 0 0% 100%;
 
+    /* Cyan accent for subtle highlights */
+    --cyan: 187 100% 50%; /* #00D9FF */
+    --cyan-muted: 187 80% 40%;
+
     /* Success green for grants */
     --success: 140 76% 39%; /* #00C853 */
     --success-foreground: 0 0% 100%;
@@ -53,6 +57,7 @@
     --shadow-card: 0 4px 20px hsl(0 0% 0% / 0.3);
     --shadow-hover: 0 8px 30px hsl(24 100% 52% / 0.2);
     --shadow-glow: 0 0 20px hsl(24 100% 52% / 0.3);
+    --shadow-cyan: 0 0 8px hsl(187 100% 50% / 0.2);
 
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -181,6 +186,43 @@
 
   .nav-link.active {
     @apply text-primary;
+  }
+
+  /* Cyan accent utilities */
+  .border-cyan-subtle {
+    border: 1px solid hsl(var(--cyan) / 0.2);
+  }
+
+  .ring-cyan-glow {
+    box-shadow: 0 0 0 1px hsl(var(--cyan) / 0.15), 
+                0 0 12px hsl(var(--cyan) / 0.1);
+  }
+
+  /* Safe area padding for notched devices */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+
+  /* Theater mode - prevent scroll */
+  .theater-mode {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: auto;
+  }
+
+  /* Auto-hiding controls */
+  .controls-overlay {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+  .controls-hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(20px);
   }
 }
 

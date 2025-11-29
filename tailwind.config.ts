@@ -59,6 +59,10 @@ export default {
 					DEFAULT: 'hsl(var(--success))',
 					foreground: 'hsl(var(--success-foreground))'
 				},
+				cyan: {
+					DEFAULT: 'hsl(var(--cyan))',
+					muted: 'hsl(var(--cyan-muted))'
+				},
 			},
 			backgroundImage: {
 				'gradient-primary': 'var(--gradient-primary)',

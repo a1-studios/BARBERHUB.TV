@@ -88,42 +88,41 @@ export const BarberHeroStreamControls = ({
     }
   };
 
-  // Not active - show start camera overlay
+  // Not active - show start camera overlay (50% smaller)
   if (!isCameraActive) {
     return (
       <div className={cn(
-        "relative w-full aspect-square rounded-lg overflow-hidden bg-black/40 backdrop-blur-sm border-2 border-dashed border-primary/50",
+        "relative w-full aspect-[4/3] rounded-md overflow-hidden bg-black/40 backdrop-blur-sm border border-dashed border-cyan/40 ring-cyan-glow",
         className
       )}>
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center animate-pulse">
-            <Camera className="w-6 h-6 text-primary" />
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5">
+          <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center animate-pulse">
+            <Camera className="w-3 h-3 text-primary" />
           </div>
-          <p className="text-white text-xs font-medium text-center px-2">
+          <p className="text-white text-[10px] font-medium text-center px-1">
             Your Battle Station
           </p>
           <Button
             onClick={handleStartCamera}
-            size="sm"
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold gap-2"
+            className="h-6 px-2.5 text-[10px] bg-primary hover:bg-primary/90 text-primary-foreground font-bold gap-1"
           >
-            <Video className="w-4 h-4" />
-            START CAMERA
+            <Video className="w-3 h-3" />
+            STREAM
           </Button>
         </div>
         
         {/* Your side indicator */}
-        <div className="absolute top-2 left-2 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full">
+        <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[8px] font-bold px-1.5 py-0.5 rounded-full">
           YOUR SIDE
         </div>
       </div>
     );
   }
 
-  // Camera active - show live preview with controls
+  // Camera active - show live preview with controls (50% smaller)
   return (
     <div className={cn(
-      "relative w-full aspect-square rounded-lg overflow-hidden bg-black shadow-xl",
+      "relative w-full aspect-[4/3] rounded-md overflow-hidden bg-black shadow-lg ring-cyan-glow",
       className
     )}>
       {/* Video Preview */}
@@ -141,59 +140,58 @@ export const BarberHeroStreamControls = ({
       {/* Video disabled placeholder */}
       {!isVideoEnabled && (
         <div className="absolute inset-0 bg-muted flex items-center justify-center">
-          <VideoOff className="w-12 h-12 text-muted-foreground" />
+          <VideoOff className="w-6 h-6 text-muted-foreground" />
         </div>
       )}
       
       {/* Live indicator */}
-      <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/70 backdrop-blur-sm rounded-full px-2 py-1">
-        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-        <span className="text-[10px] text-white font-bold">CAMERA READY</span>
+      <div className="absolute top-1 left-1 flex items-center gap-1 bg-black/70 backdrop-blur-sm rounded-full px-1.5 py-0.5">
+        <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+        <span className="text-[8px] text-white font-bold">READY</span>
       </div>
       
       {/* Your side indicator */}
-      <div className="absolute top-2 right-2 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-0.5 rounded-full">
+      <div className="absolute top-1 right-1 bg-primary text-primary-foreground text-[8px] font-bold px-1.5 py-0.5 rounded-full">
         YOUR SIDE
       </div>
       
       {/* Controls overlay */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-3">
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/60 to-transparent p-1.5">
         {/* Mini controls */}
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex gap-1.5">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex gap-1">
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleMic}
               className={cn(
-                "w-8 h-8 rounded-full",
+                "w-5 h-5 rounded-full",
                 isMicEnabled 
                   ? "bg-white/20 text-white hover:bg-white/30" 
                   : "bg-destructive/80 text-white hover:bg-destructive"
               )}
             >
-              {isMicEnabled ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4" />}
+              {isMicEnabled ? <Mic className="w-2.5 h-2.5" /> : <MicOff className="w-2.5 h-2.5" />}
             </Button>
             <Button
               variant="ghost"
               size="icon"
               onClick={toggleVideo}
               className={cn(
-                "w-8 h-8 rounded-full",
+                "w-5 h-5 rounded-full",
                 isVideoEnabled 
                   ? "bg-white/20 text-white hover:bg-white/30" 
                   : "bg-destructive/80 text-white hover:bg-destructive"
               )}
             >
-              {isVideoEnabled ? <Video className="w-4 h-4" /> : <VideoOff className="w-4 h-4" />}
+              {isVideoEnabled ? <Video className="w-2.5 h-2.5" /> : <VideoOff className="w-2.5 h-2.5" />}
             </Button>
           </div>
           
           <Button
             variant="ghost"
-            size="sm"
             onClick={handleStopCamera}
-            className="text-white/70 hover:text-white text-xs h-8 px-2"
+            className="text-white/70 hover:text-white text-[8px] h-5 px-1.5"
           >
             Stop
           </Button>
@@ -202,10 +200,10 @@ export const BarberHeroStreamControls = ({
         {/* Enter Battle Button */}
         <Button
           onClick={onEnterBattle}
-          className="w-full bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-600 text-white font-bold gap-2 shadow-lg"
+          className="w-full h-6 text-[10px] bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-600 text-white font-bold gap-1 shadow-md"
         >
           ENTER BATTLE
-          <ArrowRight className="w-4 h-4" />
+          <ArrowRight className="w-3 h-3" />
         </Button>
       </div>
     </div>
