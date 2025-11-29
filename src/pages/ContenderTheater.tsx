@@ -32,7 +32,44 @@ export default function ContenderTheater() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [barberPosition, setBarberPosition] = useState<1 | 2 | null>(null);
   const [showControls, setShowControls] = useState(true);
+  const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
+  const [cameraReady, setCameraReady] = useState(false);
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Start camera preview automatically when component mounts and user is a participant
+  useEffect(() => {
+    const startCameraPreview = async () => {
+      if (barberPosition && !previewStream && !cameraReady) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              frameRate: { ideal: 30 },
+            },
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+            },
+          });
+          setPreviewStream(stream);
+          setCameraReady(true);
+        } catch (error) {
+          console.error('Camera access error:', error);
+          toast.error('Please allow camera access to participate');
+        }
+      }
+    };
+    
+    startCameraPreview();
+    
+    return () => {
+      // Cleanup preview stream on unmount (only if not streaming)
+      if (previewStream && !isStreaming) {
+        previewStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [barberPosition]);
 
   // Auto-hide controls on mobile after 3 seconds
   useEffect(() => {
@@ -118,17 +155,21 @@ export default function ContenderTheater() {
     }
   });
 
-  // Attach local stream to video element
+  // Attach stream to video element (prefer localStream when live, otherwise use previewStream)
   useEffect(() => {
-    if (videoRef.current && localStream) {
-      videoRef.current.srcObject = localStream;
+    if (videoRef.current) {
+      const streamToUse = isStreaming ? localStream : previewStream;
+      if (streamToUse) {
+        videoRef.current.srcObject = streamToUse;
+      }
     }
-  }, [localStream]);
+  }, [localStream, previewStream, isStreaming]);
 
   // Handle mic toggle
   const toggleMic = () => {
-    if (localStream) {
-      localStream.getAudioTracks().forEach(track => {
+    const activeStream = isStreaming ? localStream : previewStream;
+    if (activeStream) {
+      activeStream.getAudioTracks().forEach(track => {
         track.enabled = !isMicEnabled;
       });
       setIsMicEnabled(!isMicEnabled);
@@ -137,8 +178,9 @@ export default function ContenderTheater() {
 
   // Handle video toggle
   const toggleVideo = () => {
-    if (localStream) {
-      localStream.getVideoTracks().forEach(track => {
+    const activeStream = isStreaming ? localStream : previewStream;
+    if (activeStream) {
+      activeStream.getVideoTracks().forEach(track => {
         track.enabled = !isVideoEnabled;
       });
       setIsVideoEnabled(!isVideoEnabled);
@@ -308,7 +350,7 @@ export default function ContenderTheater() {
             )}
             
             {/* Video Preview - Full bleed on mobile */}
-            {localStream ? (
+            {(previewStream || localStream) ? (
               <video
                 ref={videoRef}
                 autoPlay
@@ -322,12 +364,12 @@ export default function ContenderTheater() {
             ) : (
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 md:gap-4">
                 <div className={cn(
-                  "rounded-full bg-primary/20 flex items-center justify-center",
+                  "rounded-full bg-primary/20 flex items-center justify-center animate-pulse",
                   isMobile ? "w-16 h-16" : "w-20 h-20"
                 )}>
                   <Video className={cn(isMobile ? "w-8 h-8" : "w-10 h-10", "text-primary")} />
                 </div>
-                <p className="text-muted-foreground text-sm md:text-base">Camera not active</p>
+                <p className="text-muted-foreground text-sm md:text-base">Starting camera...</p>
               </div>
             )}
             
@@ -406,7 +448,7 @@ export default function ContenderTheater() {
               variant="ghost"
               size="lg"
               onClick={(e) => { e.stopPropagation(); toggleMic(); }}
-              disabled={!localStream}
+              disabled={!previewStream && !localStream}
               className={cn(
                 "rounded-full touch-manipulation",
                 isMobile ? "w-12 h-12" : "w-14 h-14",
@@ -423,7 +465,7 @@ export default function ContenderTheater() {
               variant="ghost"
               size="lg"
               onClick={(e) => { e.stopPropagation(); toggleVideo(); }}
-              disabled={!localStream}
+              disabled={!previewStream && !localStream}
               className={cn(
                 "rounded-full touch-manipulation",
                 isMobile ? "w-12 h-12" : "w-14 h-14",
