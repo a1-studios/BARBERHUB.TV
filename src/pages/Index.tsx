@@ -30,6 +30,9 @@ const Index = () => {
     <div className="min-h-screen">
       <Header />
       
+      {/* Spacer for fixed header */}
+      <div className="h-24 sm:h-28" />
+      
       {/* Content gated behind authentication */}
       {user ? (
         <main>
