@@ -204,8 +204,9 @@ export const DynamicBattleHero = () => {
   const barber1Percent = totalVotes > 0 ? ((viewerData.barber1 || 0) / totalVotes) * 100 : 50;
 
   return (
-    <div className="pt-20 sm:pt-24 lg:pt-28 pb-2 sm:pb-4 px-2 sm:px-4 max-w-[98vw] sm:max-w-5xl lg:max-w-6xl mx-auto">
-      <div className="w-full aspect-[16/9] sm:aspect-[2/1] lg:aspect-[21/9] bg-card rounded-xl shadow-2xl border border-cyan/20 overflow-hidden relative">
+    <div className="pt-16 sm:pt-24 lg:pt-28 pb-2 sm:pb-4 px-0 sm:px-4 max-w-[100vw] sm:max-w-5xl lg:max-w-6xl mx-auto">
+      {/* Full viewport height on mobile, fixed aspect ratio on larger screens */}
+      <div className="w-full h-[calc(100vh-4rem)] sm:h-auto sm:aspect-[2/1] lg:aspect-[21/9] bg-card sm:rounded-xl shadow-2xl border-0 sm:border border-cyan/20 overflow-hidden relative">
         
         {/* Subtle LIVE Badge - Top Left Inside Card */}
         {isActiveBattle && (
@@ -218,9 +219,9 @@ export const DynamicBattleHero = () => {
           </div>
         )}
 
-        <div className="h-full flex">
-          {/* Left Side - Barber 1 */}
-          <div className="flex-1 relative overflow-hidden">
+        <div className="h-full flex flex-col sm:flex-row">
+          {/* Top/Left Side - Barber 1 */}
+          <div className="flex-1 relative overflow-hidden min-h-0">
             {/* Flag Background */}
             <div 
               className="absolute inset-0 animate-pulse-slow" 
@@ -302,15 +303,15 @@ export const DynamicBattleHero = () => {
             </div>
           </div>
 
-          {/* VS Divider */}
-          <div className="w-px bg-gradient-to-b from-transparent via-cyan/40 to-transparent relative">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/80 px-1.5 py-0.5 rounded border border-cyan/30">
+          {/* VS Divider - Horizontal on mobile, Vertical on desktop */}
+          <div className="h-px sm:h-auto sm:w-px bg-gradient-to-r sm:bg-gradient-to-b from-transparent via-cyan/40 to-transparent relative flex-shrink-0">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/80 px-1.5 py-0.5 rounded border border-cyan/30 z-10">
               <span className="text-primary font-black text-[10px] sm:text-xs">VS</span>
             </div>
           </div>
 
-          {/* Right Side - Barber 2 */}
-          <div className="flex-1 relative overflow-hidden">
+          {/* Bottom/Right Side - Barber 2 */}
+          <div className="flex-1 relative overflow-hidden min-h-0">
             {/* Flag Background */}
             <div 
               className="absolute inset-0 animate-pulse-slow" 
