@@ -81,11 +81,15 @@ export const useCameraPermission = () => {
         streamRef.current = null;
       }
 
+      // Detect mobile for optimized constraints
+      const isMobile = window.innerWidth < 768;
+
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { 
           facingMode: 'user', 
-          width: { ideal: 1280 }, 
-          height: { ideal: 720 } 
+          width: { ideal: isMobile ? 720 : 1280 }, 
+          height: { ideal: isMobile ? 1280 : 720 }, // Portrait on mobile
+          frameRate: { ideal: 30 }
         },
         audio: false,
       });
