@@ -3,13 +3,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarberVideoSection } from "@/components/barber/BarberVideoSection";
-import { LiveViewerComparison } from "@/components/battles/LiveViewerComparison";
-import { LiveBattleIndicator } from "@/components/battles/LiveBattleIndicator";
-import { BattleStatsCard } from "@/components/battles/BattleStatsCard";
 import { BarberHeroStreamControls } from "@/components/streaming/BarberHeroStreamControls";
 import { useRealtimeBattleViewers } from "@/hooks/useRealtimeBattleViewers";
 import { useAuth } from "@/hooks/useAuth";
-import { Heart, Users } from "lucide-react";
+import { Heart, Users, Eye, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 
@@ -202,94 +199,70 @@ export const DynamicBattleHero = () => {
   const isBarber1CurrentUser = currentUserBarberPosition === 1;
   const isBarber2CurrentUser = currentUserBarberPosition === 2;
 
+  // Calculate vote percentages for progress bar
+  const totalVotes = (viewerData.barber1 || 0) + (viewerData.barber2 || 0);
+  const barber1Percent = totalVotes > 0 ? ((viewerData.barber1 || 0) / totalVotes) * 100 : 50;
+
   return (
-    <div className="pt-24 sm:pt-28 lg:pt-32 pb-4 sm:pb-6 lg:pb-8 px-2 sm:px-4 lg:px-6 max-w-[98vw] sm:max-w-5xl lg:max-w-6xl mx-auto space-y-3">
-      {/* Live Battle Indicator */}
-      {isActiveBattle && (
-        <div className="flex justify-center">
-          <LiveBattleIndicator />
-        </div>
-      )}
-      
-      {/* Live Viewer Comparison - Only show during active battles */}
-      {isActiveBattle && (
-        <LiveViewerComparison 
-          barber1Name={barber1.display_name || barber1.name}
-          barber2Name={barber2.display_name || barber2.name}
-          barber1Viewers={viewerData.barber1}
-          barber2Viewers={viewerData.barber2}
-          barber1Peak={viewerData.peak1}
-          barber2Peak={viewerData.peak2}
-          lastUpdate={viewerData.lastUpdate}
-        />
-      )}
-      
-      {/* Battle Stats Card */}
-      {isActiveBattle && (viewerData.barber1 > 0 || viewerData.barber2 > 0) && (
-        <BattleStatsCard
-          totalViewers={viewerData.barber1 + viewerData.barber2}
-          peakViewers={Math.max(viewerData.peak1, viewerData.peak2)}
-        />
-      )}
-      <div className="w-full aspect-[16/10] sm:aspect-[16/9] lg:aspect-[2/1] bg-card rounded-xl sm:rounded-2xl shadow-2xl border border-cyan/20 ring-1 ring-cyan/10 overflow-hidden relative">
+    <div className="pt-20 sm:pt-24 lg:pt-28 pb-2 sm:pb-4 px-2 sm:px-4 max-w-[98vw] sm:max-w-5xl lg:max-w-6xl mx-auto">
+      <div className="w-full aspect-[16/9] sm:aspect-[2/1] lg:aspect-[21/9] bg-card rounded-xl shadow-2xl border border-cyan/20 overflow-hidden relative">
+        
+        {/* Subtle LIVE Badge - Top Left Inside Card */}
+        {isActiveBattle && (
+          <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/60 backdrop-blur-sm border border-red-500/30">
+            <div className="relative">
+              <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+            </div>
+            <Radio className="w-3 h-3 text-red-500" />
+            <span className="text-[10px] font-bold text-red-500 uppercase">Live</span>
+          </div>
+        )}
+
         <div className="h-full flex">
           {/* Left Side - Barber 1 */}
           <div className="flex-1 relative overflow-hidden">
-            {/* Flag Background with cinematic overlay */}
+            {/* Flag Background */}
             <div 
               className="absolute inset-0 animate-pulse-slow" 
               style={{
                 backgroundImage: `url(${getFlagImageUrl(barber1.country_code)})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                opacity: 0.5
+                opacity: 0.4
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-br from-red-900/30 via-black/60 to-black/80" />
+            <div className="absolute inset-0 bg-gradient-to-br from-red-900/20 via-black/70 to-black/90" />
 
-            {/* Content - Redesigned horizontal layout */}
-            <div className="relative h-full flex flex-col p-3 sm:p-4 lg:p-6">
-              {/* Top Row: Avatar + Name + Stats horizontally */}
-              <div className="flex items-center gap-2 sm:gap-3 mb-3">
-                {/* Avatar */}
+            {/* Content */}
+            <div className="relative h-full flex flex-col p-2 sm:p-3">
+              {/* Compact Header Row */}
+              <div className="flex items-center gap-2 mb-2">
                 <div 
                   onClick={() => navigate(`/barber/${barber1.user_id}`)}
-                  className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-full overflow-hidden border-2 border-cyan/40 shadow-lg cursor-pointer hover:border-cyan hover:scale-105 transition-all flex-shrink-0 ring-2 ring-cyan/20"
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden border border-cyan/40 cursor-pointer hover:scale-105 transition-all flex-shrink-0"
                 >
                   {barber1.avatar_url ? (
-                    <img 
-                      src={barber1.avatar_url} 
-                      alt={barber1.display_name} 
-                      className="w-full h-full object-cover" 
-                    />
+                    <img src={barber1.avatar_url} alt={barber1.display_name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400" />
                   )}
                 </div>
-
-                {/* Name and Stats */}
                 <div className="flex flex-col min-w-0">
                   <h3 
                     onClick={() => navigate(`/barber/${barber1.user_id}`)}
-                    className="text-white text-sm sm:text-base lg:text-lg font-bold drop-shadow-lg cursor-pointer hover:text-primary transition-colors truncate"
+                    className="text-white text-xs sm:text-sm font-bold cursor-pointer hover:text-primary transition-colors truncate"
                   >
                     {barber1.display_name}
                   </h3>
-                  <div className="flex gap-2 text-white/80 text-[10px] sm:text-xs">
-                    <div className="flex items-center gap-1">
-                      <Heart className="w-3 h-3 text-red-400" fill="currentColor" />
-                      <span>{barber1.likes || 0}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="w-3 h-3 text-cyan" />
-                      <span>{barber1.followers || 0}</span>
-                    </div>
+                  <div className="flex gap-2 text-white/70 text-[9px] sm:text-[10px]">
+                    <span className="flex items-center gap-0.5"><Heart className="w-2.5 h-2.5 text-red-400" fill="currentColor" />{barber1.likes || 0}</span>
+                    <span className="flex items-center gap-0.5"><Users className="w-2.5 h-2.5 text-cyan" />{barber1.followers || 0}</span>
                   </div>
                 </div>
               </div>
 
-              {/* Large Video Preview - Takes remaining space */}
-              <div className="flex-1 min-h-0">
+              {/* Maximized Video Area */}
+              <div className="flex-1 min-h-0 relative">
                 {isBarber1CurrentUser && isStreamableBattle && battle ? (
                   <BarberHeroStreamControls
                     battleId={battle.id}
@@ -298,92 +271,88 @@ export const DynamicBattleHero = () => {
                     className="h-full"
                   />
                 ) : (
-                  <BarberVideoSection 
-                    videoId={barber1.is_live ? barber1.live_video_id : barber1.featured_video_id}
-                    isLive={barber1.is_live}
-                    viewerCount={isActiveBattle ? viewerData.barber1 : undefined}
-                    aspectRatio="landscape"
-                    className="rounded-lg shadow-xl h-full border border-cyan/20"
-                  />
+                  <div className="relative h-full">
+                    <BarberVideoSection 
+                      videoId={barber1.is_live ? barber1.live_video_id : barber1.featured_video_id}
+                      isLive={barber1.is_live}
+                      aspectRatio="landscape"
+                      className="rounded-lg h-full border border-cyan/10"
+                    />
+                    {/* Viewer Count Overlay */}
+                    {isActiveBattle && (
+                      <div className="absolute bottom-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/70 text-[9px] sm:text-[10px] text-white/90">
+                        <Eye className="w-2.5 h-2.5" />
+                        <span>{viewerData.barber1}</span>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
-              {/* Vote Button */}
+              {/* Compact Vote Button */}
               {isActiveBattle && !isBarber1CurrentUser && (
                 <Button 
                   onClick={() => navigate(`/battle/${battle?.id}/theater`)}
-                  className="mt-3 w-full bg-gradient-to-r from-primary to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-black text-base sm:text-lg py-3 sm:py-4 rounded-lg shadow-xl hover:shadow-primary/50 transition-all hover:scale-[1.02] border border-cyan/30"
+                  size="sm"
+                  className="mt-2 w-full bg-gradient-to-r from-primary to-orange-600 text-white font-bold text-xs sm:text-sm py-2 rounded-lg"
                 >
-                  🔥 VOTE NOW 🔥
+                  🔥 VOTE
                 </Button>
               )}
             </div>
           </div>
 
           {/* VS Divider */}
-          <div className="w-px bg-gradient-to-b from-transparent via-cyan/50 to-transparent relative">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/80 backdrop-blur-sm px-2 py-1 rounded-lg border border-cyan/30">
-              <span className="text-primary font-black text-xs sm:text-sm">VS</span>
+          <div className="w-px bg-gradient-to-b from-transparent via-cyan/40 to-transparent relative">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/80 px-1.5 py-0.5 rounded border border-cyan/30">
+              <span className="text-primary font-black text-[10px] sm:text-xs">VS</span>
             </div>
           </div>
 
           {/* Right Side - Barber 2 */}
           <div className="flex-1 relative overflow-hidden">
-            {/* Flag Background with cinematic overlay */}
+            {/* Flag Background */}
             <div 
               className="absolute inset-0 animate-pulse-slow" 
               style={{
                 backgroundImage: `url(${getFlagImageUrl(barber2.country_code)})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
-                opacity: 0.5
+                opacity: 0.4
               }}
             />
-            <div className="absolute inset-0 bg-gradient-to-bl from-blue-900/30 via-black/60 to-black/80" />
+            <div className="absolute inset-0 bg-gradient-to-bl from-blue-900/20 via-black/70 to-black/90" />
 
-            {/* Content - Redesigned horizontal layout */}
-            <div className="relative h-full flex flex-col p-3 sm:p-4 lg:p-6">
-              {/* Top Row: Avatar + Name + Stats horizontally (aligned right) */}
-              <div className="flex items-center justify-end gap-2 sm:gap-3 mb-3">
-                {/* Name and Stats */}
+            {/* Content */}
+            <div className="relative h-full flex flex-col p-2 sm:p-3">
+              {/* Compact Header Row - Right Aligned */}
+              <div className="flex items-center justify-end gap-2 mb-2">
                 <div className="flex flex-col items-end min-w-0">
                   <h3 
                     onClick={() => navigate(`/barber/${barber2.user_id}`)}
-                    className="text-white text-sm sm:text-base lg:text-lg font-bold drop-shadow-lg cursor-pointer hover:text-primary transition-colors truncate"
+                    className="text-white text-xs sm:text-sm font-bold cursor-pointer hover:text-primary transition-colors truncate"
                   >
                     {barber2.display_name}
                   </h3>
-                  <div className="flex gap-2 text-white/80 text-[10px] sm:text-xs">
-                    <div className="flex items-center gap-1">
-                      <Heart className="w-3 h-3 text-red-400" fill="currentColor" />
-                      <span>{barber2.likes || 0}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Users className="w-3 h-3 text-cyan" />
-                      <span>{barber2.followers || 0}</span>
-                    </div>
+                  <div className="flex gap-2 text-white/70 text-[9px] sm:text-[10px]">
+                    <span className="flex items-center gap-0.5"><Heart className="w-2.5 h-2.5 text-red-400" fill="currentColor" />{barber2.likes || 0}</span>
+                    <span className="flex items-center gap-0.5"><Users className="w-2.5 h-2.5 text-cyan" />{barber2.followers || 0}</span>
                   </div>
                 </div>
-
-                {/* Avatar */}
                 <div 
                   onClick={() => navigate(`/barber/${barber2.user_id}`)}
-                  className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-full overflow-hidden border-2 border-cyan/40 shadow-lg cursor-pointer hover:border-cyan hover:scale-105 transition-all flex-shrink-0 ring-2 ring-cyan/20"
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden border border-cyan/40 cursor-pointer hover:scale-105 transition-all flex-shrink-0"
                 >
                   {barber2.avatar_url ? (
-                    <img 
-                      src={barber2.avatar_url} 
-                      alt={barber2.display_name} 
-                      className="w-full h-full object-cover" 
-                    />
+                    <img src={barber2.avatar_url} alt={barber2.display_name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400" />
                   )}
                 </div>
               </div>
 
-              {/* Large Video Preview - Takes remaining space */}
-              <div className="flex-1 min-h-0">
+              {/* Maximized Video Area */}
+              <div className="flex-1 min-h-0 relative">
                 {isBarber2CurrentUser && isStreamableBattle && battle ? (
                   <BarberHeroStreamControls
                     battleId={battle.id}
@@ -392,28 +361,51 @@ export const DynamicBattleHero = () => {
                     className="h-full"
                   />
                 ) : (
-                  <BarberVideoSection 
-                    videoId={barber2.is_live ? barber2.live_video_id : barber2.featured_video_id}
-                    isLive={barber2.is_live}
-                    viewerCount={isActiveBattle ? viewerData.barber2 : undefined}
-                    aspectRatio="landscape"
-                    className="rounded-lg shadow-xl h-full border border-cyan/20"
-                  />
+                  <div className="relative h-full">
+                    <BarberVideoSection 
+                      videoId={barber2.is_live ? barber2.live_video_id : barber2.featured_video_id}
+                      isLive={barber2.is_live}
+                      aspectRatio="landscape"
+                      className="rounded-lg h-full border border-cyan/10"
+                    />
+                    {/* Viewer Count Overlay */}
+                    {isActiveBattle && (
+                      <div className="absolute bottom-2 right-2 flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/70 text-[9px] sm:text-[10px] text-white/90">
+                        <Eye className="w-2.5 h-2.5" />
+                        <span>{viewerData.barber2}</span>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
 
-              {/* Vote Button */}
+              {/* Compact Vote Button */}
               {isActiveBattle && !isBarber2CurrentUser && (
                 <Button 
                   onClick={() => navigate(`/battle/${battle?.id}/theater`)}
-                  className="mt-3 w-full bg-gradient-to-r from-primary to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-black text-base sm:text-lg py-3 sm:py-4 rounded-lg shadow-xl hover:shadow-primary/50 transition-all hover:scale-[1.02] border border-cyan/30"
+                  size="sm"
+                  className="mt-2 w-full bg-gradient-to-r from-primary to-orange-600 text-white font-bold text-xs sm:text-sm py-2 rounded-lg"
                 >
-                  🔥 VOTE NOW 🔥
+                  🔥 VOTE
                 </Button>
               )}
             </div>
           </div>
         </div>
+
+        {/* Thin Progress Bar at Bottom */}
+        {isActiveBattle && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50 flex">
+            <div 
+              className="h-full bg-gradient-to-r from-orange-500 to-primary transition-all duration-500"
+              style={{ width: `${barber1Percent}%` }}
+            />
+            <div 
+              className="h-full bg-gradient-to-r from-cyan to-blue-500 transition-all duration-500"
+              style={{ width: `${100 - barber1Percent}%` }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
