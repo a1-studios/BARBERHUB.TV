@@ -7,8 +7,9 @@ import { BarberHeroStreamControls } from "@/components/streaming/BarberHeroStrea
 import { useRealtimeBattleViewers } from "@/hooks/useRealtimeBattleViewers";
 import { useAuth } from "@/hooks/useAuth";
 import { Heart, Users, Eye, Radio } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { InteractiveVoteSlider } from "@/components/battles/InteractiveVoteSlider";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 interface Battle {
   id: string;
@@ -102,7 +103,7 @@ export const DynamicBattleHero = () => {
         .from('public_barber_profiles')
         .select('*')
         .order('barber_updated_at', { ascending: false })
-        .limit(10); // Fetch more barbers for rotation
+        .limit(10);
       
       if (error) throw error;
 
@@ -156,17 +157,29 @@ export const DynamicBattleHero = () => {
     return `https://flagcdn.com/w1600/${countryCode.toLowerCase()}.jpg`;
   };
 
+  // Handle vote from slider
+  const handleVote = (choice: 1 | 2) => {
+    if (!user) {
+      toast.error("Please sign in to vote");
+      return;
+    }
+    if (battle) {
+      // Navigate to battle theater to complete vote
+      navigate(`/battle/${battle.id}/theater`, { state: { initialVote: choice } });
+      toast.success(`Vote registered! Opening battle theater...`);
+    }
+  };
+
   // IMPORTANT: Call hooks before any conditional returns
-  // Get real-time viewer counts - always call this hook regardless of battle state
   const viewerData = useRealtimeBattleViewers(battle?.id || '');
 
-  // Check if current battle is active (active status for streaming)
+  // Check if current battle is active
   const isStreamableBattle = battle?.status === 'active' || battle?.status === 'voting' || battle?.status === 'upcoming';
 
   // Loading state
   if (battleLoading || barbersLoading) {
     return (
-      <div className="pt-24 lg:pt-28 pb-8 px-4 max-w-7xl mx-auto">
+      <div className="pt-8 sm:pt-12 pb-8 px-4 max-w-7xl mx-auto">
         <Skeleton className="aspect-video w-full rounded-2xl" />
       </div>
     );
@@ -176,7 +189,6 @@ export const DynamicBattleHero = () => {
   let displayBarbers = barbers && barbers.length >= 2 ? barbers : [];
   
   if (displayBarbers.length < 2 && featuredBarbers && featuredBarbers.length >= 2) {
-    // Use rotation to show different pairs
     const start = rotationIndex % featuredBarbers.length;
     const end = (start + 1) % featuredBarbers.length;
     displayBarbers = [featuredBarbers[start], featuredBarbers[end]];
@@ -185,7 +197,7 @@ export const DynamicBattleHero = () => {
   // If no barbers at all
   if (displayBarbers.length < 2) {
     return (
-      <div className="pt-24 lg:pt-28 pb-8 px-4 max-w-7xl mx-auto">
+      <div className="pt-8 sm:pt-12 pb-8 px-4 max-w-7xl mx-auto">
         <div className="aspect-video bg-card rounded-2xl shadow-2xl border-2 border-primary/50 flex items-center justify-center">
           <p className="text-muted-foreground">No barbers to showcase yet</p>
         </div>
@@ -198,27 +210,17 @@ export const DynamicBattleHero = () => {
   const isActiveBattle = battle?.status === 'active' || battle?.status === 'voting';
   const isBarber1CurrentUser = currentUserBarberPosition === 1;
   const isBarber2CurrentUser = currentUserBarberPosition === 2;
+  const isCurrentUserInBattle = isBarber1CurrentUser || isBarber2CurrentUser;
 
   // Calculate vote percentages for progress bar
   const totalVotes = (viewerData.barber1 || 0) + (viewerData.barber2 || 0);
   const barber1Percent = totalVotes > 0 ? ((viewerData.barber1 || 0) / totalVotes) * 100 : 50;
 
   return (
-    <div className="pt-16 sm:pt-24 lg:pt-28 pb-2 sm:pb-4 px-0 sm:px-4 max-w-[100vw] sm:max-w-5xl lg:max-w-6xl mx-auto">
+    <div className="pt-8 sm:pt-12 pb-2 sm:pb-4 px-0 sm:px-4 max-w-[100vw] sm:max-w-5xl lg:max-w-6xl mx-auto">
       {/* Full viewport height on mobile, fixed aspect ratio on larger screens */}
-      <div className="w-full h-[calc(100vh-4rem)] sm:h-auto sm:aspect-[2/1] lg:aspect-[21/9] bg-card sm:rounded-xl shadow-2xl border-0 sm:border border-cyan/20 overflow-hidden relative">
+      <div className="w-full h-[calc(100vh-5rem)] sm:h-auto sm:aspect-[2/1] lg:aspect-[21/9] bg-card sm:rounded-xl shadow-2xl border-0 sm:border border-cyan/20 overflow-hidden relative">
         
-        {/* Subtle LIVE Badge - Top Left Inside Card */}
-        {isActiveBattle && (
-          <div className="absolute top-2 left-2 z-20 flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/60 backdrop-blur-sm border border-red-500/30">
-            <div className="relative">
-              <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-            </div>
-            <Radio className="w-3 h-3 text-red-500" />
-            <span className="text-[10px] font-bold text-red-500 uppercase">Live</span>
-          </div>
-        )}
-
         <div className="h-full flex flex-col sm:flex-row">
           {/* Top/Left Side - Barber 1 */}
           <div className="flex-1 relative overflow-hidden min-h-0">
@@ -289,24 +291,26 @@ export const DynamicBattleHero = () => {
                   </div>
                 )}
               </div>
-
-              {/* Compact Vote Button */}
-              {isActiveBattle && !isBarber1CurrentUser && (
-                <Button 
-                  onClick={() => navigate(`/battle/${battle?.id}/theater`)}
-                  size="sm"
-                  className="mt-2 w-full bg-gradient-to-r from-primary to-orange-600 text-white font-bold text-xs sm:text-sm py-2 rounded-lg"
-                >
-                  🔥 VOTE
-                </Button>
-              )}
             </div>
           </div>
 
-          {/* VS Divider - Horizontal on mobile, Vertical on desktop */}
-          <div className="h-px sm:h-auto sm:w-px bg-gradient-to-r sm:bg-gradient-to-b from-transparent via-cyan/40 to-transparent relative flex-shrink-0">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/80 px-1.5 py-0.5 rounded border border-cyan/30 z-10">
-              <span className="text-primary font-black text-[10px] sm:text-xs">VS</span>
+          {/* VS Divider with LIVE Badge - Center position */}
+          <div className="h-4 sm:h-auto sm:w-4 bg-gradient-to-r sm:bg-gradient-to-b from-transparent via-cyan/40 to-transparent relative flex-shrink-0 flex items-center justify-center">
+            {/* LIVE Badge - Centered in divider */}
+            {isActiveBattle && (
+              <div className="absolute -top-8 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-2 py-1 rounded-full bg-black/80 backdrop-blur-sm border border-red-500/50 shadow-lg shadow-red-500/20">
+                <div className="relative">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                  <div className="absolute inset-0 w-2 h-2 bg-red-500 rounded-full animate-ping opacity-50" />
+                </div>
+                <Radio className="w-3 h-3 text-red-500" />
+                <span className="text-[10px] font-black text-red-500 uppercase tracking-wider">Live</span>
+              </div>
+            )}
+            
+            {/* VS Badge - 10% larger */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/90 px-3 py-1.5 rounded-lg border-2 border-cyan/50 z-10 shadow-lg shadow-cyan/20">
+              <span className="text-primary font-black text-sm sm:text-base tracking-wider">VS</span>
             </div>
           </div>
 
@@ -379,20 +383,20 @@ export const DynamicBattleHero = () => {
                   </div>
                 )}
               </div>
-
-              {/* Compact Vote Button */}
-              {isActiveBattle && !isBarber2CurrentUser && (
-                <Button 
-                  onClick={() => navigate(`/battle/${battle?.id}/theater`)}
-                  size="sm"
-                  className="mt-2 w-full bg-gradient-to-r from-primary to-orange-600 text-white font-bold text-xs sm:text-sm py-2 rounded-lg"
-                >
-                  🔥 VOTE
-                </Button>
-              )}
             </div>
           </div>
         </div>
+
+        {/* Interactive Vote Slider at Bottom - Only for non-barber users during active battle */}
+        {isActiveBattle && !isCurrentUserInBattle && (
+          <div className="absolute bottom-4 left-4 right-4 z-20">
+            <InteractiveVoteSlider
+              barber1Name={barber1.display_name || barber1.name}
+              barber2Name={barber2.display_name || barber2.name}
+              onVote={handleVote}
+            />
+          </div>
+        )}
 
         {/* Thin Progress Bar at Bottom */}
         {isActiveBattle && (
