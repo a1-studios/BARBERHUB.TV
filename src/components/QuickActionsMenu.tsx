@@ -2,16 +2,18 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { Button } from '@/components/ui/button';
 import { 
   Swords, 
   Plus, 
-  Scissors, 
+  Sparkles, 
   User, 
   Crown, 
-  CreditCard,
-  X
+  Coins,
+  Zap,
+  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -19,80 +21,102 @@ interface QuickAction {
   id: string;
   label: string;
   icon: React.ReactNode;
-  path: string;
+  path?: string;
   requiresAuth: boolean;
   barberOnly?: boolean;
+  adminOnly?: boolean;
+  onClick?: () => void;
+  highlight?: boolean;
 }
-
-const quickActions: QuickAction[] = [
-  {
-    id: 'battles',
-    label: 'View Battles',
-    icon: <Swords className="w-5 h-5" />,
-    path: '/battles',
-    requiresAuth: true
-  },
-  {
-    id: 'create-battle',
-    label: 'Create Battle',
-    icon: <Plus className="w-5 h-5" />,
-    path: '/battles/create',
-    requiresAuth: true,
-    barberOnly: true
-  },
-  {
-    id: 'haircut-advisor',
-    label: 'Haircut Advisor',
-    icon: <Scissors className="w-5 h-5" />,
-    path: '/haircut-advisor',
-    requiresAuth: true
-  },
-  {
-    id: 'profile',
-    label: 'Profile',
-    icon: <User className="w-5 h-5" />,
-    path: '/profile',
-    requiresAuth: true
-  },
-  {
-    id: 'creator-hub',
-    label: 'Creator Hub',
-    icon: <Crown className="w-5 h-5" />,
-    path: '/creator-hub',
-    requiresAuth: true,
-    barberOnly: true
-  },
-  {
-    id: 'add-funds',
-    label: 'Add Funds',
-    icon: <CreditCard className="w-5 h-5" />,
-    path: '/portal',
-    requiresAuth: true
-  }
-];
 
 export function QuickActionsMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const { user } = useAuth();
-  const { isBarber } = useUserRole();
+  const { isBarber, isAdmin } = useUserRole();
+  const { barberBucks, isLoading: bbLoading, setShowAddFundsModal } = useBarberBucks();
   const navigate = useNavigate();
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const quickActions: QuickAction[] = [
+    {
+      id: 'barber-bucks',
+      label: bbLoading ? 'Loading...' : `${barberBucks.toLocaleString()} BB`,
+      icon: bbLoading ? <Loader2 className="w-5 h-5 animate-spin text-yellow-500" /> : <Coins className="w-5 h-5 text-yellow-500" />,
+      requiresAuth: true,
+      onClick: () => setShowAddFundsModal(true),
+      highlight: true
+    },
+    {
+      id: 'battles',
+      label: 'View Battles',
+      icon: <Swords className="w-5 h-5" />,
+      path: '/battles',
+      requiresAuth: true
+    },
+    {
+      id: 'create-battle',
+      label: 'Create Battle',
+      icon: <Plus className="w-5 h-5" />,
+      path: '/battles/create',
+      requiresAuth: true,
+      barberOnly: true
+    },
+    {
+      id: 'ai-style',
+      label: 'AI Style',
+      icon: <Sparkles className="w-5 h-5" />,
+      path: '/haircut-advisor',
+      requiresAuth: true
+    },
+    {
+      id: 'profile',
+      label: 'Profile',
+      icon: <User className="w-5 h-5" />,
+      path: '/profile',
+      requiresAuth: true
+    },
+    {
+      id: 'creator-hub',
+      label: 'Creator Hub',
+      icon: <Crown className="w-5 h-5" />,
+      path: '/creator-hub',
+      requiresAuth: true,
+      barberOnly: true
+    },
+    {
+      id: 'admin-dashboard',
+      label: 'Admin Dashboard',
+      icon: <Zap className="w-5 h-5 text-red-500" />,
+      path: '/admin',
+      requiresAuth: true,
+      adminOnly: true
+    }
+  ];
 
   // Filter actions based on auth and user type
   const availableActions = quickActions.filter(action => {
     if (action.requiresAuth && !user) return false;
     if (action.barberOnly && !isBarber) return false;
+    if (action.adminOnly && !isAdmin) return false;
     return true;
   });
 
   const handleActionClick = (action: QuickAction) => {
+    if (action.onClick) {
+      action.onClick();
+      setIsOpen(false);
+      return;
+    }
+    
     if (action.requiresAuth && !user) {
       navigate('/');
       setIsOpen(false);
       return;
     }
     
-    navigate(action.path);
+    if (action.path) {
+      navigate(action.path);
+    }
     setIsOpen(false);
   };
 
@@ -138,18 +162,24 @@ export function QuickActionsMenu() {
                 variant="default"
                 size="sm"
                 className={cn(
-                  "w-40 justify-start gap-3 bg-card/95 backdrop-blur-sm",
+                  "w-44 justify-start gap-3 bg-card/95 backdrop-blur-sm",
                   "border border-border/50 hover:border-primary/50",
                   "shadow-lg hover:shadow-glow",
                   "transition-all duration-300",
-                  "animate-slide-in-right"
+                  "animate-slide-in-right",
+                  action.highlight && "bg-gradient-to-r from-yellow-500/20 to-amber-600/20 border-yellow-500/30 hover:border-yellow-500/50",
+                  action.adminOnly && "border-red-500/30 hover:border-red-500/50"
                 )}
                 style={{
                   animationDelay: `${index * 0.1}s`
                 }}
               >
                 {action.icon}
-                <span className="text-sm font-medium">{action.label}</span>
+                <span className={cn(
+                  "text-sm font-medium",
+                  action.highlight && "text-yellow-500 font-bold",
+                  action.adminOnly && "text-red-500"
+                )}>{action.label}</span>
               </Button>
             ))}
           </div>
