@@ -211,6 +211,35 @@
                 0 0 12px hsl(var(--cyan) / 0.1);
   }
 
+  /* Cyan accent button pattern - orange bg with cyan text/icons */
+  .btn-accent-cyan {
+    @apply bg-gradient-to-r from-primary to-orange-600 font-bold;
+    color: hsl(var(--cyan));
+    box-shadow: 0 4px 15px hsl(24 100% 52% / 0.3);
+    transition: var(--transition-smooth);
+  }
+
+  .btn-accent-cyan:hover {
+    @apply from-primary/90 to-orange-600/90;
+    box-shadow: 0 6px 20px hsl(24 100% 52% / 0.4), 0 0 15px hsl(var(--cyan) / 0.2);
+    transform: translateY(-2px);
+  }
+
+  .btn-accent-cyan svg {
+    color: hsl(var(--cyan));
+  }
+
+  /* Text cyan accent for icons/labels on orange buttons */
+  .text-cyan-accent {
+    color: hsl(var(--cyan));
+  }
+
+  /* Icon with cyan glow on hover */
+  .icon-cyan-hover:hover {
+    color: hsl(var(--cyan));
+    filter: drop-shadow(0 0 8px hsl(var(--cyan) / 0.5));
+  }
+
   /* Safe area padding for notched devices */
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0);
