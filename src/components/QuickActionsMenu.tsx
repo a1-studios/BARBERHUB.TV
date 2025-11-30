@@ -47,6 +47,13 @@ export function QuickActionsMenu() {
       highlight: true
     },
     {
+      id: 'add-funds',
+      label: 'Add Funds',
+      icon: <Plus className="w-5 h-5 text-green-500" />,
+      requiresAuth: true,
+      onClick: () => setShowAddFundsModal(true)
+    },
+    {
       id: 'battles',
       label: 'View Battles',
       icon: <Swords className="w-5 h-5" />,
