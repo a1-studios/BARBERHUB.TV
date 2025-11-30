@@ -176,13 +176,13 @@ export const BattleArenaCarousel = () => {
     slides.push(activeBattle ? 'live' : upcomingBattle ? 'upcoming' : 'highlight');
   }
 
-  // Auto-advance carousel
+  // Auto-advance carousel every 7 seconds
   useEffect(() => {
     if (!isAutoPlaying || slides.length <= 1) return;
     
     const interval = setInterval(() => {
       setCurrentSlide(prev => (prev + 1) % slides.length);
-    }, 8000);
+    }, 7000);
     
     return () => clearInterval(interval);
   }, [isAutoPlaying, slides.length]);

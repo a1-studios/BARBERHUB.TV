@@ -2435,6 +2435,7 @@ export type Database = {
         Args: { battle_id_param: string; creation_id_param: string }
         Returns: boolean
       }
+      cleanup_old_community_notes: { Args: never; Returns: Json }
       complete_qualification_phase: {
         Args: {
           phase_id_param: string
