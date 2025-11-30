@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CountrySelector } from '@/components/CountrySelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { AlertCircle, Scissors, Phone, Globe } from 'lucide-react';
 
 interface BarberProfileFormProps {
   onProfileCreated?: () => void;
@@ -23,23 +25,55 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
     bio: existingProfile?.bio || '',
     years_experience: existingProfile?.years_experience || '',
     location: existingProfile?.location || '',
-    portfolio_url: existingProfile?.portfolio_url || ''
+    portfolio_url: existingProfile?.portfolio_url || '',
+    phone_number: existingProfile?.phone_number || '',
+    country_code: existingProfile?.country_code || ''
   });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Professional name is required';
+    }
+
+    if (!formData.phone_number.trim()) {
+      newErrors.phone_number = 'Phone number is required for battle coordination';
+    } else if (formData.phone_number.length < 10) {
+      newErrors.phone_number = 'Please enter a valid phone number';
+    }
+
+    if (!formData.country_code) {
+      newErrors.country_code = 'Country/nationality is required for tournament matching';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
 
+    if (!validate()) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
     setLoading(true);
     try {
       const profileData = {
         user_id: user.id,
-        name: formData.name,
-        specialty: formData.specialty,
+        name: formData.name.trim(),
+        specialty: formData.specialty || null,
         bio: formData.bio || null,
         location: formData.location || null,
         years_experience: formData.years_experience ? parseInt(formData.years_experience) : null,
-        portfolio_url: formData.portfolio_url || null
+        portfolio_url: formData.portfolio_url || null,
+        phone_number: formData.phone_number.trim(),
+        country_code: formData.country_code
       };
 
       const { error } = await supabase
@@ -47,6 +81,12 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
         .upsert(profileData, { onConflict: 'user_id' });
 
       if (error) throw error;
+
+      // Also update country_code in profiles table
+      await supabase
+        .from('profiles')
+        .update({ country_code: formData.country_code })
+        .eq('user_id', user.id);
       
       toast.success(existingProfile ? 'Profile updated successfully!' : 'Barber profile created successfully!');
       onProfileCreated?.();
@@ -65,11 +105,30 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
   return (
     <Card>
       <CardHeader>
-        <CardTitle>
-          {existingProfile ? 'Update Barber Profile' : 'Create Your Barber Profile'}
-        </CardTitle>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary/20 rounded-lg">
+            <Scissors className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <CardTitle>
+              {existingProfile ? 'Update Barber Profile' : 'Create Your Barber Profile'}
+            </CardTitle>
+            <CardDescription>
+              Complete your professional profile to compete in battles
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
+        {/* Required Fields Notice */}
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 mb-6 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-medium text-amber-500">Required for Competition</p>
+            <p className="text-muted-foreground">Phone number and nationality are required for tournament coordination and country vs country matchmaking.</p>
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="name">Professional Name *</Label>
@@ -78,8 +137,40 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Your professional name"
-              required
+              className={errors.name ? 'border-destructive' : ''}
             />
+            {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
+          </div>
+
+          <div>
+            <Label htmlFor="phone_number" className="flex items-center gap-2">
+              <Phone className="h-4 w-4" />
+              Phone Number *
+            </Label>
+            <Input
+              id="phone_number"
+              type="tel"
+              value={formData.phone_number}
+              onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
+              placeholder="+1 (555) 123-4567"
+              className={errors.phone_number ? 'border-destructive' : ''}
+            />
+            {errors.phone_number && <p className="text-xs text-destructive mt-1">{errors.phone_number}</p>}
+            <p className="text-xs text-muted-foreground mt-1">For battle coordination only - not shared publicly</p>
+          </div>
+
+          <div>
+            <Label className="flex items-center gap-2">
+              <Globe className="h-4 w-4" />
+              Nationality *
+            </Label>
+            <CountrySelector
+              value={formData.country_code}
+              onChange={(code) => setFormData({ ...formData, country_code: code || '' })}
+              placeholder="Select your country"
+            />
+            {errors.country_code && <p className="text-xs text-destructive mt-1">{errors.country_code}</p>}
+            <p className="text-xs text-muted-foreground mt-1">Used for country vs country tournament matchmaking</p>
           </div>
 
           <div>
