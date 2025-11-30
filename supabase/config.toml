@@ -56,6 +56,9 @@ verify_jwt = true
 [functions.get-viewer-token]
 verify_jwt = true
 
+[functions.process-bb-donation]
+verify_jwt = true
+
 [functions.schedule-tournament-match]
 verify_jwt = true
 
