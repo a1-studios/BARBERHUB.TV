@@ -97,6 +97,7 @@ export type Database = {
           location: string | null
           name: string
           nickname: string | null
+          phone_number: string | null
           portfolio_url: string | null
           rating: number | null
           specialty: string | null
@@ -124,6 +125,7 @@ export type Database = {
           location?: string | null
           name: string
           nickname?: string | null
+          phone_number?: string | null
           portfolio_url?: string | null
           rating?: number | null
           specialty?: string | null
@@ -151,6 +153,7 @@ export type Database = {
           location?: string | null
           name?: string
           nickname?: string | null
+          phone_number?: string | null
           portfolio_url?: string | null
           rating?: number | null
           specialty?: string | null
