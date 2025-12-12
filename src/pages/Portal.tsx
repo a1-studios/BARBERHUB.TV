@@ -21,6 +21,8 @@ import { Trophy, Users, Clock, Vote, DollarSign, Play, Calendar, Target, Scissor
 import { OpenChallengeQueue } from "@/components/battles/OpenChallengeQueue";
 import DisplayCards from "@/components/ui/display-cards";
 import { formatDistanceToNow } from "date-fns";
+import { FactionBannerRow } from "@/components/portal/FactionBannerRow";
+
 interface Battle {
   id: string;
   title: string;
@@ -33,6 +35,7 @@ interface Battle {
   currency: string;
   organizer_id: string;
 }
+
 const Portal = () => {
   const { user, loading } = useAuth();
   const { isBarber, isFan, isLoading: rolesLoading } = useUserRole();
@@ -40,6 +43,7 @@ const Portal = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isCreatingBattle, setIsCreatingBattle] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
   const {
     data: upcomingBattles,
     refetch: refetchBattles
@@ -139,17 +143,30 @@ const Portal = () => {
       <main className="pt-20 sm:pt-24 pb-12">
         <div className="container mx-auto px-4">
           {/* Portal Header */}
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-4 mb-3">
-              <h1 className="text-3xl font-bold text-foreground">Barber Battle Portal</h1>
+          <div className="text-center mb-6">
+            <div className="flex items-center justify-center gap-4 mb-2">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">2026 Global Championship</h1>
               <LiveMatchCounter />
             </div>
-            <p className="text-lg text-muted-foreground mb-1">
-              Year-round single-elimination tournament
-            </p>
             <p className="text-sm text-muted-foreground">
-              Live battles every Sunday, 10:00 AM - 6:00 PM
+              Live battles every Sunday, 10:00 AM - 6:00 PM EST
             </p>
+          </div>
+
+          {/* Faction Banners - Show for All Users */}
+          <div className="mb-10">
+            <FactionBannerRow
+              onSelectCategory={(categoryId) => {
+                setSelectedCategory(categoryId);
+                if (isBarber) {
+                  toast({
+                    title: `${categoryId.replace('_', ' ').toUpperCase()} Selected`,
+                    description: "Scroll down to register for this category"
+                  });
+                }
+              }}
+              selectedCategory={selectedCategory}
+            />
           </div>
 
           {/* Subscription Status for Barbers */}
