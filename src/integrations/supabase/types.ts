@@ -2579,21 +2579,21 @@ export type Database = {
         | {
             Args: {
               p_battle_id: string
-              p_message: string
-              p_title: string
-              p_winner_id: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_battle_id: string
               p_data?: Json
               p_message: string
               p_title: string
               p_type?: string
             }
             Returns: number
+          }
+        | {
+            Args: {
+              p_battle_id: string
+              p_message: string
+              p_title: string
+              p_winner_id: string
+            }
+            Returns: undefined
           }
       notify_battle_voters: {
         Args: {
