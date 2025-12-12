@@ -18,6 +18,7 @@ import { LiveMatchCounter } from "@/components/tournament/LiveMatchCounter";
 import { MyBattlesSection } from "@/components/barber/MyBattlesSection";
 import { SubscriptionStatusCard } from "@/components/barber/SubscriptionStatusCard";
 import { Trophy, Users, Clock, Vote, DollarSign, Play, Calendar, Target, Scissors, Loader2, BarChart3 } from "lucide-react";
+import { OpenChallengeQueue } from "@/components/battles/OpenChallengeQueue";
 import DisplayCards from "@/components/ui/display-cards";
 import { formatDistanceToNow } from "date-fns";
 interface Battle {
@@ -225,6 +226,9 @@ const Portal = () => {
               <MyBattlesSection userId={user.id} />
             </div>
           )}
+
+          {/* Open Challenge Queue - Barber Only */}
+          {isBarber && <OpenChallengeQueue />}
 
           {/* Live Battles Section */}
           {liveBattles && liveBattles.length > 0 && <div className="mb-8">
