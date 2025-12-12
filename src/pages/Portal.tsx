@@ -22,6 +22,7 @@ import { OpenChallengeQueue } from "@/components/battles/OpenChallengeQueue";
 import DisplayCards from "@/components/ui/display-cards";
 import { formatDistanceToNow } from "date-fns";
 import { FactionBannerRow } from "@/components/portal/FactionBannerRow";
+import { CountryLeaderboard } from "@/components/portal/CountryLeaderboard";
 
 interface Battle {
   id: string;
@@ -154,7 +155,7 @@ const Portal = () => {
           </div>
 
           {/* Faction Banners - Show for All Users */}
-          <div className="mb-10">
+          <div className="mb-8">
             <FactionBannerRow
               onSelectCategory={(categoryId) => {
                 setSelectedCategory(categoryId);
@@ -167,6 +168,11 @@ const Portal = () => {
               }}
               selectedCategory={selectedCategory}
             />
+          </div>
+
+          {/* Country Leaderboard - Show for All Users */}
+          <div className="mb-10">
+            <CountryLeaderboard />
           </div>
 
           {/* Subscription Status for Barbers */}
