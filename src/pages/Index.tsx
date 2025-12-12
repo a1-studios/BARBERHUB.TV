@@ -12,6 +12,8 @@ import { LiveBarberStreams } from "@/components/battles/LiveBarberStreams";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { FEATURES } from "@/config/features";
+import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
+import { HowItWorks } from "@/components/onboarding/HowItWorks";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -35,8 +37,14 @@ const Index = () => {
       {/* Content gated behind authentication */}
       {user ? (
         <main>
+          {/* Welcome Modal for First-Time Users */}
+          <WelcomeModal />
+          
           {/* Head-to-Head Battle Hero */}
           <DynamicBattleHero />
+          
+          {/* How It Works Guide */}
+          <HowItWorks />
           
           {/* Global League Dashboard */}
           <GlobalLeagueDashboard />
