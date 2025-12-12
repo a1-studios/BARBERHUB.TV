@@ -981,6 +981,45 @@ export type Database = {
           },
         ]
       }
+      category_prize_pools: {
+        Row: {
+          category: string
+          created_at: string | null
+          donation_contributions_cents: number
+          entry_contributions_cents: number
+          id: string
+          last_updated: string | null
+          participant_count: number
+          platform_fees_collected_cents: number
+          total_pool_cents: number
+          tournament_year: number
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          donation_contributions_cents?: number
+          entry_contributions_cents?: number
+          id?: string
+          last_updated?: string | null
+          participant_count?: number
+          platform_fees_collected_cents?: number
+          total_pool_cents?: number
+          tournament_year?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          donation_contributions_cents?: number
+          entry_contributions_cents?: number
+          id?: string
+          last_updated?: string | null
+          participant_count?: number
+          platform_fees_collected_cents?: number
+          total_pool_cents?: number
+          tournament_year?: number
+        }
+        Relationships: []
+      }
       client_profiles: {
         Row: {
           avatar_url: string | null
@@ -1623,6 +1662,78 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      platform_config: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          key: string
+          updated_at: string | null
+          value: Json
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          key: string
+          updated_at?: string | null
+          value: Json
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          key?: string
+          updated_at?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
+      platform_transactions: {
+        Row: {
+          amount_cents: number
+          category: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          reference_id: string | null
+          source_user_id: string | null
+          transaction_type: string
+        }
+        Insert: {
+          amount_cents: number
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          source_user_id?: string | null
+          transaction_type: string
+        }
+        Update: {
+          amount_cents?: number
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          source_user_id?: string | null
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_transactions_source_user_id_fkey"
+            columns: ["source_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "platform_transactions_source_user_id_fkey"
+            columns: ["source_user_id"]
+            isOneToOne: false
+            referencedRelation: "public_user_profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       product_orders: {
         Row: {
@@ -2488,6 +2599,7 @@ export type Database = {
           total_donated_cents: number
         }[]
       }
+      get_fee_structure: { Args: never; Returns: Json }
       get_multiple_public_profiles: {
         Args: { user_ids: string[] }
         Returns: {
@@ -2607,6 +2719,16 @@ export type Database = {
       }
       refresh_barber_stats: { Args: never; Returns: undefined }
       reset_monthly_battle_counters: { Args: never; Returns: undefined }
+      update_category_prize_pool: {
+        Args: {
+          p_category: string
+          p_donation_amount_cents?: number
+          p_entry_amount_cents?: number
+          p_increment_participants?: boolean
+          p_platform_fee_cents?: number
+        }
+        Returns: undefined
+      }
       update_tournament_standings: {
         Args: { battle_id_param: string }
         Returns: undefined
