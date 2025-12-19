@@ -59,11 +59,8 @@ export const GlobalLeagueDashboard = () => {
 
   return (
     <div className="min-h-screen">
-      <div className="container mx-auto px-4 py-8 space-y-16">
-        {/* Prize Pool Feature Card */}
-        <PrizePoolCard />
-
-        {/* Global Contenders 3D Sphere */}
+      <div className="container mx-auto px-4 py-8 space-y-12">
+        {/* Global Contenders 3D Sphere - Featured at Top */}
         <div className="relative">
           <div className="text-center space-y-3 mb-8">
             <h2 className="text-4xl font-bold bg-gradient-to-r from-primary via-primary-glow to-primary bg-clip-text text-transparent">
@@ -117,8 +114,13 @@ export const GlobalLeagueDashboard = () => {
           </div>
         </div>
 
-        {/* Role-Based Action Zone */}
-        <FanActionZone />
+        {/* Prize Pool Feature Card */}
+        <PrizePoolCard />
+
+        {/* Role-Based Action Zone - Centered */}
+        <div className="flex justify-center">
+          <FanActionZone />
+        </div>
 
         {/* Live Battles */}
         <LiveBattleFeed />
