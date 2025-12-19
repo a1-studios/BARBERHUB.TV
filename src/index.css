@@ -212,7 +212,17 @@
     animation: prizeGlow 2s ease-in-out infinite;
   }
 
-  /* Hide scrollbar for faction banners */
+  /* Holographic shimmer effect */
+  @keyframes holographicShift {
+    0% { background-position: 0% 0%; }
+    50% { background-position: 100% 100%; }
+    100% { background-position: 0% 0%; }
+  }
+
+  .animate-holographic {
+    animation: holographicShift 3s ease infinite;
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
