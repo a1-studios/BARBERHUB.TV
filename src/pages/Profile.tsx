@@ -14,7 +14,8 @@ import { toast } from 'sonner';
 import { BackButton } from '@/components/ui/BackButton';
 import { RoleBadge } from '@/components/RoleBadge';
 import { EmptyState } from '@/components/EmptyState';
-import { Scissors, Users, Trophy, Plus, User, Loader2, Globe, Edit3, X, Settings, Upload, Zap, CheckCircle, Clock, Award, Heart, Bell, DollarSign } from 'lucide-react';
+import { Scissors, Users, Trophy, Plus, User, Loader2, Globe, Edit3, X, Settings, Upload, Zap, CheckCircle, Clock, Award, Heart, Bell, DollarSign, Coins } from 'lucide-react';
+import { BBWalletCard } from '@/components/economy/BBWalletCard';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { CountrySelector } from '@/components/CountrySelector';
@@ -480,8 +481,10 @@ const Profile = () => {
               </Card>
             </div>
 
-            {/* Quick Actions Sidebar */}
-            
+            {/* Sidebar with BB Wallet */}
+            <div className="space-y-4">
+              <BBWalletCard />
+            </div>
           </div>
 
           {/* My Battles Section - Barbers Only */}

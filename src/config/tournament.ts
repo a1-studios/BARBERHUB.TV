@@ -1,12 +1,16 @@
 /**
  * Tournament Configuration
  * Central configuration for all tournament-related settings
+ * 
+ * ECONOMY: All transactions use Barber Bucks (BB)
+ * Conversion rate: 5 BB = $1 USD
  */
 
 export const TOURNAMENT_CONFIG = {
-  // Entry Fee
-  ENTRY_FEE_CENTS: 5000, // $50.00
-  CURRENCY: 'USD',
+  // Entry Fee in BB (250 BB = $50)
+  ENTRY_FEE_BB: 250,
+  ENTRY_FEE_CENTS: 5000, // Legacy - for display purposes only
+  CURRENCY: 'BB',
   
   // Battle Settings
   BATTLE_DURATION_MINUTES: 45,
@@ -22,6 +26,13 @@ export const TOURNAMENT_CONFIG = {
   // Queue Settings
   QUEUE_EXPIRY_HOURS: 168, // 7 days (one week)
   MAX_QUEUE_SIZE_PER_CATEGORY: 100,
+  
+  // Challenge Stakes
+  MIN_CHALLENGE_STAKE_BB: 100,
+  PLATFORM_FEE_PERCENT: 5,
+  
+  // BB Conversion
+  BB_PER_DOLLAR: 5,
   
   // Prize Distribution (TBD - to be configured later)
   PRIZE_DISTRIBUTION: {
@@ -74,11 +85,18 @@ export function calculateBattleEndTime(startTime: Date): Date {
 }
 
 /**
- * Format entry fee for display
+ * Format entry fee for display (BB-based)
  */
 export function formatEntryFee(): string {
-  const dollars = TOURNAMENT_CONFIG.ENTRY_FEE_CENTS / 100;
-  return `$${dollars.toFixed(2)} ${TOURNAMENT_CONFIG.CURRENCY}`;
+  return `${TOURNAMENT_CONFIG.ENTRY_FEE_BB} BB`;
+}
+
+/**
+ * Format entry fee as USD equivalent
+ */
+export function formatEntryFeeUSD(): string {
+  const dollars = TOURNAMENT_CONFIG.ENTRY_FEE_BB / TOURNAMENT_CONFIG.BB_PER_DOLLAR;
+  return `$${dollars.toFixed(0)} USD`;
 }
 
 /**
