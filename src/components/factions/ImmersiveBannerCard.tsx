@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Crown } from 'lucide-react';
+import { Users, Crown, Zap } from 'lucide-react';
 import { TournamentCategory } from '@/config/categories';
 import { HoverParticles } from './HoverParticles';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -38,8 +38,7 @@ export const ImmersiveBannerCard = ({
   topBarber
 }: ImmersiveBannerCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
-  const { colorTheme } = category;
-  const themeColor = colorTheme.primary;
+  const [isPressed, setIsPressed] = useState(false);
 
   return (
     <motion.div
@@ -50,26 +49,20 @@ export const ImmersiveBannerCard = ({
         duration: 0.4,
         ease: "easeOut"
       }}
-      className="relative flex-shrink-0"
-      style={{ perspective: '800px' }}
+      className="relative flex-1 min-w-0"
+      style={{ perspective: '1000px' }}
     >
-      {/* Simple Chain */}
-      <div className="absolute -top-4 left-1/2 -translate-x-1/2 flex flex-col items-center z-10">
-        <div 
-          className="w-4 h-2 rounded-t-full"
-          style={{ backgroundColor: themeColor }}
-        />
-        <div 
-          className="w-2 h-3 border rounded-full"
-          style={{ borderColor: themeColor }}
-        />
+      {/* Chain Link at Top */}
+      <div className="absolute -top-5 left-1/2 -translate-x-1/2 flex flex-col items-center z-10">
+        <div className="w-5 h-2.5 rounded-t-full bg-gradient-to-b from-primary to-primary/70" />
+        <div className="w-3 h-4 border-2 border-primary/60 rounded-full bg-background/50" />
       </div>
       
       {/* Main Banner */}
       <motion.div
         animate={{
-          rotateY: [-1, 1, -1],
-          rotateX: [0.3, -0.3, 0.3],
+          rotateY: isHovered ? 0 : [-0.5, 0.5, -0.5],
+          rotateX: isHovered ? 0 : [0.2, -0.2, 0.2],
         }}
         transition={{
           duration: 4 + index * 0.3,
@@ -77,89 +70,137 @@ export const ImmersiveBannerCard = ({
           ease: "easeInOut"
         }}
         whileHover={{ 
-          scale: 1.08,
-          rotateY: 0,
-          rotateX: 0,
+          scale: 1.05,
           transition: { duration: 0.2 }
         }}
+        whileTap={{ scale: 0.98 }}
         onHoverStart={() => setIsHovered(true)}
         onHoverEnd={() => setIsHovered(false)}
-        onClick={() => onSelect(category.id)}
-        className="relative w-24 sm:w-28 lg:w-32 cursor-pointer transform-gpu"
+        onTapStart={() => setIsPressed(true)}
+        onTap={() => {
+          setIsPressed(false);
+          onSelect(category.id);
+        }}
+        onTapCancel={() => setIsPressed(false)}
+        className={cn(
+          "relative cursor-pointer transform-gpu h-[220px] sm:h-[260px] lg:h-[280px]",
+          isHovered && "animate-electric-pulse",
+          isPressed && "animate-energy-burst"
+        )}
       >
-        {/* Hover Particles */}
-        <HoverParticles isHovered={isHovered} color={themeColor} />
+        {/* Hover Particles - Electric style */}
+        <HoverParticles isHovered={isHovered} color="hsl(187 100% 50%)" />
 
-        {/* Banner Body */}
+        {/* Outer Orange Frame - Double Border Effect */}
         <div 
           className={cn(
-            "relative pt-5 pb-3 px-2 rounded-t-lg overflow-hidden",
-            "bg-gradient-to-b from-background/95 to-muted/90",
-            "border-2 border-b-0",
-            isSelected ? "border-primary" : "border-white/10"
+            "absolute inset-0 rounded-t-xl transition-all duration-300",
+            isHovered ? "opacity-100" : "opacity-80"
           )}
           style={{
-            boxShadow: isHovered || isSelected
-              ? `0 0 25px ${themeColor}, 0 15px 30px rgba(0,0,0,0.5)`
-              : `0 8px 20px rgba(0,0,0,0.4)`
+            background: 'linear-gradient(180deg, hsl(24 100% 52%) 0%, hsl(24 100% 40%) 100%)',
+            clipPath: 'polygon(0 0, 100% 0, 100% 85%, 50% 100%, 0 85%)',
+            boxShadow: isHovered 
+              ? '0 0 30px hsl(187 100% 50% / 0.5), 0 0 60px hsl(187 100% 50% / 0.3), inset 0 0 20px hsl(24 100% 60% / 0.5)'
+              : '0 0 15px hsl(24 100% 50% / 0.3), 0 8px 20px rgba(0,0,0,0.5)'
+          }}
+        />
+
+        {/* Inner Dark Body */}
+        <div 
+          className="absolute inset-[3px] rounded-t-lg overflow-hidden"
+          style={{
+            background: 'linear-gradient(180deg, hsl(240 10% 8%) 0%, hsl(240 10% 4%) 70%, hsl(187 100% 20% / 0.3) 100%)',
+            clipPath: 'polygon(0 0, 100% 0, 100% 85%, 50% 100%, 0 85%)',
           }}
         >
-          {/* Holographic overlay */}
-          <motion.div
-            className="absolute inset-0 opacity-0 pointer-events-none"
-            animate={{
-              opacity: isHovered ? 0.3 : 0,
-              backgroundPosition: isHovered ? ['0% 0%', '100% 100%'] : '0% 0%'
-            }}
-            transition={{ duration: 0.8 }}
+          {/* Inner Orange Border Line */}
+          <div 
+            className="absolute inset-[2px] rounded-t-md pointer-events-none"
             style={{
-              background: `linear-gradient(135deg, 
-                transparent 0%, 
-                ${themeColor}40 25%, 
-                transparent 50%, 
-                ${themeColor}40 75%, 
-                transparent 100%)`,
-              backgroundSize: '200% 200%'
+              border: '1px solid hsl(24 100% 52% / 0.6)',
+              clipPath: 'polygon(0 0, 100% 0, 100% 85%, 50% 100%, 0 85%)',
             }}
           />
 
-          {/* Theme color glow at top */}
-          <div 
-            className="absolute top-0 left-0 right-0 h-16 opacity-30"
+          {/* Cyan Energy Glow from Bottom */}
+          <motion.div
+            className="absolute bottom-0 left-0 right-0 pointer-events-none"
+            animate={{
+              height: isHovered ? '60%' : '40%',
+              opacity: isHovered ? 0.8 : 0.5,
+            }}
+            transition={{ duration: 0.3 }}
             style={{
-              background: `linear-gradient(180deg, ${themeColor} 0%, transparent 100%)`
+              background: 'linear-gradient(180deg, transparent 0%, hsl(187 100% 50% / 0.15) 40%, hsl(187 100% 50% / 0.4) 100%)',
             }}
           />
+
+          {/* Animated Energy Flames */}
+          <motion.div
+            className="absolute bottom-[15%] left-0 right-0 h-[30%] pointer-events-none"
+            animate={{
+              opacity: isHovered ? [0.6, 1, 0.6] : [0.3, 0.5, 0.3],
+            }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <div 
+              className="w-full h-full"
+              style={{
+                background: `radial-gradient(ellipse at 50% 100%, hsl(187 100% 50% / 0.5) 0%, transparent 70%)`,
+                filter: 'blur(8px)',
+              }}
+            />
+          </motion.div>
+
+          {/* Lightning Effect at Bottom Point */}
+          <motion.div
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 pointer-events-none"
+            animate={{
+              opacity: isHovered ? [0.5, 1, 0.5] : 0.3,
+              scale: isHovered ? [1, 1.2, 1] : 1,
+            }}
+            transition={{ duration: 0.5, repeat: Infinity }}
+          >
+            <Zap 
+              className="w-5 h-5 text-cyan" 
+              style={{ 
+                filter: isHovered ? 'drop-shadow(0 0 8px hsl(187 100% 50%))' : 'none',
+              }}
+            />
+          </motion.div>
           
           {/* Content */}
-          <div className="relative z-10 flex flex-col items-center text-center space-y-2">
+          <div className="relative z-10 flex flex-col items-center text-center pt-6 px-2 h-full">
             {/* Top Barber Avatar or Category Icon */}
-            <div className="relative">
+            <div className="relative mb-3">
               {topBarber?.avatar_url ? (
                 <div className="relative">
                   <Avatar 
-                    className="w-12 h-12 sm:w-14 sm:h-14 border-2"
-                    style={{ borderColor: themeColor }}
+                    className="w-14 h-14 sm:w-16 sm:h-16 border-2 border-cyan"
+                    style={{ 
+                      boxShadow: isHovered 
+                        ? '0 0 20px hsl(187 100% 50% / 0.6)' 
+                        : '0 0 10px hsl(187 100% 50% / 0.3)'
+                    }}
                   >
                     <AvatarImage src={topBarber.avatar_url} alt={topBarber.name} />
-                    <AvatarFallback style={{ backgroundColor: themeColor }}>
+                    <AvatarFallback className="bg-cyan/20 text-cyan">
                       {topBarber.name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                   {/* Crown badge */}
-                  <div 
-                    className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: themeColor }}
-                  >
-                    <Crown className="w-3 h-3 text-background" />
+                  <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                    <Crown className="w-3 h-3 text-primary-foreground" />
                   </div>
                 </div>
               ) : (
                 <div 
-                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-2xl border-2"
+                  className="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center text-2xl border-2 border-cyan bg-cyan/10"
                   style={{ 
-                    borderColor: themeColor,
-                    backgroundColor: `${themeColor}20`
+                    boxShadow: isHovered 
+                      ? '0 0 20px hsl(187 100% 50% / 0.6)' 
+                      : '0 0 10px hsl(187 100% 50% / 0.3)'
                   }}
                 >
                   {category.icon}
@@ -168,10 +209,7 @@ export const ImmersiveBannerCard = ({
             </div>
             
             {/* Category Name */}
-            <h3 
-              className="text-xs sm:text-sm font-bold leading-tight"
-              style={{ color: themeColor }}
-            >
+            <h3 className="text-sm sm:text-base font-bold leading-tight text-foreground mb-2">
               {category.shortName}
             </h3>
             
@@ -179,52 +217,58 @@ export const ImmersiveBannerCard = ({
             <motion.div
               key={prizePool}
               initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              className="text-lg sm:text-xl font-bold"
-              style={{ color: themeColor }}
+              animate={{ 
+                scale: isHovered ? [1, 1.05, 1] : 1,
+                textShadow: isHovered ? '0 0 20px hsl(187 100% 50%)' : '0 0 10px hsl(187 100% 50% / 0.5)'
+              }}
+              transition={{ duration: 0.5, repeat: isHovered ? Infinity : 0 }}
+              className="text-xl sm:text-2xl font-bold text-cyan"
             >
               {formatCurrency(prizePool)}
             </motion.div>
             
             {/* Participant Count */}
-            <div 
-              className="flex items-center gap-1 text-xs"
-              style={{ color: `${themeColor}cc` }}
-            >
+            <div className="flex items-center gap-1 text-xs text-cyan/70 mt-2">
               <Users className="w-3 h-3" />
-              <span>{participantCount}</span>
+              <span>{participantCount} barbers</span>
             </div>
             
             {/* Entry Fee Indicator */}
-            <div 
-              className="text-[10px] opacity-60"
-              style={{ color: themeColor }}
-            >
+            <div className="text-[10px] text-primary/80 mt-1 font-medium">
               $50 Entry
             </div>
           </div>
         </div>
+
+        {/* Electric Arc Effects on Hover */}
+        {isHovered && (
+          <>
+            <motion.div
+              initial={{ opacity: 0, scaleY: 0 }}
+              animate={{ opacity: [0, 1, 0], scaleY: [0, 1, 0] }}
+              transition={{ duration: 0.3, repeat: Infinity, repeatDelay: 0.5 }}
+              className="absolute left-1 top-1/3 w-0.5 h-8 bg-gradient-to-b from-cyan via-cyan/50 to-transparent rounded-full"
+              style={{ filter: 'blur(1px)' }}
+            />
+            <motion.div
+              initial={{ opacity: 0, scaleY: 0 }}
+              animate={{ opacity: [0, 1, 0], scaleY: [0, 1, 0] }}
+              transition={{ duration: 0.3, delay: 0.2, repeat: Infinity, repeatDelay: 0.5 }}
+              className="absolute right-1 top-1/2 w-0.5 h-6 bg-gradient-to-b from-cyan via-cyan/50 to-transparent rounded-full"
+              style={{ filter: 'blur(1px)' }}
+            />
+          </>
+        )}
         
-        {/* Pointed V-Bottom */}
-        <div 
-          className="relative h-10"
-          style={{
-            background: `linear-gradient(180deg, hsl(var(--muted) / 0.9) 0%, ${themeColor}40 100%)`,
-            clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
-            borderLeft: `2px solid ${isSelected ? 'hsl(var(--primary))' : 'rgba(255,255,255,0.1)'}`,
-            borderRight: `2px solid ${isSelected ? 'hsl(var(--primary))' : 'rgba(255,255,255,0.1)'}`
-          }}
-        />
-        
-        {/* Selection indicator */}
+        {/* Selection indicator glow */}
         {isSelected && (
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 pointer-events-none"
             style={{
-              backgroundColor: themeColor,
-              boxShadow: `0 0 10px ${themeColor}`
+              boxShadow: '0 0 40px hsl(187 100% 50% / 0.6), inset 0 0 30px hsl(187 100% 50% / 0.2)',
+              clipPath: 'polygon(0 0, 100% 0, 100% 85%, 50% 100%, 0 85%)',
             }}
           />
         )}
