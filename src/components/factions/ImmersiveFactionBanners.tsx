@@ -33,17 +33,23 @@ export const ImmersiveFactionBanners = () => {
   }
 
   return (
-    <section className="relative py-8 sm:py-12 overflow-hidden">
-      {/* Subtle background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/50 to-transparent" />
+    <section className="relative py-10 sm:py-14 overflow-hidden">
+      {/* Background with subtle cyan glow */}
+      <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-background/80 to-transparent" />
+        <div 
+          className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-32 opacity-30 blur-3xl"
+          style={{ background: 'radial-gradient(ellipse at center, hsl(187 100% 50% / 0.4) 0%, transparent 70%)' }}
+        />
+      </div>
       
       <div className="container mx-auto px-4 relative z-10">
-        {/* Banners Row - All 5 visible */}
+        {/* Banners Row - Match hero card width */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className="flex gap-3 sm:gap-4 lg:gap-6 justify-center items-start pt-6"
+          className="flex gap-2 sm:gap-3 lg:gap-4 justify-center items-end pt-8 max-w-5xl lg:max-w-6xl mx-auto"
         >
           {TOURNAMENT_CATEGORIES.map((category, index) => {
             const poolData = prizePools.find(p => p.category === category.id);
