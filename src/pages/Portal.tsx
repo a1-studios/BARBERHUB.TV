@@ -23,6 +23,7 @@ import DisplayCards from "@/components/ui/display-cards";
 import { formatDistanceToNow } from "date-fns";
 import { FactionBannerRow } from "@/components/portal/FactionBannerRow";
 import { CountryLeaderboard } from "@/components/portal/CountryLeaderboard";
+import { HowItWorks } from "@/components/onboarding/HowItWorks";
 
 interface Battle {
   id: string;
@@ -174,6 +175,13 @@ const Portal = () => {
           <div className="mb-10">
             <CountryLeaderboard />
           </div>
+
+          {/* How It Works Guide - Barbers Only */}
+          {isBarber && (
+            <div className="mb-8">
+              <HowItWorks />
+            </div>
+          )}
 
           {/* Subscription Status for Barbers */}
           {isBarber && (
