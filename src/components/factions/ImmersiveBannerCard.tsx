@@ -1,8 +1,9 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Trophy } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { BannerChainEffect } from './BannerChainEffect';
+import { Users, Crown } from 'lucide-react';
 import { TournamentCategory } from '@/config/categories';
+import { HoverParticles } from './HoverParticles';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 
 interface ImmersiveBannerCardProps {
@@ -12,6 +13,10 @@ interface ImmersiveBannerCardProps {
   onSelect: (categoryId: string) => void;
   isSelected?: boolean;
   index: number;
+  topBarber?: {
+    name: string;
+    avatar_url: string | null;
+  } | null;
 }
 
 const formatCurrency = (cents: number) => {
@@ -29,190 +34,197 @@ export const ImmersiveBannerCard = ({
   participantCount,
   onSelect,
   isSelected,
-  index
+  index,
+  topBarber
 }: ImmersiveBannerCardProps) => {
-  const { colorTheme, icon } = category;
-  const gradientClasses = colorTheme.gradient;
+  const [isHovered, setIsHovered] = useState(false);
+  const { colorTheme } = category;
+  const themeColor = colorTheme.primary;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 50 }}
+      initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ 
-        delay: index * 0.1,
-        duration: 0.5,
+        delay: index * 0.08,
+        duration: 0.4,
         ease: "easeOut"
       }}
       className="relative flex-shrink-0"
-      style={{ perspective: '1000px' }}
+      style={{ perspective: '800px' }}
     >
-      {/* Chain Effect */}
-      <BannerChainEffect colorTheme={colorTheme.glow} />
+      {/* Simple Chain */}
+      <div className="absolute -top-4 left-1/2 -translate-x-1/2 flex flex-col items-center z-10">
+        <div 
+          className="w-4 h-2 rounded-t-full"
+          style={{ backgroundColor: themeColor }}
+        />
+        <div 
+          className="w-2 h-3 border rounded-full"
+          style={{ borderColor: themeColor }}
+        />
+      </div>
       
       {/* Main Banner */}
       <motion.div
         animate={{
           rotateY: [-1, 1, -1],
-          rotateX: [0.5, -0.5, 0.5],
+          rotateX: [0.3, -0.3, 0.3],
         }}
         transition={{
-          duration: 4 + index * 0.5,
+          duration: 4 + index * 0.3,
           repeat: Infinity,
           ease: "easeInOut"
         }}
         whileHover={{ 
-          scale: 1.05,
+          scale: 1.08,
           rotateY: 0,
           rotateX: 0,
-          transition: { duration: 0.3 }
+          transition: { duration: 0.2 }
         }}
+        onHoverStart={() => setIsHovered(true)}
+        onHoverEnd={() => setIsHovered(false)}
         onClick={() => onSelect(category.id)}
-        className={cn(
-          "relative w-44 sm:w-52 cursor-pointer",
-          "transform-gpu will-change-transform"
-        )}
+        className="relative w-24 sm:w-28 lg:w-32 cursor-pointer transform-gpu"
       >
+        {/* Hover Particles */}
+        <HoverParticles isHovered={isHovered} color={themeColor} />
+
         {/* Banner Body */}
         <div 
           className={cn(
-            "relative pt-8 pb-4 px-4 rounded-t-lg",
-            "bg-gradient-to-b from-background/90 to-muted/80",
+            "relative pt-5 pb-3 px-2 rounded-t-lg overflow-hidden",
+            "bg-gradient-to-b from-background/95 to-muted/90",
             "border-2 border-b-0",
-            isSelected ? "border-primary" : "border-white/10",
-            "shadow-2xl overflow-hidden"
+            isSelected ? "border-primary" : "border-white/10"
           )}
           style={{
-            boxShadow: isSelected 
-              ? `0 0 30px ${colorTheme.glow}, 0 20px 40px rgba(0,0,0,0.5)`
-              : `0 10px 30px rgba(0,0,0,0.4)`
+            boxShadow: isHovered || isSelected
+              ? `0 0 25px ${themeColor}, 0 15px 30px rgba(0,0,0,0.5)`
+              : `0 8px 20px rgba(0,0,0,0.4)`
           }}
         >
-          {/* Animated glow overlay */}
+          {/* Holographic overlay */}
           <motion.div
+            className="absolute inset-0 opacity-0 pointer-events-none"
             animate={{
-              opacity: [0.1, 0.3, 0.1]
+              opacity: isHovered ? 0.3 : 0,
+              backgroundPosition: isHovered ? ['0% 0%', '100% 100%'] : '0% 0%'
             }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-            className={cn(
-              "absolute inset-0 bg-gradient-to-t",
-              gradientClasses,
-              "opacity-20"
-            )}
-          />
-          
-          {/* Fabric texture overlay */}
-          <div 
-            className="absolute inset-0 opacity-30"
+            transition={{ duration: 0.8 }}
             style={{
-              backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")`,
+              background: `linear-gradient(135deg, 
+                transparent 0%, 
+                ${themeColor}40 25%, 
+                transparent 50%, 
+                ${themeColor}40 75%, 
+                transparent 100%)`,
+              backgroundSize: '200% 200%'
+            }}
+          />
+
+          {/* Theme color glow at top */}
+          <div 
+            className="absolute top-0 left-0 right-0 h-16 opacity-30"
+            style={{
+              background: `linear-gradient(180deg, ${themeColor} 0%, transparent 100%)`
             }}
           />
           
           {/* Content */}
-          <div className="relative z-10 flex flex-col items-center text-center space-y-4">
-            {/* Category Icon */}
-            <motion.div
-              animate={{ 
-                y: [0, -5, 0],
-                scale: [1, 1.1, 1]
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: index * 0.2
-              }}
-              className="text-5xl sm:text-6xl"
-            >
-              {icon}
-            </motion.div>
+          <div className="relative z-10 flex flex-col items-center text-center space-y-2">
+            {/* Top Barber Avatar or Category Icon */}
+            <div className="relative">
+              {topBarber?.avatar_url ? (
+                <div className="relative">
+                  <Avatar 
+                    className="w-12 h-12 sm:w-14 sm:h-14 border-2"
+                    style={{ borderColor: themeColor }}
+                  >
+                    <AvatarImage src={topBarber.avatar_url} alt={topBarber.name} />
+                    <AvatarFallback style={{ backgroundColor: themeColor }}>
+                      {topBarber.name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  {/* Crown badge */}
+                  <div 
+                    className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
+                    style={{ backgroundColor: themeColor }}
+                  >
+                    <Crown className="w-3 h-3 text-background" />
+                  </div>
+                </div>
+              ) : (
+                <div 
+                  className="w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center text-2xl border-2"
+                  style={{ 
+                    borderColor: themeColor,
+                    backgroundColor: `${themeColor}20`
+                  }}
+                >
+                  {category.icon}
+                </div>
+              )}
+            </div>
             
             {/* Category Name */}
-            <div>
-              <h3 
-                className={cn(
-                  "text-lg sm:text-xl font-bold bg-gradient-to-r bg-clip-text text-transparent",
-                  gradientClasses
-                )}
-              >
-                {category.shortName}
-              </h3>
-              <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                {category.vibe}
-              </p>
-            </div>
+            <h3 
+              className="text-xs sm:text-sm font-bold leading-tight"
+              style={{ color: themeColor }}
+            >
+              {category.shortName}
+            </h3>
             
             {/* Prize Pool */}
-            <div className="space-y-1">
-              <div className="flex items-center justify-center gap-1 text-yellow-400">
-                <Trophy className="w-4 h-4" />
-                <span className="text-xs font-medium">PRIZE POOL</span>
-              </div>
-              <motion.div
-                key={prizePool}
-                initial={{ scale: 0.9 }}
-                animate={{ scale: 1 }}
-                className={cn(
-                  "text-2xl sm:text-3xl font-bold bg-gradient-to-r bg-clip-text text-transparent",
-                  gradientClasses
-                )}
-              >
-                {formatCurrency(prizePool)}
-              </motion.div>
-            </div>
+            <motion.div
+              key={prizePool}
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              className="text-lg sm:text-xl font-bold"
+              style={{ color: themeColor }}
+            >
+              {formatCurrency(prizePool)}
+            </motion.div>
             
             {/* Participant Count */}
-            <div className="flex items-center gap-1 text-muted-foreground">
-              <Users className="w-4 h-4" />
-              <span className="text-sm">{participantCount} Barbers</span>
+            <div 
+              className="flex items-center gap-1 text-xs"
+              style={{ color: `${themeColor}cc` }}
+            >
+              <Users className="w-3 h-3" />
+              <span>{participantCount}</span>
             </div>
             
-            {/* Enter Button */}
-            <Button
-              size="sm"
-              className={cn(
-                "w-full mt-2 font-bold uppercase tracking-wider",
-                "bg-gradient-to-r",
-                gradientClasses,
-                "hover:opacity-90 transition-opacity",
-                "text-white shadow-lg"
-              )}
-              style={{
-                boxShadow: `0 4px 15px ${colorTheme.glow}`
-              }}
+            {/* Entry Fee Indicator */}
+            <div 
+              className="text-[10px] opacity-60"
+              style={{ color: themeColor }}
             >
-              Enter Faction
-            </Button>
+              $50 Entry
+            </div>
           </div>
         </div>
         
-        {/* Pointed Bottom (Banner Tail) */}
+        {/* Pointed V-Bottom */}
         <div 
-          className={cn(
-            "relative h-16 bg-gradient-to-b from-muted/80 to-background/60",
-            "border-x-2",
-            isSelected ? "border-primary" : "border-white/10"
-          )}
+          className="relative h-10"
           style={{
-            clipPath: 'polygon(0 0, 100% 0, 100% 30%, 50% 100%, 0 30%)'
+            background: `linear-gradient(180deg, hsl(var(--muted) / 0.9) 0%, ${themeColor}40 100%)`,
+            clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
+            borderLeft: `2px solid ${isSelected ? 'hsl(var(--primary))' : 'rgba(255,255,255,0.1)'}`,
+            borderRight: `2px solid ${isSelected ? 'hsl(var(--primary))' : 'rgba(255,255,255,0.1)'}`
           }}
-        >
-          {/* Inner shadow for depth */}
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/20 to-black/40" />
-        </div>
+        />
         
         {/* Selection indicator */}
         {isSelected && (
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full bg-primary"
+            className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full"
             style={{
-              boxShadow: `0 0 15px ${colorTheme.glow}`
+              backgroundColor: themeColor,
+              boxShadow: `0 0 10px ${themeColor}`
             }}
           />
         )}
