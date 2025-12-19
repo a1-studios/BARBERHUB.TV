@@ -85,3 +85,21 @@ verify_jwt = false
 
 [functions.cleanup-community-notes]
 verify_jwt = false
+
+[functions.register-tournament-bb]
+verify_jwt = true
+
+[functions.create-challenge-stake]
+verify_jwt = true
+
+[functions.match-challenge-stake]
+verify_jwt = true
+
+[functions.distribute-pot]
+verify_jwt = true
+
+[functions.purchase-product-bb]
+verify_jwt = true
+
+[functions.donate-to-battle]
+verify_jwt = true
