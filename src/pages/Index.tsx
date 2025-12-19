@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { FEATURES } from "@/config/features";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
-import { HowItWorks } from "@/components/onboarding/HowItWorks";
+import { ImmersiveFactionBanners } from "@/components/factions/ImmersiveFactionBanners";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -43,8 +43,8 @@ const Index = () => {
           {/* Head-to-Head Battle Hero */}
           <DynamicBattleHero />
           
-          {/* How It Works Guide */}
-          <HowItWorks />
+          {/* Immersive Faction Banners - Full Screen Selection */}
+          <ImmersiveFactionBanners />
           
           {/* Global League Dashboard */}
           <GlobalLeagueDashboard />
