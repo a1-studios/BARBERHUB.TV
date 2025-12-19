@@ -52,14 +52,6 @@ export const ImmersiveBannerCard = ({
       className="relative flex-1 min-w-0"
       style={{ perspective: '1000px' }}
     >
-      {/* Barber Pole Logo at Top */}
-      <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-10">
-        <img 
-          src="/src/assets/barber-pole.png" 
-          alt="Barber Pole" 
-          className="w-8 h-8 object-contain drop-shadow-lg"
-        />
-      </div>
       
       {/* Main Banner */}
       <motion.div
