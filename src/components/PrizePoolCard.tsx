@@ -365,24 +365,24 @@ export const PrizePoolCard = () => {
           </div>
         </div>
 
-        {/* Community Notes Section */}
-        <div className="max-w-4xl mx-auto space-y-4">
-          <div className="flex items-center gap-3 mb-4">
-            <MessageCircle className="w-6 h-6 text-primary" />
-            <h3 className="text-2xl font-bold">Community Notes</h3>
+        {/* Community Notes Section - Compact */}
+        <div className="max-w-2xl mx-auto space-y-2">
+          <div className="flex items-center gap-2 mb-2">
+            <MessageCircle className="w-5 h-5 text-primary" />
+            <h3 className="text-lg font-bold">Community Notes</h3>
           </div>
 
-          {/* Post Note Input */}
+          {/* Post Note Input - Compact */}
           {user && (
-            <div className="relative mb-6">
-              <div className="relative bg-background/80 backdrop-blur-sm border border-border rounded-lg p-4">
+            <div className="relative mb-3">
+              <div className="relative bg-background/80 backdrop-blur-sm border border-border rounded-lg p-3">
                 <div className="relative">
                   <Textarea
                     ref={textareaRef}
                     placeholder="Share your thoughts... Use @username to mention someone!"
                     value={noteContent}
                     onChange={handleTextareaChange}
-                    className="min-h-[100px] bg-transparent border-0 focus-visible:ring-0 resize-none text-base"
+                    className="min-h-[60px] bg-transparent border-0 focus-visible:ring-0 resize-none text-sm"
                     maxLength={500}
                   />
                   
@@ -441,9 +441,9 @@ export const PrizePoolCard = () => {
             </div>
           )}
 
-          {/* Recent Notes Feed */}
+          {/* Recent Notes Feed - Compact */}
           <div className="relative">
-            <div className="space-y-3 max-h-[280px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+            <div className="space-y-2 max-h-[160px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
             {notes?.map((note: any) => {
               const isBarber = note.role === 'barber';
               const isFan = note.role === 'fan';
@@ -453,30 +453,30 @@ export const PrizePoolCard = () => {
               return (
                 <div
                   key={note.id}
-                  className="group relative bg-background/80 backdrop-blur-sm border border-border/50 rounded-lg p-4 transition-all hover:bg-background/90 hover:border-primary/30 animate-in fade-in slide-in-from-bottom-2 duration-300"
+                  className="group relative bg-background/80 backdrop-blur-sm border border-border/50 rounded-md p-2 transition-all hover:bg-background/90 hover:border-primary/30"
                 >
-                  <div className="flex items-start justify-between gap-3 mb-2">
+                  <div className="flex items-center gap-2">
                     <button
                       onClick={() => window.location.href = `/barber/${note.user_id}`}
-                      className={`font-bold ${usernameColor} hover:underline cursor-pointer text-base flex items-center gap-1`}
+                      className={`font-semibold ${usernameColor} hover:underline cursor-pointer text-xs flex items-center gap-0.5`}
                     >
                       @{username}
-                      {isBarber && <span className="text-xs">✂️</span>}
+                      {isBarber && <span className="text-[10px]">✂️</span>}
                     </button>
-                    <span className="text-xs text-muted-foreground flex-shrink-0">
+                    <span className="text-[10px] text-muted-foreground">
                       {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
                     </span>
                   </div>
-                  <div className="text-sm text-foreground break-words leading-relaxed">
+                  <div className="text-xs text-foreground break-words line-clamp-1 mt-0.5">
                     {renderNoteContent(note.content)}
                   </div>
                 </div>
               );
             })}
             {(!notes || notes.length === 0) && (
-              <div className="text-center py-8 text-muted-foreground">
-                <MessageCircle className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No community notes yet. Be the first to share!</p>
+              <div className="text-center py-4 text-muted-foreground">
+                <MessageCircle className="w-8 h-8 mx-auto mb-1 opacity-50" />
+                <p className="text-xs">No notes yet. Be the first to share!</p>
               </div>
             )}
             </div>
