@@ -1,11 +1,11 @@
 import { useNavigate } from 'react-router-dom';
-import { Compass, MapPin, Gift } from 'lucide-react';
+import { Compass, Gift } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { PrizePoolCard } from '@/components/PrizePoolCard';
 import { LiveBattleFeed } from '@/components/LiveBattleFeed';
-import { FanActionZone } from '@/components/FanActionZone';
+import { GlobalContendersHeader } from '@/components/GlobalContendersHeader';
 import SphereImageGrid, { ImageData } from '@/components/SphereImageGrid';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -60,19 +60,11 @@ export const GlobalLeagueDashboard = () => {
   return (
     <div className="min-h-screen">
       <div className="container mx-auto px-4 py-8 space-y-12">
-        {/* Global Contenders 3D Sphere - Featured at Top */}
+        {/* Global Contenders - Energetic Header with Search */}
+        <GlobalContendersHeader contenderCount={contenders.length} />
+
+        {/* 3D Sphere */}
         <div className="relative">
-          <div className="text-center space-y-3 mb-8">
-            <h2 className="text-4xl font-bold bg-gradient-to-r from-primary via-primary-glow to-primary bg-clip-text text-transparent">
-              Global Contenders
-            </h2>
-            <p className="text-lg text-muted-foreground">
-              🌍 {contenders.length}+ barbers competing from around the world
-            </p>
-            <p className="text-sm text-muted-foreground/70">
-              Drag to rotate • Click to view profiles
-            </p>
-          </div>
           
           <div className="flex justify-center py-8 px-4">
             {isLoadingContenders ? (
@@ -117,18 +109,13 @@ export const GlobalLeagueDashboard = () => {
         {/* Prize Pool Feature Card */}
         <PrizePoolCard />
 
-        {/* Role-Based Action Zone - Centered */}
-        <div className="flex justify-center">
-          <FanActionZone />
-        </div>
-
         {/* Live Battles */}
         <LiveBattleFeed />
 
         {/* Quick Access Links */}
         <div className="border-t pt-8">
           <h3 className="text-xl font-bold mb-6">Quick Access</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Button
               variant="outline"
               size="lg"
@@ -137,15 +124,6 @@ export const GlobalLeagueDashboard = () => {
             >
               <Compass className="w-5 h-5 mr-2" />
               Explore All Battles
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full justify-start"
-              onClick={() => navigate('/barbers')}
-            >
-              <MapPin className="w-5 h-5 mr-2" />
-              Find Barbers Near You
             </Button>
             <Button
               variant="outline"
