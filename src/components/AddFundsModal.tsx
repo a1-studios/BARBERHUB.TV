@@ -94,15 +94,17 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
 
   if (!isOpen) return null;
 
-  const handleAddFunds = (amount: number) => {
-    purchaseBucks.mutate(amount);
+  const handleAddFunds = (usdAmount: number) => {
+    purchaseBucks.mutate(usdAmount);
   };
 
+  // Packages match the edge function: $5=25BB, $10=50BB, $25=130BB, $50=265BB, $100=550BB
   const quickAmounts = [
-    { bb: 100, usd: 20 },
-    { bb: 500, usd: 100 },
-    { bb: 1000, usd: 200 },
-    { bb: 2500, usd: 500 }
+    { bb: 25, usd: 5, bonus: 0 },
+    { bb: 50, usd: 10, bonus: 0 },
+    { bb: 130, usd: 25, bonus: 5 },
+    { bb: 265, usd: 50, bonus: 15 },
+    { bb: 550, usd: 100, bonus: 50 }
   ];
 
   return (
@@ -184,11 +186,11 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
             </div>
             
             <div className="grid grid-cols-2 gap-3">
-              {quickAmounts.map(({ bb, usd }) => (
+              {quickAmounts.map(({ bb, usd, bonus }) => (
                 <Button
-                  key={bb}
+                  key={usd}
                   variant="outline"
-                  onClick={() => handleAddFunds(bb)}
+                  onClick={() => handleAddFunds(usd)}
                   disabled={purchaseBucks.isPending}
                   className="h-auto flex flex-col items-center py-4 hover:border-yellow-500/50 hover:bg-yellow-500/5"
                 >
@@ -197,6 +199,9 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
                     <span className="text-xl font-bold text-yellow-500">{bb.toLocaleString()}</span>
                   </div>
                   <span className="text-xs text-muted-foreground">Barber Bucks</span>
+                  {bonus > 0 && (
+                    <span className="text-[10px] text-green-500 font-medium">+{bonus} bonus!</span>
+                  )}
                   <span className="text-sm font-semibold mt-1 text-foreground">
                     ${usd}
                   </span>
