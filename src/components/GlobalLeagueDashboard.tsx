@@ -8,6 +8,7 @@ import { LiveBattleFeed } from '@/components/LiveBattleFeed';
 import { GlobalContendersHeader } from '@/components/GlobalContendersHeader';
 import SphereImageGrid, { ImageData } from '@/components/SphereImageGrid';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SphereHolographicWrapper } from '@/components/SphereHolographicWrapper';
 
 export const GlobalLeagueDashboard = () => {
   const navigate = useNavigate();
@@ -69,24 +70,26 @@ export const GlobalLeagueDashboard = () => {
                 <p className="text-sm text-muted-foreground">Loading contenders...</p>
               </div>
             ) : contenders.length > 0 ? (
-              <div className="w-full max-w-[650px]">
-                <SphereImageGrid
-                  images={contenders}
-                  containerSize={typeof window !== 'undefined' ? Math.min(650, window.innerWidth - 32) : 650}
-                  sphereRadius={typeof window !== 'undefined' ? Math.min(280, (window.innerWidth - 32) * 0.43) : 280}
-                  autoRotate={true}
-                  autoRotateSpeed={0.25}
-                  dragSensitivity={0.7}
-                  baseImageScale={0.14}
-                  hoverScale={1.3}
-                  perspective={1200}
-                  championId={championId || undefined}
-                  grandPrize="$25,000"
-                  showCountryFlags={true}
-                  showChampionCrown={true}
-                  className="mx-auto"
-                />
-              </div>
+              <SphereHolographicWrapper size={typeof window !== 'undefined' ? Math.min(650, window.innerWidth - 32) : 650}>
+                <div className="w-full max-w-[650px]">
+                  <SphereImageGrid
+                    images={contenders}
+                    containerSize={typeof window !== 'undefined' ? Math.min(650, window.innerWidth - 32) : 650}
+                    sphereRadius={typeof window !== 'undefined' ? Math.min(280, (window.innerWidth - 32) * 0.43) : 280}
+                    autoRotate={true}
+                    autoRotateSpeed={0.25}
+                    dragSensitivity={0.7}
+                    baseImageScale={0.14}
+                    hoverScale={1.3}
+                    perspective={1200}
+                    championId={championId || undefined}
+                    grandPrize="$25,000"
+                    showCountryFlags={true}
+                    showChampionCrown={true}
+                    className="mx-auto"
+                  />
+                </div>
+              </SphereHolographicWrapper>
             ) : (
               <div className="text-center py-12">
                 <p className="text-muted-foreground">No contenders registered yet</p>
