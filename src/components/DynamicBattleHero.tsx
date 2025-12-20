@@ -7,8 +7,8 @@ import { BarberHeroStreamControls } from "@/components/streaming/BarberHeroStrea
 import { useRealtimeBattleViewers } from "@/hooks/useRealtimeBattleViewers";
 import { useAuth } from "@/hooks/useAuth";
 import { Heart, Users, Eye, Radio } from "lucide-react";
-import { InteractiveVoteSlider } from "@/components/battles/InteractiveVoteSlider";
 import { MobileVoteCenter } from "@/components/battles/MobileVoteCenter";
+import { DesktopVoteButtons } from "@/components/battles/DesktopVoteButtons";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -438,10 +438,10 @@ export const DynamicBattleHero = () => {
           </div>
         </div>
 
-        {/* Interactive Vote Slider at Bottom - Only for non-barber users during active battle on desktop */}
+        {/* Desktop Vote Buttons - Vertical layout, only for non-barber users during active battle */}
         {isActiveBattle && !isCurrentUserInBattle && !isMobile && (
-          <div className="absolute bottom-4 left-4 right-4 z-20">
-            <InteractiveVoteSlider
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20">
+            <DesktopVoteButtons
               barber1Name={barber1.display_name || barber1.name}
               barber2Name={barber2.display_name || barber2.name}
               onVote={handleVote}
