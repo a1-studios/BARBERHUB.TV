@@ -365,31 +365,9 @@ export const DynamicBattleHero = () => {
             </div>
           </div>
 
-          {/* VS Divider with LIVE Badge - Energetic video game style */}
+          {/* VS Divider - Clean with lightning flash every 5s */}
           {!(isMobile && isActiveBattle && !isCurrentUserInBattle) && (
-            <div className="h-3 sm:h-auto sm:w-12 relative flex-shrink-0 flex items-center justify-center overflow-hidden">
-              {/* Animated energy background */}
-              <motion.div
-                className="absolute inset-0 opacity-30"
-                style={{
-                  background: "linear-gradient(180deg, hsl(var(--primary)), hsl(187 100% 50%), hsl(var(--primary)))",
-                }}
-                animate={{ 
-                  opacity: [0.2, 0.4, 0.2],
-                }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-              />
-              
-              {/* Electric bolts effect */}
-              <motion.div
-                className="absolute inset-0"
-                style={{
-                  background: "repeating-linear-gradient(0deg, transparent 0px, transparent 4px, hsl(187 100% 50% / 0.3) 4px, hsl(187 100% 50% / 0.3) 5px)",
-                }}
-                animate={{ y: [0, -10, 0] }}
-                transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
-              />
-              
+            <div className="h-3 sm:h-auto sm:w-12 relative flex-shrink-0 flex items-center justify-center">
               {/* LIVE Badge */}
               {isActiveBattle && (
                 <motion.div 
@@ -402,32 +380,39 @@ export const DynamicBattleHero = () => {
                 </motion.div>
               )}
               
-              {/* VS Badge - Energetic */}
-              <motion.div 
-                className="relative z-10 bg-black/90 px-2 py-1 rounded border border-primary/60"
+              {/* VS Text with lightning flash every 5 seconds */}
+              <motion.span 
+                className="relative z-10 text-primary font-black text-xl tracking-wider"
                 animate={{ 
-                  boxShadow: [
-                    "0 0 10px hsl(var(--primary) / 0.5), 0 0 20px hsl(187 100% 50% / 0.3)",
-                    "0 0 20px hsl(var(--primary) / 0.8), 0 0 40px hsl(187 100% 50% / 0.5)",
-                    "0 0 10px hsl(var(--primary) / 0.5), 0 0 20px hsl(187 100% 50% / 0.3)"
+                  textShadow: [
+                    "0 0 0px transparent",
+                    "0 0 0px transparent",
+                    "0 0 0px transparent",
+                    "0 0 0px transparent",
+                    "0 0 30px hsl(var(--primary)), 0 0 60px hsl(187 100% 50%), 0 0 100px hsl(var(--primary))",
+                    "0 0 5px hsl(var(--primary))",
+                    "0 0 0px transparent"
+                  ],
+                  scale: [1, 1, 1, 1, 1.15, 1.05, 1],
+                  color: [
+                    "hsl(var(--primary))",
+                    "hsl(var(--primary))",
+                    "hsl(var(--primary))",
+                    "hsl(var(--primary))",
+                    "hsl(187 100% 70%)",
+                    "hsl(var(--primary))",
+                    "hsl(var(--primary))"
                   ]
                 }}
-                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                transition={{ 
+                  duration: 5, 
+                  repeat: Infinity, 
+                  times: [0, 0.85, 0.9, 0.92, 0.94, 0.97, 1],
+                  ease: "easeInOut" 
+                }}
               >
-                <motion.span 
-                  className="text-primary font-black text-[10px] tracking-wider"
-                  animate={{ 
-                    textShadow: [
-                      "0 0 5px hsl(var(--primary))",
-                      "0 0 15px hsl(var(--primary)), 0 0 25px hsl(187 100% 50%)",
-                      "0 0 5px hsl(var(--primary))"
-                    ]
-                  }}
-                  transition={{ duration: 1, repeat: Infinity }}
-                >
-                  VS
-                </motion.span>
-              </motion.div>
+                VS
+              </motion.span>
             </div>
           )}
 
