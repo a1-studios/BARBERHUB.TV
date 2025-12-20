@@ -8,6 +8,8 @@ import { useRealtimeBattleViewers } from "@/hooks/useRealtimeBattleViewers";
 import { useAuth } from "@/hooks/useAuth";
 import { Heart, Users, Eye, Radio } from "lucide-react";
 import { InteractiveVoteSlider } from "@/components/battles/InteractiveVoteSlider";
+import { MobileVoteCenter } from "@/components/battles/MobileVoteCenter";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -172,6 +174,7 @@ export const DynamicBattleHero = () => {
 
   // IMPORTANT: Call hooks before any conditional returns
   const viewerData = useRealtimeBattleViewers(battle?.id || '');
+  const isMobile = useIsMobile();
 
   // Check if current battle is active
   const isStreamableBattle = battle?.status === 'active' || battle?.status === 'voting' || battle?.status === 'upcoming';
@@ -294,25 +297,39 @@ export const DynamicBattleHero = () => {
             </div>
           </div>
 
-          {/* VS Divider with LIVE Badge - Center position */}
-          <div className="h-4 sm:h-auto sm:w-4 bg-gradient-to-r sm:bg-gradient-to-b from-transparent via-cyan/40 to-transparent relative flex-shrink-0 flex items-center justify-center">
-            {/* LIVE Badge - Centered in divider */}
-            {isActiveBattle && (
-              <div className="absolute -top-8 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-2 py-1 rounded-full bg-black/80 backdrop-blur-sm border border-red-500/50 shadow-lg shadow-red-500/20">
-                <div className="relative">
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                  <div className="absolute inset-0 w-2 h-2 bg-red-500 rounded-full animate-ping opacity-50" />
+          {/* VS Divider with LIVE Badge - Center position (hidden on mobile when active battle) */}
+          {!(isMobile && isActiveBattle && !isCurrentUserInBattle) && (
+            <div className="h-4 sm:h-auto sm:w-4 bg-gradient-to-r sm:bg-gradient-to-b from-transparent via-cyan/40 to-transparent relative flex-shrink-0 flex items-center justify-center">
+              {/* LIVE Badge - Centered in divider */}
+              {isActiveBattle && (
+                <div className="absolute -top-8 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-2 py-1 rounded-full bg-black/80 backdrop-blur-sm border border-red-500/50 shadow-lg shadow-red-500/20">
+                  <div className="relative">
+                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                    <div className="absolute inset-0 w-2 h-2 bg-red-500 rounded-full animate-ping opacity-50" />
+                  </div>
+                  <Radio className="w-3 h-3 text-red-500" />
+                  <span className="text-[10px] font-black text-red-500 uppercase tracking-wider">Live</span>
                 </div>
-                <Radio className="w-3 h-3 text-red-500" />
-                <span className="text-[10px] font-black text-red-500 uppercase tracking-wider">Live</span>
+              )}
+              
+              {/* VS Badge - 10% larger */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/90 px-3 py-1.5 rounded-lg border-2 border-cyan/50 z-10 shadow-lg shadow-cyan/20">
+                <span className="text-primary font-black text-sm sm:text-base tracking-wider">VS</span>
               </div>
-            )}
-            
-            {/* VS Badge - 10% larger */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/90 px-3 py-1.5 rounded-lg border-2 border-cyan/50 z-10 shadow-lg shadow-cyan/20">
-              <span className="text-primary font-black text-sm sm:text-base tracking-wider">VS</span>
             </div>
-          </div>
+          )}
+
+          {/* Mobile Vote Center - Replaces VS divider on mobile during active battles */}
+          {isMobile && isActiveBattle && !isCurrentUserInBattle && (
+            <div className="py-2 px-2 flex-shrink-0">
+              <MobileVoteCenter
+                barber1Name={barber1.display_name || barber1.name}
+                barber2Name={barber2.display_name || barber2.name}
+                onVote={handleVote}
+                isLive={isActiveBattle}
+              />
+            </div>
+          )}
 
           {/* Bottom/Right Side - Barber 2 */}
           <div className="flex-1 relative overflow-hidden min-h-0">
@@ -387,8 +404,8 @@ export const DynamicBattleHero = () => {
           </div>
         </div>
 
-        {/* Interactive Vote Slider at Bottom - Only for non-barber users during active battle */}
-        {isActiveBattle && !isCurrentUserInBattle && (
+        {/* Interactive Vote Slider at Bottom - Only for non-barber users during active battle on desktop */}
+        {isActiveBattle && !isCurrentUserInBattle && !isMobile && (
           <div className="absolute bottom-4 left-4 right-4 z-20">
             <InteractiveVoteSlider
               barber1Name={barber1.display_name || barber1.name}
