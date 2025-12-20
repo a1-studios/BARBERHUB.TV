@@ -41,123 +41,190 @@ const WorldCupPrizeCounter = () => {
       transition={{ duration: 0.6, ease: "easeOut" }}
       className="relative flex flex-col items-center justify-center"
     >
-      {/* Outer energy ring */}
-      <div className="absolute inset-0 -m-4">
-        <motion.div
-          className="absolute inset-0 rounded-full"
-          style={{
-            background: "conic-gradient(from 0deg, hsl(var(--primary)), hsl(187 100% 50%), hsl(var(--primary)), hsl(187 100% 50%), hsl(var(--primary)))",
-            filter: "blur(8px)",
-          }}
-          animate={{ rotate: 360 }}
-          transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-        />
-      </div>
+      {/* Sideways Barber Pole Frame */}
+      <div className="relative">
+        {/* Top barber pole stripe */}
+        <div className="absolute -top-3 left-0 right-0 h-3 rounded-full overflow-hidden">
+          <motion.div
+            className="absolute inset-0 w-[200%] h-full"
+            style={{
+              background: `repeating-linear-gradient(
+                90deg,
+                hsl(var(--primary)) 0px,
+                hsl(var(--primary)) 12px,
+                transparent 12px,
+                transparent 24px,
+                hsl(187 100% 50%) 24px,
+                hsl(187 100% 50%) 36px,
+                transparent 36px,
+                transparent 48px
+              )`,
+            }}
+            animate={{ x: [0, -48] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+          />
+          {/* Glossy overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/30 via-transparent to-black/20" />
+        </div>
+        
+        {/* Bottom barber pole stripe */}
+        <div className="absolute -bottom-3 left-0 right-0 h-3 rounded-full overflow-hidden">
+          <motion.div
+            className="absolute inset-0 w-[200%] h-full"
+            style={{
+              background: `repeating-linear-gradient(
+                90deg,
+                hsl(187 100% 50%) 0px,
+                hsl(187 100% 50%) 12px,
+                transparent 12px,
+                transparent 24px,
+                hsl(var(--primary)) 24px,
+                hsl(var(--primary)) 36px,
+                transparent 36px,
+                transparent 48px
+              )`,
+            }}
+            animate={{ x: [-48, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+          />
+          {/* Glossy overlay */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/30 via-transparent to-black/20" />
+        </div>
+        
+        {/* Left pole cap */}
+        <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-4 h-12 rounded-l-full overflow-hidden">
+          <motion.div
+            className="absolute inset-0 w-full h-[200%]"
+            style={{
+              background: `repeating-linear-gradient(
+                180deg,
+                hsl(var(--primary)) 0px,
+                hsl(var(--primary)) 8px,
+                transparent 8px,
+                transparent 16px,
+                hsl(187 100% 50%) 16px,
+                hsl(187 100% 50%) 24px,
+                transparent 24px,
+                transparent 32px
+              )`,
+            }}
+            animate={{ y: [0, -32] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-white/20" />
+        </div>
+        
+        {/* Right pole cap */}
+        <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-4 h-12 rounded-r-full overflow-hidden">
+          <motion.div
+            className="absolute inset-0 w-full h-[200%]"
+            style={{
+              background: `repeating-linear-gradient(
+                180deg,
+                hsl(187 100% 50%) 0px,
+                hsl(187 100% 50%) 8px,
+                transparent 8px,
+                transparent 16px,
+                hsl(var(--primary)) 16px,
+                hsl(var(--primary)) 24px,
+                transparent 24px,
+                transparent 32px
+              )`,
+            }}
+            animate={{ y: [-32, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-white/20 via-transparent to-black/20" />
+        </div>
+        
+        {/* Corner glow effects */}
+        <div className="absolute -top-3 -left-4 w-6 h-6 rounded-full bg-primary/40 blur-md" />
+        <div className="absolute -top-3 -right-4 w-6 h-6 rounded-full bg-[hsl(187_100%_50%)]/40 blur-md" />
+        <div className="absolute -bottom-3 -left-4 w-6 h-6 rounded-full bg-[hsl(187_100%_50%)]/40 blur-md" />
+        <div className="absolute -bottom-3 -right-4 w-6 h-6 rounded-full bg-primary/40 blur-md" />
       
-      {/* Inner glow pulse */}
-      <motion.div
-        className="absolute inset-0 -m-2 rounded-full"
-        style={{
-          background: "radial-gradient(circle, hsl(var(--primary) / 0.4) 0%, transparent 70%)",
-        }}
-        animate={{ 
-          scale: [1, 1.2, 1],
-          opacity: [0.5, 0.8, 0.5]
-        }}
-        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-      />
-      
-      {/* Main container */}
-      <div className="relative z-10 flex flex-col items-center px-6 py-4 rounded-2xl bg-background/80 backdrop-blur-md border border-primary/30">
-        {/* Trophy icon with energy */}
-        <div className="relative mb-2">
-          {/* Energy particles around trophy */}
-          {[...Array(6)].map((_, i) => (
+        {/* Main container */}
+        <div className="relative z-10 flex flex-col items-center px-8 py-5 rounded-xl bg-background/90 backdrop-blur-md border border-primary/20">
+          {/* Trophy icon with energy */}
+          <div className="relative mb-2">
+            {/* Energy particles around trophy */}
+            {[...Array(6)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute w-1.5 h-1.5 rounded-full"
+                style={{
+                  background: i % 2 === 0 ? "hsl(var(--primary))" : "hsl(187 100% 50%)",
+                  left: "50%",
+                  top: "50%",
+                }}
+                animate={{
+                  x: [0, Math.cos((i * 60 * Math.PI) / 180) * 25],
+                  y: [0, Math.sin((i * 60 * Math.PI) / 180) * 25],
+                  opacity: [1, 0],
+                  scale: [1, 0.5],
+                }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  delay: i * 0.2,
+                  ease: "easeOut",
+                }}
+              />
+            ))}
+            
+            {/* Trophy with glow */}
             <motion.div
-              key={i}
-              className="absolute w-1.5 h-1.5 rounded-full"
-              style={{
-                background: i % 2 === 0 ? "hsl(var(--primary))" : "hsl(187 100% 50%)",
-                left: "50%",
-                top: "50%",
-              }}
-              animate={{
-                x: [0, Math.cos((i * 60 * Math.PI) / 180) * 25],
-                y: [0, Math.sin((i * 60 * Math.PI) / 180) * 25],
-                opacity: [1, 0],
-                scale: [1, 0.5],
-              }}
-              transition={{
-                duration: 1.5,
-                repeat: Infinity,
-                delay: i * 0.2,
-                ease: "easeOut",
-              }}
-            />
-          ))}
+              className="relative"
+              animate={{ y: [0, -3, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <div className="absolute inset-0 blur-md bg-primary/50 rounded-full" />
+              <Trophy className="relative w-8 h-8 text-primary drop-shadow-[0_0_10px_hsl(var(--primary))]" />
+            </motion.div>
+          </div>
           
-          {/* Trophy with glow */}
+          {/* "TOTAL PRIZE POOL" label */}
           <motion.div
-            className="relative"
-            animate={{ y: [0, -3, 0] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1"
+            animate={{ opacity: [0.7, 1, 0.7] }}
+            transition={{ duration: 2, repeat: Infinity }}
           >
-            <div className="absolute inset-0 blur-md bg-primary/50 rounded-full" />
-            <Trophy className="relative w-8 h-8 text-primary drop-shadow-[0_0_10px_hsl(var(--primary))]" />
+            Total Prize Pool
           </motion.div>
-        </div>
-        
-        {/* "TOTAL PRIZE POOL" label */}
-        <motion.div
-          className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-medium mb-1"
-          animate={{ opacity: [0.7, 1, 0.7] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        >
-          Total Prize Pool
-        </motion.div>
-        
-        {/* Animated price display */}
-        <div className="relative">
-          {/* Scanning highlight effect */}
-          <motion.div
-            className="absolute inset-0 w-full h-full"
-            style={{
-              background: "linear-gradient(90deg, transparent 0%, hsl(187 100% 50% / 0.3) 50%, transparent 100%)",
-            }}
-            animate={{ x: ["-100%", "200%"] }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", repeatDelay: 1 }}
-          />
           
-          <motion.span
-            className="relative text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary via-[hsl(187_100%_50%)] to-primary bg-clip-text text-transparent"
-            style={{
-              textShadow: "0 0 30px hsl(var(--primary) / 0.5)",
-            }}
-          >
-            {isLoading ? "..." : formatCurrency(displayValue)}
-          </motion.span>
-        </div>
-        
-        {/* Live indicator */}
-        <div className="flex items-center gap-1.5 mt-2">
-          <motion.div
-            className="w-2 h-2 rounded-full bg-green-500"
-            animate={{ scale: [1, 1.3, 1], opacity: [1, 0.7, 1] }}
-            transition={{ duration: 1, repeat: Infinity }}
-          />
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Live</span>
+          {/* Animated price display */}
+          <div className="relative">
+            {/* Scanning highlight effect */}
+            <motion.div
+              className="absolute inset-0 w-full h-full"
+              style={{
+                background: "linear-gradient(90deg, transparent 0%, hsl(187 100% 50% / 0.3) 50%, transparent 100%)",
+              }}
+              animate={{ x: ["-100%", "200%"] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", repeatDelay: 1 }}
+            />
+            
+            <motion.span
+              className="relative text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary via-[hsl(187_100%_50%)] to-primary bg-clip-text text-transparent"
+              style={{
+                textShadow: "0 0 30px hsl(var(--primary) / 0.5)",
+              }}
+            >
+              {isLoading ? "..." : formatCurrency(displayValue)}
+            </motion.span>
+          </div>
+          
+          {/* Live indicator */}
+          <div className="flex items-center gap-1.5 mt-2">
+            <motion.div
+              className="w-2 h-2 rounded-full bg-green-500"
+              animate={{ scale: [1, 1.3, 1], opacity: [1, 0.7, 1] }}
+              transition={{ duration: 1, repeat: Infinity }}
+            />
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Live</span>
+          </div>
         </div>
       </div>
-      
-      {/* Bottom energy beam */}
-      <motion.div
-        className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-20 h-1 rounded-full"
-        style={{
-          background: "linear-gradient(90deg, transparent, hsl(var(--primary)), hsl(187 100% 50%), hsl(var(--primary)), transparent)",
-        }}
-        animate={{ scaleX: [0.5, 1, 0.5], opacity: [0.5, 1, 0.5] }}
-        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-      />
     </motion.div>
   );
 };
