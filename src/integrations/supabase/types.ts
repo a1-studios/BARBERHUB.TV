@@ -321,6 +321,82 @@ export type Database = {
           },
         ]
       }
+      battle_donations: {
+        Row: {
+          amount_bb: number
+          battle_id: string | null
+          challenge_id: string | null
+          created_at: string
+          donor_id: string
+          id: string
+          message: string | null
+          recipient_barber_id: string | null
+        }
+        Insert: {
+          amount_bb: number
+          battle_id?: string | null
+          challenge_id?: string | null
+          created_at?: string
+          donor_id: string
+          id?: string
+          message?: string | null
+          recipient_barber_id?: string | null
+        }
+        Update: {
+          amount_bb?: number
+          battle_id?: string | null
+          challenge_id?: string | null
+          created_at?: string
+          donor_id?: string
+          id?: string
+          message?: string | null
+          recipient_barber_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "battle_donations_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_donations_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "open_challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "battle_donations_donor_id_fkey"
+            columns: ["donor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "battle_donations_donor_id_fkey"
+            columns: ["donor_id"]
+            isOneToOne: false
+            referencedRelation: "public_user_profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "battle_donations_recipient_barber_id_fkey"
+            columns: ["recipient_barber_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "battle_donations_recipient_barber_id_fkey"
+            columns: ["recipient_barber_id"]
+            isOneToOne: false
+            referencedRelation: "public_user_profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       battle_participants: {
         Row: {
           battle_id: string
@@ -1576,9 +1652,15 @@ export type Database = {
           challenger_username: string
           challenger_youtube_video_id: string | null
           created_at: string | null
+          donations_total: number | null
           id: string
+          opponent_stake_matched: boolean | null
+          platform_fee_collected: number | null
+          pot_total: number | null
+          stake_amount: number | null
           status: string | null
           title: string
+          winner_id: string | null
         }
         Insert: {
           accepted_at?: string | null
@@ -1593,9 +1675,15 @@ export type Database = {
           challenger_username: string
           challenger_youtube_video_id?: string | null
           created_at?: string | null
+          donations_total?: number | null
           id?: string
+          opponent_stake_matched?: boolean | null
+          platform_fee_collected?: number | null
+          pot_total?: number | null
+          stake_amount?: number | null
           status?: string | null
           title: string
+          winner_id?: string | null
         }
         Update: {
           accepted_at?: string | null
@@ -1610,9 +1698,15 @@ export type Database = {
           challenger_username?: string
           challenger_youtube_video_id?: string | null
           created_at?: string | null
+          donations_total?: number | null
           id?: string
+          opponent_stake_matched?: boolean | null
+          platform_fee_collected?: number | null
+          pot_total?: number | null
+          stake_amount?: number | null
           status?: string | null
           title?: string
+          winner_id?: string | null
         }
         Relationships: [
           {
@@ -1621,6 +1715,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "battles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "open_challenges_winner_id_fkey"
+            columns: ["winner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "open_challenges_winner_id_fkey"
+            columns: ["winner_id"]
+            isOneToOne: false
+            referencedRelation: "public_user_profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
