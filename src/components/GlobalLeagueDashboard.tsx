@@ -60,12 +60,8 @@ export const GlobalLeagueDashboard = () => {
   return (
     <div className="min-h-screen">
       <div className="container mx-auto px-4 py-8 space-y-12">
-        {/* Global Contenders - Energetic Header with Search */}
-        <GlobalContendersHeader contenderCount={contenders.length} />
-
         {/* 3D Sphere */}
         <div className="relative">
-          
           <div className="flex justify-center py-8 px-4">
             {isLoadingContenders ? (
               <div className="flex flex-col items-center gap-4">
@@ -105,6 +101,9 @@ export const GlobalLeagueDashboard = () => {
             )}
           </div>
         </div>
+
+        {/* Global Contenders - Header with Search */}
+        <GlobalContendersHeader contenderCount={contenders.length} />
 
         {/* Prize Pool Feature Card */}
         <PrizePoolCard />
