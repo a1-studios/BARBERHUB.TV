@@ -124,8 +124,8 @@ const LandingHero = () => {
       <Globe3D />
       
       {/* Main content - Add top padding to account for sticky header */}
-      <div className="relative z-10 flex items-center justify-center min-h-screen pt-20">
-        <div className="container mx-auto px-4 py-20">
+      <div className="relative z-10 flex items-center justify-center min-h-screen pt-16 md:pt-20">
+        <div className="container mx-auto px-4 py-8 md:py-20">
           <div className="max-w-6xl mx-auto space-y-8">
             {/* Sign up section - Top position */}
             <div className="w-full max-w-md mx-auto">
