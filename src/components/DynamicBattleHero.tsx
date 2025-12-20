@@ -365,55 +365,51 @@ export const DynamicBattleHero = () => {
             </div>
           </div>
 
-          {/* VS Divider - Clean with lightning flash every 5s */}
+          {/* VS - Floating centered with lightning flash every 3s */}
           {!(isMobile && isActiveBattle && !isCurrentUserInBattle) && (
-            <div className="h-3 sm:h-auto sm:w-12 relative flex-shrink-0 flex items-center justify-center">
-              {/* LIVE Badge */}
+            <>
+              {/* LIVE Badge - absolute positioned */}
               {isActiveBattle && (
                 <motion.div 
-                  className="absolute top-1 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 px-1 py-0.5 rounded bg-red-500/90"
+                  className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-red-500/90"
                   animate={{ scale: [1, 1.05, 1] }}
                   transition={{ duration: 0.8, repeat: Infinity }}
                 >
-                  <div className="w-1 h-1 bg-white rounded-full" />
-                  <span className="text-[6px] font-black text-white uppercase">Live</span>
+                  <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                  <span className="text-[8px] font-black text-white uppercase">Live</span>
                 </motion.div>
               )}
               
-              {/* VS Text with lightning flash every 5 seconds */}
+              {/* VS Text - absolute centered */}
               <motion.span 
-                className="relative z-10 text-primary font-black text-xl tracking-wider"
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 text-primary font-black text-2xl sm:text-3xl tracking-widest drop-shadow-lg"
                 animate={{ 
                   textShadow: [
                     "0 0 0px transparent",
                     "0 0 0px transparent",
-                    "0 0 0px transparent",
-                    "0 0 0px transparent",
-                    "0 0 30px hsl(var(--primary)), 0 0 60px hsl(187 100% 50%), 0 0 100px hsl(var(--primary))",
+                    "0 0 40px hsl(var(--primary)), 0 0 80px hsl(187 100% 50%), 0 0 120px hsl(var(--primary))",
                     "0 0 5px hsl(var(--primary))",
                     "0 0 0px transparent"
                   ],
-                  scale: [1, 1, 1, 1, 1.15, 1.05, 1],
+                  scale: [1, 1, 1.2, 1.05, 1],
                   color: [
                     "hsl(var(--primary))",
                     "hsl(var(--primary))",
-                    "hsl(var(--primary))",
-                    "hsl(var(--primary))",
-                    "hsl(187 100% 70%)",
+                    "hsl(187 100% 80%)",
                     "hsl(var(--primary))",
                     "hsl(var(--primary))"
                   ]
                 }}
                 transition={{ 
-                  duration: 5, 
+                  duration: 3, 
                   repeat: Infinity, 
-                  times: [0, 0.85, 0.9, 0.92, 0.94, 0.97, 1],
+                  times: [0, 0.8, 0.88, 0.94, 1],
                   ease: "easeInOut" 
                 }}
               >
                 VS
               </motion.span>
-            </div>
+            </>
           )}
 
           {/* Mobile Vote Center - Replaces VS divider on mobile during active battles */}
