@@ -103,3 +103,6 @@ verify_jwt = true
 
 [functions.donate-to-battle]
 verify_jwt = true
+
+[functions.purchase-barber-bucks]
+verify_jwt = false

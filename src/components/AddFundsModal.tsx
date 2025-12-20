@@ -18,8 +18,7 @@ interface AddFundsModalProps {
 export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
   const { purchaseBucks } = useBarberBucks();
   const { user } = useAuth();
-  const { isFan } = useUserRole();
-  const { isLoading: rolesLoading } = useUserRole();
+  const { isFan, isLoading: rolesLoading } = useUserRole();
   const [showProfilePrompt, setShowProfilePrompt] = useState(false);
   const [profileData, setProfileData] = useState({
     display_name: '',
