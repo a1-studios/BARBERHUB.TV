@@ -128,7 +128,12 @@ const LandingHero = () => {
       <div className="relative z-10 flex items-center justify-center min-h-screen pt-16 md:pt-20">
         <div className="container mx-auto px-4 py-8 md:py-20">
           <div className="max-w-6xl mx-auto space-y-8">
-            {/* Sign up section - Top position */}
+            {/* World Cup Prize Counter - Top position */}
+            <div className="flex justify-center">
+              <WorldCupPrizeCounter />
+            </div>
+
+            {/* Sign up section */}
             <div className="w-full max-w-md mx-auto">
               <Card className="p-6 border border-border/50 shadow-lg backdrop-blur-sm bg-card/50 transition-all duration-300 hover:shadow-[0_0_30px_hsl(24_100%_52%/0.5),inset_0_0_20px_hsl(24_100%_52%/0.15)] hover:border-primary/30" style={{ borderRadius: '1.5rem' }}>
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -243,10 +248,6 @@ const LandingHero = () => {
               </Card>
             </div>
 
-            {/* World Cup Prize Counter */}
-            <div className="flex justify-center">
-              <WorldCupPrizeCounter />
-            </div>
 
             {/* Branding section - Below prize counter */}
             <div className="text-center space-y-4">
