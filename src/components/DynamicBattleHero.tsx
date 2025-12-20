@@ -6,12 +6,38 @@ import { BarberVideoSection } from "@/components/barber/BarberVideoSection";
 import { BarberHeroStreamControls } from "@/components/streaming/BarberHeroStreamControls";
 import { useRealtimeBattleViewers } from "@/hooks/useRealtimeBattleViewers";
 import { useAuth } from "@/hooks/useAuth";
-import { Heart, Users, Eye, Radio } from "lucide-react";
+import { Heart, Users, Eye } from "lucide-react";
 import { MobileVoteCenter } from "@/components/battles/MobileVoteCenter";
-import { DesktopVoteButtons } from "@/components/battles/DesktopVoteButtons";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
+
+// Minimal inline vote button component
+const VoteButton = ({ name, variant, onVote }: { name: string; variant: 'primary' | 'cyan'; onVote: () => void }) => {
+  const [voted, setVoted] = useState(false);
+  
+  const handleClick = () => {
+    if (voted) return;
+    setVoted(true);
+    onVote();
+  };
+  
+  const colors = variant === 'primary' 
+    ? 'bg-primary/20 border-primary/40 hover:bg-primary/40 text-primary' 
+    : 'bg-cyan/20 border-cyan/40 hover:bg-cyan/40 text-cyan';
+  
+  return (
+    <motion.button
+      onClick={handleClick}
+      disabled={voted}
+      className={`px-2 py-0.5 rounded text-[8px] font-medium border transition-all truncate max-w-[50px] ${colors} ${voted ? 'opacity-50' : ''}`}
+      whileTap={{ scale: 0.95 }}
+    >
+      {voted ? '✓' : name.split(' ')[0]}
+    </motion.button>
+  );
+};
 
 interface Battle {
   id: string;
@@ -331,25 +357,37 @@ export const DynamicBattleHero = () => {
             </div>
           </div>
 
-          {/* VS Divider with LIVE Badge - Center position (hidden on mobile when active battle) */}
+          {/* VS Divider with LIVE Badge and Vote Buttons - Center position (hidden on mobile when active battle) */}
           {!(isMobile && isActiveBattle && !isCurrentUserInBattle) && (
-            <div className="h-4 sm:h-auto sm:w-4 bg-gradient-to-r sm:bg-gradient-to-b from-transparent via-cyan/40 to-transparent relative flex-shrink-0 flex items-center justify-center">
-              {/* LIVE Badge - Centered in divider */}
+            <div className="h-4 sm:h-auto sm:w-16 bg-gradient-to-r sm:bg-gradient-to-b from-transparent via-cyan/20 to-transparent relative flex-shrink-0 flex items-center justify-center">
+              {/* LIVE Badge */}
               {isActiveBattle && (
-                <div className="absolute -top-8 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-2 py-1 rounded-full bg-black/80 backdrop-blur-sm border border-red-500/50 shadow-lg shadow-red-500/20">
-                  <div className="relative">
-                    <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-                    <div className="absolute inset-0 w-2 h-2 bg-red-500 rounded-full animate-ping opacity-50" />
-                  </div>
-                  <Radio className="w-3 h-3 text-red-500" />
-                  <span className="text-[10px] font-black text-red-500 uppercase tracking-wider">Live</span>
+                <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/80 backdrop-blur-sm border border-red-500/50">
+                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                  <span className="text-[8px] font-bold text-red-500 uppercase">Live</span>
                 </div>
               )}
               
-              {/* VS Badge - 10% larger */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black/90 px-3 py-1.5 rounded-lg border-2 border-cyan/50 z-10 shadow-lg shadow-cyan/20">
-                <span className="text-primary font-black text-sm sm:text-base tracking-wider">VS</span>
+              {/* VS Badge */}
+              <div className="bg-black/80 px-2 py-1 rounded border border-cyan/40 z-10">
+                <span className="text-primary font-black text-xs tracking-wider">VS</span>
               </div>
+
+              {/* Vote Buttons - Desktop only, below VS */}
+              {isActiveBattle && !isCurrentUserInBattle && !isMobile && (
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex flex-col gap-1 z-20">
+                  <VoteButton 
+                    name={barber1.display_name || barber1.name} 
+                    variant="primary" 
+                    onVote={() => handleVote(1)} 
+                  />
+                  <VoteButton 
+                    name={barber2.display_name || barber2.name} 
+                    variant="cyan" 
+                    onVote={() => handleVote(2)} 
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -438,16 +476,6 @@ export const DynamicBattleHero = () => {
           </div>
         </div>
 
-        {/* Desktop Vote Buttons - Vertical layout, only for non-barber users during active battle */}
-        {isActiveBattle && !isCurrentUserInBattle && !isMobile && (
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20">
-            <DesktopVoteButtons
-              barber1Name={barber1.display_name || barber1.name}
-              barber2Name={barber2.display_name || barber2.name}
-              onVote={handleVote}
-            />
-          </div>
-        )}
 
         {/* Thin Progress Bar at Bottom */}
         {isActiveBattle && (
