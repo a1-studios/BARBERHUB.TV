@@ -349,11 +349,10 @@ export const DynamicBattleHero = () => {
                 />
                 {/* VS Text */}
                 <motion.span 
-                  className="text-primary font-black text-2xl sm:text-3xl tracking-widest drop-shadow-lg"
+                  className="text-lg sm:text-xl font-bold tracking-[0.3em] italic bg-gradient-to-r from-primary via-cyan to-primary bg-clip-text text-transparent drop-shadow-lg"
                   animate={{
-                    textShadow: ["0 0 0px transparent", "0 0 0px transparent", "0 0 40px hsl(var(--primary)), 0 0 80px hsl(187 100% 50%), 0 0 120px hsl(var(--primary))", "0 0 5px hsl(var(--primary))", "0 0 0px transparent"],
-                    scale: [1, 1, 1.2, 1.05, 1],
-                    color: ["hsl(var(--primary))", "hsl(var(--primary))", "hsl(187 100% 80%)", "hsl(var(--primary))", "hsl(var(--primary))"]
+                    textShadow: ["0 0 0px transparent", "0 0 0px transparent", "0 0 30px hsl(187 100% 50%), 0 0 60px hsl(var(--primary))", "0 0 5px hsl(187 100% 50%)", "0 0 0px transparent"],
+                    scale: [1, 1, 1.15, 1.05, 1],
                   }} 
                   transition={{
                     duration: 3,
