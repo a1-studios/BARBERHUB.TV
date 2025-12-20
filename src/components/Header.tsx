@@ -142,13 +142,13 @@ const Header = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-2 border-primary/40 rounded-xl mx-4 mt-2 overflow-hidden">
-      {/* Energy pulse effects */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl">
+      {/* Energy pulse effects - pointer-events-none ensures clicks pass through */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl z-0">
         <div className="absolute w-32 h-32 bg-cyan/20 rounded-full blur-2xl animate-[energy-pulse-1_8s_ease-in-out_infinite]" />
         <div className="absolute w-24 h-24 bg-cyan/15 rounded-full blur-xl animate-[energy-pulse-2_10s_ease-in-out_infinite_3s]" />
         <div className="absolute w-20 h-20 bg-cyan/10 rounded-full blur-lg animate-[energy-pulse-3_12s_ease-in-out_infinite_6s]" />
       </div>
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="flex items-center justify-between h-16 sm:h-20">
           {/* Logo Icon with Quick Actions */}
           <div className="flex items-center relative" ref={quickActionsRef}>
