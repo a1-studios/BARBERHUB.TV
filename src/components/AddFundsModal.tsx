@@ -19,22 +19,26 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
   const { purchaseBucks } = useBarberBucks();
   const { user } = useAuth();
   const { isFan } = useUserRole();
+  const { isLoading: rolesLoading } = useUserRole();
   const [showProfilePrompt, setShowProfilePrompt] = useState(false);
   const [profileData, setProfileData] = useState({
     display_name: '',
     country_code: ''
   });
   const [loading, setLoading] = useState(false);
-  const [checkingProfile, setCheckingProfile] = useState(true);
+  const [checkingProfile, setCheckingProfile] = useState(false);
 
   // Check if fan profile is complete
   useEffect(() => {
-    if (isOpen && user && isFan) {
+    if (!isOpen || !user || rolesLoading) return;
+    
+    if (isFan) {
       checkProfile();
     } else {
+      setShowProfilePrompt(false);
       setCheckingProfile(false);
     }
-  }, [isOpen, user, isFan]);
+  }, [isOpen, user, isFan, rolesLoading]);
 
   const checkProfile = async () => {
     if (!user) return;
@@ -172,8 +176,15 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
           </div>
         )}
 
+        {/* Show loading while roles are being fetched */}
+        {rolesLoading && (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+          </div>
+        )}
+
         {/* Purchase Options - show if profile is complete or not a fan */}
-        {(!showProfilePrompt || !isFan) && !checkingProfile && (
+        {!rolesLoading && (!showProfilePrompt || !isFan) && !checkingProfile && (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground mb-4">
               Purchase Barber Bucks to vote, donate to creators, and enter tournaments.
@@ -215,7 +226,7 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
           </div>
         )}
 
-        {checkingProfile && (
+        {!rolesLoading && checkingProfile && (
           <div className="flex items-center justify-center py-8">
             <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
           </div>
