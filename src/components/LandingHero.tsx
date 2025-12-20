@@ -2,13 +2,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
-import { Scissors, Users, Star, TrendingUp, Loader2 } from "lucide-react";
+import { Scissors, Users, Loader2 } from "lucide-react";
 import Globe3D from "@/components/Globe3D";
 import { CountrySelector } from "@/components/CountrySelector";
+import WorldCupPrizeCounter from "@/components/WorldCupPrizeCounter";
 
 const LandingHero = () => {
   const { signUp, signIn } = useAuth();
@@ -242,7 +243,12 @@ const LandingHero = () => {
               </Card>
             </div>
 
-            {/* Branding section - Below sign up */}
+            {/* World Cup Prize Counter */}
+            <div className="flex justify-center">
+              <WorldCupPrizeCounter />
+            </div>
+
+            {/* Branding section - Below prize counter */}
             <div className="text-center space-y-4">
               <h1 className="text-3xl md:text-5xl font-bold max-w-2xl mx-auto">
                 <span className="text-white">where </span>
