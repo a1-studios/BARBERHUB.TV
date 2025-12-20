@@ -313,7 +313,7 @@ export const DynamicBattleHero = () => {
                     <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400" />
                   )}
                 </div>
-                <div className="flex flex-col min-w-0">
+                <div className="flex flex-col min-w-0 flex-1">
                   <h3 
                     onClick={() => navigate(`/barber/${barber1.user_id}`)}
                     className="text-white text-xs sm:text-sm font-bold cursor-pointer hover:text-primary transition-colors truncate"
@@ -325,6 +325,14 @@ export const DynamicBattleHero = () => {
                     <span className="flex items-center gap-0.5"><Users className="w-2.5 h-2.5 text-cyan" />{barber1.followers || 0}</span>
                   </div>
                 </div>
+                {/* Vote button next to profile */}
+                {isActiveBattle && !isCurrentUserInBattle && (
+                  <VoteButton 
+                    name={barber1.display_name || barber1.name} 
+                    variant="primary" 
+                    onVote={() => handleVote(1)} 
+                  />
+                )}
               </div>
 
               {/* Maximized Video Area */}
@@ -357,37 +365,69 @@ export const DynamicBattleHero = () => {
             </div>
           </div>
 
-          {/* VS Divider with LIVE Badge and Vote Buttons - Center position (hidden on mobile when active battle) */}
+          {/* VS Divider with LIVE Badge - Energetic video game style */}
           {!(isMobile && isActiveBattle && !isCurrentUserInBattle) && (
-            <div className="h-4 sm:h-auto sm:w-16 bg-gradient-to-r sm:bg-gradient-to-b from-transparent via-cyan/20 to-transparent relative flex-shrink-0 flex items-center justify-center">
+            <div className="h-3 sm:h-auto sm:w-12 relative flex-shrink-0 flex items-center justify-center overflow-hidden">
+              {/* Animated energy background */}
+              <motion.div
+                className="absolute inset-0 opacity-30"
+                style={{
+                  background: "linear-gradient(180deg, hsl(var(--primary)), hsl(187 100% 50%), hsl(var(--primary)))",
+                }}
+                animate={{ 
+                  opacity: [0.2, 0.4, 0.2],
+                }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              />
+              
+              {/* Electric bolts effect */}
+              <motion.div
+                className="absolute inset-0"
+                style={{
+                  background: "repeating-linear-gradient(0deg, transparent 0px, transparent 4px, hsl(187 100% 50% / 0.3) 4px, hsl(187 100% 50% / 0.3) 5px)",
+                }}
+                animate={{ y: [0, -10, 0] }}
+                transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+              />
+              
               {/* LIVE Badge */}
               {isActiveBattle && (
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-black/80 backdrop-blur-sm border border-red-500/50">
-                  <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
-                  <span className="text-[8px] font-bold text-red-500 uppercase">Live</span>
-                </div>
+                <motion.div 
+                  className="absolute top-1 left-1/2 -translate-x-1/2 z-20 flex items-center gap-0.5 px-1 py-0.5 rounded bg-red-500/90"
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ duration: 0.8, repeat: Infinity }}
+                >
+                  <div className="w-1 h-1 bg-white rounded-full" />
+                  <span className="text-[6px] font-black text-white uppercase">Live</span>
+                </motion.div>
               )}
               
-              {/* VS Badge */}
-              <div className="bg-black/80 px-2 py-1 rounded border border-cyan/40 z-10">
-                <span className="text-primary font-black text-xs tracking-wider">VS</span>
-              </div>
-
-              {/* Vote Buttons - Desktop only, below VS */}
-              {isActiveBattle && !isCurrentUserInBattle && !isMobile && (
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex flex-col gap-1 z-20">
-                  <VoteButton 
-                    name={barber1.display_name || barber1.name} 
-                    variant="primary" 
-                    onVote={() => handleVote(1)} 
-                  />
-                  <VoteButton 
-                    name={barber2.display_name || barber2.name} 
-                    variant="cyan" 
-                    onVote={() => handleVote(2)} 
-                  />
-                </div>
-              )}
+              {/* VS Badge - Energetic */}
+              <motion.div 
+                className="relative z-10 bg-black/90 px-2 py-1 rounded border border-primary/60"
+                animate={{ 
+                  boxShadow: [
+                    "0 0 10px hsl(var(--primary) / 0.5), 0 0 20px hsl(187 100% 50% / 0.3)",
+                    "0 0 20px hsl(var(--primary) / 0.8), 0 0 40px hsl(187 100% 50% / 0.5)",
+                    "0 0 10px hsl(var(--primary) / 0.5), 0 0 20px hsl(187 100% 50% / 0.3)"
+                  ]
+                }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <motion.span 
+                  className="text-primary font-black text-[10px] tracking-wider"
+                  animate={{ 
+                    textShadow: [
+                      "0 0 5px hsl(var(--primary))",
+                      "0 0 15px hsl(var(--primary)), 0 0 25px hsl(187 100% 50%)",
+                      "0 0 5px hsl(var(--primary))"
+                    ]
+                  }}
+                  transition={{ duration: 1, repeat: Infinity }}
+                >
+                  VS
+                </motion.span>
+              </motion.div>
             </div>
           )}
 
@@ -421,7 +461,15 @@ export const DynamicBattleHero = () => {
             <div className="relative h-full flex flex-col p-2 sm:p-3">
               {/* Compact Header Row - Right Aligned */}
               <div className="flex items-center justify-end gap-2 mb-2">
-                <div className="flex flex-col items-end min-w-0">
+                {/* Vote button next to profile */}
+                {isActiveBattle && !isCurrentUserInBattle && (
+                  <VoteButton 
+                    name={barber2.display_name || barber2.name} 
+                    variant="cyan" 
+                    onVote={() => handleVote(2)} 
+                  />
+                )}
+                <div className="flex flex-col items-end min-w-0 flex-1">
                   <h3 
                     onClick={() => navigate(`/barber/${barber2.user_id}`)}
                     className="text-white text-xs sm:text-sm font-bold cursor-pointer hover:text-primary transition-colors truncate"
