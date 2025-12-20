@@ -126,8 +126,8 @@ const LandingHero = () => {
       
       {/* Main content - Add top padding to account for sticky header */}
       <div className="relative z-10 flex items-center justify-center min-h-screen pt-0">
-        <div className="container mx-auto px-4 py-2 md:py-8">
-          <div className="max-w-6xl mx-auto space-y-8">
+        <div className="container mx-auto px-4 py-2 md:py-4">
+          <div className="max-w-6xl mx-auto space-y-6">
             {/* World Cup Prize Counter - Top position */}
             <div className="flex justify-center">
               <WorldCupPrizeCounter />
