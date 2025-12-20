@@ -309,7 +309,7 @@ export const DynamicBattleHero = () => {
             </div>
           </div>
 
-          {/* VS - Floating centered with lightning flash every 3s */}
+          {/* VS - Floating centered with rotating frame and lightning flash every 3s */}
           {!(isMobile && isActiveBattle && !isCurrentUserInBattle) && <>
               {/* LIVE Badge - absolute positioned */}
               {isActiveBattle && <motion.div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-red-500/90" animate={{
@@ -319,22 +319,52 @@ export const DynamicBattleHero = () => {
             repeat: Infinity
           }}>
                   <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                  
                 </motion.div>}
               
-              {/* VS Text - absolute centered */}
-              <motion.span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 text-primary font-black text-2xl sm:text-3xl tracking-widest drop-shadow-lg" animate={{
-            textShadow: ["0 0 0px transparent", "0 0 0px transparent", "0 0 40px hsl(var(--primary)), 0 0 80px hsl(187 100% 50%), 0 0 120px hsl(var(--primary))", "0 0 5px hsl(var(--primary))", "0 0 0px transparent"],
-            scale: [1, 1, 1.2, 1.05, 1],
-            color: ["hsl(var(--primary))", "hsl(var(--primary))", "hsl(187 100% 80%)", "hsl(var(--primary))", "hsl(var(--primary))"]
-          }} transition={{
-            duration: 3,
-            repeat: Infinity,
-            times: [0, 0.8, 0.88, 0.94, 1],
-            ease: "easeInOut"
-          }}>
-                VS
-              </motion.span>
+              {/* VS Container - absolute centered between videos */}
+              <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center justify-center">
+                {/* Rotating ring frame */}
+                <motion.div 
+                  className="absolute w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-primary/60"
+                  style={{
+                    borderStyle: 'dashed',
+                    borderSpacing: '4px',
+                  }}
+                  animate={{ rotate: 360 }}
+                  transition={{
+                    duration: 8,
+                    repeat: Infinity,
+                    ease: "linear"
+                  }}
+                />
+                {/* Inner glow ring */}
+                <motion.div 
+                  className="absolute w-14 h-14 sm:w-16 sm:h-16 rounded-full border border-cyan/40"
+                  animate={{ rotate: -360 }}
+                  transition={{
+                    duration: 12,
+                    repeat: Infinity,
+                    ease: "linear"
+                  }}
+                />
+                {/* VS Text */}
+                <motion.span 
+                  className="text-primary font-black text-2xl sm:text-3xl tracking-widest drop-shadow-lg"
+                  animate={{
+                    textShadow: ["0 0 0px transparent", "0 0 0px transparent", "0 0 40px hsl(var(--primary)), 0 0 80px hsl(187 100% 50%), 0 0 120px hsl(var(--primary))", "0 0 5px hsl(var(--primary))", "0 0 0px transparent"],
+                    scale: [1, 1, 1.2, 1.05, 1],
+                    color: ["hsl(var(--primary))", "hsl(var(--primary))", "hsl(187 100% 80%)", "hsl(var(--primary))", "hsl(var(--primary))"]
+                  }} 
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    times: [0, 0.8, 0.88, 0.94, 1],
+                    ease: "easeInOut"
+                  }}
+                >
+                  VS
+                </motion.span>
+              </div>
             </>}
 
           {/* Mobile Vote Center - Replaces VS divider on mobile during active battles */}
