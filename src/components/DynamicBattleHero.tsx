@@ -34,7 +34,7 @@ const VoteButton = ({ name, variant, onVote }: { name: string; variant: 'primary
       className={`px-2 py-0.5 rounded text-[8px] font-medium border transition-all truncate max-w-[50px] ${colors} ${voted ? 'opacity-50' : ''}`}
       whileTap={{ scale: 0.95 }}
     >
-      {voted ? '✓' : name.split(' ')[0]}
+      {voted ? '✓' : 'Vote'}
     </motion.button>
   );
 };
