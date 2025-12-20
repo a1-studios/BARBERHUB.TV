@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Flame, Radio } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Flame } from 'lucide-react';
 
 interface MobileVoteCenterProps {
   barber1Name: string;
@@ -29,130 +28,63 @@ export const MobileVoteCenter = ({
 
   if (hasVoted) {
     return (
-      <motion.div
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="relative p-4 rounded-2xl bg-background/80 backdrop-blur-md border border-primary/30 overflow-hidden"
-      >
-        {/* Animated border */}
-        <div className="absolute inset-0 rounded-2xl overflow-hidden">
-          <motion.div
-            className="absolute inset-0"
-            style={{
-              background: "conic-gradient(from 0deg, hsl(var(--primary)), hsl(187 100% 50%), hsl(var(--primary)), hsl(187 100% 50%), hsl(var(--primary)))",
-              filter: "blur(8px)",
-              opacity: 0.3,
-            }}
-            animate={{ rotate: 360 }}
-            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-          />
-        </div>
-        
-        <div className="relative z-10 flex flex-col items-center gap-2">
-          <Flame className="w-6 h-6 text-primary" />
-          <span className="text-white font-bold text-sm">Vote Recorded!</span>
-          <span className="text-xs text-muted-foreground">
-            You voted for {hasVoted === 1 ? barber1Name : barber2Name}
-          </span>
-        </div>
-      </motion.div>
+      <div className="flex items-center justify-center gap-2 py-1 px-3 rounded-full bg-primary/20 border border-primary/30">
+        <Flame className="w-3 h-3 text-primary" />
+        <span className="text-[10px] text-white/80">Voted!</span>
+      </div>
     );
   }
 
   return (
-    <motion.div
-      initial={{ scale: 0.9, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      className="relative p-3 rounded-2xl bg-background/80 backdrop-blur-md overflow-hidden"
-    >
-      {/* Animated energy border */}
-      <div className="absolute inset-0 rounded-2xl overflow-hidden">
+    <div className="flex items-center justify-center gap-2">
+      {/* Live indicator dot */}
+      {isLive && (
         <motion.div
-          className="absolute -inset-1"
-          style={{
-            background: `repeating-linear-gradient(
-              90deg,
-              hsl(var(--primary)) 0px,
-              hsl(var(--primary)) 10px,
-              transparent 10px,
-              transparent 20px,
-              hsl(187 100% 50%) 20px,
-              hsl(187 100% 50%) 30px,
-              transparent 30px,
-              transparent 40px
-            )`,
-          }}
-          animate={{ x: [0, -40] }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+          className="w-2 h-2 bg-red-500 rounded-full"
+          animate={{ scale: [1, 1.3, 1], opacity: [1, 0.7, 1] }}
+          transition={{ duration: 1, repeat: Infinity }}
         />
-      </div>
+      )}
       
-      {/* Inner background */}
-      <div className="absolute inset-[3px] rounded-xl bg-background/95" />
+      {/* VS text */}
+      <span className="text-primary font-bold text-xs">VS</span>
       
-      {/* Content */}
-      <div className="relative z-10 flex flex-col items-center gap-3">
-        {/* VS and Live Badge Row */}
-        <div className="flex items-center gap-3">
-          {isLive && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-red-500/20 border border-red-500/50">
-              <motion.div
-                className="w-2 h-2 bg-red-500 rounded-full"
-                animate={{ scale: [1, 1.3, 1], opacity: [1, 0.7, 1] }}
-                transition={{ duration: 1, repeat: Infinity }}
-              />
-              <Radio className="w-3 h-3 text-red-500" />
-              <span className="text-[10px] font-bold text-red-500 uppercase">Live</span>
-            </div>
-          )}
-          
-          <div className="px-4 py-1.5 rounded-lg bg-black/80 border-2 border-cyan/50 shadow-lg shadow-cyan/20">
-            <span className="text-primary font-black text-lg tracking-wider">VS</span>
-          </div>
-        </div>
-
-        {/* Vote Button or Choice Buttons */}
-        {!showButtons ? (
-          <Button
-            onClick={() => setShowButtons(true)}
-            disabled={disabled}
-            className="relative px-8 py-3 bg-gradient-to-r from-primary via-orange-500 to-primary text-white font-bold rounded-full shadow-lg shadow-primary/30 border-2 border-white/20 overflow-hidden group"
-          >
-            {/* Shimmer effect */}
-            <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-              animate={{ x: ["-100%", "200%"] }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            />
-            <span className="relative flex items-center gap-2">
-              <Flame className="w-5 h-5" />
-              Cast Your Vote
-            </span>
-          </Button>
-        ) : (
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
+      {/* Vote button or choice */}
+      {!showButtons ? (
+        <motion.button
+          onClick={() => setShowButtons(true)}
+          disabled={disabled}
+          className="flex items-center gap-1 px-3 py-1 rounded-full bg-primary/20 border border-primary/40 text-[10px] text-white font-medium hover:bg-primary/30 transition-colors"
+          whileTap={{ scale: 0.95 }}
+        >
+          <Flame className="w-3 h-3 text-primary" />
+          Vote
+        </motion.button>
+      ) : (
+        <div className="flex gap-1">
+          <motion.button
+            initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="flex gap-3 w-full"
+            onClick={() => handleVote(1)}
+            disabled={disabled}
+            className="px-2 py-1 rounded-full bg-primary/30 border border-primary/50 text-[9px] text-white font-medium hover:bg-primary/50 transition-colors truncate max-w-[60px]"
+            whileTap={{ scale: 0.95 }}
           >
-            <Button
-              onClick={() => handleVote(1)}
-              disabled={disabled}
-              className="flex-1 py-3 bg-gradient-to-r from-primary to-orange-600 text-white font-bold rounded-xl shadow-lg shadow-primary/30 border border-primary/50 hover:scale-105 transition-transform"
-            >
-              <span className="truncate text-xs">{barber1Name}</span>
-            </Button>
-            
-            <Button
-              onClick={() => handleVote(2)}
-              disabled={disabled}
-              className="flex-1 py-3 bg-gradient-to-r from-cyan to-blue-500 text-white font-bold rounded-xl shadow-lg shadow-cyan/30 border border-cyan/50 hover:scale-105 transition-transform"
-            >
-              <span className="truncate text-xs">{barber2Name}</span>
-            </Button>
-          </motion.div>
-        )}
-      </div>
-    </motion.div>
+            {barber1Name.split(' ')[0]}
+          </motion.button>
+          <motion.button
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.05 }}
+            onClick={() => handleVote(2)}
+            disabled={disabled}
+            className="px-2 py-1 rounded-full bg-cyan/30 border border-cyan/50 text-[9px] text-white font-medium hover:bg-cyan/50 transition-colors truncate max-w-[60px]"
+            whileTap={{ scale: 0.95 }}
+          >
+            {barber2Name.split(' ')[0]}
+          </motion.button>
+        </div>
+      )}
+    </div>
   );
 };
