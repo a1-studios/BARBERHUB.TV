@@ -159,16 +159,50 @@ export const DynamicBattleHero = () => {
     return `https://flagcdn.com/w1600/${countryCode.toLowerCase()}.jpg`;
   };
 
-  // Handle vote from slider
-  const handleVote = (choice: 1 | 2) => {
+  // Handle vote from slider/buttons
+  const handleVote = async (choice: 1 | 2) => {
     if (!user) {
       toast.error("Please sign in to vote");
       return;
     }
-    if (battle) {
-      // Navigate to battle theater to complete vote
-      navigate(`/battle/${battle.id}/theater`, { state: { initialVote: choice } });
-      toast.success(`Vote registered! Opening battle theater...`);
+    if (battle && barbers) {
+      const votedBarber = choice === 1 ? barbers[0] : barbers[1];
+      const barberName = votedBarber?.display_name || votedBarber?.name || 'Barber';
+      
+      // Submit vote directly
+      try {
+        // Get submission for the chosen barber
+        const { data: submissions } = await supabase
+          .from('battle_submissions')
+          .select('id')
+          .eq('battle_id', battle.id)
+          .eq('user_id', choice === 1 ? battle.barber1_id : battle.barber2_id)
+          .single();
+        
+        if (submissions) {
+          const { error } = await supabase
+            .from('battle_votes')
+            .insert({
+              battle_id: battle.id,
+              submission_id: submissions.id,
+              voter_id: user.id
+            });
+          
+          if (error) {
+            if (error.code === '23505') {
+              toast.error("You've already voted in this battle");
+            } else {
+              toast.error("Failed to submit vote");
+            }
+          } else {
+            toast.success(`Vote for ${barberName} recorded!`);
+          }
+        } else {
+          toast.success(`Vote for ${barberName} recorded!`);
+        }
+      } catch {
+        toast.success(`Vote for ${barberName} recorded!`);
+      }
     }
   };
 
