@@ -96,6 +96,18 @@
     }
   }
 
+  /* Header cyan glow animation */
+  @keyframes header-glow {
+    0%, 100% {
+      border-color: hsl(24 100% 52% / 0.3);
+      box-shadow: 0 0 10px hsl(187 100% 50% / 0.1);
+    }
+    50% {
+      border-color: hsl(187 100% 50% / 0.4);
+      box-shadow: 0 0 20px hsl(187 100% 50% / 0.25);
+    }
+  }
+
   .animate-float {
     animation: float 3s ease-in-out infinite;
   }
