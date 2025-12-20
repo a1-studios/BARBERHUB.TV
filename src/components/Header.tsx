@@ -141,7 +141,7 @@ const Header = () => {
   }, [quickActionsOpen]);
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-2 border-primary/40 rounded-xl mx-4 mt-2 overflow-hidden">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-2 border-primary/40 rounded-xl mx-4 mt-2">
       {/* Energy pulse effects - pointer-events-none ensures clicks pass through */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl z-0">
         <div className="absolute w-32 h-32 bg-cyan/20 rounded-full blur-2xl animate-[energy-pulse-1_8s_ease-in-out_infinite]" />
