@@ -102,13 +102,13 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
     purchaseBucks.mutate(usdAmount);
   };
 
-  // Packages match the edge function: $5=25BB, $10=50BB, $25=130BB, $50=265BB, $100=550BB
+  // Packages match the edge function: $5=25BB, $10=50BB, $25=130BB (125+5), $50=265BB (250+15), $100=550BB (500+50)
   const quickAmounts = [
     { bb: 25, usd: 5, bonus: 0 },
     { bb: 50, usd: 10, bonus: 0 },
-    { bb: 130, usd: 25, bonus: 5 },
-    { bb: 265, usd: 50, bonus: 15 },
-    { bb: 550, usd: 100, bonus: 50 }
+    { bb: 130, usd: 25, bonus: 5 },  // 125 base + 5 bonus
+    { bb: 265, usd: 50, bonus: 15 }, // 250 base + 15 bonus
+    { bb: 550, usd: 100, bonus: 50 } // 500 base + 50 bonus
   ];
 
   return (
