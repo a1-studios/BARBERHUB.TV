@@ -96,15 +96,63 @@
     }
   }
 
-  /* Header cyan glow animation */
-  @keyframes header-glow {
+  /* Header internal energy pulse animations */
+  @keyframes energy-pulse-1 {
     0%, 100% {
-      border-color: hsl(24 100% 52% / 0.3);
-      box-shadow: 0 0 10px hsl(187 100% 50% / 0.1);
+      top: -20%;
+      left: -10%;
+      opacity: 0;
+    }
+    10% {
+      opacity: 0.6;
     }
     50% {
-      border-color: hsl(187 100% 50% / 0.4);
-      box-shadow: 0 0 20px hsl(187 100% 50% / 0.25);
+      top: 20%;
+      left: 80%;
+      opacity: 0.4;
+    }
+    90% {
+      opacity: 0.6;
+    }
+  }
+
+  @keyframes energy-pulse-2 {
+    0%, 100% {
+      top: 50%;
+      right: -15%;
+      left: auto;
+      opacity: 0;
+    }
+    15% {
+      opacity: 0.5;
+    }
+    50% {
+      top: -10%;
+      right: 40%;
+      opacity: 0.3;
+    }
+    85% {
+      opacity: 0.5;
+    }
+  }
+
+  @keyframes energy-pulse-3 {
+    0%, 100% {
+      bottom: -20%;
+      left: 30%;
+      top: auto;
+      opacity: 0;
+    }
+    20% {
+      opacity: 0.4;
+    }
+    50% {
+      bottom: 30%;
+      left: 60%;
+      opacity: 0.25;
+    }
+    80% {
+      opacity: 0.4;
     }
   }
 
