@@ -43,26 +43,16 @@ const WorldCupPrizeCounter = () => {
       <div className="relative flex items-center">
         
         {/* Left Energy Sphere */}
-        <div className="relative w-14 h-14 md:w-16 md:h-16 flex-shrink-0 z-20">
-          {/* Outer rotating ring */}
-          <motion.div
-            className="absolute inset-0 rounded-full"
-            style={{
-              background: "conic-gradient(from 0deg, hsl(var(--primary)), hsl(187 100% 50%), hsl(var(--primary)), hsl(187 100% 50%), hsl(var(--primary)))",
-              filter: "blur(4px)",
-            }}
-            animate={{ rotate: 360 }}
-            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-          />
+        <div className="relative w-12 h-12 md:w-14 md:h-14 flex-shrink-0 z-20">
           {/* Inner sphere */}
           <motion.div
-            className="absolute inset-1 rounded-full bg-background/90 backdrop-blur-sm border border-primary/30"
+            className="absolute inset-0 rounded-full bg-background/90 backdrop-blur-sm border border-primary/40"
             animate={{ scale: [1, 1.05, 1] }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
           />
           {/* Core energy */}
           <motion.div
-            className="absolute inset-3 rounded-full"
+            className="absolute inset-2 rounded-full"
             style={{
               background: "radial-gradient(circle, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.3) 60%, transparent 100%)",
             }}
@@ -73,11 +63,11 @@ const WorldCupPrizeCounter = () => {
           {[...Array(4)].map((_, i) => (
             <motion.div
               key={`left-${i}`}
-              className="absolute w-1.5 h-1.5 rounded-full bg-primary"
+              className="absolute w-1 h-1 rounded-full bg-primary"
               style={{ left: "50%", top: "50%" }}
               animate={{
-                x: [0, Math.cos((i * 90 * Math.PI) / 180) * 20, 0],
-                y: [0, Math.sin((i * 90 * Math.PI) / 180) * 20, 0],
+                x: [0, Math.cos((i * 90 * Math.PI) / 180) * 16, 0],
+                y: [0, Math.sin((i * 90 * Math.PI) / 180) * 16, 0],
                 opacity: [0, 1, 0],
               }}
               transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
@@ -165,27 +155,16 @@ const WorldCupPrizeCounter = () => {
           <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[hsl(187_100%_50%)]/40 to-transparent" />
         </div>
 
-        {/* Right Energy Sphere */}
-        <div className="relative w-14 h-14 md:w-16 md:h-16 flex-shrink-0 z-20">
-          {/* Outer rotating ring */}
-          <motion.div
-            className="absolute inset-0 rounded-full"
-            style={{
-              background: "conic-gradient(from 180deg, hsl(187 100% 50%), hsl(var(--primary)), hsl(187 100% 50%), hsl(var(--primary)), hsl(187 100% 50%))",
-              filter: "blur(4px)",
-            }}
-            animate={{ rotate: -360 }}
-            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-          />
+        <div className="relative w-12 h-12 md:w-14 md:h-14 flex-shrink-0 z-20">
           {/* Inner sphere */}
           <motion.div
-            className="absolute inset-1 rounded-full bg-background/90 backdrop-blur-sm border border-[hsl(187_100%_50%)]/30"
+            className="absolute inset-0 rounded-full bg-background/90 backdrop-blur-sm border border-[hsl(187_100%_50%)]/40"
             animate={{ scale: [1, 1.05, 1] }}
             transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
           />
           {/* Core energy */}
           <motion.div
-            className="absolute inset-3 rounded-full"
+            className="absolute inset-2 rounded-full"
             style={{
               background: "radial-gradient(circle, hsl(187 100% 50%) 0%, hsl(187 100% 50% / 0.3) 60%, transparent 100%)",
             }}
@@ -196,11 +175,11 @@ const WorldCupPrizeCounter = () => {
           {[...Array(4)].map((_, i) => (
             <motion.div
               key={`right-${i}`}
-              className="absolute w-1.5 h-1.5 rounded-full bg-[hsl(187_100%_50%)]"
+              className="absolute w-1 h-1 rounded-full bg-[hsl(187_100%_50%)]"
               style={{ left: "50%", top: "50%" }}
               animate={{
-                x: [0, Math.cos((i * 90 * Math.PI) / 180) * 20, 0],
-                y: [0, Math.sin((i * 90 * Math.PI) / 180) * 20, 0],
+                x: [0, Math.cos((i * 90 * Math.PI) / 180) * 16, 0],
+                y: [0, Math.sin((i * 90 * Math.PI) / 180) * 16, 0],
                 opacity: [0, 1, 0],
               }}
               transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 + 0.5 }}
@@ -208,20 +187,6 @@ const WorldCupPrizeCounter = () => {
           ))}
         </div>
       </div>
-      
-      {/* Connection energy beams between spheres and pole */}
-      <motion.div
-        className="absolute left-[52px] md:left-[60px] top-1/2 -translate-y-1/2 w-4 h-1 rounded-full"
-        style={{ background: "linear-gradient(90deg, hsl(var(--primary)), transparent)" }}
-        animate={{ opacity: [0.3, 1, 0.3], scaleX: [0.8, 1.2, 0.8] }}
-        transition={{ duration: 1.5, repeat: Infinity }}
-      />
-      <motion.div
-        className="absolute right-[52px] md:right-[60px] top-1/2 -translate-y-1/2 w-4 h-1 rounded-full"
-        style={{ background: "linear-gradient(270deg, hsl(187 100% 50%), transparent)" }}
-        animate={{ opacity: [0.3, 1, 0.3], scaleX: [0.8, 1.2, 0.8] }}
-        transition={{ duration: 1.5, repeat: Infinity, delay: 0.75 }}
-      />
     </motion.div>
   );
 };
