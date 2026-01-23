@@ -102,7 +102,11 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
   };
 
   const handleAddFunds = (usdAmount: number) => {
-    purchaseBucks.mutate(usdAmount);
+    purchaseBucks.mutate(usdAmount, {
+      onSuccess: () => {
+        onClose(); // Close modal when redirecting to Stripe
+      }
+    });
   };
 
   const quickAmounts = [
