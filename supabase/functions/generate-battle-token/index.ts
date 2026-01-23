@@ -58,27 +58,37 @@ serve(async (req) => {
 
     console.log("Token received - length:", token.length, "first 10 chars:", token.substring(0, 10));
 
-    const supabaseAnon = createClient(
+    // Validate JWT in an Edge-safe way.
+    // getUser() can still attempt to read a stored session in some runtimes; getClaims(jwt)
+    // verifies the token against Supabase signing keys and returns claims.
+    const supabaseAuth = createClient(
       supabaseUrl,
       Deno.env.get("SUPABASE_ANON_KEY")!,
       {
+        global: { headers: { Authorization: `Bearer ${token}` } },
         auth: { persistSession: false, autoRefreshToken: false },
       }
     );
 
-    // CRITICAL: Pass the token explicitly to getUser() for stateless validation
-    // This works in Edge Functions where there's no browser storage
-    const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
+    console.log("AUTH_STRATEGY=CLAIMS_V2");
 
-    if (authError || !user) {
-      console.error("Auth validation error:", authError?.message, "Code:", authError?.code);
+    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
+    const userId = claimsData?.claims?.sub;
+
+    if (claimsError || !userId) {
+      console.error(
+        "Auth claims error:",
+        claimsError?.message,
+        "Code:",
+        (claimsError as any)?.code
+      );
       return new Response(
         JSON.stringify({ error: "Invalid authentication. Please sign in again." }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const userId = user.id;
+    console.log(`Authenticated user (claims.sub): ${userId}`);
     console.log(`Authenticated user: ${userId}`);
 
     // Create service role client for database operations
