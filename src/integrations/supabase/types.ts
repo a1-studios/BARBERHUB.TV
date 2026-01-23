@@ -2090,6 +2090,7 @@ export type Database = {
       stream_sessions: {
         Row: {
           barber_id: string | null
+          barber_position: number | null
           battle_id: string | null
           created_at: string | null
           duration_seconds: number | null
@@ -2102,7 +2103,7 @@ export type Database = {
           recording_status: string | null
           recording_url: string | null
           room_name: string | null
-          room_sid: string
+          room_sid: string | null
           started_at: string | null
           status: string | null
           total_views: number | null
@@ -2111,6 +2112,7 @@ export type Database = {
         }
         Insert: {
           barber_id?: string | null
+          barber_position?: number | null
           battle_id?: string | null
           created_at?: string | null
           duration_seconds?: number | null
@@ -2123,7 +2125,7 @@ export type Database = {
           recording_status?: string | null
           recording_url?: string | null
           room_name?: string | null
-          room_sid: string
+          room_sid?: string | null
           started_at?: string | null
           status?: string | null
           total_views?: number | null
@@ -2132,6 +2134,7 @@ export type Database = {
         }
         Update: {
           barber_id?: string | null
+          barber_position?: number | null
           battle_id?: string | null
           created_at?: string | null
           duration_seconds?: number | null
@@ -2144,7 +2147,7 @@ export type Database = {
           recording_status?: string | null
           recording_url?: string | null
           room_name?: string | null
-          room_sid?: string
+          room_sid?: string | null
           started_at?: string | null
           status?: string | null
           total_views?: number | null

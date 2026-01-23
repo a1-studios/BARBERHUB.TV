@@ -162,23 +162,21 @@ serve(async (req) => {
     // Log token generation for analytics
     console.log(`Token generated for barber ${barberProfile.id} (${displayName}) in battle ${battleId}`);
 
-    // Create or update stream session
+    // Create stream session (use insert, ignore if exists)
     const { error: sessionError } = await supabase
       .from("stream_sessions")
-      .upsert({
+      .insert({
         battle_id: battleId,
         barber_id: barberProfile.id,
         room_name: roomName,
         status: "connecting",
         barber_position: barberPosition,
         started_at: new Date().toISOString(),
-      }, {
-        onConflict: "battle_id,barber_id",
       });
 
     if (sessionError) {
-      console.error("Stream session error:", sessionError);
-      // Non-blocking - continue even if session creation fails
+      // Log but don't block - session may already exist
+      console.log("Stream session insert (may already exist):", sessionError.message);
     }
 
     // Update battle status to live if both barbers are joining
