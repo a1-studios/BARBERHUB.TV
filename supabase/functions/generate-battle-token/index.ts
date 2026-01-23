@@ -1,0 +1,219 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import twilio from "npm:twilio@^4.19";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+interface TokenRequest {
+  battleId: string;
+}
+
+serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    // Get Twilio credentials
+    const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
+    const apiKey = Deno.env.get("TWILIO_API_KEY");
+    const apiSecret = Deno.env.get("TWILIO_API_SECRET");
+
+    if (!accountSid || !apiKey || !apiSecret) {
+      console.error("Missing Twilio credentials");
+      return new Response(
+        JSON.stringify({ error: "Streaming service not configured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get Supabase credentials
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    // Authenticate user
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Authorization required" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    // Get user from JWT
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      console.error("Auth error:", authError);
+      return new Response(
+        JSON.stringify({ error: "Invalid authentication" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Parse request body
+    const { battleId }: TokenRequest = await req.json();
+
+    if (!battleId) {
+      return new Response(
+        JSON.stringify({ error: "Battle ID is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Generating battle token for user ${user.id}, battle ${battleId}`);
+
+    // Get barber profile
+    const { data: barberProfile, error: barberError } = await supabase
+      .from("barber_profiles")
+      .select("id, shop_name, shop_country, user_id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (barberError || !barberProfile) {
+      console.error("Barber profile error:", barberError);
+      return new Response(
+        JSON.stringify({ error: "Barber profile not found. Only barbers can join battles." }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get battle and verify participation
+    const { data: battle, error: battleError } = await supabase
+      .from("battles")
+      .select("id, title, barber1_id, barber2_id, status, scheduled_time")
+      .eq("id", battleId)
+      .single();
+
+    if (battleError || !battle) {
+      console.error("Battle error:", battleError);
+      return new Response(
+        JSON.stringify({ error: "Battle not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify barber is a participant
+    const isBarber1 = battle.barber1_id === barberProfile.id;
+    const isBarber2 = battle.barber2_id === barberProfile.id;
+
+    if (!isBarber1 && !isBarber2) {
+      console.error(`Barber ${barberProfile.id} is not a participant in battle ${battleId}`);
+      return new Response(
+        JSON.stringify({ error: "You are not a participant in this battle" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check battle status - allow joining for upcoming, check_in, or live battles
+    const allowedStatuses = ["upcoming", "check_in", "live", "scheduled"];
+    if (!allowedStatuses.includes(battle.status)) {
+      return new Response(
+        JSON.stringify({ error: `Cannot join battle with status: ${battle.status}` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Generate room name
+    const roomName = `battle-${battleId}`;
+    const barberPosition = isBarber1 ? 1 : 2;
+
+    // Create Twilio Access Token using official SDK
+    const AccessToken = twilio.jwt.AccessToken;
+    const VideoGrant = AccessToken.VideoGrant;
+
+    // Create video grant for the specific room
+    const videoGrant = new VideoGrant({
+      room: roomName,
+    });
+
+    // Generate token with 45-minute TTL (battle duration)
+    const accessToken = new AccessToken(
+      accountSid,
+      apiKey,
+      apiSecret,
+      {
+        identity: barberProfile.id, // Use barber profile ID for point system tracking
+        ttl: 2700, // 45 minutes in seconds
+      }
+    );
+
+    accessToken.addGrant(videoGrant);
+
+    const jwtToken = accessToken.toJwt();
+
+    // Get user display name for room identity
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("display_name")
+      .eq("id", user.id)
+      .single();
+
+    const displayName = profile?.display_name || barberProfile.shop_name || "Barber";
+
+    // Log token generation for analytics
+    console.log(`Token generated for barber ${barberProfile.id} (${displayName}) in battle ${battleId}`);
+
+    // Create or update stream session
+    const { error: sessionError } = await supabase
+      .from("stream_sessions")
+      .upsert({
+        battle_id: battleId,
+        barber_id: barberProfile.id,
+        room_name: roomName,
+        status: "connecting",
+        barber_position: barberPosition,
+        started_at: new Date().toISOString(),
+      }, {
+        onConflict: "battle_id,barber_id",
+      });
+
+    if (sessionError) {
+      console.error("Stream session error:", sessionError);
+      // Non-blocking - continue even if session creation fails
+    }
+
+    // Update battle status to live if both barbers are joining
+    if (battle.status === "upcoming" || battle.status === "scheduled") {
+      await supabase
+        .from("battles")
+        .update({ 
+          status: "live",
+          [`barber${barberPosition}_streaming`]: true,
+        })
+        .eq("id", battleId);
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        token: jwtToken,
+        roomName: roomName,
+        barberPosition: barberPosition,
+        identity: barberProfile.id,
+        displayName: displayName,
+        country: barberProfile.shop_country || null,
+        battleTitle: battle.title,
+        expiresIn: 2700, // 45 minutes
+      }),
+      { 
+        status: 200, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      }
+    );
+
+  } catch (error: any) {
+    console.error("Token generation error:", error);
+    return new Response(
+      JSON.stringify({ error: error.message || "Failed to generate battle token" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});

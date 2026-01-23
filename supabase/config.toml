@@ -106,3 +106,6 @@ verify_jwt = true
 
 [functions.purchase-barber-bucks]
 verify_jwt = false
+
+[functions.generate-battle-token]
+verify_jwt = true

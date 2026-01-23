@@ -1,0 +1,269 @@
+import { useRef, useEffect, memo } from 'react';
+import { LocalVideoTrack, RemoteVideoTrack } from 'twilio-video';
+import { cn } from '@/lib/utils';
+import { Users, Wifi, WifiOff, Loader2 } from 'lucide-react';
+
+interface VideoAttachProps {
+  track: LocalVideoTrack | RemoteVideoTrack | null;
+  className?: string;
+  muted?: boolean;
+}
+
+// Component to attach a video track to a DOM element
+const VideoAttach = memo(({ track, className, muted = false }: VideoAttachProps) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!containerRef.current || !track) return;
+
+    const element = track.attach();
+    element.style.width = '100%';
+    element.style.height = '100%';
+    element.style.objectFit = 'cover';
+    if (muted) {
+      element.muted = true;
+    }
+    
+    containerRef.current.appendChild(element);
+
+    return () => {
+      track.detach().forEach(el => el.remove());
+    };
+  }, [track, muted]);
+
+  return <div ref={containerRef} className={className} />;
+});
+
+VideoAttach.displayName = 'VideoAttach';
+
+interface BattleVideoContainerProps {
+  localTrack: LocalVideoTrack | null;
+  remoteTrack: RemoteVideoTrack | null;
+  localBarberName: string;
+  remoteBarberName: string;
+  localCountry?: string;
+  remoteCountry?: string;
+  isConnecting?: boolean;
+  isConnected?: boolean;
+  hasOpponent?: boolean;
+  duration?: string;
+  viewerCount?: number;
+  className?: string;
+  layout?: 'split' | 'pip';
+}
+
+export const BattleVideoContainer = ({
+  localTrack,
+  remoteTrack,
+  localBarberName,
+  remoteBarberName,
+  localCountry,
+  remoteCountry,
+  isConnecting = false,
+  isConnected = false,
+  hasOpponent = false,
+  duration = '0:00',
+  viewerCount = 0,
+  className,
+  layout = 'split',
+}: BattleVideoContainerProps) => {
+  
+  if (layout === 'pip') {
+    // Picture-in-Picture layout - large remote, small local overlay
+    return (
+      <div className={cn("relative w-full h-full bg-black rounded-lg overflow-hidden", className)}>
+        {/* Remote/Opponent Video (Full Screen) */}
+        <div className="absolute inset-0">
+          {hasOpponent && remoteTrack ? (
+            <VideoAttach track={remoteTrack} className="w-full h-full" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-muted">
+              <div className="text-center">
+                <Users className="w-12 h-12 text-muted-foreground mx-auto mb-2" />
+                <p className="text-muted-foreground text-sm">
+                  {isConnecting ? 'Connecting...' : 'Waiting for opponent...'}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Local Video (PIP Overlay) */}
+        <div className="absolute bottom-4 right-4 w-32 h-24 md:w-48 md:h-36 rounded-lg overflow-hidden border-2 border-primary shadow-lg">
+          {localTrack ? (
+            <VideoAttach track={localTrack} className="w-full h-full" muted />
+          ) : (
+            <div className="w-full h-full bg-muted flex items-center justify-center">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          )}
+          <div className="absolute bottom-1 left-1 bg-black/70 text-[10px] text-white px-1.5 py-0.5 rounded">
+            YOU
+          </div>
+        </div>
+
+        {/* Battle Info Overlay */}
+        <BattleOverlay
+          isConnected={isConnected}
+          duration={duration}
+          viewerCount={viewerCount}
+        />
+      </div>
+    );
+  }
+
+  // Split layout - side by side
+  return (
+    <div className={cn("relative w-full h-full bg-black rounded-lg overflow-hidden", className)}>
+      <div className="flex h-full">
+        {/* Local Video (Left/Your Side) */}
+        <div id="local-video-container" className="relative flex-1 border-r border-white/10">
+          {localTrack ? (
+            <VideoAttach track={localTrack} className="w-full h-full" muted />
+          ) : (
+            <div className="w-full h-full bg-muted flex items-center justify-center">
+              {isConnecting ? (
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              ) : (
+                <div className="text-center">
+                  <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-2">
+                    <Users className="w-8 h-8 text-primary" />
+                  </div>
+                  <p className="text-muted-foreground text-sm">Your camera</p>
+                </div>
+              )}
+            </div>
+          )}
+          
+      {/* Your Side Label */}
+      <div className="absolute top-2 left-2 flex items-center gap-2">
+        <span className="bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded-full">
+          YOUR SIDE
+        </span>
+        {localCountry && (
+          <span className="bg-background/60 text-foreground text-xs px-2 py-1 rounded">
+                {localCountry}
+              </span>
+            )}
+          </div>
+      
+      {/* Barber Name */}
+      <div className="absolute bottom-2 left-2 bg-background/70 backdrop-blur-sm text-foreground text-sm px-2 py-1 rounded">
+        {localBarberName}
+      </div>
+    </div>
+
+        {/* VS Divider */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center shadow-lg animate-pulse">
+            <span className="text-white font-black text-sm">VS</span>
+          </div>
+        </div>
+
+        {/* Remote Video (Right/Opponent) */}
+        <div id="remote-video-container" className="relative flex-1">
+          {hasOpponent && remoteTrack ? (
+            <VideoAttach track={remoteTrack} className="w-full h-full" />
+          ) : (
+            <div className="w-full h-full bg-muted flex items-center justify-center">
+              <div className="text-center">
+                <div className="w-16 h-16 rounded-full bg-muted-foreground/20 flex items-center justify-center mx-auto mb-2 animate-pulse">
+                  <Users className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground text-sm">
+                  {isConnecting ? 'Connecting...' : 'Waiting for opponent...'}
+                </p>
+              </div>
+            </div>
+          )}
+          
+          {/* Opponent Label */}
+          <div className="absolute top-2 right-2 flex items-center gap-2">
+            {remoteCountry && (
+              <span className="bg-background/60 text-foreground text-xs px-2 py-1 rounded">
+                {remoteCountry}
+              </span>
+            )}
+            <span className="bg-destructive text-destructive-foreground text-xs font-bold px-2 py-1 rounded-full">
+              OPPONENT
+            </span>
+          </div>
+          
+          {/* Opponent Name */}
+          {hasOpponent && (
+            <div className="absolute bottom-2 right-2 bg-background/70 backdrop-blur-sm text-foreground text-sm px-2 py-1 rounded">
+              {remoteBarberName}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Battle Info Overlay */}
+      <BattleOverlay
+        isConnected={isConnected}
+        duration={duration}
+        viewerCount={viewerCount}
+      />
+    </div>
+  );
+};
+
+// Overlay component for battle stats
+interface BattleOverlayProps {
+  isConnected: boolean;
+  duration: string;
+  viewerCount: number;
+}
+
+const BattleOverlay = ({
+  isConnected,
+  duration,
+  viewerCount,
+}: BattleOverlayProps) => (
+  <>
+    {/* Live Indicator */}
+    <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-2">
+      <div className={cn(
+        "flex items-center gap-1.5 px-3 py-1 rounded-full",
+        isConnected ? "bg-red-600" : "bg-muted"
+      )}>
+        <div className={cn(
+          "w-2 h-2 rounded-full",
+          isConnected ? "bg-white animate-pulse" : "bg-muted-foreground"
+        )} />
+        <span className="text-white text-xs font-bold">
+          {isConnected ? 'LIVE' : 'OFFLINE'}
+        </span>
+      </div>
+      
+      {isConnected && (
+        <div className="bg-background/70 backdrop-blur-sm text-foreground text-xs px-2 py-1 rounded">
+          {duration}
+        </div>
+      )}
+    </div>
+
+    {/* Viewer Count */}
+    {isConnected && viewerCount > 0 && (
+      <div className="absolute top-2 right-2 flex items-center gap-1 bg-background/70 backdrop-blur-sm text-foreground text-xs px-2 py-1 rounded">
+        <Users className="w-3 h-3" />
+        <span>{viewerCount.toLocaleString()}</span>
+      </div>
+    )}
+
+    {/* Connection Status */}
+    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-background/70 backdrop-blur-sm text-xs px-2 py-1 rounded">
+      {isConnected ? (
+        <>
+          <Wifi className="w-3 h-3 text-primary" />
+          <span className="text-primary">Connected</span>
+        </>
+      ) : (
+        <>
+          <WifiOff className="w-3 h-3 text-muted-foreground" />
+          <span className="text-muted-foreground">Disconnected</span>
+        </>
+      )}
+    </div>
+  </>
+);

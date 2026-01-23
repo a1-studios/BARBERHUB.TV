@@ -3,9 +3,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useTwilioStream } from '@/hooks/useTwilioStream';
+import { useBattleVideoRoom } from '@/hooks/useBattleVideoRoom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useMediaControls } from '@/hooks/useMediaControls';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { useAutoHideControls } from '@/hooks/useAutoHideControls';
 import { Button } from '@/components/ui/button';
@@ -13,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { BattleChat } from '@/components/battles/BattleChat';
 import { ContenderTopBar } from '@/components/contender/ContenderTopBar';
 import { ContenderControlBar } from '@/components/contender/ContenderControlBar';
-import { ContenderVideoPreview } from '@/components/contender/ContenderVideoPreview';
+import { BattleVideoContainer } from '@/components/streaming/BattleVideoContainer';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -23,16 +22,14 @@ export default function ContenderTheater() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isMobile = useIsMobile();
-  const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
   const [showChat, setShowChat] = useState(false);
   const [barberPosition, setBarberPosition] = useState<1 | 2 | null>(null);
-  const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
-  const [cameraReady, setCameraReady] = useState(false);
+  const [localCountry, setLocalCountry] = useState<string | undefined>();
+  const [remoteCountry, setRemoteCountry] = useState<string | undefined>();
 
   // Use extracted hooks
-  const { isMicEnabled, isVideoEnabled, toggleMic, toggleVideo } = useMediaControls();
   const { isFullscreen, toggleFullscreen } = useFullscreen(containerRef);
   const { showControls, handleScreenTap } = useAutoHideControls({ isMobile });
 
@@ -59,7 +56,7 @@ export default function ContenderTheater() {
       if (!battle?.barber1_id || !battle?.barber2_id) return null;
       const { data, error } = await supabase
         .from('barber_profiles')
-        .select('*')
+        .select('*, profiles:user_id(display_name)')
         .in('id', [battle.barber1_id, battle.barber2_id]);
       if (error) throw error;
       return data;
@@ -75,87 +72,58 @@ export default function ContenderTheater() {
       
       if (barber1?.user_id === user.id) {
         setBarberPosition(1);
+        setLocalCountry(barber1.country_code || undefined);
+        setRemoteCountry(barber2?.country_code || undefined);
       } else if (barber2?.user_id === user.id) {
         setBarberPosition(2);
+        setLocalCountry(barber2.country_code || undefined);
+        setRemoteCountry(barber1?.country_code || undefined);
       }
     }
   }, [barberProfiles, user, battle]);
 
-  // Initialize Twilio stream hook
+  // Initialize Battle Video Room hook with Twilio SDK
   const {
     status: streamStatus,
-    localStream,
+    localVideoTrack,
+    remoteVideoTrack,
     formattedDuration,
-    viewerCount,
-    startStream,
-    endStream,
-    isStreaming,
-    canStart
-  } = useTwilioStream({
+    opponentIdentity,
+    connect,
+    disconnect,
+    toggleVideo,
+    toggleAudio,
+    isVideoEnabled,
+    isAudioEnabled,
+    isConnected,
+    isConnecting,
+    hasOpponent,
+  } = useBattleVideoRoom({
     battleId: battleId || '',
-    barberPosition: barberPosition || 1,
-    onStatusChange: (status) => console.log('Stream status:', status)
-  });
-
-  // Start camera preview automatically
-  useEffect(() => {
-    const startCameraPreview = async () => {
-      if (barberPosition && !previewStream && !cameraReady) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
-            audio: { echoCancellation: true, noiseSuppression: true },
-          });
-          setPreviewStream(stream);
-          setCameraReady(true);
-        } catch (error) {
-          console.error('Camera access error:', error);
-          toast.error('Please allow camera access to participate');
-        }
-      }
-    };
-    
-    startCameraPreview();
-    
-    return () => {
-      if (previewStream && !isStreaming) {
-        previewStream.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, [barberPosition]);
-
-  // Attach stream to video element
-  useEffect(() => {
-    if (videoRef.current) {
-      const streamToUse = isStreaming ? localStream : previewStream;
-      if (streamToUse) {
-        videoRef.current.srcObject = streamToUse;
+    onOpponentJoin: (participant) => {
+      console.log('Opponent joined:', participant.identity);
+    },
+    onOpponentLeave: () => {
+      console.log('Opponent left the battle');
+    },
+    onDisconnect: (error) => {
+      if (error) {
+        toast.error('Connection lost. Please rejoin.');
       }
     }
-  }, [localStream, previewStream, isStreaming]);
-
-  // Handle media toggle with active stream
-  const handleToggleMic = useCallback(() => {
-    const activeStream = isStreaming ? localStream : previewStream;
-    toggleMic(activeStream);
-  }, [isStreaming, localStream, previewStream, toggleMic]);
-
-  const handleToggleVideo = useCallback(() => {
-    const activeStream = isStreaming ? localStream : previewStream;
-    toggleVideo(activeStream);
-  }, [isStreaming, localStream, previewStream, toggleVideo]);
+  });
 
   const handleGoLive = async () => {
     try {
-      await startStream();
+      await connect();
     } catch (error) {
-      console.error('Failed to start stream:', error);
+      console.error('Failed to connect to battle room:', error);
     }
   };
 
   const handleEndStream = async () => {
     try {
-      await endStream();
+      disconnect();
       toast.success('Stream ended successfully');
     } catch (error) {
       console.error('Failed to end stream:', error);
@@ -169,6 +137,16 @@ export default function ContenderTheater() {
   const opponentBarber = barberProfiles?.find(b => 
     barberPosition === 1 ? b.id === battle?.barber2_id : b.id === battle?.barber1_id
   );
+
+  // Get display names - profiles is the joined table result
+  const getDisplayName = (barber: typeof currentBarber) => {
+    if (!barber) return 'Unknown';
+    const profileData = barber.profiles as { display_name: string | null } | null;
+    return profileData?.display_name || barber.name || 'Barber';
+  };
+  
+  const currentBarberName = currentBarber ? getDisplayName(currentBarber) : 'You';
+  const opponentBarberName = opponentBarber ? getDisplayName(opponentBarber) : 'Opponent';
 
   if (battleLoading) {
     return (
@@ -192,8 +170,6 @@ export default function ContenderTheater() {
     );
   }
 
-  const hasStream = !!(previewStream || localStream);
-
   return (
     <div 
       ref={containerRef}
@@ -202,8 +178,8 @@ export default function ContenderTheater() {
     >
       <ContenderTopBar
         title={battle?.title || 'Battle'}
-        isStreaming={isStreaming}
-        viewerCount={viewerCount}
+        isStreaming={isConnected}
+        viewerCount={0} // Will be updated with real viewer count
         formattedDuration={formattedDuration}
         isFullscreen={isFullscreen}
         showControls={showControls}
@@ -211,54 +187,42 @@ export default function ContenderTheater() {
         onToggleFullscreen={toggleFullscreen}
       />
 
-      {/* Main Content */}
+      {/* Main Content - Battle Video Container */}
       <div className={cn(
         "flex items-center justify-center",
-        isMobile ? "fixed inset-0 flex-col" : "pt-20 pb-32 px-4 min-h-screen"
+        isMobile ? "fixed inset-0 flex-col pt-14 pb-24" : "pt-20 pb-32 px-4 min-h-screen"
       )}>
-        <div className={cn(
-          "w-full",
-          isMobile ? "h-full flex flex-col" : "max-w-7xl grid grid-cols-1 lg:grid-cols-2 gap-4"
-        )}>
-          {/* Your Camera */}
-          <ContenderVideoPreview
-            ref={videoRef}
-            isYourCamera={true}
-            hasStream={hasStream}
-            isVideoEnabled={isVideoEnabled}
-            isStreaming={isStreaming}
-            barberName={currentBarber?.name || 'You'}
-            barberPosition={barberPosition}
-            isMobile={isMobile}
-          />
-
-          {/* Opponent's Stream */}
-          <ContenderVideoPreview
-            isYourCamera={false}
-            hasStream={false}
-            isVideoEnabled={true}
-            isStreaming={false}
-            barberName={opponentBarber?.name || 'Opponent'}
-            barberPosition={barberPosition === 1 ? 2 : 1}
-            isMobile={isMobile}
-          />
-        </div>
+        <BattleVideoContainer
+          localTrack={localVideoTrack}
+          remoteTrack={remoteVideoTrack}
+          localBarberName={currentBarberName}
+          remoteBarberName={opponentBarberName}
+          localCountry={localCountry}
+          remoteCountry={remoteCountry}
+          isConnecting={isConnecting}
+          isConnected={isConnected}
+          hasOpponent={hasOpponent}
+          duration={formattedDuration}
+          viewerCount={0}
+          layout={isMobile ? 'pip' : 'split'}
+          className="w-full h-full max-w-7xl"
+        />
       </div>
 
       <ContenderControlBar
         isMobile={isMobile}
         showControls={showControls}
-        isMicEnabled={isMicEnabled}
+        isMicEnabled={isAudioEnabled}
         isVideoEnabled={isVideoEnabled}
-        isStreaming={isStreaming}
-        canStart={canStart}
+        isStreaming={isConnected}
+        canStart={!isConnected && !isConnecting}
         streamStatus={streamStatus}
-        viewerCount={viewerCount}
+        viewerCount={0}
         formattedDuration={formattedDuration}
         showChat={showChat}
-        hasStream={hasStream}
-        onToggleMic={handleToggleMic}
-        onToggleVideo={handleToggleVideo}
+        hasStream={!!localVideoTrack}
+        onToggleMic={toggleAudio}
+        onToggleVideo={toggleVideo}
         onGoLive={handleGoLive}
         onEndStream={handleEndStream}
         onToggleChat={() => setShowChat(!showChat)}
