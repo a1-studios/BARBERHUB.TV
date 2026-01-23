@@ -36,7 +36,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     // Authenticate user
-    const authHeader = req.headers.get("Authorization");
+    const authHeader = req.headers.get("Authorization") ?? req.headers.get("authorization");
     if (!authHeader) {
       return new Response(
         JSON.stringify({ error: "Authorization required" }),
@@ -47,8 +47,19 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
     
     // Get user from JWT
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
+    const jwt = bearerMatch?.[1]?.trim();
+
+    // Avoid noisy auth-js AuthSessionMissingError by catching malformed/empty headers early
+    if (!jwt || jwt.split(".").length !== 3) {
+      console.error("Auth error: missing/invalid bearer token (token_length)", jwt?.length ?? 0);
+      return new Response(
+        JSON.stringify({ error: "Invalid authentication token. Please sign in again." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
 
     if (authError || !user) {
       console.error("Auth error:", authError);
@@ -168,6 +179,7 @@ serve(async (req) => {
       .insert({
         battle_id: battleId,
         barber_id: barberProfile.id,
+        user_id: user.id,
         room_name: roomName,
         status: "connecting",
         barber_position: barberPosition,
