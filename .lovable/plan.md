@@ -1,53 +1,112 @@
 
-# Fix AddFundsModal Portal Crash
 
-## Problem
-The site crashes when clicking "Add Funds" because `createPortal(content, document.body)` is called when `document.body` may not yet be available. This is a common issue with React portals that access the DOM directly.
+# Fix Add Funds Stripe Checkout Redirect
+
+## Problem Summary
+
+When clicking "Add Funds", the user sees an "about:blank" tab instead of being redirected to Stripe Checkout. The network request shows the `purchase-barber-bucks` edge function successfully returns a Stripe checkout URL (Status 200), but the redirect fails.
+
+## Root Cause
+
+The current popup strategy in `useBarberBucks.tsx` has a race condition:
+
+```tsx
+// Current problematic flow:
+const popup = window.open("about:blank", "_blank"); // Opens blank tab immediately
+const { data } = await supabase.functions.invoke(...); // Async API call
+popup.location.href = data.url; // By now, popup reference may be stale
+```
+
+In Lovable's preview iframe environment, the popup reference becomes invalid by the time the async call completes, leaving the user stuck on "about:blank".
 
 ## Solution
-Add a client-side mount check to ensure `document.body` exists before rendering the portal. This involves:
 
-1. Using a `useState` + `useEffect` pattern to track when the component has mounted
-2. Only rendering the portal after confirming we're on the client side with a valid `document.body`
+Replace the pre-opened popup approach with a more reliable redirect strategy:
+
+1. **Show loading state** when the purchase button is clicked
+2. **Close the modal** after receiving the Stripe URL
+3. **Navigate directly** using `window.open()` with the actual URL (not about:blank)
+4. **Fallback gracefully** if popup is blocked
 
 ## Technical Changes
 
+### File: `src/hooks/useBarberBucks.tsx`
+
+**Current Code (lines 87-126):**
+```tsx
+const purchaseBucks = useMutation({
+  mutationFn: async (packageAmount: number) => {
+    // ...pre-opens about:blank, then tries to update URL
+  }
+});
+```
+
+**Updated Code:**
+```tsx
+const purchaseBucks = useMutation({
+  mutationFn: async (packageAmount: number) => {
+    if (!user) throw new Error("Not authenticated");
+
+    const { data, error } = await supabase.functions.invoke('purchase-barber-bucks', {
+      body: { package_amount: packageAmount }
+    });
+
+    if (error) throw error;
+    if (!data?.url) throw new Error("No checkout URL returned");
+
+    return data;
+  },
+  onSuccess: (data) => {
+    toast.message("Redirecting to Stripe checkout...");
+    
+    // Try opening in new tab with actual URL
+    const popup = window.open(data.url, "_blank", "noopener,noreferrer");
+    
+    if (!popup || popup.closed) {
+      // If popup blocked, redirect current window
+      window.location.href = data.url;
+    }
+  },
+  onError: (error: any) => {
+    toast.error(error.message || "Failed to initiate purchase");
+    console.error("Purchase bucks error:", error);
+  }
+});
+```
+
+**Key Improvements:**
+- Opens popup **after** receiving the valid Stripe URL (not before)
+- Uses `window.open(data.url, "_blank")` directly instead of `about:blank` + later assignment
+- Has clean fallback to same-window redirect if popup is blocked
+- Separates async logic from navigation for cleaner flow
+
 ### File: `src/components/AddFundsModal.tsx`
 
-**Add mounted state check:**
+Add loading feedback and close modal on success:
+
 ```tsx
-const [mounted, setMounted] = useState(false);
-
-useEffect(() => {
-  setMounted(true);
-  return () => setMounted(false);
-}, []);
+const handleAddFunds = async (usdAmount: number) => {
+  purchaseBucks.mutate(usdAmount, {
+    onSuccess: () => {
+      onClose(); // Close modal when redirecting to Stripe
+    }
+  });
+};
 ```
-
-**Update the return statement:**
-```tsx
-// Early return if not open OR not mounted yet
-if (!isOpen || !mounted) return null;
-
-return createPortal(
-  // ... modal content
-  document.body
-);
-```
-
-This ensures the portal only renders after:
-1. The component has mounted on the client
-2. The modal is explicitly opened
-3. `document.body` is guaranteed to exist
 
 ## Summary of Changes
 
-| File | Change |
-|------|--------|
-| `src/components/AddFundsModal.tsx` | Add `mounted` state with `useEffect` to ensure client-side rendering before accessing `document.body` |
+| File | Changes |
+|------|---------|
+| `src/hooks/useBarberBucks.tsx` | Remove pre-opened about:blank popup; open popup with actual URL after API call; move navigation to onSuccess handler |
+| `src/components/AddFundsModal.tsx` | Close modal on successful checkout initiation |
 
 ## Expected Result
-- Clicking "Add Funds" opens the modal without crashing
-- Modal remains perfectly centered on screen
-- Header stays visible and crisp (not blurred)
-- Stripe payment flow works when selecting a package
+
+1. User clicks a package (e.g., $25 = 130 BB)
+2. API call to `purchase-barber-bucks` executes
+3. Modal closes and toast shows "Redirecting to Stripe checkout..."
+4. New tab opens directly to Stripe Checkout (not about:blank)
+5. User completes payment on Stripe
+6. User returns to app with updated BB balance
+
