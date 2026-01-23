@@ -73,7 +73,7 @@ serve(async (req) => {
     // Get barber profile
     const { data: barberProfile, error: barberError } = await supabase
       .from("barber_profiles")
-      .select("id, shop_name, shop_country, user_id")
+      .select("id, name, country_code, user_id")
       .eq("user_id", user.id)
       .single();
 
@@ -156,7 +156,7 @@ serve(async (req) => {
       .eq("id", user.id)
       .single();
 
-    const displayName = profile?.display_name || barberProfile.shop_name || "Barber";
+    const displayName = profile?.display_name || barberProfile.name || "Barber";
 
     // Log token generation for analytics
     console.log(`Token generated for barber ${barberProfile.id} (${displayName}) in battle ${battleId}`);
@@ -199,7 +199,7 @@ serve(async (req) => {
         barberPosition: barberPosition,
         identity: barberProfile.id,
         displayName: displayName,
-        country: barberProfile.shop_country || null,
+        country: barberProfile.country_code || null,
         battleTitle: battle.title,
         expiresIn: 2700, // 45 minutes
       }),
