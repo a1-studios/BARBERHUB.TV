@@ -112,8 +112,8 @@ serve(async (req) => {
       );
     }
 
-    // Check battle status - allow joining for upcoming, check_in, or live battles
-    const allowedStatuses = ["upcoming", "check_in", "live", "scheduled"];
+    // Check battle status - allow joining for upcoming, check_in, active, or live battles
+    const allowedStatuses = ["upcoming", "check_in", "live", "scheduled", "active"];
     if (!allowedStatuses.includes(battle.status)) {
       return new Response(
         JSON.stringify({ error: `Cannot join battle with status: ${battle.status}` }),
