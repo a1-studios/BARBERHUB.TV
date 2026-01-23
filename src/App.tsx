@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { BarberGuard } from "@/components/auth/BarberGuard";
 import { AdminGuard } from "@/components/auth/AdminGuard";
+import SovereignGuard from "@/components/auth/SovereignGuard";
 import { useFollowedBarbersNotifications } from "@/hooks/useFollowedBarbersNotifications";
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
@@ -32,6 +33,7 @@ import BattleManagement from "./pages/admin/BattleManagement";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import BattleTheater from "./pages/BattleTheater";
 import ContenderTheater from "./pages/ContenderTheater";
+import SovereignHQ from "./pages/SovereignHQ";
 
 const queryClient = new QueryClient();
 
@@ -175,6 +177,14 @@ const AppContent = () => {
                     <AdminAnalytics />
                   </AdminGuard>
                 </AuthGuard>
+              } 
+            />
+            <Route 
+              path="/sovereign-hq" 
+              element={
+                <SovereignGuard>
+                  <SovereignHQ />
+                </SovereignGuard>
               } 
             />
             <Route path="*" element={<NotFound />} />

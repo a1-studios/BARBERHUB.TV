@@ -1795,6 +1795,30 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_state: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string | null
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       platform_transactions: {
         Row: {
           amount_cents: number
@@ -2086,6 +2110,48 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      sovereign_audit_log: {
+        Row: {
+          action_category: string
+          action_type: string
+          after_state: Json | null
+          before_state: Json | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          severity: string | null
+          sovereign_id: string
+          target_id: string | null
+          target_type: string | null
+        }
+        Insert: {
+          action_category: string
+          action_type: string
+          after_state?: Json | null
+          before_state?: Json | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          severity?: string | null
+          sovereign_id: string
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Update: {
+          action_category?: string
+          action_type?: string
+          after_state?: Json | null
+          before_state?: Json | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          severity?: string | null
+          sovereign_id?: string
+          target_id?: string | null
+          target_type?: string | null
+        }
+        Relationships: []
       }
       stream_sessions: {
         Row: {
@@ -2862,7 +2928,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "barber" | "fan" | "admin"
+      app_role: "barber" | "fan" | "admin" | "sovereign"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2990,7 +3056,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["barber", "fan", "admin"],
+      app_role: ["barber", "fan", "admin", "sovereign"],
     },
   },
 } as const
