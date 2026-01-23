@@ -100,8 +100,8 @@ serve(async (req) => {
       throw new Error('You are already streaming in this battle');
     }
 
-    // Create unique room name
-    const roomName = `battle-${battleId}-barber${barberPosition}`;
+    // Create unique room name - shared between both barbers
+    const roomName = `battle-${battleId}`;
 
     console.log('[CREATE-TWILIO-ROOM] Creating room:', roomName);
 
@@ -118,10 +118,12 @@ serve(async (req) => {
         },
         body: new URLSearchParams({
           UniqueName: roomName,
-          Type: 'group', // Supports up to 50 participants
+          Type: 'group', // Supports up to 50 participants for viewers
           RecordParticipantsOnConnect: 'true',
           MaxParticipants: '50',
+          MaxDuration: '2700', // 45 minutes - battle duration
           StatusCallback: `${Deno.env.get('SUPABASE_URL')}/functions/v1/twilio-webhook`,
+          StatusCallbackMethod: 'POST',
         }),
       }
     );
