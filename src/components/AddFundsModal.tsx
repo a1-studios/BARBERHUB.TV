@@ -7,8 +7,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Coins, AlertCircle, User, Globe } from "lucide-react";
+import { AlertCircle, User, Globe, X, Zap } from "lucide-react";
 import { CountrySelector } from "./CountrySelector";
+import { cn } from "@/lib/utils";
 
 interface AddFundsModalProps {
   isOpen: boolean;
@@ -27,7 +28,6 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
   const [loading, setLoading] = useState(false);
   const [checkingProfile, setCheckingProfile] = useState(false);
 
-  // Check if fan profile is complete
   useEffect(() => {
     if (!isOpen || !user || rolesLoading) return;
     
@@ -49,7 +49,6 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
         .eq('user_id', user.id)
         .single();
 
-      // For fans, prompt for more info if they haven't provided display_name
       if (profile && (!profile.display_name || profile.display_name.trim() === '')) {
         setShowProfilePrompt(true);
         setProfileData({
@@ -101,135 +100,190 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
     purchaseBucks.mutate(usdAmount);
   };
 
-  // Packages match the edge function: $5=25BB, $10=50BB, $25=130BB (125+5), $50=265BB (250+15), $100=550BB (500+50)
   const quickAmounts = [
     { bb: 25, usd: 5, bonus: 0 },
     { bb: 50, usd: 10, bonus: 0 },
-    { bb: 130, usd: 25, bonus: 5 },  // 125 base + 5 bonus
-    { bb: 265, usd: 50, bonus: 15 }, // 250 base + 15 bonus
-    { bb: 550, usd: 100, bonus: 50 } // 500 base + 50 bonus
+    { bb: 130, usd: 25, bonus: 5 },
+    { bb: 265, usd: 50, bonus: 15 },
+    { bb: 550, usd: 100, bonus: 50 }
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div className="bg-card rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <Coins className="h-6 w-6 text-yellow-500" />
-            <h3 className="text-xl font-bold text-foreground">Add Barber Bucks</h3>
-          </div>
-          <Button variant="ghost" size="sm" onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            ✕
-          </Button>
-        </div>
-
-        {/* Profile Prompt for Fans */}
-        {showProfilePrompt && !checkingProfile && (
-          <div className="mb-6 bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
-            <div className="flex items-start gap-3 mb-4">
-              <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium text-amber-500 text-sm">Complete Your Profile</p>
-                <p className="text-xs text-muted-foreground">Add a display name before purchasing Barber Bucks</p>
+    <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4">
+      {/* Modal Container with energy border effect */}
+      <div className="relative max-w-xs w-full">
+        {/* Energy glow effect */}
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-primary via-cyan to-primary rounded-xl blur-sm opacity-60 animate-pulse" />
+        
+        {/* Main modal */}
+        <div className="relative bg-card/95 backdrop-blur-sm rounded-xl border border-primary/40 overflow-hidden">
+          {/* Header with energy gradient */}
+          <div className="relative px-4 py-3 bg-gradient-to-r from-primary/20 via-cyan/10 to-primary/20 border-b border-primary/30">
+            {/* Animated energy line */}
+            <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan to-transparent animate-pulse" />
+            
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Zap className="h-4 w-4 text-cyan" />
+                  <div className="absolute inset-0 blur-sm bg-cyan/30 rounded-full" />
+                </div>
+                <h3 className="text-base font-bold">
+                  <span className="text-cyan">BB</span>
+                  <span className="text-foreground ml-1">Store</span>
+                </h3>
               </div>
+              <button 
+                onClick={onClose} 
+                className="p-1 rounded-md hover:bg-muted/50 transition-colors"
+              >
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
             </div>
+          </div>
 
-            <div className="space-y-3">
-              <div>
-                <Label htmlFor="display_name" className="text-sm flex items-center gap-2">
-                  <User className="h-3 w-3" />
-                  Display Name *
-                </Label>
-                <Input
-                  id="display_name"
-                  value={profileData.display_name}
-                  onChange={(e) => setProfileData(prev => ({ ...prev, display_name: e.target.value }))}
-                  placeholder="Your name"
-                  className="mt-1"
-                />
-              </div>
+          <div className="p-3">
+            {/* Profile Prompt for Fans */}
+            {showProfilePrompt && !checkingProfile && (
+              <div className="mb-3 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+                <div className="flex items-start gap-2 mb-3">
+                  <AlertCircle className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-amber-500 text-xs">Complete Profile</p>
+                    <p className="text-[10px] text-muted-foreground">Add display name to continue</p>
+                  </div>
+                </div>
 
-              <div>
-                <Label className="text-sm flex items-center gap-2">
-                  <Globe className="h-3 w-3" />
-                  Country (optional)
-                </Label>
-                <div className="mt-1">
-                  <CountrySelector
-                    value={profileData.country_code}
-                    onChange={(code) => setProfileData(prev => ({ ...prev, country_code: code || '' }))}
-                    placeholder="Select country"
-                  />
+                <div className="space-y-2">
+                  <div>
+                    <Label htmlFor="display_name" className="text-xs flex items-center gap-1">
+                      <User className="h-3 w-3" />
+                      Display Name *
+                    </Label>
+                    <Input
+                      id="display_name"
+                      value={profileData.display_name}
+                      onChange={(e) => setProfileData(prev => ({ ...prev, display_name: e.target.value }))}
+                      placeholder="Your name"
+                      className="mt-1 h-8 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs flex items-center gap-1">
+                      <Globe className="h-3 w-3" />
+                      Country
+                    </Label>
+                    <div className="mt-1">
+                      <CountrySelector
+                        value={profileData.country_code}
+                        onChange={(code) => setProfileData(prev => ({ ...prev, country_code: code || '' }))}
+                        placeholder="Select country"
+                      />
+                    </div>
+                  </div>
+
+                  <Button 
+                    onClick={handleSaveProfile} 
+                    disabled={loading}
+                    size="sm"
+                    className="w-full h-8 text-xs"
+                  >
+                    {loading ? 'Saving...' : 'Save & Continue'}
+                  </Button>
                 </div>
               </div>
+            )}
 
-              <Button 
-                onClick={handleSaveProfile} 
-                disabled={loading}
-                size="sm"
-                className="w-full"
-              >
-                {loading ? 'Saving...' : 'Save & Continue'}
-              </Button>
-            </div>
-          </div>
-        )}
+            {rolesLoading && (
+              <div className="flex items-center justify-center py-6">
+                <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
+              </div>
+            )}
 
-        {/* Show loading while roles are being fetched */}
-        {rolesLoading && (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
-          </div>
-        )}
-
-        {/* Purchase Options - show if profile is complete or not a fan */}
-        {!rolesLoading && (!showProfilePrompt || !isFan) && !checkingProfile && (
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground mb-4">
-              Purchase Barber Bucks to vote, donate to creators, and enter tournaments.
-            </p>
-
-            {/* Conversion Rate */}
-            <div className="bg-muted/50 rounded-lg p-3 text-center mb-4">
-              <p className="text-xs text-muted-foreground">Conversion Rate</p>
-              <p className="font-bold text-foreground">$1 USD = 5 BB</p>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              {quickAmounts.map(({ bb, usd, bonus }) => (
-                <Button
-                  key={usd}
-                  variant="outline"
-                  onClick={() => handleAddFunds(usd)}
-                  disabled={purchaseBucks.isPending}
-                  className="h-auto flex flex-col items-center py-4 hover:border-yellow-500/50 hover:bg-yellow-500/5"
-                >
-                  <div className="flex items-center gap-1">
-                    <Coins className="h-4 w-4 text-yellow-500" />
-                    <span className="text-xl font-bold text-yellow-500">{bb.toLocaleString()}</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">Barber Bucks</span>
-                  {bonus > 0 && (
-                    <span className="text-[10px] text-green-500 font-medium">+{bonus} bonus!</span>
-                  )}
-                  <span className="text-sm font-semibold mt-1 text-foreground">
-                    ${usd}
+            {!rolesLoading && (!showProfilePrompt || !isFan) && !checkingProfile && (
+              <div className="space-y-3">
+                {/* Conversion Rate - Compact */}
+                <div className="flex items-center justify-center gap-2 py-1.5 px-3 bg-muted/30 rounded-lg border border-border/30">
+                  <span className="text-[10px] text-muted-foreground">Rate:</span>
+                  <span className="text-xs font-bold">
+                    <span className="text-foreground">$1</span>
+                    <span className="text-muted-foreground mx-1">=</span>
+                    <span className="text-cyan">5 BB</span>
                   </span>
-                </Button>
-              ))}
-            </div>
+                </div>
+                
+                {/* Package Grid - Compact */}
+                <div className="grid grid-cols-3 gap-1.5">
+                  {quickAmounts.slice(0, 3).map(({ bb, usd, bonus }) => (
+                    <button
+                      key={usd}
+                      onClick={() => handleAddFunds(usd)}
+                      disabled={purchaseBucks.isPending}
+                      className={cn(
+                        "relative group flex flex-col items-center p-2 rounded-lg",
+                        "bg-gradient-to-b from-muted/50 to-muted/20",
+                        "border border-border/50 hover:border-cyan/50",
+                        "transition-all duration-200",
+                        "hover:shadow-[0_0_12px_rgba(0,217,255,0.2)]"
+                      )}
+                    >
+                      <span className="text-lg font-bold text-primary">{bb}</span>
+                      <span className="text-[9px] text-cyan font-medium">BB</span>
+                      {bonus > 0 && (
+                        <span className="text-[8px] text-green-400 font-medium">+{bonus}</span>
+                      )}
+                      <span className="text-[10px] text-muted-foreground mt-0.5">${usd}</span>
+                    </button>
+                  ))}
+                </div>
 
-            <Button variant="outline" onClick={onClose} className="w-full">
-              Cancel
-            </Button>
-          </div>
-        )}
+                {/* Larger packages - horizontal */}
+                <div className="grid grid-cols-2 gap-1.5">
+                  {quickAmounts.slice(3).map(({ bb, usd, bonus }) => (
+                    <button
+                      key={usd}
+                      onClick={() => handleAddFunds(usd)}
+                      disabled={purchaseBucks.isPending}
+                      className={cn(
+                        "relative group flex items-center justify-between p-2 rounded-lg",
+                        "bg-gradient-to-r from-primary/10 via-cyan/5 to-primary/10",
+                        "border border-primary/30 hover:border-cyan/50",
+                        "transition-all duration-200",
+                        "hover:shadow-[0_0_12px_rgba(0,217,255,0.3)]"
+                      )}
+                    >
+                      <div className="flex flex-col">
+                        <div className="flex items-baseline gap-0.5">
+                          <span className="text-base font-bold text-primary">{bb}</span>
+                          <span className="text-[9px] text-cyan font-medium">BB</span>
+                        </div>
+                        {bonus > 0 && (
+                          <span className="text-[8px] text-green-400 font-medium">+{bonus} bonus</span>
+                        )}
+                      </div>
+                      <span className="text-sm font-bold text-foreground">${usd}</span>
+                    </button>
+                  ))}
+                </div>
 
-        {!rolesLoading && checkingProfile && (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+                {/* Cancel button - minimal */}
+                <button 
+                  onClick={onClose} 
+                  className="w-full py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            {!rolesLoading && checkingProfile && (
+              <div className="flex items-center justify-center py-6">
+                <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
