@@ -31,6 +31,13 @@ const Header = () => {
 
   const quickActions: QuickAction[] = [
     {
+      id: 'barbers',
+      label: 'Barbers',
+      icon: <Scissors className="w-5 h-5" />,
+      path: '/barbers',
+      requiresAuth: true
+    },
+    {
       id: 'battles',
       label: 'View Battles',
       icon: <Swords className="w-5 h-5" />,
@@ -38,10 +45,26 @@ const Header = () => {
       requiresAuth: true
     },
     {
+      id: 'portal',
+      label: 'Portal',
+      icon: <Zap className="w-5 h-5" />,
+      path: '/portal',
+      requiresAuth: true,
+      barberOnly: true
+    },
+    {
       id: 'create-battle',
       label: 'Create Battle',
       icon: <Plus className="w-5 h-5" />,
       path: '/battles/create',
+      requiresAuth: true,
+      barberOnly: true
+    },
+    {
+      id: 'creator-hub',
+      label: 'Creator Hub',
+      icon: <Crown className="w-5 h-5" />,
+      path: '/creator-hub',
       requiresAuth: true,
       barberOnly: true
     },
@@ -60,20 +83,20 @@ const Header = () => {
       requiresAuth: true
     },
     {
-      id: 'creator-hub',
-      label: 'Creator Hub',
-      icon: <Crown className="w-5 h-5" />,
-      path: '/creator-hub',
-      requiresAuth: true,
-      barberOnly: true
-    },
-    {
       id: 'admin-dashboard',
       label: 'Admin Dashboard',
-      icon: <Zap className="w-5 h-5 text-red-500" />,
+      icon: <Zap className="w-5 h-5 text-destructive" />,
       path: '/admin',
       requiresAuth: true,
       adminOnly: true
+    },
+    {
+      id: 'sign-out',
+      label: 'Sign Out',
+      icon: <LogOut className="w-5 h-5 text-muted-foreground" />,
+      path: '/',
+      requiresAuth: true,
+      onClick: () => handleSignOut()
     }
   ];
 
