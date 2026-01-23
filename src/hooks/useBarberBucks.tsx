@@ -88,36 +88,25 @@ export const useBarberBucks = () => {
     mutationFn: async (packageAmount: number) => {
       if (!user) throw new Error("Not authenticated");
 
-      // Stripe Checkout cannot be embedded in iframes (Lovable preview).
-      // Pre-open a new tab synchronously to avoid popup blockers.
-      const isEmbedded = (() => {
-        try {
-          return window.self !== window.top;
-        } catch {
-          return true;
-        }
-      })();
-
-      const popup = isEmbedded ? window.open("about:blank", "_blank", "noopener") : null;
-
       const { data, error } = await supabase.functions.invoke('purchase-barber-bucks', {
         body: { package_amount: packageAmount }
       });
 
       if (error) throw error;
-
-      if (data?.url) {
-        toast.message("Opening Stripe checkout…");
-
-        if (popup && !popup.closed) {
-          popup.location.href = data.url;
-        } else {
-          // Fall back to same-tab navigation (works outside iframe; may show blank in iframe)
-          window.location.href = data.url;
-        }
-      }
+      if (!data?.url) throw new Error("No checkout URL returned");
 
       return data;
+    },
+    onSuccess: (data) => {
+      toast.message("Redirecting to Stripe checkout...");
+      
+      // Try opening in new tab with actual URL
+      const popup = window.open(data.url, "_blank", "noopener,noreferrer");
+      
+      if (!popup || popup.closed) {
+        // If popup blocked, redirect current window
+        window.location.href = data.url;
+      }
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to initiate purchase");
