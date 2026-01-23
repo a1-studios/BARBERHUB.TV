@@ -1,112 +1,90 @@
 
+# Fix White Screen After Barber Bucks Purchase
 
-# Fix Add Funds Stripe Checkout Redirect
+## Problem Identified
 
-## Problem Summary
+After successfully completing a Stripe checkout for Barber Bucks, users see a white/blank page. The root cause:
 
-When clicking "Add Funds", the user sees an "about:blank" tab instead of being redirected to Stripe Checkout. The network request shows the `purchase-barber-bucks` edge function successfully returns a Stripe checkout URL (Status 200), but the redirect fails.
-
-## Root Cause
-
-The current popup strategy in `useBarberBucks.tsx` has a race condition:
-
-```tsx
-// Current problematic flow:
-const popup = window.open("about:blank", "_blank"); // Opens blank tab immediately
-const { data } = await supabase.functions.invoke(...); // Async API call
-popup.location.href = data.url; // By now, popup reference may be stale
-```
-
-In Lovable's preview iframe environment, the popup reference becomes invalid by the time the async call completes, leaving the user stuck on "about:blank".
+1. The success redirect URL includes `?session_id=...&type=bb`
+2. The `PaymentSuccess.tsx` page calls `verify-tournament-payment` for **all** payments
+3. That edge function expects tournament-specific metadata (`barber_profile_id`, `category`, etc.)
+4. For BB purchases, this metadata doesn't exist, causing the function to fail with "Missing required metadata"
+5. The error triggers a destructive toast and the page renders incorrectly
 
 ## Solution
 
-Replace the pre-opened popup approach with a more reliable redirect strategy:
+Update `PaymentSuccess.tsx` to handle both payment types:
 
-1. **Show loading state** when the purchase button is clicked
-2. **Close the modal** after receiving the Stripe URL
-3. **Navigate directly** using `window.open()` with the actual URL (not about:blank)
-4. **Fallback gracefully** if popup is blocked
+1. **Detect payment type** from the `type` query parameter
+2. **For BB purchases (`type=bb`)**: Skip tournament verification (webhook already credited the account) and show BB-specific success message
+3. **For tournament payments**: Continue with existing `verify-tournament-payment` flow
 
 ## Technical Changes
 
-### File: `src/hooks/useBarberBucks.tsx`
+### File: `src/pages/PaymentSuccess.tsx`
 
-**Current Code (lines 87-126):**
+**Add type detection:**
 ```tsx
-const purchaseBucks = useMutation({
-  mutationFn: async (packageAmount: number) => {
-    // ...pre-opens about:blank, then tries to update URL
-  }
-});
+const paymentType = searchParams.get('type'); // 'bb' for Barber Bucks, null for tournament
 ```
 
-**Updated Code:**
+**Conditional verification logic:**
 ```tsx
-const purchaseBucks = useMutation({
-  mutationFn: async (packageAmount: number) => {
-    if (!user) throw new Error("Not authenticated");
-
-    const { data, error } = await supabase.functions.invoke('purchase-barber-bucks', {
-      body: { package_amount: packageAmount }
-    });
-
-    if (error) throw error;
-    if (!data?.url) throw new Error("No checkout URL returned");
-
-    return data;
-  },
-  onSuccess: (data) => {
-    toast.message("Redirecting to Stripe checkout...");
+useEffect(() => {
+  const verifyPayment = async () => {
+    if (!sessionId) return;
     
-    // Try opening in new tab with actual URL
-    const popup = window.open(data.url, "_blank", "noopener,noreferrer");
+    // BB purchases are handled by webhook - no verification needed
+    if (paymentType === 'bb') {
+      toast({
+        title: "Barber Bucks Added!",
+        description: "Your balance has been updated. It may take a moment to reflect.",
+      });
+      return;
+    }
     
-    if (!popup || popup.closed) {
-      // If popup blocked, redirect current window
-      window.location.href = data.url;
+    // Tournament verification (existing logic)
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-tournament-payment", {
+        body: { session_id: sessionId }
+      });
+      // ... existing error handling
+    } catch (err) {
+      // ... existing catch
     }
-  },
-  onError: (error: any) => {
-    toast.error(error.message || "Failed to initiate purchase");
-    console.error("Purchase bucks error:", error);
-  }
-});
+  };
+  
+  verifyPayment();
+}, [sessionId, paymentType, toast]);
 ```
 
-**Key Improvements:**
-- Opens popup **after** receiving the valid Stripe URL (not before)
-- Uses `window.open(data.url, "_blank")` directly instead of `about:blank` + later assignment
-- Has clean fallback to same-window redirect if popup is blocked
-- Separates async logic from navigation for cleaner flow
-
-### File: `src/components/AddFundsModal.tsx`
-
-Add loading feedback and close modal on success:
-
+**Conditional UI rendering:**
 ```tsx
-const handleAddFunds = async (usdAmount: number) => {
-  purchaseBucks.mutate(usdAmount, {
-    onSuccess: () => {
-      onClose(); // Close modal when redirecting to Stripe
-    }
-  });
-};
+// Different content based on payment type
+{paymentType === 'bb' ? (
+  <BBSuccessContent />  // Show BB-specific success message
+) : (
+  <TournamentSuccessContent />  // Existing tournament success content
+)}
 ```
 
-## Summary of Changes
+### BB Success Content
+- Title: "Barber Bucks Added!"
+- Description: "Your purchase is complete"
+- Icon: Coins/wallet icon instead of Trophy
+- Next steps: "Check your balance in the header" and links to spend BB
+- Buttons: "View Balance" → `/profile`, "Explore" → `/creator-hub`
+
+## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/hooks/useBarberBucks.tsx` | Remove pre-opened about:blank popup; open popup with actual URL after API call; move navigation to onSuccess handler |
-| `src/components/AddFundsModal.tsx` | Close modal on successful checkout initiation |
+| `src/pages/PaymentSuccess.tsx` | Add payment type detection, conditional verification, and separate UI for BB purchases |
 
 ## Expected Result
 
-1. User clicks a package (e.g., $25 = 130 BB)
-2. API call to `purchase-barber-bucks` executes
-3. Modal closes and toast shows "Redirecting to Stripe checkout..."
-4. New tab opens directly to Stripe Checkout (not about:blank)
-5. User completes payment on Stripe
-6. User returns to app with updated BB balance
-
+1. User completes BB purchase on Stripe
+2. Redirect to `/payment-success?session_id=...&type=bb`
+3. Page detects `type=bb` and skips tournament verification
+4. Shows friendly "Barber Bucks Added!" success page
+5. User can navigate back to app with updated balance (credited by webhook)
