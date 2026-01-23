@@ -19,6 +19,7 @@ import { MyBattlesSection } from "@/components/barber/MyBattlesSection";
 import { SubscriptionStatusCard } from "@/components/barber/SubscriptionStatusCard";
 import { Trophy, Users, Clock, Vote, DollarSign, Play, Calendar, Target, Scissors, Loader2, BarChart3 } from "lucide-react";
 import { OpenChallengeQueue } from "@/components/battles/OpenChallengeQueue";
+import { ChallengeStreamSection } from "@/components/battles/ChallengeStreamSection";
 import DisplayCards from "@/components/ui/display-cards";
 import { formatDistanceToNow } from "date-fns";
 import { ImmersiveFactionBanners } from "@/components/factions/ImmersiveFactionBanners";
@@ -244,6 +245,13 @@ const Portal = () => {
               </div>
               
               <MyBattlesSection userId={user.id} />
+            </div>
+          )}
+
+          {/* Challenge Stream Section - Barber Only (Go Live with Camera Preview) */}
+          {isBarber && (
+            <div className="mb-8">
+              <ChallengeStreamSection />
             </div>
           )}
 
