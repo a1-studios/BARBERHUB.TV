@@ -2098,6 +2098,10 @@ export type Database = {
           id: string
           participant_sid: string | null
           peak_viewers: number | null
+          recording_sid: string | null
+          recording_status: string | null
+          recording_url: string | null
+          room_name: string | null
           room_sid: string
           started_at: string | null
           status: string | null
@@ -2115,6 +2119,10 @@ export type Database = {
           id?: string
           participant_sid?: string | null
           peak_viewers?: number | null
+          recording_sid?: string | null
+          recording_status?: string | null
+          recording_url?: string | null
+          room_name?: string | null
           room_sid: string
           started_at?: string | null
           status?: string | null
@@ -2132,6 +2140,10 @@ export type Database = {
           id?: string
           participant_sid?: string | null
           peak_viewers?: number | null
+          recording_sid?: string | null
+          recording_status?: string | null
+          recording_url?: string | null
+          room_name?: string | null
           room_sid?: string
           started_at?: string | null
           status?: string | null
