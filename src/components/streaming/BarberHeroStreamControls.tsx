@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Video, VideoOff, Mic, MicOff, Camera, ArrowRight } from 'lucide-react';
+import { Video, VideoOff, Mic, MicOff, Camera, ArrowRight, Loader2 } from 'lucide-react';
 import { useCameraPermission } from '@/hooks/useCameraPermission';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface BarberHeroStreamControlsProps {
   battleId: string;
   barberName: string;
-  onEnterBattle: () => void;
+  onEnterBattle?: () => void;
   className?: string;
 }
 
@@ -17,11 +19,13 @@ export const BarberHeroStreamControls = ({
   onEnterBattle,
   className
 }: BarberHeroStreamControlsProps) => {
+  const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [isMicEnabled, setIsMicEnabled] = useState(true);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
+  const [isEntering, setIsEntering] = useState(false);
   
   const { 
     status: cameraStatus, 
@@ -199,11 +203,34 @@ export const BarberHeroStreamControls = ({
         
         {/* Enter Battle Button */}
         <Button
-          onClick={onEnterBattle}
+          onClick={() => {
+            setIsEntering(true);
+            // Stop preview streams before navigating - they'll be recreated in ContenderTheater
+            stopStream();
+            if (audioStream) {
+              audioStream.getTracks().forEach(track => track.stop());
+            }
+            // Navigate to contender theater for full battle experience
+            if (onEnterBattle) {
+              onEnterBattle();
+            } else {
+              navigate(`/battle/${battleId}/contender`);
+            }
+          }}
+          disabled={isEntering}
           className="w-full h-6 text-[10px] bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-600 text-white font-bold gap-1 shadow-md"
         >
-          ENTER BATTLE
-          <ArrowRight className="w-3 h-3" />
+          {isEntering ? (
+            <>
+              <Loader2 className="w-3 h-3 animate-spin" />
+              ENTERING...
+            </>
+          ) : (
+            <>
+              ENTER BATTLE
+              <ArrowRight className="w-3 h-3" />
+            </>
+          )}
         </Button>
       </div>
     </div>

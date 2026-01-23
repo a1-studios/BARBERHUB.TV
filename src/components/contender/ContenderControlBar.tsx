@@ -5,7 +5,8 @@ import {
   MessageCircle, Settings, Users, Clock 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { StreamStatus } from '@/hooks/useTwilioStream';
+
+type StreamStatus = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'failed' | 'live' | 'ended';
 
 interface ContenderControlBarProps {
   isMobile: boolean;
@@ -155,8 +156,8 @@ export const ContenderControlBar = memo(function ContenderControlBar({
             <p className="text-white/60 text-sm">
               {streamStatus === 'idle' && 'Click "GO LIVE" to start broadcasting'}
               {streamStatus === 'connecting' && 'Connecting to stream...'}
-              {streamStatus === 'live' && `Broadcasting to ${viewerCount} viewer${viewerCount !== 1 ? 's' : ''}`}
-              {streamStatus === 'ended' && 'Stream ended'}
+              {(streamStatus === 'live' || streamStatus === 'connected') && `Broadcasting to ${viewerCount} viewer${viewerCount !== 1 ? 's' : ''}`}
+              {(streamStatus === 'ended' || streamStatus === 'disconnected') && 'Stream ended'}
               {streamStatus === 'failed' && 'Stream failed - try again'}
             </p>
           </div>
