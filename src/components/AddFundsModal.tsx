@@ -111,11 +111,8 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
 
   return createPortal(
     <div 
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-      style={{ 
-        backgroundColor: 'rgba(0, 0, 0, 0.92)',
-        backdropFilter: 'blur(8px)'
-      }}
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 pt-20"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.88)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       {/* Modal Container - perfectly centered */}
