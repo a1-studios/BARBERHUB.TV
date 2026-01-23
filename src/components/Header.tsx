@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Coins, Plus, User, LogOut, Sparkles, Zap, Scissors, Swords, Crown } from 'lucide-react';
+import { Plus, User, LogOut, Sparkles, Zap, Scissors, Swords, Crown, ChevronDown, History, Wallet } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import barberPole from '@/assets/barber-pole.png';
 import { cn } from '@/lib/utils';
@@ -25,7 +25,9 @@ const Header = () => {
   const { isBarber, isAdmin } = useUserRole();
   
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
+  const [bbDropdownOpen, setBbDropdownOpen] = useState(false);
   const quickActionsRef = useRef<HTMLDivElement>(null);
+  const bbDropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
 
@@ -134,21 +136,25 @@ const Header = () => {
     setQuickActionsOpen(false);
   };
 
-  // Close quick actions when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (quickActionsRef.current && !quickActionsRef.current.contains(event.target as Node)) {
         setQuickActionsOpen(false);
+      }
+      if (bbDropdownRef.current && !bbDropdownRef.current.contains(event.target as Node)) {
+        setBbDropdownOpen(false);
       }
     };
 
     const handleEscapeKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setQuickActionsOpen(false);
+        setBbDropdownOpen(false);
       }
     };
 
-    if (quickActionsOpen) {
+    if (quickActionsOpen || bbDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleEscapeKey);
     }
@@ -157,7 +163,7 @@ const Header = () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscapeKey);
     };
-  }, [quickActionsOpen]);
+  }, [quickActionsOpen, bbDropdownOpen]);
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-2 border-primary/40 rounded-xl mx-4 mt-2">
@@ -237,17 +243,69 @@ const Header = () => {
             </span>
           </button>
 
-          {/* Right Side - Barber Bucks Balance */}
-          <button
-            onClick={() => setShowAddFundsModal(true)}
-            className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/30 transition-all duration-200"
-            aria-label="Barber Bucks balance"
-          >
-            <Coins className="h-4 w-4 text-primary" />
-            <span className="text-sm font-semibold text-primary tabular-nums">
-              {barberBucks.toLocaleString()}
-            </span>
-          </button>
+          {/* Right Side - Barber Bucks Balance Dropdown */}
+          <div className="relative" ref={bbDropdownRef}>
+            <button
+              onClick={() => setBbDropdownOpen(!bbDropdownOpen)}
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 rounded-lg transition-all duration-200",
+                "bg-gradient-to-r from-primary/20 to-cyan/10",
+                "border border-primary/40 hover:border-cyan/40",
+                "hover:shadow-[0_0_8px_rgba(0,217,255,0.3)]",
+                bbDropdownOpen && "border-cyan/50 shadow-[0_0_8px_rgba(0,217,255,0.3)]"
+              )}
+              aria-label="Barber Bucks menu"
+            >
+              <span className="text-xs font-bold text-cyan">BB</span>
+              <span className="text-sm font-semibold text-primary tabular-nums">
+                {barberBucks.toLocaleString()}
+              </span>
+              <ChevronDown className={cn(
+                "h-3 w-3 text-muted-foreground transition-transform duration-200",
+                bbDropdownOpen && "rotate-180"
+              )} />
+            </button>
+
+            {/* BB Dropdown Menu */}
+            {bbDropdownOpen && (
+              <div className="absolute top-full right-0 mt-2 z-50 animate-scale-in">
+                <div className="w-44 bg-card/95 backdrop-blur-sm border border-border/50 rounded-lg shadow-lg overflow-hidden">
+                  {/* Balance Header */}
+                  <div className="px-3 py-2 bg-gradient-to-r from-primary/10 to-cyan/5 border-b border-border/30">
+                    <p className="text-xs text-muted-foreground">Your Balance</p>
+                    <p className="text-lg font-bold">
+                      <span className="text-cyan">BB</span>
+                      <span className="text-primary ml-1">{barberBucks.toLocaleString()}</span>
+                    </p>
+                  </div>
+                  
+                  {/* Actions */}
+                  <div className="p-1.5 space-y-1">
+                    <button
+                      onClick={() => {
+                        setShowAddFundsModal(true);
+                        setBbDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-primary/10 transition-colors"
+                    >
+                      <Wallet className="h-4 w-4 text-primary" />
+                      <span>Add Funds</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigate('/profile?tab=transactions');
+                        setBbDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-primary/10 transition-colors"
+                    >
+                      <History className="h-4 w-4 text-cyan" />
+                      <span>Transaction History</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
       </div>
