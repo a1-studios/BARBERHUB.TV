@@ -110,16 +110,20 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
 
   return (
     <div 
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: 'rgba(0, 0, 0, 0.90)' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      {/* Modal Container - centered */}
-      <div className="relative w-[280px] mx-auto">
-        {/* Energy glow effect */}
-        <div className="absolute -inset-0.5 bg-gradient-to-r from-primary via-cyan to-primary rounded-xl blur-sm opacity-60 animate-pulse" />
+      {/* Modal Container - perfectly centered */}
+      <div className="relative w-[280px] max-w-[90vw]">
+        {/* Outer glow for prominence */}
+        <div className="absolute -inset-3 bg-gradient-to-r from-primary/40 via-cyan/30 to-primary/40 rounded-2xl blur-xl opacity-80" />
         
-        {/* Main modal */}
-        <div className="relative bg-card/95 backdrop-blur-sm rounded-xl border border-primary/40 overflow-hidden">
+        {/* Energy border glow */}
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-primary via-cyan to-primary rounded-xl blur-sm opacity-70 animate-pulse" />
+        
+        {/* Main modal - brighter background */}
+        <div className="relative bg-card rounded-xl border border-cyan/50 overflow-hidden shadow-[0_0_40px_rgba(0,217,255,0.15)]">
           {/* Header with energy gradient */}
           <div className="relative px-4 py-3 bg-gradient-to-r from-primary/20 via-cyan/10 to-primary/20 border-b border-primary/30">
             {/* Animated energy line */}
