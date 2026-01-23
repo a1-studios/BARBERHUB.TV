@@ -35,54 +35,42 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Authenticate user
+    // Authenticate user (use Authorization header; do NOT rely on session storage in Edge runtime)
     const authHeader = req.headers.get("Authorization") ?? req.headers.get("authorization");
-    if (!authHeader) {
+    if (!authHeader?.toLowerCase().startsWith("bearer ")) {
       return new Response(
         JSON.stringify({ error: "Authorization required" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Create Supabase client with the user's auth header for proper JWT validation
-    const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } }
-    });
-    
-    // Use getClaims() which works correctly with signing-keys system
-    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
-    
-    if (!token || token.split(".").length !== 3) {
-      console.error("Auth error: missing/invalid bearer token");
-      return new Response(
-        JSON.stringify({ error: "Invalid authentication token. Please sign in again." }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const supabaseAnon = createClient(
+      supabaseUrl,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      {
+        global: { headers: { Authorization: authHeader } },
+        auth: { persistSession: false, autoRefreshToken: false },
+      }
+    );
 
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    // This uses the provided Authorization header rather than a stored session
+    const { data: { user }, error: authError } = await supabaseAnon.auth.getUser();
 
-    if (claimsError || !claimsData?.claims) {
-      console.error("Auth claims error:", claimsError);
+    if (authError || !user) {
+      console.error("Auth error:", authError);
       return new Response(
         JSON.stringify({ error: "Invalid authentication" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const userId = claimsData.claims.sub;
-    if (!userId) {
-      console.error("Auth error: no user ID in claims");
-      return new Response(
-        JSON.stringify({ error: "Invalid authentication" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
+    const userId = user.id;
     console.log(`Authenticated user: ${userId}`);
-    
+
     // Create service role client for database operations
-    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
 
     // Parse request body
     const { battleId }: TokenRequest = await req.json();
