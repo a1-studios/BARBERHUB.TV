@@ -44,22 +44,36 @@ serve(async (req) => {
       );
     }
 
+    // Extract the raw JWT token from the Authorization header
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    
+    // Validate token format (JWT has 3 dot-separated parts)
+    if (!token || token.split(".").length !== 3) {
+      console.error("Auth error: Invalid token format. Token length:", token?.length, "Parts:", token?.split(".").length);
+      return new Response(
+        JSON.stringify({ error: "Invalid token format. Please sign in again." }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("Token received - length:", token.length, "first 10 chars:", token.substring(0, 10));
+
     const supabaseAnon = createClient(
       supabaseUrl,
       Deno.env.get("SUPABASE_ANON_KEY")!,
       {
-        global: { headers: { Authorization: authHeader } },
         auth: { persistSession: false, autoRefreshToken: false },
       }
     );
 
-    // This uses the provided Authorization header rather than a stored session
-    const { data: { user }, error: authError } = await supabaseAnon.auth.getUser();
+    // CRITICAL: Pass the token explicitly to getUser() for stateless validation
+    // This works in Edge Functions where there's no browser storage
+    const { data: { user }, error: authError } = await supabaseAnon.auth.getUser(token);
 
     if (authError || !user) {
-      console.error("Auth error:", authError);
+      console.error("Auth validation error:", authError?.message, "Code:", authError?.code);
       return new Response(
-        JSON.stringify({ error: "Invalid authentication" }),
+        JSON.stringify({ error: "Invalid authentication. Please sign in again." }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

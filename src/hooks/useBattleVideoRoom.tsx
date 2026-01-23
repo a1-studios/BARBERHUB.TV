@@ -111,9 +111,23 @@ export const useBattleVideoRoom = ({
     try {
       setState(prev => ({ ...prev, status: 'connecting', error: null }));
 
-      // Get token from edge function
+      // CRITICAL: Get the current session and explicitly pass the token
+      // This ensures the Authorization header is always sent correctly
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !sessionData.session?.access_token) {
+        throw new Error('Please sign in again to join the battle');
+      }
+
+      const accessToken = sessionData.session.access_token;
+      console.log('Calling generate-battle-token with explicit auth token');
+
+      // Get token from edge function with explicit Authorization header
       const { data: tokenData, error: tokenError } = await supabase.functions.invoke('generate-battle-token', {
-        body: { battleId }
+        body: { battleId },
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
       });
 
       if (tokenError || !tokenData?.token) {
