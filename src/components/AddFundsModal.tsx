@@ -109,9 +109,12 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
   ];
 
   return (
-    <div className="fixed inset-0 bg-black/85 flex items-center justify-center z-50 p-4">
-      {/* Modal Container with energy border effect */}
-      <div className="relative max-w-xs w-full">
+    <div 
+      className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      {/* Modal Container - centered */}
+      <div className="relative w-[280px] mx-auto">
         {/* Energy glow effect */}
         <div className="absolute -inset-0.5 bg-gradient-to-r from-primary via-cyan to-primary rounded-xl blur-sm opacity-60 animate-pulse" />
         
