@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Coins, Plus, User, LogOut, Sparkles, Zap, Scissors, Swords, Crown } from 'lucide-react';
+import { Coins, Plus, User, LogOut, Sparkles, Zap, Scissors, Swords, Crown, Wallet } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import barberPole from '@/assets/barber-pole.png';
 import { cn } from '@/lib/utils';
@@ -25,9 +25,18 @@ const Header = () => {
   const { isBarber, isAdmin } = useUserRole();
   
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
+  const [bbDropdownOpen, setBbDropdownOpen] = useState(false);
   const quickActionsRef = useRef<HTMLDivElement>(null);
+  const bbDropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
+  const { barberBucks, purchaseBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
+
+  const bbPackages = [
+    { amount: 25, price: 5, bonus: 0 },
+    { amount: 55, price: 10, bonus: 5 },
+    { amount: 150, price: 25, bonus: 25 },
+    { amount: 300, price: 50, bonus: 50 },
+  ];
 
   const quickActions: QuickAction[] = [
     {
@@ -134,21 +143,25 @@ const Header = () => {
     setQuickActionsOpen(false);
   };
 
-  // Close quick actions when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (quickActionsRef.current && !quickActionsRef.current.contains(event.target as Node)) {
         setQuickActionsOpen(false);
+      }
+      if (bbDropdownRef.current && !bbDropdownRef.current.contains(event.target as Node)) {
+        setBbDropdownOpen(false);
       }
     };
 
     const handleEscapeKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setQuickActionsOpen(false);
+        setBbDropdownOpen(false);
       }
     };
 
-    if (quickActionsOpen) {
+    if (quickActionsOpen || bbDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       document.addEventListener('keydown', handleEscapeKey);
     }
@@ -157,7 +170,12 @@ const Header = () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleEscapeKey);
     };
-  }, [quickActionsOpen]);
+  }, [quickActionsOpen, bbDropdownOpen]);
+
+  const handlePurchase = (price: number) => {
+    setBbDropdownOpen(false);
+    purchaseBucks.mutate(price);
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-2 border-primary/40 rounded-xl mx-4 mt-2">
@@ -237,17 +255,88 @@ const Header = () => {
             </span>
           </button>
 
-          {/* Right Side - Barber Bucks Balance */}
-          <button
-            onClick={() => setShowAddFundsModal(true)}
-            className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/30 transition-all duration-200"
-            aria-label="Barber Bucks balance"
-          >
-            <Coins className="h-4 w-4 text-primary" />
-            <span className="text-sm font-semibold text-primary tabular-nums">
-              {barberBucks.toLocaleString()}
-            </span>
-          </button>
+          {/* Right Side - Barber Bucks Balance with Dropdown */}
+          <div className="relative" ref={bbDropdownRef}>
+            <button
+              onClick={() => setBbDropdownOpen(!bbDropdownOpen)}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all duration-200",
+                "bg-cyan/10 hover:bg-cyan/20 border border-cyan/30",
+                bbDropdownOpen && "bg-cyan/20 border-cyan/50"
+              )}
+              aria-label="Barber Bucks balance"
+            >
+              <Coins className="h-4 w-4 text-cyan" />
+              <span className="text-sm font-bold text-cyan tabular-nums">
+                {barberBucks.toLocaleString()}
+              </span>
+            </button>
+
+            {/* BB Dropdown Panel */}
+            {bbDropdownOpen && (
+              <div className="absolute top-full right-0 mt-2 z-50 w-72 animate-scale-in">
+                <div className="bg-card/95 backdrop-blur-md border-2 border-cyan/30 rounded-xl shadow-lg overflow-hidden">
+                  {/* Header with Balance */}
+                  <div className="bg-gradient-to-r from-cyan/20 to-primary/20 px-4 py-3 border-b border-border/50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Wallet className="h-5 w-5 text-cyan" />
+                        <span className="text-sm font-medium text-muted-foreground">Your Balance</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Coins className="h-5 w-5 text-primary" />
+                        <span className="text-xl font-bold text-primary tabular-nums">
+                          {barberBucks.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quick Purchase Grid */}
+                  <div className="p-3">
+                    <p className="text-xs text-muted-foreground mb-2 px-1">Quick Add</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {bbPackages.map((pkg) => (
+                        <button
+                          key={pkg.price}
+                          onClick={() => handlePurchase(pkg.price)}
+                          className={cn(
+                            "flex flex-col items-center p-3 rounded-lg transition-all duration-200",
+                            "bg-background/50 hover:bg-primary/10 border border-border/50 hover:border-primary/50",
+                            "group"
+                          )}
+                        >
+                          <div className="flex items-center gap-1 text-primary font-bold">
+                            <Coins className="h-4 w-4" />
+                            <span>{pkg.amount}</span>
+                          </div>
+                          {pkg.bonus > 0 && (
+                            <span className="text-[10px] text-cyan font-medium">+{pkg.bonus} bonus!</span>
+                          )}
+                          <span className="text-xs text-muted-foreground mt-1">${pkg.price}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* View All Button */}
+                  <div className="px-3 pb-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full border-cyan/30 hover:border-cyan/50 hover:bg-cyan/10 text-cyan"
+                      onClick={() => {
+                        setBbDropdownOpen(false);
+                        setShowAddFundsModal(true);
+                      }}
+                    >
+                      View All Packages
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
       </div>
