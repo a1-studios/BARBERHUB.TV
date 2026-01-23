@@ -4,7 +4,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Trophy, ArrowRight } from "lucide-react";
+import { CheckCircle, Trophy, ArrowRight, Coins, Wallet } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -14,11 +14,22 @@ const PaymentSuccess = () => {
   const { toast } = useToast();
 
   const sessionId = searchParams.get('session_id');
+  const paymentType = searchParams.get('type'); // 'bb' for Barber Bucks, null for tournament
 
   useEffect(() => {
     const verifyPayment = async () => {
       if (!sessionId) return;
       
+      // BB purchases are handled by webhook - no verification needed
+      if (paymentType === 'bb') {
+        toast({
+          title: "Barber Bucks Added!",
+          description: "Your balance has been updated. It may take a moment to reflect.",
+        });
+        return;
+      }
+      
+      // Tournament verification (existing logic)
       try {
         const { data, error } = await supabase.functions.invoke("verify-tournament-payment", {
           body: { session_id: sessionId }
@@ -43,8 +54,108 @@ const PaymentSuccess = () => {
     };
 
     verifyPayment();
-  }, [sessionId, toast]);
+  }, [sessionId, paymentType, toast]);
 
+  // Barber Bucks success content
+  if (paymentType === 'bb') {
+    return (
+      <div className="min-h-screen">
+        <Header />
+        <main className="pt-20 sm:pt-24 pb-12">
+          <div className="container mx-auto px-4">
+            <div className="max-w-2xl mx-auto">
+              <Card className="text-center">
+                <CardHeader className="pb-8">
+                  <div className="mx-auto mb-6">
+                    <CheckCircle className="h-16 w-16 text-green-500" />
+                  </div>
+                  <CardTitle className="text-3xl font-bold text-foreground mb-2">
+                    Barber Bucks Added!
+                  </CardTitle>
+                  <CardDescription className="text-lg">
+                    Your purchase is complete
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="bg-amber-50 dark:bg-amber-950/20 p-6 rounded-lg">
+                    <div className="flex items-center justify-center mb-4">
+                      <Coins className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2">Balance Updated</h3>
+                    <p className="text-muted-foreground">
+                      Your Barber Bucks have been added to your account. 
+                      Check your balance in the header to see your updated total.
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold">What can you do with Barber Bucks?</h4>
+                    <div className="text-left space-y-3">
+                      <div className="flex items-start space-x-3">
+                        <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
+                          1
+                        </div>
+                        <p className="text-muted-foreground">
+                          Donate to your favorite barbers during battles
+                        </p>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
+                          2
+                        </div>
+                        <p className="text-muted-foreground">
+                          Enter tournaments and compete for prizes
+                        </p>
+                      </div>
+                      <div className="flex items-start space-x-3">
+                        <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
+                          3
+                        </div>
+                        <p className="text-muted-foreground">
+                          Purchase gear and exclusive items
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-4 pt-6">
+                    <Button 
+                      onClick={() => navigate('/profile')}
+                      size="lg"
+                      className="flex-1"
+                    >
+                      <Wallet className="mr-2 h-4 w-4" />
+                      View Balance
+                    </Button>
+                    <Button 
+                      onClick={() => navigate('/creator-hub')}
+                      variant="outline"
+                      size="lg"
+                      className="flex-1"
+                    >
+                      Explore Creator Hub
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {sessionId && (
+                    <div className="pt-4 border-t">
+                      <p className="text-sm text-muted-foreground">
+                        Payment ID: {sessionId.substring(0, 20)}...
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  // Tournament success content (existing)
   return (
     <div className="min-h-screen">
       <Header />
