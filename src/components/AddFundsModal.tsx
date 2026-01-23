@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -94,8 +95,6 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
     }
   };
 
-  if (!isOpen) return null;
-
   const handleAddFunds = (usdAmount: number) => {
     purchaseBucks.mutate(usdAmount);
   };
@@ -108,10 +107,15 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
     { bb: 550, usd: 100, bonus: 50 }
   ];
 
-  return (
+  if (!isOpen) return null;
+
+  return createPortal(
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: 'rgba(0, 0, 0, 0.90)' }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      style={{ 
+        backgroundColor: 'rgba(0, 0, 0, 0.92)',
+        backdropFilter: 'blur(8px)'
+      }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       {/* Modal Container - perfectly centered */}
@@ -292,6 +296,7 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
