@@ -21,6 +21,7 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
   const { purchaseBucks } = useBarberBucks();
   const { user } = useAuth();
   const { isFan, isLoading: rolesLoading } = useUserRole();
+  const [mounted, setMounted] = useState(false);
   const [showProfilePrompt, setShowProfilePrompt] = useState(false);
   const [profileData, setProfileData] = useState({
     display_name: '',
@@ -28,6 +29,11 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
   });
   const [loading, setLoading] = useState(false);
   const [checkingProfile, setCheckingProfile] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
   useEffect(() => {
     if (!isOpen || !user || rolesLoading) return;
@@ -107,7 +113,7 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
     { bb: 550, usd: 100, bonus: 50 }
   ];
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   return createPortal(
     <div 
