@@ -166,7 +166,7 @@ const Header = () => {
                 className={cn(
                   "h-12 w-12 transition-all duration-500",
                   "hover:scale-110 hover:drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]",
-                  quickActionsOpen ? "animate-pulse" : "animate-[spin_6s_linear_infinite]"
+                  quickActionsOpen ? "animate-pulse" : "animate-[spin_9s_linear_infinite]"
                 )}
               />
               {/* Glow effect on hover */}
