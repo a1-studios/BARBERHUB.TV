@@ -88,7 +88,8 @@ serve(async (req) => {
     // Get battle and verify participation
     const { data: battle, error: battleError } = await supabase
       .from("battles")
-      .select("id, title, barber1_id, barber2_id, status, scheduled_time")
+      // NOTE: keep this select aligned with actual DB columns
+      .select("id, title, barber1_id, barber2_id, status")
       .eq("id", battleId)
       .single();
 
