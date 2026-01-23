@@ -44,30 +44,45 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Create Supabase client with the user's auth header for proper JWT validation
+    const supabase = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: { headers: { Authorization: authHeader } }
+    });
     
-    // Get user from JWT
-    const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
-    const jwt = bearerMatch?.[1]?.trim();
-
-    // Avoid noisy auth-js AuthSessionMissingError by catching malformed/empty headers early
-    if (!jwt || jwt.split(".").length !== 3) {
-      console.error("Auth error: missing/invalid bearer token (token_length)", jwt?.length ?? 0);
+    // Use getClaims() which works correctly with signing-keys system
+    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+    
+    if (!token || token.split(".").length !== 3) {
+      console.error("Auth error: missing/invalid bearer token");
       return new Response(
         JSON.stringify({ error: "Invalid authentication token. Please sign in again." }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(jwt);
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
 
-    if (authError || !user) {
-      console.error("Auth error:", authError);
+    if (claimsError || !claimsData?.claims) {
+      console.error("Auth claims error:", claimsError);
       return new Response(
         JSON.stringify({ error: "Invalid authentication" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const userId = claimsData.claims.sub;
+    if (!userId) {
+      console.error("Auth error: no user ID in claims");
+      return new Response(
+        JSON.stringify({ error: "Invalid authentication" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Authenticated user: ${userId}`);
+    
+    // Create service role client for database operations
+    const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
     // Parse request body
     const { battleId }: TokenRequest = await req.json();
@@ -79,13 +94,13 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Generating battle token for user ${user.id}, battle ${battleId}`);
+    console.log(`Generating battle token for user ${userId}, battle ${battleId}`);
 
     // Get barber profile
-    const { data: barberProfile, error: barberError } = await supabase
+    const { data: barberProfile, error: barberError } = await supabaseAdmin
       .from("barber_profiles")
       .select("id, name, country_code, user_id")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .single();
 
     if (barberError || !barberProfile) {
@@ -97,7 +112,7 @@ serve(async (req) => {
     }
 
     // Get battle and verify participation
-    const { data: battle, error: battleError } = await supabase
+    const { data: battle, error: battleError } = await supabaseAdmin
       .from("battles")
       // NOTE: keep this select aligned with actual DB columns
       .select("id, title, barber1_id, barber2_id, status")
@@ -162,10 +177,10 @@ serve(async (req) => {
     const jwtToken = accessToken.toJwt();
 
     // Get user display name for room identity
-    const { data: profile } = await supabase
+    const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("display_name")
-      .eq("id", user.id)
+      .eq("id", userId)
       .single();
 
     const displayName = profile?.display_name || barberProfile.name || "Barber";
@@ -174,12 +189,12 @@ serve(async (req) => {
     console.log(`Token generated for barber ${barberProfile.id} (${displayName}) in battle ${battleId}`);
 
     // Create stream session (use insert, ignore if exists)
-    const { error: sessionError } = await supabase
+    const { error: sessionError } = await supabaseAdmin
       .from("stream_sessions")
       .insert({
         battle_id: battleId,
         barber_id: barberProfile.id,
-        user_id: user.id,
+        user_id: userId,
         room_name: roomName,
         status: "connecting",
         barber_position: barberPosition,
@@ -193,7 +208,7 @@ serve(async (req) => {
 
     // Update battle status to live if both barbers are joining
     if (battle.status === "upcoming" || battle.status === "scheduled") {
-      await supabase
+      await supabaseAdmin
         .from("battles")
         .update({ 
           status: "live",
