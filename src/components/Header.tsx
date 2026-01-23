@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Menu, X, Plus, User, LogOut, Sparkles, Zap, Scissors, Swords, Crown } from 'lucide-react';
+import { Coins, Plus, User, LogOut, Sparkles, Zap, Scissors, Swords, Crown } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import barberPole from '@/assets/barber-pole.png';
 import { cn } from '@/lib/utils';
@@ -23,11 +23,11 @@ interface QuickAction {
 const Header = () => {
   const { user, signOut } = useAuth();
   const { isBarber, isAdmin } = useUserRole();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
   const quickActionsRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const { showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
+  const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
 
   const quickActions: QuickAction[] = [
     {
@@ -79,16 +79,12 @@ const Header = () => {
 
   const handleSignOut = async () => {
     await signOut();
-    setMobileMenuOpen(false);
     navigate('/');
   };
 
   const handleBrandClick = () => {
     navigate('/');
-    setMobileMenuOpen(false);
   };
-
-  const closeMobileMenu = () => setMobileMenuOpen(false);
 
   // Filter actions based on auth and user type
   const availableActions = quickActions.filter(action => {
@@ -218,118 +214,19 @@ const Header = () => {
             </span>
           </button>
 
-          {/* Right Side - Menu Only (BB moved to Quick Actions) */}
-          <div className="flex items-center gap-3">
-            {/* Hamburger Menu Button */}
-            <button
-              className="p-2 -mr-2"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label="Toggle menu"
-            >
-              {mobileMenuOpen ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
-              )}
-            </button>
-          </div>
+          {/* Right Side - Barber Bucks Balance */}
+          <button
+            onClick={() => setShowAddFundsModal(true)}
+            className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/30 transition-all duration-200"
+            aria-label="Barber Bucks balance"
+          >
+            <Coins className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold text-primary tabular-nums">
+              {barberBucks.toLocaleString()}
+            </span>
+          </button>
         </div>
 
-        {/* Hamburger Menu Dropdown */}
-        {mobileMenuOpen && (
-          <div className="absolute top-full left-4 right-4 bg-background/95 backdrop-blur border-2 border-primary/30 rounded-xl shadow-lg mt-2">
-            <div className="px-4 py-6 space-y-4">
-              {user ? (
-                <>
-                  <Link
-                    to="/barbers"
-                    className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
-                    onClick={closeMobileMenu}
-                  >
-                    <Scissors className="h-5 w-5" />
-                    Barbers
-                  </Link>
-
-                  {isBarber && (
-                    <>
-                      <Link
-                        to="/portal"
-                        className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
-                        onClick={closeMobileMenu}
-                      >
-                        <Zap className="h-5 w-5" />
-                        Portal
-                      </Link>
-                      <Link
-                        to="/battles/create"
-                        className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
-                        onClick={closeMobileMenu}
-                      >
-                        <Plus className="h-5 w-5" />
-                        Create Battle
-                      </Link>
-                      <Link
-                        to="/creator-hub"
-                        className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
-                        onClick={closeMobileMenu}
-                      >
-                        <Crown className="h-5 w-5" />
-                        Creator Hub
-                      </Link>
-                    </>
-                  )}
-                  {isAdmin && (
-                    <Link
-                      to="/admin"
-                      className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
-                      onClick={closeMobileMenu}
-                    >
-                      <Zap className="h-5 w-5 text-red-500" />
-                      <span className="text-red-500 font-bold">Admin Dashboard</span>
-                    </Link>
-                  )}
-                  <Link
-                    to="/haircut-advisor"
-                    className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
-                    onClick={closeMobileMenu}
-                  >
-                    <Sparkles className="h-5 w-5" />
-                    AI Style
-                  </Link>
-                  <Link
-                    to="/profile"
-                    className="flex items-center gap-3 py-2 text-foreground hover:text-primary transition-colors"
-                    onClick={closeMobileMenu}
-                  >
-                    <User className="h-5 w-5" />
-                    Profile
-                  </Link>
-                  <div className="border-t border-border pt-4">
-                    <button
-                      onClick={handleSignOut}
-                      className="flex items-center gap-3 py-2 text-muted-foreground hover:text-foreground transition-colors w-full text-left"
-                    >
-                      <LogOut className="h-5 w-5" />
-                      Sign Out
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="pt-2">
-                  <Button 
-                    className="w-full" 
-                    onClick={() => {
-                      closeMobileMenu();
-                      navigate('/');
-                    }}
-                  >
-                    Sign In
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Add Funds Modal */}
