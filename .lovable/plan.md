@@ -1,400 +1,460 @@
 
 
-# Arena Gate Integration & Role System Enhancement
+# Super High-Energy Cultural Welcome on Country Selection
 
 ## Summary
 
-This plan integrates the Arena Gate ceremony directly into the landing page sign-up flow, adds visual distinction between Barber (orange) and Fan (cyan) roles, and ensures the role system works seamlessly across the entire application.
+Create an explosive, culturally-themed celebration moment the instant a user taps to select their country in the Arena Gate. This transforms country selection from a simple tap into a memorable "draft pick" moment with nation-specific colors, confetti explosion, haptic feedback, sound effects, and dynamic visual elements.
 
-## Problem Analysis
+## Vision
 
-The Arena Gate system (`ArenaGateModal`, `FlagCarousel`, `ClipperSwipeVerifier`) we built is completely disconnected from the actual sign-up flow:
-
-1. **`LandingHero.tsx`** has its own inline `UserTypeSelector` that ignores the Arena Gate
-2. When users click "BARBER", nothing special happens - just highlights the button
-3. Both roles currently use the same orange color scheme with no visual differentiation
-
-## Solution Design
-
-### Visual Design: Orange vs Cyan Role Contrast
+When a user taps a country flag in the wheel, the entire modal should explode with that nation's cultural energy:
 
 ```text
-┌────────────────────────────┐  ┌────────────────────────────┐
-│      ✂️ BARBER             │  │        👥 FAN              │
-│   ┌────────────────┐       │  │   ┌────────────────┐       │
-│   │ Orange primary │       │  │   │ Cyan primary   │       │
-│   │ Orange glow    │       │  │   │ Cyan glow      │       │
-│   │ Orange border  │       │  │   │ Cyan border    │       │
-│   └────────────────┘       │  │   └────────────────┘       │
-│   "Professional Service"   │  │   "Community Member"       │
-└────────────────────────────┘  └────────────────────────────┘
+┌─────────────────────────────────────────┐
+│    🏆 ARENA GATE                        │
+│                                         │
+│         ╔═══════════════════╗           │
+│     ░░░ ║  🇧🇷 BRAZIL   ✓   ║ ░░░       │
+│   ⚡    ╚═══════════════════╝   ⚡       │
+│                                         │
+│   💥 💥 💥 💥 💥 💥 💥 💥 💥 💥 💥   │
+│      CONFETTI IN FLAG COLORS            │
+│   🟢 🟡 🟢 🟡 🟢 🟡 🟢 🟡 🟢 🟡         │
+│                                         │
+│    ┌───────────────────────────┐        │
+│    │ 🌍  REPRESENTING BRAZIL!  │        │
+│    │    "Vamos! 🔥"            │        │
+│    └───────────────────────────┘        │
+│                                         │
+│    [   Continue to Verification   ]     │
+└─────────────────────────────────────────┘
 ```
-
-### Sign-Up Flow
-
-**For Barbers:**
-1. User clicks "BARBER" role button
-2. Arena Gate Modal opens (stadium theme)
-3. User selects country via 3D flag carousel
-4. User performs clipper swipe verification
-5. "FRESH!" celebration plays
-6. Modal closes, form shows locked country with "✓ Verified" badge
-7. User completes remaining fields
-
-**For Fans:**
-1. User clicks "FAN" role button (cyan highlight)
-2. No Arena Gate required
-3. Country dropdown optional (cyan-themed)
-4. User fills fields normally
-
----
 
 ## Technical Implementation
 
-### File 1: `src/components/LandingHero.tsx`
+### New File: `src/utils/countryCelebration.ts`
 
-**New imports:**
-```tsx
-import { ArenaGateModal, ArenaGateResult } from '@/components/auth/ArenaGateModal';
-import { Lock } from 'lucide-react';
-import { toast } from 'sonner';
-```
+**Cultural data with flag colors & hype phrases:**
 
-**New state variables:**
-```tsx
-const [showArenaGate, setShowArenaGate] = useState(false);
-const [arenaGateVerified, setArenaGateVerified] = useState(false);
-```
+```typescript
+export interface CountryCulturalData {
+  colors: string[];           // Flag colors for confetti
+  hypePhrase: string;         // Cultural hype phrase (e.g., "Vamos!")
+  celebrationEmoji: string;   // Cultural emoji
+}
 
-**Arena Gate handlers:**
-```tsx
-const handleArenaGateComplete = (result: ArenaGateResult) => {
-  setSignUpData(prev => ({
-    ...prev,
-    userType: 'barber',
-    countryCode: result.selectedCountry
-  }));
-  setArenaGateVerified(true);
-  setShowArenaGate(false);
+// Map of country codes to cultural celebration data
+export const COUNTRY_CULTURAL_DATA: Record<string, CountryCulturalData> = {
+  // Americas
+  US: { colors: ['#B31942', '#FFFFFF', '#0A3161'], hypePhrase: "Let's Go!", celebrationEmoji: '🦅' },
+  BR: { colors: ['#009739', '#FEDD00', '#002776'], hypePhrase: "Vamos!", celebrationEmoji: '🔥' },
+  MX: { colors: ['#006847', '#FFFFFF', '#CE1126'], hypePhrase: "¡Órale!", celebrationEmoji: '🌮' },
+  AR: { colors: ['#74ACDF', '#FFFFFF', '#F6B40E'], hypePhrase: "¡Vamos!", celebrationEmoji: '⚽' },
+  CA: { colors: ['#FF0000', '#FFFFFF'], hypePhrase: "Let's Go!", celebrationEmoji: '🍁' },
+  JM: { colors: ['#009B3A', '#FED100', '#000000'], hypePhrase: "Yah Mon!", celebrationEmoji: '🎶' },
+  CO: { colors: ['#FCD116', '#003893', '#CE1126'], hypePhrase: "¡Dale!", celebrationEmoji: '☕' },
+  
+  // Europe
+  GB: { colors: ['#012169', '#C8102E', '#FFFFFF'], hypePhrase: "Brilliant!", celebrationEmoji: '👑' },
+  FR: { colors: ['#0055A4', '#FFFFFF', '#EF4135'], hypePhrase: "Allez!", celebrationEmoji: '🗼' },
+  DE: { colors: ['#000000', '#DD0000', '#FFCE00'], hypePhrase: "Los Geht's!", celebrationEmoji: '🦅' },
+  ES: { colors: ['#AA151B', '#F1BF00'], hypePhrase: "¡Vamos!", celebrationEmoji: '💃' },
+  IT: { colors: ['#008C45', '#FFFFFF', '#CD212A'], hypePhrase: "Andiamo!", celebrationEmoji: '🤌' },
+  NL: { colors: ['#AE1C28', '#FFFFFF', '#21468B'], hypePhrase: "Kom Op!", celebrationEmoji: '🌷' },
+  PT: { colors: ['#006600', '#FF0000', '#FFCC00'], hypePhrase: "Vamos!", celebrationEmoji: '⚽' },
+  
+  // Africa
+  NG: { colors: ['#008751', '#FFFFFF'], hypePhrase: "Na We!", celebrationEmoji: '🦁' },
+  GH: { colors: ['#006B3F', '#FCD116', '#CE1126'], hypePhrase: "Ayeeko!", celebrationEmoji: '⭐' },
+  ZA: { colors: ['#007749', '#FFB81C', '#DE3831', '#002395', '#000000', '#FFFFFF'], hypePhrase: "Sho!", celebrationEmoji: '🦁' },
+  KE: { colors: ['#000000', '#BB0000', '#008000', '#FFFFFF'], hypePhrase: "Tuko Pamoja!", celebrationEmoji: '🦁' },
+  
+  // Asia
+  JP: { colors: ['#BC002D', '#FFFFFF'], hypePhrase: "Ikuzo!", celebrationEmoji: '🌸' },
+  KR: { colors: ['#0047A0', '#C60C30', '#FFFFFF', '#000000'], hypePhrase: "Hwaiting!", celebrationEmoji: '🔥' },
+  IN: { colors: ['#FF9933', '#FFFFFF', '#138808', '#000080'], hypePhrase: "Chalo!", celebrationEmoji: '🪔' },
+  PH: { colors: ['#0038A8', '#CE1126', '#FCD116', '#FFFFFF'], hypePhrase: "Tara!", celebrationEmoji: '⭐' },
+  
+  // Middle East
+  AE: { colors: ['#00732F', '#FFFFFF', '#000000', '#FF0000'], hypePhrase: "Yalla!", celebrationEmoji: '🏜️' },
+  SA: { colors: ['#006C35', '#FFFFFF'], hypePhrase: "Yalla!", celebrationEmoji: '🕌' },
+  
+  // Caribbean
+  TT: { colors: ['#DA2127', '#FFFFFF', '#000000'], hypePhrase: "Leh We Go!", celebrationEmoji: '🎭' },
+  
+  // Oceania
+  AU: { colors: ['#00008B', '#FFFFFF', '#FF0000'], hypePhrase: "Let's Go!", celebrationEmoji: '🦘' },
+  NZ: { colors: ['#00247D', '#CC142B', '#FFFFFF'], hypePhrase: "Ka Pai!", celebrationEmoji: '🥝' },
 };
 
-const handleArenaGateClose = () => {
-  // If they close without completing, reset to fan
-  setShowArenaGate(false);
-  if (!arenaGateVerified) {
-    setSignUpData(prev => ({
-      ...prev,
-      userType: 'fan',
-      countryCode: null
-    }));
+// Default fallback for countries without specific data
+export const DEFAULT_CULTURAL_DATA: CountryCulturalData = {
+  colors: ['#f97316', '#00D9FF', '#22c55e'],  // Platform colors
+  hypePhrase: "Let's Go!",
+  celebrationEmoji: '🔥'
+};
+
+export const getCountryCulturalData = (code: string): CountryCulturalData => {
+  return COUNTRY_CULTURAL_DATA[code] || DEFAULT_CULTURAL_DATA;
+};
+```
+
+**Celebration trigger function:**
+
+```typescript
+import confetti from 'canvas-confetti';
+import { HapticFeedback } from './hapticFeedback';
+
+export const triggerCountryCelebration = (countryCode: string) => {
+  const cultural = getCountryCulturalData(countryCode);
+  
+  // 1. MASSIVE confetti burst in flag colors
+  confetti({
+    particleCount: 150,
+    spread: 100,
+    origin: { y: 0.5, x: 0.5 },
+    colors: cultural.colors,
+    ticks: 120,
+    gravity: 0.8,
+    scalar: 1.2,
+    disableForReducedMotion: true
+  });
+
+  // 2. Side cannons with flag colors
+  setTimeout(() => {
+    confetti({
+      particleCount: 60,
+      angle: 60,
+      spread: 70,
+      origin: { x: 0, y: 0.5 },
+      colors: cultural.colors,
+      ticks: 100,
+      disableForReducedMotion: true
+    });
+    confetti({
+      particleCount: 60,
+      angle: 120,
+      spread: 70,
+      origin: { x: 1, y: 0.5 },
+      colors: cultural.colors,
+      ticks: 100,
+      disableForReducedMotion: true
+    });
+  }, 150);
+
+  // 3. Top explosion
+  setTimeout(() => {
+    confetti({
+      particleCount: 40,
+      angle: 270,
+      spread: 80,
+      origin: { x: 0.5, y: 0 },
+      colors: cultural.colors,
+      ticks: 80,
+      startVelocity: 45,
+      disableForReducedMotion: true
+    });
+  }, 300);
+
+  // 4. Haptic celebration
+  HapticFeedback.winner();
+  
+  return cultural;
+};
+```
+
+### Update File: `src/components/auth/FlagCarousel.tsx`
+
+**Add celebration on selection:**
+
+```tsx
+import { triggerCountryCelebration, getCountryCulturalData } from '@/utils/countryCelebration';
+import { useState } from 'react';
+
+// Inside component:
+const [celebrationData, setCelebrationData] = useState<CountryCulturalData | null>(null);
+const [showCelebration, setShowCelebration] = useState(false);
+
+const handleFlagClick = (code: string, index: number) => {
+  if (isDragging.current) return;
+  
+  // Trigger explosive celebration!
+  const cultural = triggerCountryCelebration(code);
+  setCelebrationData(cultural);
+  setShowCelebration(true);
+  
+  // Clear celebration after animation
+  setTimeout(() => setShowCelebration(false), 2000);
+  
+  onSelect(code);
+  
+  // Center the flag
+  if (containerRef.current) {
+    const containerWidth = containerRef.current.offsetWidth;
+    const targetX = -(index * ITEM_WIDTH) + containerWidth / 2 - FLAG_WIDTH / 2;
+    animate(x, targetX, { type: 'spring', stiffness: 300, damping: 30 });
   }
 };
 ```
 
-**Updated handleSignUp with validation:**
-```tsx
-const handleSignUp = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  // Barbers MUST complete Arena Gate
-  if (signUpData.userType === 'barber' && !arenaGateVerified) {
-    toast.error('Please complete the Arena Gate verification');
-    setShowArenaGate(true);
-    return;
-  }
-  
-  // Barbers MUST have country selected
-  if (signUpData.userType === 'barber' && !signUpData.countryCode) {
-    toast.error('Please complete nationality verification');
-    setShowArenaGate(true);
-    return;
-  }
-  
-  setLoading(true);
-  const { error } = await signUp(signUpData.email, signUpData.password, signUpData.displayName, signUpData.userType, signUpData.countryCode || undefined);
-  setLoading(false);
-};
-```
+**Add celebration overlay in JSX:**
 
-**Updated UserTypeSelector with cyan/orange contrast:**
 ```tsx
-const UserTypeSelector = () => (
-  <div className="space-y-4">
-    <Label className="text-sm font-medium">I am a:</Label>
-    <div className="grid grid-cols-2 gap-3">
-      {/* BARBER Button - Orange Theme */}
-      <button 
-        type="button" 
-        onClick={() => {
-          if (!arenaGateVerified) {
-            setShowArenaGate(true);
-          }
-          setSignUpData(prev => ({ ...prev, userType: "barber" }));
-        }} 
-        className={`relative p-4 border transition-all duration-300 ${
-          signUpData.userType === "barber" 
-            ? "border-primary/50 bg-primary/5 shadow-[0_0_20px_hsl(24_100%_52%/0.3),inset_0_0_15px_hsl(24_100%_52%/0.1)]" 
-            : "border-border/50 bg-card/50 hover:border-primary/30 hover:shadow-[0_0_15px_hsl(24_100%_52%/0.2)]"
-        }`} 
-        style={{ borderRadius: '1rem' }}
+{/* Country Selection Celebration Overlay */}
+<AnimatePresence>
+  {showCelebration && selectedCountry && celebrationData && (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      className="absolute inset-0 z-20 flex flex-col items-center justify-center pointer-events-none"
+    >
+      {/* Giant pulsing flag */}
+      <motion.div
+        initial={{ scale: 0, rotate: -180 }}
+        animate={{ 
+          scale: [0, 1.5, 1.2], 
+          rotate: 0,
+        }}
+        transition={{ type: 'spring', stiffness: 200, damping: 12 }}
+        className="text-8xl mb-4"
+        style={{ 
+          filter: `drop-shadow(0 0 40px ${celebrationData.colors[0]})`
+        }}
       >
-        <div className="flex flex-col items-center space-y-2">
-          <div className={`p-2 rounded-full ${
-            signUpData.userType === "barber" 
-              ? "bg-primary text-primary-foreground" 
-              : "bg-muted"
-          }`}>
-            <Scissors className="w-5 h-5" />
-          </div>
-          <div className="text-center">
-            <div className="font-semibold text-sm">BARBER</div>
-            <div className="text-xs text-muted-foreground">Professional Service</div>
-          </div>
-        </div>
-        {signUpData.userType === "barber" && arenaGateVerified && (
-          <div className="absolute -top-1 -right-1">
-            <Badge className="text-xs bg-green-500/20 text-green-400 border-green-500/30">
-              ✓ Verified
-            </Badge>
-          </div>
-        )}
-      </button>
+        {getCountryFlag(selectedCountry)}
+      </motion.div>
 
-      {/* FAN Button - Cyan Theme */}
-      <button 
-        type="button" 
-        onClick={() => {
-          setSignUpData(prev => ({ ...prev, userType: "fan" }));
-          // Reset arena gate state when switching to fan
-          setArenaGateVerified(false);
-        }} 
-        className={`relative p-4 border transition-all duration-300 ${
-          signUpData.userType === "fan" 
-            ? "border-cyan-500/50 bg-cyan-500/5 shadow-[0_0_20px_rgba(0,217,255,0.3),inset_0_0_15px_rgba(0,217,255,0.1)]" 
-            : "border-border/50 bg-card/50 hover:border-cyan-500/30 hover:shadow-[0_0_15px_rgba(0,217,255,0.2)]"
-        }`} 
-        style={{ borderRadius: '1rem' }}
+      {/* Hype phrase with emoji */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="text-center"
       >
-        <div className="flex flex-col items-center space-y-2">
-          <div className={`p-2 rounded-full ${
-            signUpData.userType === "fan" 
-              ? "bg-cyan-500 text-black" 
-              : "bg-muted"
-          }`}>
-            <Users className="w-5 h-5" />
-          </div>
-          <div className="text-center">
-            <div className="font-semibold text-sm">FAN</div>
-            <div className="text-xs text-muted-foreground">Community Member</div>
-          </div>
-        </div>
-        {signUpData.userType === "fan" && (
-          <div className="absolute -top-1 -right-1">
-            <Badge className="text-xs bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
-              Selected
-            </Badge>
-          </div>
-        )}
-      </button>
+        <span className="text-4xl font-black text-white drop-shadow-lg">
+          {celebrationData.celebrationEmoji} {celebrationData.hypePhrase}
+        </span>
+      </motion.div>
+
+      {/* Radial glow burst */}
+      <motion.div
+        initial={{ scale: 0, opacity: 0.8 }}
+        animate={{ scale: 3, opacity: 0 }}
+        transition={{ duration: 0.8 }}
+        className="absolute w-32 h-32 rounded-full"
+        style={{
+          background: `radial-gradient(circle, ${celebrationData.colors[0]}60 0%, transparent 70%)`
+        }}
+      />
+    </motion.div>
+  )}
+</AnimatePresence>
+```
+
+### Update File: `src/components/auth/ArenaGateModal.tsx`
+
+**Pass celebration data to display:**
+
+Update the selected country display to show the hype phrase:
+
+```tsx
+import { getCountryCulturalData } from '@/utils/countryCelebration';
+
+// Inside component:
+const culturalData = selectedCountry ? getCountryCulturalData(selectedCountry) : null;
+
+// Update the "Representing" badge:
+{selectedCountry && culturalData && (
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="text-center mb-4"
+  >
+    <div 
+      className="inline-flex items-center gap-2 px-4 py-2 rounded-full border"
+      style={{
+        backgroundColor: `${culturalData.colors[0]}20`,
+        borderColor: `${culturalData.colors[0]}50`,
+      }}
+    >
+      <span className="text-xl">{getCountryFlag(selectedCountry)}</span>
+      <span 
+        className="font-bold"
+        style={{ color: culturalData.colors[0] }}
+      >
+        Representing {getCountryName(selectedCountry)}
+      </span>
+      <span className="text-xl">{culturalData.celebrationEmoji}</span>
+    </div>
+    <motion.p
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 0.5 }}
+      className="text-sm mt-2 font-semibold"
+      style={{ color: culturalData.colors[0] }}
+    >
+      "{culturalData.hypePhrase}"
+    </motion.p>
+  </motion.div>
+)}
+```
+
+### Update File: `src/components/auth/FlagCarousel.tsx` - Expand Countries
+
+**Use the full 180+ country list from CountrySelector:**
+
+```tsx
+// Import the comprehensive list
+import { COUNTRIES } from '@/components/CountrySelector';
+
+// OR duplicate the list directly to avoid circular imports
+const ALL_COUNTRIES = [
+  { code: 'US', name: 'United States' },
+  { code: 'CA', name: 'Canada' },
+  // ... all 180+ countries
+];
+```
+
+**Upgrade to vertical wheel with search:**
+
+```tsx
+const FLAG_HEIGHT = 64;
+const VISIBLE_ITEMS = 5;
+const CONTAINER_HEIGHT = FLAG_HEIGHT * VISIBLE_ITEMS;
+
+// Add search state
+const [searchQuery, setSearchQuery] = useState('');
+
+const filteredCountries = ALL_COUNTRIES.filter(c => 
+  c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  c.code.toLowerCase().includes(searchQuery.toLowerCase())
+);
+
+return (
+  <div className="flex flex-col h-full">
+    {/* Search input */}
+    <Input
+      placeholder="Search country..."
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
+      className="mb-4"
+    />
+    
+    {/* Vertical wheel container */}
+    <div 
+      className="relative overflow-hidden flex-1"
+      style={{ height: CONTAINER_HEIGHT }}
+    >
+      {/* Center highlight line */}
+      <div className="absolute top-1/2 -translate-y-1/2 left-0 right-0 h-16 z-10 pointer-events-none">
+        <div className="h-full border-y-2 border-primary bg-primary/5 rounded-lg" />
+      </div>
+
+      {/* Top/bottom fade gradients */}
+      <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-background to-transparent z-20 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-background to-transparent z-20 pointer-events-none" />
+
+      {/* Scrollable flag list */}
+      <motion.div
+        className="flex flex-col items-center"
+        style={{ y }}
+        drag="y"
+        dragConstraints={{
+          top: -(filteredCountries.length * FLAG_HEIGHT - CONTAINER_HEIGHT / 2),
+          bottom: CONTAINER_HEIGHT / 2
+        }}
+        dragElastic={0.1}
+        onDragEnd={handleDragEnd}
+      >
+        {filteredCountries.map((country, index) => (
+          <motion.button
+            key={country.code}
+            onClick={() => handleFlagClick(country.code, index)}
+            className="flex items-center gap-4 w-full px-4 py-2"
+            style={{ height: FLAG_HEIGHT }}
+            animate={{
+              opacity: selectedCountry === country.code ? 1 : 0.6,
+              scale: selectedCountry === country.code ? 1.05 : 1,
+            }}
+          >
+            <span className="text-4xl">{getCountryFlag(country.code)}</span>
+            <span className={cn(
+              "font-medium",
+              selectedCountry === country.code ? "text-primary" : "text-foreground"
+            )}>
+              {country.name}
+            </span>
+          </motion.button>
+        ))}
+      </motion.div>
     </div>
   </div>
 );
 ```
 
-**Updated Country Selector section:**
-```tsx
-<div className="space-y-2">
-  <div className="flex items-center justify-between">
-    <Label>Country</Label>
-    {signUpData.userType === 'barber' && arenaGateVerified && (
-      <Badge className="text-xs bg-green-500/20 text-green-400 border-green-500/30">
-        <Lock className="h-3 w-3 mr-1" />
-        Verified
-      </Badge>
-    )}
-  </div>
-  <CountrySelector 
-    value={signUpData.countryCode} 
-    onChange={countryCode => {
-      if (!arenaGateVerified) {
-        setSignUpData(prev => ({ ...prev, countryCode }));
-      }
-    }} 
-    placeholder={arenaGateVerified ? "Nationality locked" : "Select your country"}
-    disabled={arenaGateVerified}
-  />
-  {signUpData.userType === 'barber' && arenaGateVerified && (
-    <p className="text-xs text-amber-500/80 flex items-center gap-1">
-      <Lock className="h-3 w-3" />
-      Nationality cannot be changed after sign-up
-    </p>
-  )}
-  {signUpData.userType === 'fan' && (
-    <p className="text-xs text-muted-foreground">
-      Optional - helps connect with local barbers
-    </p>
-  )}
-</div>
-```
+## Files to Create/Modify
 
-**Add Arena Gate Modal at end of component:**
-```tsx
-{/* Arena Gate for Barbers */}
-<ArenaGateModal
-  isOpen={showArenaGate}
-  onClose={handleArenaGateClose}
-  onComplete={handleArenaGateComplete}
-/>
-```
+| File | Action | Description |
+|------|--------|-------------|
+| `src/utils/countryCelebration.ts` | CREATE | Cultural data map (30+ countries with colors, phrases, emojis) + celebration trigger function |
+| `src/components/auth/FlagCarousel.tsx` | MODIFY | Add celebration overlay, expand to 180+ countries, convert to vertical wheel with search |
+| `src/components/auth/ArenaGateModal.tsx` | MODIFY | Display cultural hype phrase and dynamic colors in "Representing" badge |
+| `src/utils/hapticFeedback.ts` | MODIFY | Add `countryCelebration` pattern for ultra-celebration haptic |
 
----
+## Celebration Sequence Timeline
 
-### File 2: `src/components/RoleBadge.tsx`
-
-**Update Fan badge to use cyan:**
-```tsx
-if (isFan) {
-  return (
-    <Badge 
-      variant="secondary" 
-      className={`bg-gradient-to-r from-cyan-500/20 to-cyan-400/10 text-cyan-400 border border-cyan-500/30 ${sizeClasses[size]} ${className}`}
-    >
-      <Users className={`${iconSize[size]} mr-1`} />
-      Fan
-    </Badge>
-  );
-}
-```
-
----
-
-### File 3: `src/components/auth/AuthDialog.tsx`
-
-**Same Arena Gate integration pattern:**
-
-Add state and handlers:
-```tsx
-const [showArenaGate, setShowArenaGate] = useState(false);
-const [arenaGateVerified, setArenaGateVerified] = useState(!!prefilledCountry);
-```
-
-Update barber button to trigger Arena Gate:
-```tsx
-<button
-  type="button"
-  onClick={() => {
-    if (!arenaGateVerified) {
-      setShowArenaGate(true);
-    }
-    setSignUpData(prev => ({ ...prev, userType: "barber" }));
-  }}
-  className={`... ${
-    signUpData.userType === "barber" 
-      ? "border-primary bg-primary/10" 
-      : "border-border hover:border-primary/50"
-  }`}
->
-```
-
-Update fan button with cyan theme:
-```tsx
-<button
-  type="button"
-  onClick={() => {
-    setSignUpData(prev => ({ ...prev, userType: "fan" }));
-    setArenaGateVerified(false);
-  }}
-  className={`... ${
-    signUpData.userType === "fan" 
-      ? "border-cyan-500 bg-cyan-500/10" 
-      : "border-border hover:border-cyan-500/50"
-  }`}
->
-```
-
-Add Arena Gate Modal at end.
-
----
-
-## Role System Verification
-
-The existing role system is already properly integrated across the app:
-
-| Component | Role Check | Purpose |
-|-----------|------------|---------|
-| `Header.tsx` | `useUserRole` | Filter navigation items by `barberOnly`/`adminOnly` |
-| `Index.tsx` | `isBarber` | Show Creator Hub only to barbers |
-| `BattlesPage.tsx` | `isBarber`, `isFan` | Different battle actions per role |
-| `AdminGuard.tsx` | `isAdmin` | Protect admin routes |
-| `BarberGuard.tsx` | `isBarber` | Protect barber-only routes |
-| `AuthGuard.tsx` | `user` | Protect authenticated routes |
-| `ChallengeFeed.tsx` | `isBarber` | Show accept challenge for barbers only |
-| `QuickActionsMenu.tsx` | `isBarber`, `isAdmin` | Filter quick actions |
-| `Profile.tsx` | `isBarber` | Show different profile layouts |
-
-All these continue to work because:
-1. `useAuth` passes `user_type` to Supabase metadata
-2. Database trigger creates `user_roles` entry
-3. `useUserRole` reads from `user_roles` table
-4. Guards and components consume the role flags
-
----
-
-## Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/components/LandingHero.tsx` | Import ArenaGateModal, add Arena Gate state/handlers, update UserTypeSelector with orange/cyan contrast, lock country after verification, add validation in handleSignUp, render ArenaGateModal |
-| `src/components/auth/AuthDialog.tsx` | Same Arena Gate integration, add cyan styling for fan role |
-| `src/components/RoleBadge.tsx` | Update Fan badge to use cyan gradient |
-
----
-
-## Data Permanence Summary
-
-After account creation, the following CANNOT be changed:
-- **Role** (barber/fan) - set at sign-up
-- **Nationality** - set via Arena Gate for barbers (mandatory), optional dropdown for fans
-- **Display Name** - set at sign-up
-- **Email** - for login purposes
-
-Only **password** can be reset via email.
-
----
-
-## Flow Diagrams
-
-### Barber Sign-Up Flow
 ```text
-[Click BARBER] → [Arena Gate Opens]
-      ↓
-[3D Flag Carousel] → [Select Country]
-      ↓
-[Clipper Swipe Verification] → [FRESH! Animation]
-      ↓
-[Form: Country Locked ✓] → [Fill Name/Email/Password]
-      ↓
-[Create Account] → [Account with permanent nationality]
+0ms    - User taps country flag
+10ms   - Haptic vibration fires (winner pattern)
+50ms   - CENTER: 150 particles explode in flag colors
+150ms  - SIDES: 60 particles from left + 60 from right
+300ms  - TOP: 40 particles rain down
+350ms  - Giant flag scales in with rotation + glow
+500ms  - Hype phrase fades in with cultural emoji
+800ms  - Radial glow burst expands and fades
+2000ms - Celebration overlay fades out
 ```
 
-### Fan Sign-Up Flow
-```text
-[Click FAN] → [Form with Cyan styling]
-      ↓
-[Optional Country Dropdown] → [Fill Name/Email/Password]
-      ↓
-[Create Account] → [Regular account]
-```
+## Visual Elements
 
----
+**1. Confetti Colors** - Uses actual flag colors (extracted from each nation's flag design)
+
+**2. Hype Phrases** - Culturally relevant expressions:
+- Brazil: "Vamos!" 
+- Jamaica: "Yah Mon!" 
+- UK: "Brilliant!" 
+- Korea: "Hwaiting!" 
+- UAE: "Yalla!"
+
+**3. Cultural Emojis** - Nation-specific symbols:
+- 🦅 USA/Germany (eagles)
+- 🍁 Canada (maple leaf)
+- 🌸 Japan (cherry blossom)
+- 🦁 Nigeria/South Africa (lions)
+- 🌷 Netherlands (tulips)
+
+**4. Dynamic Colors** - Badge and glow effects use the primary flag color
+
+## Performance Considerations
+
+- All celebrations use existing `canvas-confetti` library (already installed)
+- Cultural data is a simple static object (no additional API calls)
+- Animations use `framer-motion` (already installed)
+- Celebration overlay uses `pointer-events-none` to not block interactions
+- Haptic uses native vibration API (no overhead)
 
 ## Summary
 
-This implementation:
-1. **Integrates** Arena Gate into the barber sign-up flow on the landing page
-2. **Creates visual distinction** with orange for barbers, cyan for fans
-3. **Enforces** mandatory Arena Gate completion for barbers before sign-up
-4. **Locks** nationality after Arena Gate verification with clear visual feedback
-5. **Maintains** existing role logic across all components (no changes needed)
-6. **Keeps lightweight** - no new dependencies, minimal additions
+This implementation creates an explosive, culturally-aware celebration when users select their country:
+
+1. **Massive confetti** in that nation's flag colors (150+ particles)
+2. **Side cannons** for stadium-like effect
+3. **Giant pulsing flag** with glow in primary flag color
+4. **Cultural hype phrase** with nation-specific emoji
+5. **Haptic feedback** for physical celebration feel
+6. **180+ countries** available in vertical scrolling wheel with search
+
+The celebration is triggered instantly on country selection - not waiting for verification - making the moment of "choosing your nation" feel like being drafted to a World Cup team.
 
