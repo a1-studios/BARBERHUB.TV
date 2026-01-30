@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SubscriptionBadge } from '@/components/SubscriptionBadge';
 import { Link } from 'react-router-dom';
-import { ExternalLink, Settings } from 'lucide-react';
+import { ExternalLink, Settings, Coins, Plus } from 'lucide-react';
 
 interface BarberProfileHeaderProps {
   avatar_url?: string | null;
@@ -20,7 +20,9 @@ interface BarberProfileHeaderProps {
     total_donations_cents: number;
   };
   barber_id?: string;
-  onEditClick?: () => void;
+  onSettingsClick?: () => void;
+  onAddFundsClick?: () => void;
+  barberBucks?: number;
   showActions?: boolean;
 }
 
@@ -33,7 +35,9 @@ export function BarberProfileHeader({
   subscription_tier,
   stats,
   barber_id,
-  onEditClick,
+  onSettingsClick,
+  onAddFundsClick,
+  barberBucks,
   showActions = true
 }: BarberProfileHeaderProps) {
   const getCountryFlag = (code: string) => {
@@ -49,6 +53,21 @@ export function BarberProfileHeader({
   return (
     <Card className="relative overflow-hidden border-primary/20">
       <div className="absolute inset-0 bg-gradient-to-br from-background/90 via-background/80 to-primary/20" />
+      
+      {/* Compact BB Display - Top Right */}
+      {barberBucks !== undefined && (
+        <div className="absolute top-4 right-4 z-20 flex items-center gap-2 bg-background/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-cyan-500/20">
+          <Coins className="h-4 w-4 text-cyan-400" />
+          <span className="text-sm font-bold text-white">{barberBucks.toLocaleString()}</span>
+          <span className="text-xs text-muted-foreground">BB</span>
+          {onAddFundsClick && (
+            <Button size="sm" variant="ghost" className="h-6 w-6 p-0 hover:bg-cyan-500/20" onClick={onAddFundsClick}>
+              <Plus className="h-3 w-3 text-cyan-400" />
+            </Button>
+          )}
+        </div>
+      )}
+      
       <CardContent className="relative p-6 md:p-8 z-10">
         <div className="flex flex-col md:flex-row gap-6 items-start">
           <Avatar className="w-24 h-24 md:w-32 md:h-32 border-4 border-primary/30">
@@ -111,10 +130,10 @@ export function BarberProfileHeader({
                     </Button>
                   </Link>
                 )}
-                {onEditClick && (
-                  <Button variant="outline" size="sm" onClick={onEditClick}>
+                {onSettingsClick && (
+                  <Button variant="outline" size="sm" onClick={onSettingsClick}>
                     <Settings className="w-4 h-4 mr-2" />
-                    Edit Profile
+                    Settings
                   </Button>
                 )}
               </div>

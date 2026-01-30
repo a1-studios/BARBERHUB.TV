@@ -32,7 +32,8 @@ import {
   MapPin,
   Award,
   Loader2,
-  Save
+  Save,
+  Lock
 } from 'lucide-react';
 
 interface BarberSettingsProps {
@@ -327,12 +328,22 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
                 </div>
 
                 <div>
-                  <Label>Country</Label>
+                  <Label className="flex items-center gap-2">
+                    Country
+                    <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-500 border-amber-500/30">
+                      <Lock className="h-3 w-3 mr-1" />
+                      Locked
+                    </Badge>
+                  </Label>
                   <CountrySelector
                     value={profileForm.country_code}
-                    onChange={(country_code) => setProfileForm(prev => ({ ...prev, country_code }))}
-                    placeholder="Select your country"
+                    onChange={() => {}}
+                    placeholder="Set during Arena Gate"
+                    disabled={true}
                   />
+                  <p className="text-xs text-amber-500/80 mt-1">
+                    Nationality is permanently set during sign-up
+                  </p>
                 </div>
 
                 <Button type="submit" disabled={updateProfileMutation.isPending}>
@@ -428,14 +439,22 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
                   </div>
 
                   <div>
-                    <Label>Professional Country</Label>
+                    <Label className="flex items-center gap-2">
+                      Professional Country
+                      <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-500 border-amber-500/30">
+                        <Lock className="h-3 w-3 mr-1" />
+                        Locked
+                      </Badge>
+                    </Label>
                     <CountrySelector
                       value={barberForm.country_code}
-                      onChange={(country_code) => setBarberForm(prev => ({ ...prev, country_code: country_code || '' }))}
-                      placeholder="Select your professional country"
+                      onChange={() => {}}
+                      placeholder="Set during Arena Gate"
+                      disabled={true}
                     />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      This country will be displayed on your barber profile
+                    <p className="text-xs text-amber-500/80 mt-1 flex items-center gap-1">
+                      <Lock className="h-3 w-3" />
+                      Represents your nation in World Cup battles
                     </p>
                   </div>
                 </div>

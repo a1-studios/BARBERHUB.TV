@@ -14,8 +14,9 @@ import { toast } from 'sonner';
 import { BackButton } from '@/components/ui/BackButton';
 import { RoleBadge } from '@/components/RoleBadge';
 import { EmptyState } from '@/components/EmptyState';
-import { Scissors, Users, Trophy, Plus, User, Loader2, Globe, Edit3, X, Settings, Upload, Zap, CheckCircle, Clock, Award, Heart, Bell, DollarSign, Coins } from 'lucide-react';
-import { BBWalletCard } from '@/components/economy/BBWalletCard';
+import { Scissors, Users, Trophy, Plus, User, Loader2, Globe, Edit3, X, Settings, Upload, Zap, CheckCircle, Clock, Award, Heart, Bell, DollarSign, Coins, Lock } from 'lucide-react';
+import { useBarberBucks } from '@/hooks/useBarberBucks';
+import { AddFundsModal } from '@/components/AddFundsModal';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { CountrySelector } from '@/components/CountrySelector';
@@ -39,6 +40,10 @@ const Profile = () => {
   const [showProfileSetup, setShowProfileSetup] = useState(false);
   const [showCreationUpload, setShowCreationUpload] = useState(false);
   const [showBarberSettings, setShowBarberSettings] = useState(false);
+  
+  // Get barber bucks data
+  const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
+  
   const {
     userProfile,
     barberProfile,
@@ -331,80 +336,63 @@ const Profile = () => {
                   total_donations_cents: barberStats.total_donations_cents || 0
                 }}
                 barber_id={barberProfile.id}
-                onEditClick={() => setShowBarberSettings(true)}
+                barberBucks={barberBucks}
+                onSettingsClick={() => setShowBarberSettings(true)}
+                onAddFundsClick={() => setShowAddFundsModal(true)}
                 showActions={true}
               />
             </div>
           )}
           
-          <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
-            {/* Profile Info */}
-            <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-              {/* Personal Information Card */}
+          <div className="space-y-4 sm:space-y-6">
+            {/* Personal Information Card - For fans only (barbers use header) */}
+            {!isBarber && (
               <Card>
                 <CardHeader className="pb-4">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                        <User className="h-5 w-5 flex-shrink-0" />
-                        <span className="truncate">Personal Information</span>
-                      </CardTitle>
-                      <CardDescription className="text-sm mt-1">
-                        Manage your basic profile information and avatar
-                      </CardDescription>
-                    </div>
-                  </div>
+                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+                    <User className="h-5 w-5 flex-shrink-0" />
+                    <span className="truncate">Personal Information</span>
+                  </CardTitle>
+                  <CardDescription className="text-sm mt-1">
+                    Manage your basic profile information
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Avatar Upload Section - Barbers Only */}
-                  {isBarber && (
-                    <div className="flex flex-col items-center pb-6 border-b">
-                      <AvatarUpload currentAvatar={profile?.avatar_url || ''} onAvatarChange={url => {
-                        queryClient.invalidateQueries({
-                          queryKey: ['profile', user?.id]
-                        });
-                      }} size="lg" />
-                    </div>
-                  )}
-
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label htmlFor="display_name">Display Name</Label>
-                        <Input id="display_name" value={formData.display_name} onChange={e => setFormData(prev => ({
-                        ...prev,
-                        display_name: e.target.value
-                      }))} disabled={!isEditing} className="w-full" />
+                        <Input 
+                          id="display_name" 
+                          value={formData.display_name} 
+                          onChange={e => setFormData(prev => ({ ...prev, display_name: e.target.value }))} 
+                          disabled={!isEditing} 
+                          className="w-full" 
+                        />
                       </div>
                       
                       <div className="space-y-2">
                         <Label htmlFor="username">Username</Label>
-                        <Input id="username" value={formData.username} onChange={e => setFormData(prev => ({
-                        ...prev,
-                        username: e.target.value
-                      }))} disabled={!isEditing} placeholder="@username" className="w-full" />
-                        <p className="text-xs text-muted-foreground">
-                          Choose a unique username
-                        </p>
+                        <Input 
+                          id="username" 
+                          value={formData.username} 
+                          onChange={e => setFormData(prev => ({ ...prev, username: e.target.value }))} 
+                          disabled={!isEditing} 
+                          placeholder="@username" 
+                          className="w-full" 
+                        />
                       </div>
                     </div>
 
                     <div className="space-y-2">
                       <Label>Country</Label>
-                      <CountrySelector value={formData.country_code} onChange={country_code => setFormData(prev => ({
-                      ...prev,
-                      country_code
-                    }))} placeholder="Select your country" disabled={false} />
+                      <CountrySelector 
+                        value={formData.country_code} 
+                        onChange={country_code => setFormData(prev => ({ ...prev, country_code }))} 
+                        placeholder="Select your country" 
+                        disabled={!isEditing}
+                      />
                     </div>
-
-                    {/* Only show bio for barbers */}
-                    {isBarber && <div className="space-y-2">
-                        <Label htmlFor="bio">Personal Bio</Label>
-                        <Textarea id="bio" value={formData.bio} onChange={e => setFormData(prev => ({
-                      ...prev,
-                      bio: e.target.value
-                    }))} disabled={!isEditing} placeholder="Tell people about yourself..." rows={3} className="resize-none w-full" />
-                      </div>}
 
                     <div className="space-y-2">
                       <Label>Email</Label>
@@ -414,21 +402,17 @@ const Profile = () => {
                     <div className="space-y-2">
                       <Label>Account Type</Label>
                       <div className="flex items-center gap-2">
-                        <Badge variant={isBarber ? "default" : "secondary"} className="text-sm px-3 py-1">
-                          {isBarber ? <>
-                              <Scissors className="w-4 h-4 mr-1.5" />
-                              Barber
-                            </> : <>
-                              <Users className="w-4 h-4 mr-1.5" />
-                              Fan
-                            </>}
+                        <Badge variant="secondary" className="text-sm px-3 py-1">
+                          <Users className="w-4 h-4 mr-1.5" />
+                          Fan
                         </Badge>
                         <RoleBadge size="sm" />
                       </div>
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-2 pt-4 border-t">
-                      {isEditing ? <>
+                      {isEditing ? (
+                        <>
                           <Button type="submit" disabled={updateProfileMutation.isPending} className="w-full sm:w-auto">
                             {updateProfileMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                             Save Profile
@@ -436,55 +420,17 @@ const Profile = () => {
                           <Button type="button" variant="outline" onClick={handleCancel} className="w-full sm:w-auto">
                             Cancel
                           </Button>
-                        </> : <Button type="button" onClick={() => setIsEditing(true)} className="w-full sm:w-auto">
+                        </>
+                      ) : (
+                        <Button type="button" onClick={() => setIsEditing(true)} className="w-full sm:w-auto">
                           Edit Profile
-                        </Button>}
-                      
-                      {isBarber && <Button variant="outline" size="default" onClick={() => setShowBarberSettings(true)} className="w-full sm:w-auto sm:ml-auto">
-                          <Settings className="h-4 w-4 mr-2" />
-                          Barber Settings
-                        </Button>}
-                      {(barberProfile || clientProfile) && <Button variant="outline" size="default" onClick={() => setShowProfileSetup(true)} className="w-full sm:w-auto">
-                          <Edit3 className="h-4 w-4 mr-2" />
-                          Edit {isBarber ? 'Barber' : 'Client'} Profile
-                        </Button>}
+                        </Button>
+                      )}
                     </div>
                   </form>
-
-                  {/* Specialized Profile Info */}
-                  {barberProfile && <div className="mt-6 pt-6 border-t">
-                      <h4 className="font-semibold mb-4">Barber Profile</h4>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="text-muted-foreground">Professional Name:</span>
-                          <p className="font-medium">{barberProfile.name}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Specialty:</span>
-                          <p className="font-medium">{barberProfile.specialty || 'Not specified'}</p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Experience:</span>
-                          <p className="font-medium">
-                            {barberProfile.years_experience ? `${barberProfile.years_experience} years` : 'Not specified'}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">Rating:</span>
-                          <p className="font-medium">{barberProfile.rating || 0}/5</p>
-                        </div>
-                      </div>
-                    </div>}
-
-                  {/* Fan stats section removed - keep it minimal */}
                 </CardContent>
               </Card>
-            </div>
-
-            {/* Sidebar with BB Wallet */}
-            <div className="space-y-4">
-              <BBWalletCard />
-            </div>
+            )}
           </div>
 
           {/* My Battles Section - Barbers Only */}
@@ -618,6 +564,12 @@ const Profile = () => {
             </div>}
         </div>
       </main>
+      
+      {/* Add Funds Modal */}
+      <AddFundsModal 
+        isOpen={showAddFundsModal} 
+        onClose={() => setShowAddFundsModal(false)} 
+      />
     </div>;
 };
 export default Profile;
