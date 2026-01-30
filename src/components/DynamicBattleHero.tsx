@@ -6,7 +6,8 @@ import { BarberVideoSection } from "@/components/barber/BarberVideoSection";
 import { BarberHeroStreamControls } from "@/components/streaming/BarberHeroStreamControls";
 import { useRealtimeBattleViewers } from "@/hooks/useRealtimeBattleViewers";
 import { useAuth } from "@/hooks/useAuth";
-import { Heart, Users, Eye } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
+import { Heart, Users, Eye, Compass } from "lucide-react";
 import { MobileVoteCenter } from "@/components/battles/MobileVoteCenter";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useEffect } from "react";
@@ -58,9 +59,8 @@ interface BarberProfile {
 }
 export const DynamicBattleHero = () => {
   const navigate = useNavigate();
-  const {
-    user
-  } = useAuth();
+  const { user } = useAuth();
+  const { isBarber, isFan } = useUserRole();
   const [rotationIndex, setRotationIndex] = useState(0);
   const [currentUserBarberPosition, setCurrentUserBarberPosition] = useState<1 | 2 | null>(null);
 
@@ -251,7 +251,15 @@ export const DynamicBattleHero = () => {
   }
   const barber1 = displayBarbers[0];
   const barber2 = displayBarbers[1];
-  const isActiveBattle = battle?.status === 'active' || battle?.status === 'voting';
+  
+  // Battle phase logic - voting only after battle ends
+  const isLiveBattle = battle?.status === 'active';
+  const isVotingPhase = battle?.status === 'voting';
+  const isActiveBattle = isLiveBattle || isVotingPhase;
+  
+  // Demo mode when no real voting battle exists - allows users to see the UI
+  const showDemoMode = !battle || (!isVotingPhase && displayBarbers.length >= 2);
+  
   const isBarber1CurrentUser = currentUserBarberPosition === 1;
   const isBarber2CurrentUser = currentUserBarberPosition === 2;
   const isCurrentUserInBattle = isBarber1CurrentUser || isBarber2CurrentUser;
@@ -262,6 +270,17 @@ export const DynamicBattleHero = () => {
   return <div className="pt-8 sm:pt-12 pb-2 sm:pb-4 px-0 sm:px-4 max-w-[100vw] sm:max-w-5xl lg:max-w-6xl mx-auto">
       {/* Full viewport height on mobile, fixed aspect ratio on larger screens */}
       <div className="w-full h-[calc(100vh-5rem)] sm:h-auto sm:aspect-[2/1] lg:aspect-[21/9] bg-card sm:rounded-xl shadow-2xl border-0 sm:border border-cyan/20 overflow-hidden relative">
+        
+        {/* Demo Mode Badge */}
+        {showDemoMode && (
+          <motion.div 
+            className="absolute top-3 left-1/2 -translate-x-1/2 z-30 px-3 py-1 rounded-full bg-gradient-to-r from-primary to-cyan text-white text-xs font-bold shadow-lg"
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+          >
+            ⚡ DEMO BATTLE ⚡
+          </motion.div>
+        )}
         
         <div className="h-full flex flex-col sm:flex-row">
           {/* Top/Left Side - Barber 1 */}
@@ -291,8 +310,21 @@ export const DynamicBattleHero = () => {
                     <span className="flex items-center gap-0.5"><Users className="w-2.5 h-2.5 text-cyan" />{barber1.followers || 0}</span>
                   </div>
                 </div>
-                {/* Vote button next to profile */}
-                {isActiveBattle && !isCurrentUserInBattle && <VoteButton name={barber1.display_name || barber1.name} variant="primary" onVote={() => handleVote(1)} />}
+                {/* Role-based action button - Vote for fans, Explore for barbers */}
+                {((isVotingPhase || showDemoMode) && !isCurrentUserInBattle) && (
+                  (isFan || !user) ? (
+                    <VoteButton name={barber1.display_name || barber1.name} variant="primary" onVote={() => handleVote(1)} />
+                  ) : isBarber ? (
+                    <motion.button
+                      onClick={() => navigate('/battles')}
+                      className="px-2 py-0.5 rounded text-[8px] font-medium border transition-all bg-cyan/20 border-cyan/40 hover:bg-cyan/40 text-cyan flex items-center gap-1"
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Compass className="w-2.5 h-2.5" />
+                      Explore
+                    </motion.button>
+                  ) : null
+                )}
               </div>
 
               {/* Maximized Video Area */}
@@ -386,8 +418,21 @@ export const DynamicBattleHero = () => {
             <div className="relative h-full flex flex-col p-2 sm:p-3">
               {/* Compact Header Row - Right Aligned */}
               <div className="flex items-center justify-end gap-2 mb-2">
-                {/* Vote button next to profile */}
-                {isActiveBattle && !isCurrentUserInBattle && <VoteButton name={barber2.display_name || barber2.name} variant="cyan" onVote={() => handleVote(2)} />}
+                {/* Role-based action button - Vote for fans, Explore for barbers */}
+                {((isVotingPhase || showDemoMode) && !isCurrentUserInBattle) && (
+                  (isFan || !user) ? (
+                    <VoteButton name={barber2.display_name || barber2.name} variant="cyan" onVote={() => handleVote(2)} />
+                  ) : isBarber ? (
+                    <motion.button
+                      onClick={() => navigate('/battles')}
+                      className="px-2 py-0.5 rounded text-[8px] font-medium border transition-all bg-cyan/20 border-cyan/40 hover:bg-cyan/40 text-cyan flex items-center gap-1"
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <Compass className="w-2.5 h-2.5" />
+                      Explore
+                    </motion.button>
+                  ) : null
+                )}
                 <div className="flex flex-col items-end min-w-0 flex-1">
                   <h3 onClick={() => navigate(`/barber/${barber2.user_id}`)} className="text-white text-xs sm:text-sm font-bold cursor-pointer hover:text-primary transition-colors truncate">
                     {barber2.display_name}
@@ -418,8 +463,8 @@ export const DynamicBattleHero = () => {
         </div>
 
 
-        {/* Thin Progress Bar at Bottom */}
-        {isActiveBattle && <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50 flex">
+        {/* Thin Progress Bar at Bottom - show in demo mode too */}
+        {(isActiveBattle || showDemoMode) && <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50 flex">
             <div className="h-full bg-gradient-to-r from-orange-500 to-primary transition-all duration-500" style={{
           width: `${barber1Percent}%`
         }} />
