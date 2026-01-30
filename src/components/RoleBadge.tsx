@@ -50,7 +50,7 @@ export const RoleBadge = ({ size = 'md', className }: RoleBadgeProps) => {
     return (
       <Badge 
         variant="secondary" 
-        className={`${sizeClasses[size]} ${className}`}
+        className={`bg-gradient-to-r from-cyan-500/20 to-cyan-400/10 text-cyan-400 border border-cyan-500/30 ${sizeClasses[size]} ${className}`}
       >
         <Users className={`${iconSize[size]} mr-1`} />
         Fan

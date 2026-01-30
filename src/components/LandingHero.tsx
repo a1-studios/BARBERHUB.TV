@@ -6,17 +6,21 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
-import { Scissors, Users, Loader2 } from "lucide-react";
+import { Scissors, Users, Loader2, Lock } from "lucide-react";
 import Globe3D from "@/components/Globe3D";
 import { CountrySelector } from "@/components/CountrySelector";
 import WorldCupPrizeCounter from "@/components/WorldCupPrizeCounter";
+import { ArenaGateModal, ArenaGateResult } from "@/components/auth/ArenaGateModal";
+import { toast } from "sonner";
+
 const LandingHero = () => {
-  const {
-    signUp,
-    signIn
-  } = useAuth();
+  const { signUp, signIn } = useAuth();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("signin");
+
+  // Arena Gate state for barbers
+  const [showArenaGate, setShowArenaGate] = useState(false);
+  const [arenaGateVerified, setArenaGateVerified] = useState(false);
 
   // Sign In Form State
   const [signInData, setSignInData] = useState({
@@ -32,39 +36,97 @@ const LandingHero = () => {
     userType: "fan" as "barber" | "fan",
     countryCode: null as string | null
   });
+
+  const handleArenaGateComplete = (result: ArenaGateResult) => {
+    setSignUpData(prev => ({
+      ...prev,
+      userType: 'barber',
+      countryCode: result.selectedCountry
+    }));
+    setArenaGateVerified(true);
+    setShowArenaGate(false);
+  };
+
+  const handleArenaGateClose = () => {
+    setShowArenaGate(false);
+    // If they close without completing, reset to fan
+    if (!arenaGateVerified) {
+      setSignUpData(prev => ({
+        ...prev,
+        userType: 'fan',
+        countryCode: null
+      }));
+    }
+  };
+
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const {
-      error
-    } = await signIn(signInData.email, signInData.password);
+    const { error } = await signIn(signInData.email, signInData.password);
     setLoading(false);
     if (!error) {
       // User will be redirected by auth state change
     }
   };
+
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Barbers MUST complete Arena Gate
+    if (signUpData.userType === 'barber' && !arenaGateVerified) {
+      toast.error('Please complete the Arena Gate verification');
+      setShowArenaGate(true);
+      return;
+    }
+    
+    // Barbers MUST have country selected
+    if (signUpData.userType === 'barber' && !signUpData.countryCode) {
+      toast.error('Please complete nationality verification');
+      setShowArenaGate(true);
+      return;
+    }
+    
     setLoading(true);
-    const {
-      error
-    } = await signUp(signUpData.email, signUpData.password, signUpData.displayName, signUpData.userType, signUpData.countryCode || undefined);
+    const { error } = await signUp(
+      signUpData.email, 
+      signUpData.password, 
+      signUpData.displayName, 
+      signUpData.userType, 
+      signUpData.countryCode || undefined
+    );
     setLoading(false);
     if (!error) {
       // User will be redirected by auth state change
     }
   };
-  const UserTypeSelector = () => <div className="space-y-4">
+
+  const UserTypeSelector = () => (
+    <div className="space-y-4">
       <Label className="text-sm font-medium">I am a:</Label>
       <div className="grid grid-cols-2 gap-3">
-        <button type="button" onClick={() => setSignUpData(prev => ({
-        ...prev,
-        userType: "barber"
-      }))} className={`relative p-4 border transition-all duration-300 ${signUpData.userType === "barber" ? "border-primary/50 bg-primary/5 shadow-[0_0_20px_hsl(24_100%_52%/0.3),inset_0_0_15px_hsl(24_100%_52%/0.1)]" : "border-border/50 bg-card/50 hover:border-primary/30 hover:shadow-[0_0_15px_hsl(24_100%_52%/0.2)]"}`} style={{
-        borderRadius: '1rem'
-      }}>
+        {/* BARBER Button - Orange Theme */}
+        <button 
+          type="button" 
+          onClick={() => {
+            // For barbers, open Arena Gate if not yet verified
+            if (!arenaGateVerified) {
+              setShowArenaGate(true);
+            }
+            setSignUpData(prev => ({ ...prev, userType: "barber" }));
+          }} 
+          className={`relative p-4 border transition-all duration-300 ${
+            signUpData.userType === "barber" 
+              ? "border-primary/50 bg-primary/5 shadow-[0_0_20px_hsl(var(--primary)/0.3),inset_0_0_15px_hsl(var(--primary)/0.1)]" 
+              : "border-border/50 bg-card/50 hover:border-primary/30 hover:shadow-[0_0_15px_hsl(var(--primary)/0.2)]"
+          }`} 
+          style={{ borderRadius: '1rem' }}
+        >
           <div className="flex flex-col items-center space-y-2">
-            <div className={`p-2 rounded-full ${signUpData.userType === "barber" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+            <div className={`p-2 rounded-full ${
+              signUpData.userType === "barber" 
+                ? "bg-primary text-primary-foreground" 
+                : "bg-muted"
+            }`}>
               <Scissors className="w-5 h-5" />
             </div>
             <div className="text-center">
@@ -72,19 +134,41 @@ const LandingHero = () => {
               <div className="text-xs text-muted-foreground">Professional Service</div>
             </div>
           </div>
-          {signUpData.userType === "barber" && <div className="absolute -top-1 -right-1">
+          {signUpData.userType === "barber" && arenaGateVerified && (
+            <div className="absolute -top-1 -right-1">
+              <Badge className="text-xs bg-green-500/20 text-green-400 border border-green-500/30">
+                ✓ Verified
+              </Badge>
+            </div>
+          )}
+          {signUpData.userType === "barber" && !arenaGateVerified && (
+            <div className="absolute -top-1 -right-1">
               <Badge variant="default" className="text-xs">Selected</Badge>
-            </div>}
+            </div>
+          )}
         </button>
 
-        <button type="button" onClick={() => setSignUpData(prev => ({
-        ...prev,
-        userType: "fan"
-      }))} className={`relative p-4 border transition-all duration-300 ${signUpData.userType === "fan" ? "border-primary/50 bg-primary/5 shadow-[0_0_20px_hsl(24_100%_52%/0.3),inset_0_0_15px_hsl(24_100%_52%/0.1)]" : "border-border/50 bg-card/50 hover:border-primary/30 hover:shadow-[0_0_15px_hsl(24_100%_52%/0.2)]"}`} style={{
-        borderRadius: '1rem'
-      }}>
+        {/* FAN Button - Cyan Theme */}
+        <button 
+          type="button" 
+          onClick={() => {
+            setSignUpData(prev => ({ ...prev, userType: "fan" }));
+            // Reset arena gate state when switching to fan
+            setArenaGateVerified(false);
+          }} 
+          className={`relative p-4 border transition-all duration-300 ${
+            signUpData.userType === "fan" 
+              ? "border-cyan-500/50 bg-cyan-500/5 shadow-[0_0_20px_rgba(0,217,255,0.3),inset_0_0_15px_rgba(0,217,255,0.1)]" 
+              : "border-border/50 bg-card/50 hover:border-cyan-500/30 hover:shadow-[0_0_15px_rgba(0,217,255,0.2)]"
+          }`} 
+          style={{ borderRadius: '1rem' }}
+        >
           <div className="flex flex-col items-center space-y-2">
-            <div className={`p-2 rounded-full ${signUpData.userType === "fan" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+            <div className={`p-2 rounded-full ${
+              signUpData.userType === "fan" 
+                ? "bg-cyan-500 text-black" 
+                : "bg-muted"
+            }`}>
               <Users className="w-5 h-5" />
             </div>
             <div className="text-center">
@@ -92,13 +176,20 @@ const LandingHero = () => {
               <div className="text-xs text-muted-foreground">Community Member</div>
             </div>
           </div>
-          {signUpData.userType === "fan" && <div className="absolute -top-1 -right-1">
-              <Badge variant="default" className="text-xs">Selected</Badge>
-            </div>}
+          {signUpData.userType === "fan" && (
+            <div className="absolute -top-1 -right-1">
+              <Badge className="text-xs bg-cyan-500/20 text-cyan-400 border border-cyan-500/30">
+                Selected
+              </Badge>
+            </div>
+          )}
         </button>
       </div>
-    </div>;
-  return <section className="relative min-h-screen overflow-hidden bg-gradient-to-br from-background via-background/95 to-primary/5">
+    </div>
+  );
+
+  return (
+    <section className="relative min-h-screen overflow-hidden bg-gradient-to-br from-background via-background/95 to-primary/5">
       <Globe3D />
       
       {/* Main content - Positioned at top, not centered */}
@@ -112,9 +203,10 @@ const LandingHero = () => {
 
             {/* Sign up section */}
             <div className="w-full max-w-md mx-auto">
-              <Card className="p-6 border border-border/50 shadow-lg backdrop-blur-sm bg-card/50 transition-all duration-300 hover:shadow-[0_0_30px_hsl(24_100%_52%/0.5),inset_0_0_20px_hsl(24_100%_52%/0.15)] hover:border-primary/30" style={{
-              borderRadius: '1.5rem'
-            }}>
+              <Card 
+                className="p-6 border border-border/50 shadow-lg backdrop-blur-sm bg-card/50 transition-all duration-300 hover:shadow-[0_0_30px_hsl(var(--primary)/0.5),inset_0_0_20px_hsl(var(--primary)/0.15)] hover:border-primary/30" 
+                style={{ borderRadius: '1.5rem' }}
+              >
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="signin">Sign In</TabsTrigger>
@@ -125,23 +217,39 @@ const LandingHero = () => {
                     <form onSubmit={handleSignIn} className="space-y-4">
                       <div className="space-y-2">
                         <Label htmlFor="signin-email">Email</Label>
-                        <Input id="signin-email" type="email" value={signInData.email} onChange={e => setSignInData(prev => ({
-                        ...prev,
-                        email: e.target.value
-                      }))} required className="bg-background/50" />
+                        <Input 
+                          id="signin-email" 
+                          type="email" 
+                          value={signInData.email} 
+                          onChange={e => setSignInData(prev => ({
+                            ...prev,
+                            email: e.target.value
+                          }))} 
+                          required 
+                          className="bg-background/50" 
+                        />
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="signin-password">Password</Label>
-                        <Input id="signin-password" type="password" value={signInData.password} onChange={e => setSignInData(prev => ({
-                        ...prev,
-                        password: e.target.value
-                      }))} required className="bg-background/50" />
+                        <Input 
+                          id="signin-password" 
+                          type="password" 
+                          value={signInData.password} 
+                          onChange={e => setSignInData(prev => ({
+                            ...prev,
+                            password: e.target.value
+                          }))} 
+                          required 
+                          className="bg-background/50" 
+                        />
                       </div>
                       <Button type="submit" disabled={loading} className="w-full">
-                        {loading ? <>
+                        {loading ? (
+                          <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             Signing In...
-                          </> : "Sign In"}
+                          </>
+                        ) : "Sign In"}
                       </Button>
                     </form>
                   </TabsContent>
@@ -152,44 +260,95 @@ const LandingHero = () => {
                       
                       <div className="space-y-2">
                         <Label htmlFor="signup-name">Display Name</Label>
-                        <Input id="signup-name" type="text" value={signUpData.displayName} onChange={e => setSignUpData(prev => ({
-                        ...prev,
-                        displayName: e.target.value
-                      }))} required className="bg-background/50" />
+                        <Input 
+                          id="signup-name" 
+                          type="text" 
+                          value={signUpData.displayName} 
+                          onChange={e => setSignUpData(prev => ({
+                            ...prev,
+                            displayName: e.target.value
+                          }))} 
+                          required 
+                          className="bg-background/50" 
+                        />
                       </div>
+                      
                       <div className="space-y-2">
-                        <Label>Country</Label>
-                        <CountrySelector value={signUpData.countryCode} onChange={countryCode => setSignUpData(prev => ({
-                        ...prev,
-                        countryCode
-                      }))} placeholder="Select your country" />
+                        <div className="flex items-center justify-between">
+                          <Label>Country</Label>
+                          {signUpData.userType === 'barber' && arenaGateVerified && (
+                            <Badge className="text-xs bg-green-500/20 text-green-400 border border-green-500/30">
+                              <Lock className="h-3 w-3 mr-1" />
+                              Verified
+                            </Badge>
+                          )}
+                        </div>
+                        <CountrySelector 
+                          value={signUpData.countryCode} 
+                          onChange={countryCode => {
+                            if (!arenaGateVerified) {
+                              setSignUpData(prev => ({ ...prev, countryCode }));
+                            }
+                          }} 
+                          placeholder={arenaGateVerified ? "Nationality locked" : "Select your country"}
+                          disabled={arenaGateVerified}
+                        />
+                        {signUpData.userType === 'barber' && arenaGateVerified && (
+                          <p className="text-xs text-amber-500/80 flex items-center gap-1">
+                            <Lock className="h-3 w-3" />
+                            Nationality cannot be changed after sign-up
+                          </p>
+                        )}
+                        {signUpData.userType === 'fan' && (
+                          <p className="text-xs text-muted-foreground">
+                            Optional - helps connect with local barbers
+                          </p>
+                        )}
                       </div>
+                      
                       <div className="space-y-2">
                         <Label htmlFor="signup-email">Email</Label>
-                        <Input id="signup-email" type="email" value={signUpData.email} onChange={e => setSignUpData(prev => ({
-                        ...prev,
-                        email: e.target.value
-                      }))} required className="bg-background/50" />
+                        <Input 
+                          id="signup-email" 
+                          type="email" 
+                          value={signUpData.email} 
+                          onChange={e => setSignUpData(prev => ({
+                            ...prev,
+                            email: e.target.value
+                          }))} 
+                          required 
+                          className="bg-background/50" 
+                        />
                       </div>
+                      
                       <div className="space-y-2">
                         <Label htmlFor="signup-password">Password</Label>
-                        <Input id="signup-password" type="password" value={signUpData.password} onChange={e => setSignUpData(prev => ({
-                        ...prev,
-                        password: e.target.value
-                      }))} required className="bg-background/50" />
+                        <Input 
+                          id="signup-password" 
+                          type="password" 
+                          value={signUpData.password} 
+                          onChange={e => setSignUpData(prev => ({
+                            ...prev,
+                            password: e.target.value
+                          }))} 
+                          required 
+                          className="bg-background/50" 
+                        />
                       </div>
+                      
                       <Button type="submit" disabled={loading} className="w-full">
-                        {loading ? <>
+                        {loading ? (
+                          <>
                             <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                             Creating Account...
-                          </> : "Create Account"}
+                          </>
+                        ) : "Create Account"}
                       </Button>
                     </form>
                   </TabsContent>
                 </Tabs>
               </Card>
             </div>
-
 
             {/* Branding section - Below prize counter */}
             <div className="text-center space-y-4">
@@ -221,6 +380,15 @@ const LandingHero = () => {
           </div>
         </div>
       </div>
-    </section>;
+
+      {/* Arena Gate Modal for Barbers */}
+      <ArenaGateModal
+        isOpen={showArenaGate}
+        onClose={handleArenaGateClose}
+        onComplete={handleArenaGateComplete}
+      />
+    </section>
+  );
 };
+
 export default LandingHero;
