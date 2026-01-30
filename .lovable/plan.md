@@ -1,300 +1,302 @@
 
-# Arena Gate - World Cup Nationality Selection Flow
 
-## Overview
+# Profile Page Cleanup, Country Lock & Booking Button
 
-Build a standalone "Arena Gate" component that creates a ceremonial, stadium-themed nationality selection experience for barbers before sign-up. This is a pre-sign-up gatekeeper that establishes the competitive, premium feel of the World Cup of Barbering.
+## Summary
 
-## Design Vision
+This plan consolidates the Profile page into a minimalist single-card layout, integrates Barber Bucks into the header, permanently locks nationality selection after Arena Gate verification, and adds a placeholder "Book" button on public barber profiles for future implementation.
 
-The Arena Gate creates a "World Cup Draft Night" atmosphere:
-- Dark stadium background with spotlight effect
-- Horizontal flag carousel with 3D depth
-- Signature "clipper swipe" gesture to confirm nationality
-- Bot detection via gesture physics analysis
-- "Fresh!" celebration animation on success
+## Current Issues
 
-## Technical Architecture
+Based on the screenshots and code analysis:
+
+1. **Multiple duplicate edit options**: "Edit Profile" button, "Barber Settings" button, and "Edit Barber Profile" button all visible
+2. **BB Wallet in separate sidebar**: Takes up valuable screen space in a 3-column grid
+3. **Country selector still changeable**: Both `Profile.tsx` and `BarberSettings.tsx` allow barbers to change their nationality
+4. **Personal Information card redundant for barbers**: BarberProfileHeader already shows the key information
+5. **No booking button**: Visitors to a barber's public profile have no way to express booking intent
+
+## Solution Overview
 
 ```text
-+---------------------------+
-|      ArenaGateModal       |
-|  +-----------------------+|
-|  |   StadiumBackground   ||
-|  |  +------------------+ ||
-|  |  | FlagCarousel     | ||
-|  |  | (framer-motion)  | ||
-|  |  +------------------+ ||
-|  |  +------------------+ ||
-|  |  | SwipeVerifier    | ||
-|  |  | (gesture track)  | ||
-|  |  +------------------+ ||
-|  +-----------------------+|
-+---------------------------+
-         |
-         v
-  AuthDialog (receives verified data)
+BEFORE (Current Layout):
+┌──────────────────────┐  ┌────────────┐
+│ Barber Header        │  │            │
+├──────────────────────┤  │ BB Wallet  │
+│ Personal Info Card   │  │ Card       │
+│ - Avatar Upload      │  │            │
+│ - Name/Username      │  │            │
+│ - Country (editable) │  └────────────┘
+│ - [Edit Profile]     │
+│ - [Barber Settings]  │
+│ - [Edit Barber Prof] │
+└──────────────────────┘
+
+AFTER (Consolidated):
+┌─────────────────────────────────────────┐
+│ ┌──────┐  CJ 🇺🇸 Texture          ┌───┐ │
+│ │Avatar│  📍 NYC                  │125│ │
+│ └──────┘                          │BB │ │
+│ 7 Followers  7 Likes  5 Subs      └───┘ │
+│ ┌────────────────┐ ┌────────────────┐   │
+│ │ View Profile   │ │   Settings     │   │
+│ └────────────────┘ └────────────────┘   │
+└─────────────────────────────────────────┘
+│ My Battles Section                      │
+└─────────────────────────────────────────┘
 ```
 
-## Phase-by-Phase Implementation
+## Technical Changes
 
-### Phase 1: Core Component Structure
+### 1. `src/components/barber/BarberProfileHeader.tsx`
 
-**New Files:**
-| File | Purpose |
-|------|---------|
-| `src/components/auth/ArenaGateModal.tsx` | Main modal container with stadium theme |
-| `src/components/auth/FlagCarousel.tsx` | Horizontal flag carousel with 3D transforms |
-| `src/components/auth/ClipperSwipeVerifier.tsx` | Gesture tracking and verification |
-| `src/hooks/useGestureVerification.tsx` | Physics tracking for bot detection |
+**Add BB balance display and consolidate actions:**
 
-### Phase 2: Visual Design - Stadium Theme
-
-**StadiumBackground styling:**
-- Full-screen dark modal with radial gradient (`bg-[radial-gradient(ellipse_at_center,_#1a1a2e_0%,_#0f0f17_50%,_#000_100%)]`)
-- Spotlight beam SVG pointing at selected flag
-- Subtle crowd texture pattern in background
-- Animated ambient particles (like stadium dust/confetti)
-
-**Layout:**
-```text
-+----------------------------------------+
-|  [X]                ARENA GATE         |
-|        ___________________________     |
-|       /   WORLD CUP OF BARBERING  \    |
-|      |                             |   |
-|      |    🇺🇸  🇬🇧 [🇧🇷] 🇯🇵  🇳🇬    |   |
-|      |         ^ spotlight          |   |
-|      |___________________________|     |
-|                                        |
-|      REPRESENT YOUR NATION             |
-|      Swipe the clipper to confirm      |
-|                                        |
-|      [====✂️===========]               |
-|        ^ diagonal swipe zone           |
-+----------------------------------------+
-```
-
-### Phase 3: Flag Carousel Implementation
-
-**FlagCarousel.tsx** using framer-motion:
-- Horizontal scroll with snap-to-center behavior
-- 3D perspective transforms (`perspective: 1000px`)
-- Selected flag scales up (1.2x) with glow effect
-- Non-selected flags have reduced opacity and scale
-- Touch/drag to browse, click to select
-
-**Carousel State:**
 ```tsx
-interface FlagCarouselProps {
-  countries: Array<{ code: string; name: string }>;
-  selectedCountry: string | null;
-  onSelect: (code: string) => void;
-}
-
-// Uses useMotionValue for x position
-// useTransform for 3D depth effects per flag
-// AnimatePresence for selection spotlight
-```
-
-**Inline SVG Flags:**
-- Use emoji flags (existing `getCountryFlag` function from CountrySelector)
-- Render at 64x64px with glow border on selection
-- Keep under 50kb by using native emoji rendering
-
-### Phase 4: Clipper Swipe Verifier - The Signature Gesture
-
-**ClipperSwipeVerifier.tsx:**
-- Diagonal swipe zone (45-degree angle target)
-- User drags a clipper icon from bottom-left to top-right
-- Track gesture physics: velocity, angle, jitter
-
-**Gesture Data Collected:**
-```tsx
-interface SwipeMetrics {
-  startTime: number;
-  endTime: number;
-  startPoint: { x: number; y: number };
-  endPoint: { x: number; y: number };
-  pathPoints: Array<{ x: number; y: number; t: number }>;
-  velocity: number;         // pixels per ms
-  angle: number;            // degrees from horizontal
-  jitterVariance: number;   // deviation from perfect line
+interface BarberProfileHeaderProps {
+  // ...existing props
+  barberBucks?: number;           // NEW
+  onAddFundsClick?: () => void;   // NEW
+  onSettingsClick?: () => void;   // RENAME from onEditClick
 }
 ```
 
-**Bot Detection Logic:**
+**BB display in top-right corner:**
 ```tsx
-const validateHumanGesture = (metrics: SwipeMetrics): boolean => {
-  // 1. Check angle is roughly diagonal (30-60 degrees)
-  const angleDiff = Math.abs(metrics.angle - 45);
-  if (angleDiff > 25) return false;
-
-  // 2. Check velocity is human-like (not instant, not too slow)
-  if (metrics.velocity < 0.3 || metrics.velocity > 5) return false;
-
-  // 3. Critical: Check jitter variance (humans are never perfectly straight)
-  // If path variance is < 2px, likely a bot
-  if (metrics.jitterVariance < 2) return false;
-
-  // 4. Check duration is reasonable (200ms - 2000ms)
-  const duration = metrics.endTime - metrics.startTime;
-  if (duration < 200 || duration > 2000) return false;
-
-  return true;
-};
+{/* Compact BB Display - Top Right */}
+{barberBucks !== undefined && (
+  <div className="absolute top-4 right-4 flex items-center gap-2 bg-background/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-cyan-500/20">
+    <Coins className="h-4 w-4 text-cyan-400" />
+    <span className="text-sm font-bold text-white">{barberBucks.toLocaleString()}</span>
+    <span className="text-xs text-muted-foreground">BB</span>
+    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={onAddFundsClick}>
+      <Plus className="h-3 w-3 text-cyan-400" />
+    </Button>
+  </div>
+)}
 ```
 
-### Phase 5: Success Animation & Haptics
-
-**"Fresh!" Animation on valid swipe:**
+**Consolidate action buttons (remove "Edit Profile", keep single "Settings"):**
 ```tsx
-// 1. Haptic burst
-HapticFeedback.winner(); // Uses existing pattern
-
-// 2. Visual celebration
-CelebrationEffects.winner('left'); // Confetti burst
-
-// 3. Text animation
-<motion.div
-  initial={{ scale: 0, opacity: 0 }}
-  animate={{ scale: [0, 1.2, 1], opacity: 1 }}
-  className="text-4xl font-black text-primary"
->
-  FRESH! ✂️
-</motion.div>
+{showActions && (
+  <div className="flex gap-3 flex-wrap pt-2">
+    {barber_id && (
+      <Link to={`/barbers/${barber_id}`}>
+        <Button variant="outline" size="sm">
+          <ExternalLink className="w-4 h-4 mr-2" />
+          View Public Profile
+        </Button>
+      </Link>
+    )}
+    {onSettingsClick && (
+      <Button variant="outline" size="sm" onClick={onSettingsClick}>
+        <Settings className="w-4 h-4 mr-2" />
+        Settings
+      </Button>
+    )}
+  </div>
+)}
 ```
 
-### Phase 6: State Management & Data Flow
+### 2. `src/pages/Profile.tsx`
 
-**ArenaGateModal State:**
+**Remove:**
+- Grid layout with sidebar (lines 340-488)
+- Separate `<BBWalletCard />` component
+- Personal Information Card for barbers (redundant with header)
+- Duplicate "Edit Profile", "Barber Settings", "Edit Barber Profile" buttons
+
+**Simplified Layout:**
 ```tsx
-const [step, setStep] = useState<'select' | 'verify' | 'success'>('select');
-const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
-const [verificationToken, setVerificationToken] = useState<string | null>(null);
+return (
+  <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5">
+    <Header />
+    <main className="pt-20 sm:pt-24 pb-12 px-4">
+      <div className="container mx-auto max-w-4xl">
+        <BackButton className="mb-4 sm:mb-6" />
+        
+        {/* Unified Barber Header with BB */}
+        {isBarber && barberProfile && barberStats && (
+          <div className="mb-6">
+            <BarberProfileHeader
+              {...props}
+              barberBucks={barberBucksBalance}
+              onAddFundsClick={() => setShowAddFundsModal(true)}
+              onSettingsClick={() => setShowBarberSettings(true)}
+            />
+          </div>
+        )}
+        
+        {/* Fan profile card (simplified) - only show for non-barbers */}
+        {!isBarber && (
+          <Card className="mb-6">
+            {/* Minimal fan profile info */}
+          </Card>
+        )}
+        
+        {/* My Battles Section - Barbers Only */}
+        {isBarber && myBattles && ...}
+      </div>
+    </main>
+    
+    <AddFundsModal isOpen={showAddFundsModal} onClose={...} />
+  </div>
+);
 ```
 
-**Verification Token Generation:**
+**Add useBarberBucks hook:**
 ```tsx
-// Generate a simple client-side token with timestamp + metrics hash
-const generateVerificationToken = (country: string, metrics: SwipeMetrics): string => {
-  const payload = {
-    country,
-    timestamp: Date.now(),
-    velocity: metrics.velocity.toFixed(2),
-    jitter: metrics.jitterVariance.toFixed(2),
-  };
-  return btoa(JSON.stringify(payload));
-};
+const { barberBucks: barberBucksBalance, setShowAddFundsModal, showAddFundsModal } = useBarberBucks();
 ```
 
-**Data Passed to Sign-Up:**
+### 3. `src/components/profiles/BarberSettings.tsx`
+
+**Lock country selectors in Profile tab (around line 329):**
 ```tsx
-interface ArenaGateResult {
-  selectedCountry: string;
-  verificationToken: string;
-  verified: boolean;
-}
-
-// Callback when gate is passed:
-onComplete: (result: ArenaGateResult) => void;
+<div>
+  <Label className="flex items-center gap-2">
+    Country
+    <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-500 border-amber-500/30">
+      <Lock className="h-3 w-3 mr-1" />
+      Locked
+    </Badge>
+  </Label>
+  <CountrySelector
+    value={profileForm.country_code}
+    onChange={() => {}} // No-op
+    placeholder="Set during Arena Gate"
+    disabled={true}
+  />
+  <p className="text-xs text-amber-500/80 mt-1">
+    Nationality is permanently set during sign-up
+  </p>
+</div>
 ```
 
-### Phase 7: Integration Points
-
-**Entry Point:**
-- When user selects "Barber" role in RoleSelection, instead of immediately proceeding, open ArenaGateModal
-- ArenaGateModal completion passes verified country to AuthDialog
-
-**Modified Flow:**
-```text
-RoleSelection (user clicks Barber)
-    └─> ArenaGateModal opens
-        └─> User selects country
-        └─> User does clipper swipe
-        └─> On success: onComplete({ country, token })
-            └─> AuthDialog opens with pre-filled country
+**Lock country in Professional tab (around line 430):**
+```tsx
+<div>
+  <Label>Professional Country</Label>
+  <CountrySelector
+    value={barberForm.country_code}
+    onChange={() => {}}
+    placeholder="Set during Arena Gate"
+    disabled={true}
+  />
+  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+    <Lock className="h-3 w-3" />
+    Represents your nation in World Cup battles
+  </p>
+</div>
 ```
 
-**No Auth Listener Conflicts:**
-- ArenaGate is purely UI/state - no Supabase calls
-- Only passes data forward, doesn't interact with auth
+### 4. `src/components/profiles/BarberProfileForm.tsx`
 
-## Files to Create
+**Lock nationality for existing profiles:**
+```tsx
+<div>
+  <Label className="flex items-center gap-2">
+    <Globe className="h-4 w-4" />
+    Nationality *
+    {existingProfile?.country_code && (
+      <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-500 border-amber-500/30">
+        <Lock className="h-3 w-3 mr-1" />
+        Locked
+      </Badge>
+    )}
+  </Label>
+  <CountrySelector
+    value={formData.country_code}
+    onChange={(code) => {
+      // Only allow change if no existing country
+      if (!existingProfile?.country_code) {
+        setFormData({ ...formData, country_code: code || '' });
+      }
+    }}
+    placeholder="Select your country"
+    disabled={!!existingProfile?.country_code}
+  />
+  {existingProfile?.country_code ? (
+    <p className="text-xs text-amber-500/80 mt-1 flex items-center gap-1">
+      <Lock className="h-3 w-3" />
+      Nationality cannot be changed after initial setup
+    </p>
+  ) : (
+    <p className="text-xs text-muted-foreground mt-1">
+      Used for country vs country tournament matchmaking
+    </p>
+  )}
+</div>
+```
 
-| File | Size Est. | Purpose |
-|------|-----------|---------|
-| `src/components/auth/ArenaGateModal.tsx` | ~8kb | Main modal with stadium theme |
-| `src/components/auth/FlagCarousel.tsx` | ~6kb | 3D flag selection carousel |
-| `src/components/auth/ClipperSwipeVerifier.tsx` | ~5kb | Gesture tracking zone |
-| `src/hooks/useGestureVerification.tsx` | ~3kb | Physics validation logic |
-| `src/components/auth/FreshAnimation.tsx` | ~2kb | Success celebration overlay |
+### 5. `src/pages/BarberPublicProfile.tsx`
 
-**Total estimated: ~24kb** (well under 50kb limit)
+**Add "Book" button placeholder to the action buttons:**
+
+```tsx
+{/* Action Buttons */}
+<div className="flex gap-3 flex-wrap">
+  <BarberActionButtons
+    barberId={barberData.barber_id}
+    barberUserId={userId!}
+    onDonateClick={() => setIsDonationModalOpen(true)}
+  />
+  
+  {/* Book Button - Placeholder for future booking system */}
+  {!isOwner && (
+    <Button 
+      variant="default" 
+      size="default"
+      className="bg-cyan-500 hover:bg-cyan-600 text-black font-semibold"
+      onClick={() => toast.info("Booking system coming soon!")}
+    >
+      <Calendar className="w-4 h-4 mr-2" />
+      Book Appointment
+    </Button>
+  )}
+</div>
+```
+
+**Add Calendar import:**
+```tsx
+import { ArrowLeft, MapPin, Award, Upload, Image as ImageIcon, Video, Trash2, Calendar } from 'lucide-react';
+```
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/auth/RoleSelector.tsx` | Trigger ArenaGateModal when barber is selected |
-| `src/components/auth/AuthDialog.tsx` | Accept pre-filled country from ArenaGate |
-| `src/utils/hapticFeedback.ts` | Add `confirm` pattern for swipe success |
+| `src/components/barber/BarberProfileHeader.tsx` | Add BB display (top-right), rename `onEditClick` to `onSettingsClick`, add `barberBucks` and `onAddFundsClick` props, add Coins/Plus icons |
+| `src/pages/Profile.tsx` | Remove grid/sidebar, remove duplicate buttons, remove BBWalletCard sidebar, pass BB props to header, add useBarberBucks hook, add AddFundsModal |
+| `src/components/profiles/BarberSettings.tsx` | Lock both country selectors with `disabled={true}`, add Lock icon + explanatory text |
+| `src/components/profiles/BarberProfileForm.tsx` | Lock country selector if `existingProfile?.country_code` exists |
+| `src/pages/BarberPublicProfile.tsx` | Add "Book Appointment" button placeholder for non-owners |
 
-## Component Props Summary
+## Visual Summary
 
-```tsx
-// ArenaGateModal
-interface ArenaGateModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onComplete: (result: { country: string; token: string }) => void;
-}
+**Profile Page (Owner View):**
+- Single unified header card with avatar, name, flag, stats
+- BB balance in top-right corner with quick "+" action
+- Single "Settings" button → opens BarberSettings
+- Single "View Public Profile" button → opens public page
+- My Battles section below
 
-// FlagCarousel
-interface FlagCarouselProps {
-  selectedCountry: string | null;
-  onSelect: (code: string) => void;
-}
+**Barber Settings:**
+- Country selectors show lock icon with "Locked" badge
+- Disabled inputs with amber text explaining permanence
 
-// ClipperSwipeVerifier
-interface ClipperSwipeVerifierProps {
-  onVerified: (metrics: SwipeMetrics) => void;
-  onFailed: (reason: string) => void;
-  disabled?: boolean;
-}
-```
-
-## Visual Details
-
-**Spotlight Effect:**
-- SVG cone shape pointing at selected flag
-- Animated opacity pulse
-- Color: `hsl(187 100% 50%)` (cyan glow)
-
-**Clipper Icon:**
-- Lucide `Scissors` icon rotated 45 degrees
-- Draggable with `motion.div` and `drag` prop
-- Trail effect showing swipe path
-
-**Flag Selection Glow:**
-- `box-shadow: 0 0 30px hsl(var(--primary) / 0.6)`
-- Scale: 1.2x when selected
-- Border: 3px solid primary
-
-## Mobile Optimizations
-
-- Touch-optimized swipe zone (min 100px height)
-- Haptic feedback on all interactions
-- Full-screen modal on mobile
-- Swipe instructions adapted for touch ("Swipe" vs "Drag")
+**Public Barber Profile (Visitor View):**
+- All existing action buttons (Follow, Like, Subscribe, Donate)
+- NEW: Cyan "Book Appointment" button
+- Toast message "Booking system coming soon!" when clicked
 
 ## Summary
 
-This creates a premium, stadium-themed nationality selection that:
-1. Builds anticipation for the World Cup experience
-2. Adds a unique "clipper swipe" verification gesture
-3. Implements basic bot detection via gesture physics
-4. Triggers celebratory feedback on success
-5. Seamlessly hands off to the existing auth flow
+This implementation:
+1. **Consolidates** the profile page into a clean single-card layout
+2. **Integrates** BB balance minimally into the header (cyan accent, matches design system)
+3. **Removes** 3 duplicate edit/settings buttons → single "Settings" action
+4. **Permanently locks** nationality selection with visual indicators (Lock icon + "Locked" badge)
+5. **Adds** booking button placeholder on public profiles for future implementation
+6. **Maintains** the minimalist design philosophy with maximum content, minimum chrome
 
-The implementation stays lightweight (under 50kb), uses existing patterns (framer-motion, haptics, celebration effects), and doesn't interfere with Supabase auth.
