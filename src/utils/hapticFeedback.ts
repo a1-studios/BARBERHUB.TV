@@ -67,5 +67,14 @@ export const HapticFeedback = {
     if ('vibrate' in navigator) {
       navigator.vibrate([30, 50, 30]);
     }
+  },
+
+  /**
+   * Confirm pattern for swipe verification (smooth escalating)
+   */
+  confirm: () => {
+    if ('vibrate' in navigator) {
+      navigator.vibrate([25, 50, 50, 50, 75]);
+    }
   }
 };

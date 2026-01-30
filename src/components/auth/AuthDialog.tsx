@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,10 +12,19 @@ import { CountrySelector } from '@/components/CountrySelector';
 interface AuthDialogProps {
   children: React.ReactNode;
   initialRole?: 'barber' | 'fan';
+  prefilledCountry?: string;
+  autoOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function AuthDialog({ children, initialRole = 'fan' }: AuthDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AuthDialog({ 
+  children, 
+  initialRole = 'fan', 
+  prefilledCountry,
+  autoOpen = false,
+  onOpenChange,
+}: AuthDialogProps) {
+  const [open, setOpen] = useState(autoOpen);
   const [loading, setLoading] = useState(false);
   const { signIn, signUp } = useAuth();
 
@@ -29,8 +38,27 @@ export function AuthDialog({ children, initialRole = 'fan' }: AuthDialogProps) {
     password: '',
     displayName: '',
     userType: initialRole,
-    countryCode: null as string | null,
+    countryCode: prefilledCountry || null as string | null,
   });
+
+  // Handle autoOpen
+  useEffect(() => {
+    if (autoOpen) {
+      setOpen(true);
+    }
+  }, [autoOpen]);
+
+  // Handle prefilled country from Arena Gate
+  useEffect(() => {
+    if (prefilledCountry) {
+      setSignUpData(prev => ({ ...prev, countryCode: prefilledCountry }));
+    }
+  }, [prefilledCountry]);
+
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    onOpenChange?.(newOpen);
+  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +67,7 @@ export function AuthDialog({ children, initialRole = 'fan' }: AuthDialogProps) {
     const { error } = await signIn(signInData.email, signInData.password);
     
     if (!error) {
-      setOpen(false);
+      handleOpenChange(false);
       setSignInData({ email: '', password: '' });
     }
     
@@ -53,15 +81,15 @@ export function AuthDialog({ children, initialRole = 'fan' }: AuthDialogProps) {
     const { error } = await signUp(signUpData.email, signUpData.password, signUpData.displayName, signUpData.userType, signUpData.countryCode || undefined);
     
     if (!error) {
-      setOpen(false);
-      setSignUpData({ email: '', password: '', displayName: '', userType: initialRole, countryCode: null });
+      handleOpenChange(false);
+      setSignUpData({ email: '', password: '', displayName: '', userType: initialRole, countryCode: prefilledCountry || null });
     }
     
     setLoading(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
@@ -73,7 +101,7 @@ export function AuthDialog({ children, initialRole = 'fan' }: AuthDialogProps) {
           </DialogTitle>
         </DialogHeader>
         
-        <Tabs defaultValue="signin" className="w-full">
+        <Tabs defaultValue="signup" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="signin">Sign In</TabsTrigger>
             <TabsTrigger value="signup">Sign Up</TabsTrigger>
@@ -167,11 +195,19 @@ export function AuthDialog({ children, initialRole = 'fan' }: AuthDialogProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Country</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Country</Label>
+                  {prefilledCountry && (
+                    <Badge variant="secondary" className="text-xs">
+                      ✓ Verified via Arena Gate
+                    </Badge>
+                  )}
+                </div>
                 <CountrySelector
                   value={signUpData.countryCode}
                   onChange={(countryCode) => setSignUpData(prev => ({ ...prev, countryCode }))}
                   placeholder="Select your country"
+                  disabled={!!prefilledCountry}
                 />
               </div>
               <div className="space-y-2">
