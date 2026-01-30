@@ -49,7 +49,7 @@ interface BattleVideoContainerProps {
   duration?: string;
   viewerCount?: number;
   className?: string;
-  layout?: 'split' | 'pip';
+  layout?: 'split' | 'pip' | 'preview';
 }
 
 export const BattleVideoContainer = ({
@@ -68,10 +68,88 @@ export const BattleVideoContainer = ({
   layout = 'split',
 }: BattleVideoContainerProps) => {
   
+  // Preview layout - barber gets 70%, waiting indicator 30%
+  if (layout === 'preview') {
+    return (
+      <div className={cn("relative w-full h-full bg-black overflow-hidden", className)}>
+        <div className="flex h-full">
+          {/* Local Video - LARGE (70%) */}
+          <div id="local-video-container" className="relative w-[70%] border-r border-white/10">
+            {localTrack ? (
+              <VideoAttach track={localTrack} className="w-full h-full" muted />
+            ) : (
+              <div className="w-full h-full bg-muted flex items-center justify-center">
+                {isConnecting ? (
+                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                ) : (
+                  <div className="text-center">
+                    <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-2">
+                      <Users className="w-8 h-8 text-primary" />
+                    </div>
+                    <p className="text-muted-foreground text-sm">Your camera</p>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Your Side Label */}
+            <div className="absolute top-2 left-2 flex items-center gap-2">
+              <span className="bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded-full">
+                YOUR SIDE
+              </span>
+              {localCountry && (
+                <span className="bg-background/60 text-foreground text-xs px-2 py-1 rounded">
+                  {localCountry}
+                </span>
+              )}
+            </div>
+            
+            {/* Barber Name */}
+            <div className="absolute bottom-2 left-2 bg-background/70 backdrop-blur-sm text-foreground text-sm px-2 py-1 rounded">
+              {localBarberName}
+            </div>
+          </div>
+          
+          {/* Waiting for opponent - SMALLER (30%) */}
+          <div id="remote-video-container" className="relative w-[30%] bg-muted/50 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-muted-foreground/20 flex items-center justify-center mx-auto mb-3 animate-pulse">
+                <Users className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <p className="text-muted-foreground text-sm">Waiting for</p>
+              <p className="text-muted-foreground text-sm">opponent...</p>
+            </div>
+            
+            {/* Opponent Label */}
+            <div className="absolute top-2 right-2">
+              <span className="bg-destructive/50 text-destructive-foreground text-xs font-bold px-2 py-1 rounded-full">
+                OPPONENT
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        {/* VS badge - positioned at the boundary */}
+        <div className="absolute left-[70%] top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-destructive flex items-center justify-center shadow-lg">
+            <span className="text-primary-foreground font-black text-xs">VS</span>
+          </div>
+        </div>
+
+        {/* Battle Info Overlay */}
+        <BattleOverlay
+          isConnected={isConnected}
+          duration={duration}
+          viewerCount={viewerCount}
+        />
+      </div>
+    );
+  }
+
   if (layout === 'pip') {
     // Picture-in-Picture layout - large remote, small local overlay
     return (
-      <div className={cn("relative w-full h-full bg-black rounded-lg overflow-hidden", className)}>
+      <div className={cn("relative w-full h-full bg-black overflow-hidden", className)}>
         {/* Remote/Opponent Video (Full Screen) */}
         <div className="absolute inset-0">
           {hasOpponent && remoteTrack ? (
@@ -97,7 +175,7 @@ export const BattleVideoContainer = ({
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
           )}
-          <div className="absolute bottom-1 left-1 bg-black/70 text-[10px] text-white px-1.5 py-0.5 rounded">
+          <div className="absolute bottom-1 left-1 bg-black/70 text-[10px] text-foreground px-1.5 py-0.5 rounded">
             YOU
           </div>
         </div>
@@ -112,12 +190,12 @@ export const BattleVideoContainer = ({
     );
   }
 
-  // Split layout - side by side
+  // Split layout - side by side 50/50
   return (
-    <div className={cn("relative w-full h-full bg-black rounded-lg overflow-hidden", className)}>
+    <div className={cn("relative w-full h-full bg-black overflow-hidden", className)}>
       <div className="flex h-full">
-        {/* Local Video (Left/Your Side) */}
-        <div id="local-video-container" className="relative flex-1 border-r border-white/10">
+        {/* Local Video (Left/Your Side) - 50% */}
+        <div id="local-video-container" className="relative w-1/2 border-r border-white/10">
           {localTrack ? (
             <VideoAttach track={localTrack} className="w-full h-full" muted />
           ) : (
@@ -155,13 +233,13 @@ export const BattleVideoContainer = ({
 
         {/* VS Divider */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center shadow-lg animate-pulse">
-            <span className="text-white font-black text-sm">VS</span>
+          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-destructive flex items-center justify-center shadow-lg animate-pulse">
+            <span className="text-primary-foreground font-black text-sm">VS</span>
           </div>
         </div>
 
-        {/* Remote Video (Right/Opponent) */}
-        <div id="remote-video-container" className="relative flex-1">
+        {/* Remote Video (Right/Opponent) - 50% */}
+        <div id="remote-video-container" className="relative w-1/2">
           {hasOpponent && remoteTrack ? (
             <VideoAttach track={remoteTrack} className="w-full h-full" />
           ) : (
@@ -225,13 +303,16 @@ const BattleOverlay = ({
     <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-2">
       <div className={cn(
         "flex items-center gap-1.5 px-3 py-1 rounded-full",
-        isConnected ? "bg-red-600" : "bg-muted"
+        isConnected ? "bg-destructive" : "bg-muted"
       )}>
         <div className={cn(
           "w-2 h-2 rounded-full",
-          isConnected ? "bg-white animate-pulse" : "bg-muted-foreground"
+          isConnected ? "bg-destructive-foreground animate-pulse" : "bg-muted-foreground"
         )} />
-        <span className="text-white text-xs font-bold">
+        <span className={cn(
+          "text-xs font-bold",
+          isConnected ? "text-destructive-foreground" : "text-muted-foreground"
+        )}>
           {isConnected ? 'LIVE' : 'OFFLINE'}
         </span>
       </div>

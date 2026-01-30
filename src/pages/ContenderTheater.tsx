@@ -190,7 +190,9 @@ export default function ContenderTheater() {
       {/* Main Content - Battle Video Container */}
       <div className={cn(
         "flex items-center justify-center",
-        isMobile ? "fixed inset-0 flex-col pt-14 pb-24" : "pt-20 pb-32 px-4 min-h-screen"
+        isMobile 
+          ? "fixed inset-0 flex-col pt-12 pb-20" 
+          : "fixed inset-0 pt-14 pb-24 px-2"
       )}>
         <BattleVideoContainer
           localTrack={localVideoTrack}
@@ -204,8 +206,8 @@ export default function ContenderTheater() {
           hasOpponent={hasOpponent}
           duration={formattedDuration}
           viewerCount={0}
-          layout={isMobile ? 'pip' : 'split'}
-          className="w-full h-full max-w-7xl"
+          layout={isMobile ? 'pip' : (hasOpponent ? 'split' : 'preview')}
+          className="w-full h-full"
         />
       </div>
 

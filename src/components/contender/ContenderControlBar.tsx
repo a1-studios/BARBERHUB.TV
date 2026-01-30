@@ -47,8 +47,8 @@ export const ContenderControlBar = memo(function ContenderControlBar({
 }: ContenderControlBarProps) {
   return (
     <div className={cn(
-      "fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-black via-black/95 to-transparent controls-overlay",
-      isMobile ? "p-4 pb-safe" : "p-6",
+      "fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-black/90 to-transparent controls-overlay",
+      isMobile ? "p-3 pb-safe" : "p-4",
       isMobile && !showControls && "controls-hidden"
     )}>
       <div className="max-w-4xl mx-auto">
