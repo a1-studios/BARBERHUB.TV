@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, MapPin, Award, Upload, Image as ImageIcon, Video, Trash2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Award, Upload, Image as ImageIcon, Video, Trash2, Calendar } from 'lucide-react';
 import { BarberVideoSection } from '@/components/barber/BarberVideoSection';
 import { BarberActionButtons } from '@/components/barber/BarberActionButtons';
 import { SubscriptionBadge } from '@/components/SubscriptionBadge';
@@ -331,11 +331,26 @@ export default function BarberPublicProfile() {
                 </div>
 
                 {/* Action Buttons */}
-                <BarberActionButtons
-                  barberId={barberData.barber_id}
-                  barberUserId={userId!}
-                  onDonateClick={() => setIsDonationModalOpen(true)}
-                />
+                <div className="flex gap-3 flex-wrap">
+                  <BarberActionButtons
+                    barberId={barberData.barber_id}
+                    barberUserId={userId!}
+                    onDonateClick={() => setIsDonationModalOpen(true)}
+                  />
+                  
+                  {/* Book Button - Placeholder for future booking system */}
+                  {!isOwner && (
+                    <Button 
+                      variant="default" 
+                      size="default"
+                      className="bg-cyan-500 hover:bg-cyan-600 text-black font-semibold"
+                      onClick={() => toast.info("Booking system coming soon!")}
+                    >
+                      <Calendar className="w-4 h-4 mr-2" />
+                      Book Appointment
+                    </Button>
+                  )}
+                </div>
               </div>
             </div>
           </CardContent>

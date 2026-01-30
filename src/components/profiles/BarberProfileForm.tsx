@@ -9,7 +9,8 @@ import { CountrySelector } from '@/components/CountrySelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { AlertCircle, Scissors, Phone, Globe } from 'lucide-react';
+import { AlertCircle, Scissors, Phone, Globe, Lock } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface BarberProfileFormProps {
   onProfileCreated?: () => void;
@@ -163,14 +164,32 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
             <Label className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
               Nationality *
+              {existingProfile?.country_code && (
+                <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-500 border-amber-500/30">
+                  <Lock className="h-3 w-3 mr-1" />
+                  Locked
+                </Badge>
+              )}
             </Label>
             <CountrySelector
               value={formData.country_code}
-              onChange={(code) => setFormData({ ...formData, country_code: code || '' })}
+              onChange={(code) => {
+                if (!existingProfile?.country_code) {
+                  setFormData({ ...formData, country_code: code || '' });
+                }
+              }}
               placeholder="Select your country"
+              disabled={!!existingProfile?.country_code}
             />
             {errors.country_code && <p className="text-xs text-destructive mt-1">{errors.country_code}</p>}
-            <p className="text-xs text-muted-foreground mt-1">Used for country vs country tournament matchmaking</p>
+            {existingProfile?.country_code ? (
+              <p className="text-xs text-amber-500/80 mt-1 flex items-center gap-1">
+                <Lock className="h-3 w-3" />
+                Nationality cannot be changed after initial setup
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">Used for country vs country tournament matchmaking</p>
+            )}
           </div>
 
           <div>

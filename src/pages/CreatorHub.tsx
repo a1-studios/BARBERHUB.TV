@@ -231,7 +231,7 @@ export default function CreatorHub() {
                   total_donations_cents: barberStats.total_donations_cents || 0
                 }}
                 barber_id={barberProfile.id}
-                onEditClick={() => navigate('/profile')}
+                onSettingsClick={() => navigate('/profile')}
                 showActions={true}
               />
             </div>
