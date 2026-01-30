@@ -76,5 +76,14 @@ export const HapticFeedback = {
     if ('vibrate' in navigator) {
       navigator.vibrate([25, 50, 50, 50, 75]);
     }
+  },
+
+  /**
+   * Ultra celebration for country selection (extended victory pattern)
+   */
+  countryCelebration: () => {
+    if ('vibrate' in navigator) {
+      navigator.vibrate([100, 30, 100, 30, 100, 50, 200, 50, 300]);
+    }
   }
 };

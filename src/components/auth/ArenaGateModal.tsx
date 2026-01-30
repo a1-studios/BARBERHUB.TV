@@ -1,12 +1,13 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trophy, Globe } from 'lucide-react';
+import { X, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { FlagCarousel } from './FlagCarousel';
+import { FlagCarousel, getCountryFlag, CAROUSEL_COUNTRIES } from './FlagCarousel';
 import { ClipperSwipeVerifier } from './ClipperSwipeVerifier';
 import { FreshAnimation } from './FreshAnimation';
 import { SwipeMetrics, useGestureVerification } from '@/hooks/useGestureVerification';
 import { HapticFeedback } from '@/utils/hapticFeedback';
+import { getCountryCulturalData } from '@/utils/countryCelebration';
 
 export interface ArenaGateResult {
   selectedCountry: string;
@@ -76,13 +77,19 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
 
   if (!isOpen) return null;
 
+  // Get cultural data for display
+  const culturalData = selectedCountry ? getCountryCulturalData(selectedCountry) : null;
+  const countryName = selectedCountry 
+    ? CAROUSEL_COUNTRIES.find(c => c.code === selectedCountry)?.name || selectedCountry 
+    : '';
+
   return (
     <AnimatePresence>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4"
       >
         {/* Backdrop */}
         <div 
@@ -95,7 +102,7 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
           initial={{ scale: 0.9, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.9, opacity: 0, y: 20 }}
-          className="absolute inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-lg md:w-full overflow-hidden rounded-2xl"
+          className="relative w-full max-w-lg max-h-[90vh] overflow-hidden rounded-2xl"
           style={{
             background: 'radial-gradient(ellipse at center, #1a1a2e 0%, #0f0f17 50%, #000 100%)',
           }}
@@ -107,9 +114,9 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
           </div>
 
           {/* Content */}
-          <div className="relative z-10 p-6 h-full flex flex-col">
+          <div className="relative z-10 p-6 flex flex-col" style={{ height: '600px', maxHeight: '85vh' }}>
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Trophy className="w-6 h-6 text-primary" />
                 <span className="font-bold text-lg text-foreground">ARENA GATE</span>
@@ -125,7 +132,7 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
             </div>
 
             {/* Title */}
-            <div className="text-center mb-6">
+            <div className="text-center mb-4">
               <h2 className="text-2xl font-black bg-gradient-to-r from-primary via-orange-400 to-cyan-400 bg-clip-text text-transparent mb-2">
                 WORLD CUP OF BARBERING
               </h2>
@@ -135,7 +142,7 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
             </div>
 
             {/* Steps */}
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col min-h-0">
               <AnimatePresence mode="wait">
                 {step === 'select' && (
                   <motion.div
@@ -143,26 +150,47 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
-                    className="flex-1 flex flex-col"
+                    className="flex-1 flex flex-col min-h-0"
                   >
-                    <FlagCarousel
-                      selectedCountry={selectedCountry}
-                      onSelect={handleCountrySelect}
-                    />
+                    <div className="flex-1 min-h-0">
+                      <FlagCarousel
+                        selectedCountry={selectedCountry}
+                        onSelect={handleCountrySelect}
+                      />
+                    </div>
 
-                    {/* Selected country display */}
-                    {selectedCountry && (
+                    {/* Selected country display with cultural data */}
+                    {selectedCountry && culturalData && (
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="text-center mb-4"
+                        className="text-center mb-4 mt-2"
                       >
-                        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/20 border border-primary/30">
-                          <Globe className="w-4 h-4 text-primary" />
-                          <span className="text-primary font-semibold">
-                            Representing {selectedCountry}
+                        <div 
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border"
+                          style={{
+                            backgroundColor: `${culturalData.colors[0]}20`,
+                            borderColor: `${culturalData.colors[0]}50`,
+                          }}
+                        >
+                          <span className="text-xl">{getCountryFlag(selectedCountry)}</span>
+                          <span 
+                            className="font-bold"
+                            style={{ color: culturalData.colors[0] }}
+                          >
+                            Representing {countryName}
                           </span>
+                          <span className="text-xl">{culturalData.celebrationEmoji}</span>
                         </div>
+                        <motion.p
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.5 }}
+                          className="text-sm mt-2 font-semibold"
+                          style={{ color: culturalData.colors[0] }}
+                        >
+                          "{culturalData.hypePhrase}"
+                        </motion.p>
                       </motion.div>
                     )}
 
@@ -170,7 +198,7 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
                       onClick={handleProceedToVerify}
                       disabled={!selectedCountry}
                       size="lg"
-                      className="w-full mt-auto bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90"
+                      className="w-full mt-2 bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90"
                     >
                       Continue to Verification
                     </Button>
