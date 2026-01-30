@@ -30,7 +30,7 @@ export const ContenderTopBar = memo(function ContenderTopBar({
 
   return (
     <div className={cn(
-      "fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/90 to-transparent p-3 pt-safe controls-overlay",
+      "fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/80 to-transparent p-2 pt-safe controls-overlay",
       isMobile && !showControls && "controls-hidden"
     )}>
       <div className="flex items-center justify-between max-w-7xl mx-auto">
