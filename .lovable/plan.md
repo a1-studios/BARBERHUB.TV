@@ -1,302 +1,400 @@
 
 
-# Profile Page Cleanup, Country Lock & Booking Button
+# Arena Gate Integration & Role System Enhancement
 
 ## Summary
 
-This plan consolidates the Profile page into a minimalist single-card layout, integrates Barber Bucks into the header, permanently locks nationality selection after Arena Gate verification, and adds a placeholder "Book" button on public barber profiles for future implementation.
+This plan integrates the Arena Gate ceremony directly into the landing page sign-up flow, adds visual distinction between Barber (orange) and Fan (cyan) roles, and ensures the role system works seamlessly across the entire application.
 
-## Current Issues
+## Problem Analysis
 
-Based on the screenshots and code analysis:
+The Arena Gate system (`ArenaGateModal`, `FlagCarousel`, `ClipperSwipeVerifier`) we built is completely disconnected from the actual sign-up flow:
 
-1. **Multiple duplicate edit options**: "Edit Profile" button, "Barber Settings" button, and "Edit Barber Profile" button all visible
-2. **BB Wallet in separate sidebar**: Takes up valuable screen space in a 3-column grid
-3. **Country selector still changeable**: Both `Profile.tsx` and `BarberSettings.tsx` allow barbers to change their nationality
-4. **Personal Information card redundant for barbers**: BarberProfileHeader already shows the key information
-5. **No booking button**: Visitors to a barber's public profile have no way to express booking intent
+1. **`LandingHero.tsx`** has its own inline `UserTypeSelector` that ignores the Arena Gate
+2. When users click "BARBER", nothing special happens - just highlights the button
+3. Both roles currently use the same orange color scheme with no visual differentiation
 
-## Solution Overview
+## Solution Design
+
+### Visual Design: Orange vs Cyan Role Contrast
 
 ```text
-BEFORE (Current Layout):
-┌──────────────────────┐  ┌────────────┐
-│ Barber Header        │  │            │
-├──────────────────────┤  │ BB Wallet  │
-│ Personal Info Card   │  │ Card       │
-│ - Avatar Upload      │  │            │
-│ - Name/Username      │  │            │
-│ - Country (editable) │  └────────────┘
-│ - [Edit Profile]     │
-│ - [Barber Settings]  │
-│ - [Edit Barber Prof] │
-└──────────────────────┘
-
-AFTER (Consolidated):
-┌─────────────────────────────────────────┐
-│ ┌──────┐  CJ 🇺🇸 Texture          ┌───┐ │
-│ │Avatar│  📍 NYC                  │125│ │
-│ └──────┘                          │BB │ │
-│ 7 Followers  7 Likes  5 Subs      └───┘ │
-│ ┌────────────────┐ ┌────────────────┐   │
-│ │ View Profile   │ │   Settings     │   │
-│ └────────────────┘ └────────────────┘   │
-└─────────────────────────────────────────┘
-│ My Battles Section                      │
-└─────────────────────────────────────────┘
+┌────────────────────────────┐  ┌────────────────────────────┐
+│      ✂️ BARBER             │  │        👥 FAN              │
+│   ┌────────────────┐       │  │   ┌────────────────┐       │
+│   │ Orange primary │       │  │   │ Cyan primary   │       │
+│   │ Orange glow    │       │  │   │ Cyan glow      │       │
+│   │ Orange border  │       │  │   │ Cyan border    │       │
+│   └────────────────┘       │  │   └────────────────┘       │
+│   "Professional Service"   │  │   "Community Member"       │
+└────────────────────────────┘  └────────────────────────────┘
 ```
 
-## Technical Changes
+### Sign-Up Flow
 
-### 1. `src/components/barber/BarberProfileHeader.tsx`
+**For Barbers:**
+1. User clicks "BARBER" role button
+2. Arena Gate Modal opens (stadium theme)
+3. User selects country via 3D flag carousel
+4. User performs clipper swipe verification
+5. "FRESH!" celebration plays
+6. Modal closes, form shows locked country with "✓ Verified" badge
+7. User completes remaining fields
 
-**Add BB balance display and consolidate actions:**
+**For Fans:**
+1. User clicks "FAN" role button (cyan highlight)
+2. No Arena Gate required
+3. Country dropdown optional (cyan-themed)
+4. User fills fields normally
 
+---
+
+## Technical Implementation
+
+### File 1: `src/components/LandingHero.tsx`
+
+**New imports:**
 ```tsx
-interface BarberProfileHeaderProps {
-  // ...existing props
-  barberBucks?: number;           // NEW
-  onAddFundsClick?: () => void;   // NEW
-  onSettingsClick?: () => void;   // RENAME from onEditClick
-}
+import { ArenaGateModal, ArenaGateResult } from '@/components/auth/ArenaGateModal';
+import { Lock } from 'lucide-react';
+import { toast } from 'sonner';
 ```
 
-**BB display in top-right corner:**
+**New state variables:**
 ```tsx
-{/* Compact BB Display - Top Right */}
-{barberBucks !== undefined && (
-  <div className="absolute top-4 right-4 flex items-center gap-2 bg-background/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-cyan-500/20">
-    <Coins className="h-4 w-4 text-cyan-400" />
-    <span className="text-sm font-bold text-white">{barberBucks.toLocaleString()}</span>
-    <span className="text-xs text-muted-foreground">BB</span>
-    <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={onAddFundsClick}>
-      <Plus className="h-3 w-3 text-cyan-400" />
-    </Button>
-  </div>
-)}
+const [showArenaGate, setShowArenaGate] = useState(false);
+const [arenaGateVerified, setArenaGateVerified] = useState(false);
 ```
 
-**Consolidate action buttons (remove "Edit Profile", keep single "Settings"):**
+**Arena Gate handlers:**
 ```tsx
-{showActions && (
-  <div className="flex gap-3 flex-wrap pt-2">
-    {barber_id && (
-      <Link to={`/barbers/${barber_id}`}>
-        <Button variant="outline" size="sm">
-          <ExternalLink className="w-4 h-4 mr-2" />
-          View Public Profile
-        </Button>
-      </Link>
-    )}
-    {onSettingsClick && (
-      <Button variant="outline" size="sm" onClick={onSettingsClick}>
-        <Settings className="w-4 h-4 mr-2" />
-        Settings
-      </Button>
-    )}
-  </div>
-)}
+const handleArenaGateComplete = (result: ArenaGateResult) => {
+  setSignUpData(prev => ({
+    ...prev,
+    userType: 'barber',
+    countryCode: result.selectedCountry
+  }));
+  setArenaGateVerified(true);
+  setShowArenaGate(false);
+};
+
+const handleArenaGateClose = () => {
+  // If they close without completing, reset to fan
+  setShowArenaGate(false);
+  if (!arenaGateVerified) {
+    setSignUpData(prev => ({
+      ...prev,
+      userType: 'fan',
+      countryCode: null
+    }));
+  }
+};
 ```
 
-### 2. `src/pages/Profile.tsx`
-
-**Remove:**
-- Grid layout with sidebar (lines 340-488)
-- Separate `<BBWalletCard />` component
-- Personal Information Card for barbers (redundant with header)
-- Duplicate "Edit Profile", "Barber Settings", "Edit Barber Profile" buttons
-
-**Simplified Layout:**
+**Updated handleSignUp with validation:**
 ```tsx
-return (
-  <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5">
-    <Header />
-    <main className="pt-20 sm:pt-24 pb-12 px-4">
-      <div className="container mx-auto max-w-4xl">
-        <BackButton className="mb-4 sm:mb-6" />
-        
-        {/* Unified Barber Header with BB */}
-        {isBarber && barberProfile && barberStats && (
-          <div className="mb-6">
-            <BarberProfileHeader
-              {...props}
-              barberBucks={barberBucksBalance}
-              onAddFundsClick={() => setShowAddFundsModal(true)}
-              onSettingsClick={() => setShowBarberSettings(true)}
-            />
+const handleSignUp = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  // Barbers MUST complete Arena Gate
+  if (signUpData.userType === 'barber' && !arenaGateVerified) {
+    toast.error('Please complete the Arena Gate verification');
+    setShowArenaGate(true);
+    return;
+  }
+  
+  // Barbers MUST have country selected
+  if (signUpData.userType === 'barber' && !signUpData.countryCode) {
+    toast.error('Please complete nationality verification');
+    setShowArenaGate(true);
+    return;
+  }
+  
+  setLoading(true);
+  const { error } = await signUp(signUpData.email, signUpData.password, signUpData.displayName, signUpData.userType, signUpData.countryCode || undefined);
+  setLoading(false);
+};
+```
+
+**Updated UserTypeSelector with cyan/orange contrast:**
+```tsx
+const UserTypeSelector = () => (
+  <div className="space-y-4">
+    <Label className="text-sm font-medium">I am a:</Label>
+    <div className="grid grid-cols-2 gap-3">
+      {/* BARBER Button - Orange Theme */}
+      <button 
+        type="button" 
+        onClick={() => {
+          if (!arenaGateVerified) {
+            setShowArenaGate(true);
+          }
+          setSignUpData(prev => ({ ...prev, userType: "barber" }));
+        }} 
+        className={`relative p-4 border transition-all duration-300 ${
+          signUpData.userType === "barber" 
+            ? "border-primary/50 bg-primary/5 shadow-[0_0_20px_hsl(24_100%_52%/0.3),inset_0_0_15px_hsl(24_100%_52%/0.1)]" 
+            : "border-border/50 bg-card/50 hover:border-primary/30 hover:shadow-[0_0_15px_hsl(24_100%_52%/0.2)]"
+        }`} 
+        style={{ borderRadius: '1rem' }}
+      >
+        <div className="flex flex-col items-center space-y-2">
+          <div className={`p-2 rounded-full ${
+            signUpData.userType === "barber" 
+              ? "bg-primary text-primary-foreground" 
+              : "bg-muted"
+          }`}>
+            <Scissors className="w-5 h-5" />
+          </div>
+          <div className="text-center">
+            <div className="font-semibold text-sm">BARBER</div>
+            <div className="text-xs text-muted-foreground">Professional Service</div>
+          </div>
+        </div>
+        {signUpData.userType === "barber" && arenaGateVerified && (
+          <div className="absolute -top-1 -right-1">
+            <Badge className="text-xs bg-green-500/20 text-green-400 border-green-500/30">
+              ✓ Verified
+            </Badge>
           </div>
         )}
-        
-        {/* Fan profile card (simplified) - only show for non-barbers */}
-        {!isBarber && (
-          <Card className="mb-6">
-            {/* Minimal fan profile info */}
-          </Card>
+      </button>
+
+      {/* FAN Button - Cyan Theme */}
+      <button 
+        type="button" 
+        onClick={() => {
+          setSignUpData(prev => ({ ...prev, userType: "fan" }));
+          // Reset arena gate state when switching to fan
+          setArenaGateVerified(false);
+        }} 
+        className={`relative p-4 border transition-all duration-300 ${
+          signUpData.userType === "fan" 
+            ? "border-cyan-500/50 bg-cyan-500/5 shadow-[0_0_20px_rgba(0,217,255,0.3),inset_0_0_15px_rgba(0,217,255,0.1)]" 
+            : "border-border/50 bg-card/50 hover:border-cyan-500/30 hover:shadow-[0_0_15px_rgba(0,217,255,0.2)]"
+        }`} 
+        style={{ borderRadius: '1rem' }}
+      >
+        <div className="flex flex-col items-center space-y-2">
+          <div className={`p-2 rounded-full ${
+            signUpData.userType === "fan" 
+              ? "bg-cyan-500 text-black" 
+              : "bg-muted"
+          }`}>
+            <Users className="w-5 h-5" />
+          </div>
+          <div className="text-center">
+            <div className="font-semibold text-sm">FAN</div>
+            <div className="text-xs text-muted-foreground">Community Member</div>
+          </div>
+        </div>
+        {signUpData.userType === "fan" && (
+          <div className="absolute -top-1 -right-1">
+            <Badge className="text-xs bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+              Selected
+            </Badge>
+          </div>
         )}
-        
-        {/* My Battles Section - Barbers Only */}
-        {isBarber && myBattles && ...}
-      </div>
-    </main>
-    
-    <AddFundsModal isOpen={showAddFundsModal} onClose={...} />
+      </button>
+    </div>
   </div>
 );
 ```
 
-**Add useBarberBucks hook:**
+**Updated Country Selector section:**
 ```tsx
-const { barberBucks: barberBucksBalance, setShowAddFundsModal, showAddFundsModal } = useBarberBucks();
-```
-
-### 3. `src/components/profiles/BarberSettings.tsx`
-
-**Lock country selectors in Profile tab (around line 329):**
-```tsx
-<div>
-  <Label className="flex items-center gap-2">
-    Country
-    <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-500 border-amber-500/30">
-      <Lock className="h-3 w-3 mr-1" />
-      Locked
-    </Badge>
-  </Label>
-  <CountrySelector
-    value={profileForm.country_code}
-    onChange={() => {}} // No-op
-    placeholder="Set during Arena Gate"
-    disabled={true}
-  />
-  <p className="text-xs text-amber-500/80 mt-1">
-    Nationality is permanently set during sign-up
-  </p>
-</div>
-```
-
-**Lock country in Professional tab (around line 430):**
-```tsx
-<div>
-  <Label>Professional Country</Label>
-  <CountrySelector
-    value={barberForm.country_code}
-    onChange={() => {}}
-    placeholder="Set during Arena Gate"
-    disabled={true}
-  />
-  <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-    <Lock className="h-3 w-3" />
-    Represents your nation in World Cup battles
-  </p>
-</div>
-```
-
-### 4. `src/components/profiles/BarberProfileForm.tsx`
-
-**Lock nationality for existing profiles:**
-```tsx
-<div>
-  <Label className="flex items-center gap-2">
-    <Globe className="h-4 w-4" />
-    Nationality *
-    {existingProfile?.country_code && (
-      <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-500 border-amber-500/30">
+<div className="space-y-2">
+  <div className="flex items-center justify-between">
+    <Label>Country</Label>
+    {signUpData.userType === 'barber' && arenaGateVerified && (
+      <Badge className="text-xs bg-green-500/20 text-green-400 border-green-500/30">
         <Lock className="h-3 w-3 mr-1" />
-        Locked
+        Verified
       </Badge>
     )}
-  </Label>
-  <CountrySelector
-    value={formData.country_code}
-    onChange={(code) => {
-      // Only allow change if no existing country
-      if (!existingProfile?.country_code) {
-        setFormData({ ...formData, country_code: code || '' });
+  </div>
+  <CountrySelector 
+    value={signUpData.countryCode} 
+    onChange={countryCode => {
+      if (!arenaGateVerified) {
+        setSignUpData(prev => ({ ...prev, countryCode }));
       }
-    }}
-    placeholder="Select your country"
-    disabled={!!existingProfile?.country_code}
+    }} 
+    placeholder={arenaGateVerified ? "Nationality locked" : "Select your country"}
+    disabled={arenaGateVerified}
   />
-  {existingProfile?.country_code ? (
-    <p className="text-xs text-amber-500/80 mt-1 flex items-center gap-1">
+  {signUpData.userType === 'barber' && arenaGateVerified && (
+    <p className="text-xs text-amber-500/80 flex items-center gap-1">
       <Lock className="h-3 w-3" />
-      Nationality cannot be changed after initial setup
+      Nationality cannot be changed after sign-up
     </p>
-  ) : (
-    <p className="text-xs text-muted-foreground mt-1">
-      Used for country vs country tournament matchmaking
+  )}
+  {signUpData.userType === 'fan' && (
+    <p className="text-xs text-muted-foreground">
+      Optional - helps connect with local barbers
     </p>
   )}
 </div>
 ```
 
-### 5. `src/pages/BarberPublicProfile.tsx`
-
-**Add "Book" button placeholder to the action buttons:**
-
+**Add Arena Gate Modal at end of component:**
 ```tsx
-{/* Action Buttons */}
-<div className="flex gap-3 flex-wrap">
-  <BarberActionButtons
-    barberId={barberData.barber_id}
-    barberUserId={userId!}
-    onDonateClick={() => setIsDonationModalOpen(true)}
-  />
-  
-  {/* Book Button - Placeholder for future booking system */}
-  {!isOwner && (
-    <Button 
-      variant="default" 
-      size="default"
-      className="bg-cyan-500 hover:bg-cyan-600 text-black font-semibold"
-      onClick={() => toast.info("Booking system coming soon!")}
+{/* Arena Gate for Barbers */}
+<ArenaGateModal
+  isOpen={showArenaGate}
+  onClose={handleArenaGateClose}
+  onComplete={handleArenaGateComplete}
+/>
+```
+
+---
+
+### File 2: `src/components/RoleBadge.tsx`
+
+**Update Fan badge to use cyan:**
+```tsx
+if (isFan) {
+  return (
+    <Badge 
+      variant="secondary" 
+      className={`bg-gradient-to-r from-cyan-500/20 to-cyan-400/10 text-cyan-400 border border-cyan-500/30 ${sizeClasses[size]} ${className}`}
     >
-      <Calendar className="w-4 h-4 mr-2" />
-      Book Appointment
-    </Button>
-  )}
-</div>
+      <Users className={`${iconSize[size]} mr-1`} />
+      Fan
+    </Badge>
+  );
+}
 ```
 
-**Add Calendar import:**
+---
+
+### File 3: `src/components/auth/AuthDialog.tsx`
+
+**Same Arena Gate integration pattern:**
+
+Add state and handlers:
 ```tsx
-import { ArrowLeft, MapPin, Award, Upload, Image as ImageIcon, Video, Trash2, Calendar } from 'lucide-react';
+const [showArenaGate, setShowArenaGate] = useState(false);
+const [arenaGateVerified, setArenaGateVerified] = useState(!!prefilledCountry);
 ```
+
+Update barber button to trigger Arena Gate:
+```tsx
+<button
+  type="button"
+  onClick={() => {
+    if (!arenaGateVerified) {
+      setShowArenaGate(true);
+    }
+    setSignUpData(prev => ({ ...prev, userType: "barber" }));
+  }}
+  className={`... ${
+    signUpData.userType === "barber" 
+      ? "border-primary bg-primary/10" 
+      : "border-border hover:border-primary/50"
+  }`}
+>
+```
+
+Update fan button with cyan theme:
+```tsx
+<button
+  type="button"
+  onClick={() => {
+    setSignUpData(prev => ({ ...prev, userType: "fan" }));
+    setArenaGateVerified(false);
+  }}
+  className={`... ${
+    signUpData.userType === "fan" 
+      ? "border-cyan-500 bg-cyan-500/10" 
+      : "border-border hover:border-cyan-500/50"
+  }`}
+>
+```
+
+Add Arena Gate Modal at end.
+
+---
+
+## Role System Verification
+
+The existing role system is already properly integrated across the app:
+
+| Component | Role Check | Purpose |
+|-----------|------------|---------|
+| `Header.tsx` | `useUserRole` | Filter navigation items by `barberOnly`/`adminOnly` |
+| `Index.tsx` | `isBarber` | Show Creator Hub only to barbers |
+| `BattlesPage.tsx` | `isBarber`, `isFan` | Different battle actions per role |
+| `AdminGuard.tsx` | `isAdmin` | Protect admin routes |
+| `BarberGuard.tsx` | `isBarber` | Protect barber-only routes |
+| `AuthGuard.tsx` | `user` | Protect authenticated routes |
+| `ChallengeFeed.tsx` | `isBarber` | Show accept challenge for barbers only |
+| `QuickActionsMenu.tsx` | `isBarber`, `isAdmin` | Filter quick actions |
+| `Profile.tsx` | `isBarber` | Show different profile layouts |
+
+All these continue to work because:
+1. `useAuth` passes `user_type` to Supabase metadata
+2. Database trigger creates `user_roles` entry
+3. `useUserRole` reads from `user_roles` table
+4. Guards and components consume the role flags
+
+---
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/barber/BarberProfileHeader.tsx` | Add BB display (top-right), rename `onEditClick` to `onSettingsClick`, add `barberBucks` and `onAddFundsClick` props, add Coins/Plus icons |
-| `src/pages/Profile.tsx` | Remove grid/sidebar, remove duplicate buttons, remove BBWalletCard sidebar, pass BB props to header, add useBarberBucks hook, add AddFundsModal |
-| `src/components/profiles/BarberSettings.tsx` | Lock both country selectors with `disabled={true}`, add Lock icon + explanatory text |
-| `src/components/profiles/BarberProfileForm.tsx` | Lock country selector if `existingProfile?.country_code` exists |
-| `src/pages/BarberPublicProfile.tsx` | Add "Book Appointment" button placeholder for non-owners |
+| `src/components/LandingHero.tsx` | Import ArenaGateModal, add Arena Gate state/handlers, update UserTypeSelector with orange/cyan contrast, lock country after verification, add validation in handleSignUp, render ArenaGateModal |
+| `src/components/auth/AuthDialog.tsx` | Same Arena Gate integration, add cyan styling for fan role |
+| `src/components/RoleBadge.tsx` | Update Fan badge to use cyan gradient |
 
-## Visual Summary
+---
 
-**Profile Page (Owner View):**
-- Single unified header card with avatar, name, flag, stats
-- BB balance in top-right corner with quick "+" action
-- Single "Settings" button → opens BarberSettings
-- Single "View Public Profile" button → opens public page
-- My Battles section below
+## Data Permanence Summary
 
-**Barber Settings:**
-- Country selectors show lock icon with "Locked" badge
-- Disabled inputs with amber text explaining permanence
+After account creation, the following CANNOT be changed:
+- **Role** (barber/fan) - set at sign-up
+- **Nationality** - set via Arena Gate for barbers (mandatory), optional dropdown for fans
+- **Display Name** - set at sign-up
+- **Email** - for login purposes
 
-**Public Barber Profile (Visitor View):**
-- All existing action buttons (Follow, Like, Subscribe, Donate)
-- NEW: Cyan "Book Appointment" button
-- Toast message "Booking system coming soon!" when clicked
+Only **password** can be reset via email.
+
+---
+
+## Flow Diagrams
+
+### Barber Sign-Up Flow
+```text
+[Click BARBER] → [Arena Gate Opens]
+      ↓
+[3D Flag Carousel] → [Select Country]
+      ↓
+[Clipper Swipe Verification] → [FRESH! Animation]
+      ↓
+[Form: Country Locked ✓] → [Fill Name/Email/Password]
+      ↓
+[Create Account] → [Account with permanent nationality]
+```
+
+### Fan Sign-Up Flow
+```text
+[Click FAN] → [Form with Cyan styling]
+      ↓
+[Optional Country Dropdown] → [Fill Name/Email/Password]
+      ↓
+[Create Account] → [Regular account]
+```
+
+---
 
 ## Summary
 
 This implementation:
-1. **Consolidates** the profile page into a clean single-card layout
-2. **Integrates** BB balance minimally into the header (cyan accent, matches design system)
-3. **Removes** 3 duplicate edit/settings buttons → single "Settings" action
-4. **Permanently locks** nationality selection with visual indicators (Lock icon + "Locked" badge)
-5. **Adds** booking button placeholder on public profiles for future implementation
-6. **Maintains** the minimalist design philosophy with maximum content, minimum chrome
+1. **Integrates** Arena Gate into the barber sign-up flow on the landing page
+2. **Creates visual distinction** with orange for barbers, cyan for fans
+3. **Enforces** mandatory Arena Gate completion for barbers before sign-up
+4. **Locks** nationality after Arena Gate verification with clear visual feedback
+5. **Maintains** existing role logic across all components (no changes needed)
+6. **Keeps lightweight** - no new dependencies, minimal additions
 
