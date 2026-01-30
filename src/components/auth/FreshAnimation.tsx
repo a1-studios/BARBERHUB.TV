@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Scissors, CheckCircle2 } from 'lucide-react';
-import confetti from 'canvas-confetti';
 
 interface FreshAnimationProps {
   show: boolean;
@@ -18,36 +17,7 @@ const getCountryFlag = (countryCode: string) => {
 export const FreshAnimation = ({ show, countryCode, onComplete }: FreshAnimationProps) => {
   useEffect(() => {
     if (show) {
-      // Trigger confetti celebration
-      const colors = ['#f97316', '#00D9FF', '#22c55e', '#fbbf24'];
-      
-      // Center burst
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.5 },
-        colors: colors,
-        disableForReducedMotion: true,
-      });
-
-      // Side cannons
-      setTimeout(() => {
-        confetti({
-          particleCount: 50,
-          angle: 60,
-          spread: 55,
-          origin: { x: 0, y: 0.6 },
-          colors: colors,
-        });
-        confetti({
-          particleCount: 50,
-          angle: 120,
-          spread: 55,
-          origin: { x: 1, y: 0.6 },
-          colors: colors,
-        });
-      }, 200);
-
+      // Simple verification success - NO confetti here (save for sign-up success)
       // Auto-complete after animation
       const timer = setTimeout(onComplete, 2000);
       return () => clearTimeout(timer);
