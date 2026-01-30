@@ -3,7 +3,8 @@ import { motion, useMotionValue, animate, PanInfo, AnimatePresence } from 'frame
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
-import { triggerCountryCelebration, getCountryCulturalData, CountryCulturalData } from '@/utils/countryCelebration';
+import { getCountryCulturalData, CountryCulturalData } from '@/utils/countryCelebration';
+import { HapticFeedback } from '@/utils/hapticFeedback';
 
 // Full list of 180+ countries
 const ALL_COUNTRIES = [
@@ -246,12 +247,15 @@ export const FlagCarousel = ({ selectedCountry, onSelect }: FlagCarouselProps) =
   const handleFlagClick = (code: string, index: number) => {
     if (isDragging.current) return;
     
-    // Trigger explosive celebration!
-    const cultural = triggerCountryCelebration(code);
+    // Get cultural data for visual overlay (NO confetti here - save for sign-up success)
+    const cultural = getCountryCulturalData(code);
     setCelebrationData(cultural);
     setShowCelebration(true);
     
-    // Clear celebration after animation
+    // Haptic feedback on selection
+    HapticFeedback.vote();
+    
+    // Clear celebration overlay after animation
     setTimeout(() => setShowCelebration(false), 2000);
     
     onSelect(code);

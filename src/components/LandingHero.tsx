@@ -12,6 +12,7 @@ import { CountrySelector } from "@/components/CountrySelector";
 import WorldCupPrizeCounter from "@/components/WorldCupPrizeCounter";
 import { ArenaGateModal, ArenaGateResult } from "@/components/auth/ArenaGateModal";
 import { toast } from "sonner";
+import { triggerCountryCelebration } from "@/utils/countryCelebration";
 
 const LandingHero = () => {
   const { signUp, signIn } = useAuth();
@@ -95,7 +96,12 @@ const LandingHero = () => {
       signUpData.countryCode || undefined
     );
     setLoading(false);
+    
     if (!error) {
+      // Fire MASSIVE celebration ONLY after successful barber sign-up!
+      if (signUpData.userType === 'barber' && signUpData.countryCode) {
+        triggerCountryCelebration(signUpData.countryCode);
+      }
       // User will be redirected by auth state change
     }
   };
