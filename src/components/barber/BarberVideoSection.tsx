@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Play, Users, Upload, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
+import type { Variants } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -132,12 +133,46 @@ export const BarberVideoSection = ({
       );
     }
 
-    // Show empty state for non-owners
+    // Show animated arena placeholder for non-owners (demo/simulation mode)
     return (
-      <div className={`${aspectClass} bg-gradient-to-br from-primary/20 to-primary/5 rounded-lg border border-primary/20 flex items-center justify-center ${className}`}>
-        <div className="text-center space-y-2">
-          <Play className="w-12 h-12 mx-auto text-primary/40" />
-          <p className="text-sm text-muted-foreground">No video available</p>
+      <div className={`${aspectClass} bg-gradient-to-br from-primary/30 via-black to-cyan/20 rounded-lg border border-primary/30 flex items-center justify-center overflow-hidden ${className}`}>
+        <div className="relative text-center space-y-3">
+          {/* Animated rotating barber pole effect */}
+          <motion.div
+            animate={{ 
+              rotate: [0, 360],
+              scale: [1, 1.1, 1]
+            }}
+            transition={{ 
+              rotate: { duration: 4, repeat: Infinity, ease: "linear" },
+              scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
+            }}
+            className="w-16 h-16 mx-auto relative"
+          >
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary via-white to-cyan opacity-60" />
+            <div className="absolute inset-2 rounded-full bg-black/80 flex items-center justify-center">
+              <Play className="w-6 h-6 text-primary" />
+            </div>
+          </motion.div>
+          
+          {/* Pulsing text */}
+          <motion.div
+            animate={{ opacity: [0.7, 1, 0.7] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
+            className="space-y-1"
+          >
+            <p className="text-lg font-bold text-primary drop-shadow-lg">
+              🔥 ARENA INCOMING 🔥
+            </p>
+            <p className="text-xs text-white/70">Battle starting soon...</p>
+          </motion.div>
+          
+          {/* Radial glow */}
+          <motion.div
+            animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.1, 0.3] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="absolute inset-0 rounded-full bg-primary/20 blur-xl -z-10"
+          />
         </div>
       </div>
     );
