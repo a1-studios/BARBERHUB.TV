@@ -135,9 +135,17 @@ export const BarberVideoSection = ({
 
     // Show animated arena placeholder for non-owners (demo/simulation mode)
     return (
-      <div className={`${aspectClass} bg-gradient-to-br from-primary/30 via-black to-cyan/20 rounded-lg border border-primary/30 flex items-center justify-center overflow-hidden ${className}`}>
-        <div className="relative text-center space-y-3">
-          {/* Animated rotating barber pole effect */}
+      <div className={`${aspectClass} bg-gradient-to-br from-primary/30 via-black to-cyan/20 rounded-lg border border-primary/30 overflow-hidden relative ${className}`}>
+        {/* Radial glow - behind everything */}
+        <motion.div
+          animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.1, 0.3] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="absolute inset-0 bg-gradient-radial from-primary/30 to-transparent"
+        />
+        
+        {/* Centered content - absolutely positioned at exact center */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          {/* Animated rotating barber pole effect - THE PLAY BUTTON */}
           <motion.div
             animate={{ 
               rotate: [0, 360],
@@ -147,7 +155,7 @@ export const BarberVideoSection = ({
               rotate: { duration: 4, repeat: Infinity, ease: "linear" },
               scale: { duration: 2, repeat: Infinity, ease: "easeInOut" }
             }}
-            className="w-16 h-16 mx-auto relative"
+            className="w-16 h-16 relative"
           >
             <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary via-white to-cyan opacity-60" />
             <div className="absolute inset-2 rounded-full bg-black/80 flex items-center justify-center">
@@ -155,24 +163,17 @@ export const BarberVideoSection = ({
             </div>
           </motion.div>
           
-          {/* Pulsing text */}
+          {/* Pulsing text - positioned below play button */}
           <motion.div
             animate={{ opacity: [0.7, 1, 0.7] }}
             transition={{ duration: 1.5, repeat: Infinity }}
-            className="space-y-1"
+            className="text-center mt-3"
           >
             <p className="text-lg font-bold text-primary drop-shadow-lg">
               🔥 ARENA INCOMING 🔥
             </p>
             <p className="text-xs text-white/70">Battle starting soon...</p>
           </motion.div>
-          
-          {/* Radial glow */}
-          <motion.div
-            animate={{ scale: [1, 1.5, 1], opacity: [0.3, 0.1, 0.3] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            className="absolute inset-0 rounded-full bg-primary/20 blur-xl -z-10"
-          />
         </div>
       </div>
     );
