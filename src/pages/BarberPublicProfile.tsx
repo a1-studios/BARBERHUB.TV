@@ -330,16 +330,16 @@ export default function BarberPublicProfile() {
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-3 flex-wrap">
-                  <BarberActionButtons
-                    barberId={barberData.barber_id}
-                    barberUserId={userId!}
-                    onDonateClick={() => setIsDonationModalOpen(true)}
-                  />
-                  
-                  {/* Book Button - Placeholder for future booking system */}
-                  {!isOwner && (
+                {/* Action Buttons - Only show for visitors, not the profile owner */}
+                {!isOwner && (
+                  <div className="flex gap-3 flex-wrap">
+                    <BarberActionButtons
+                      barberId={barberData.barber_id}
+                      barberUserId={userId!}
+                      onDonateClick={() => setIsDonationModalOpen(true)}
+                    />
+                    
+                    {/* Book Button - Placeholder for future booking system */}
                     <Button 
                       variant="default" 
                       size="default"
@@ -349,8 +349,8 @@ export default function BarberPublicProfile() {
                       <Calendar className="w-4 h-4 mr-2" />
                       Book Appointment
                     </Button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
