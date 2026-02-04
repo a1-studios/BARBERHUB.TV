@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useBattleVideoRoom } from '@/hooks/useBattleVideoRoom';
+import { useLocalCameraPreview } from '@/hooks/useLocalCameraPreview';
+import { useContenderReadiness } from '@/hooks/useContenderReadiness';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useFullscreen } from '@/hooks/useFullscreen';
 import { useAutoHideControls } from '@/hooks/useAutoHideControls';
@@ -12,10 +14,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { BattleChat } from '@/components/battles/BattleChat';
 import { ContenderTopBar } from '@/components/contender/ContenderTopBar';
 import { ContenderControlBar } from '@/components/contender/ContenderControlBar';
+import { ContenderPreviewOverlay } from '@/components/contender/ContenderPreviewOverlay';
 import { BattleVideoContainer } from '@/components/streaming/BattleVideoContainer';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+
+type Phase = 'preview' | 'standby' | 'countdown' | 'live';
+
+const COUNTDOWN_SECONDS = 5;
 
 export default function ContenderTheater() {
   const { id: battleId } = useParams<{ id: string }>();
@@ -26,12 +33,30 @@ export default function ContenderTheater() {
   
   const [showChat, setShowChat] = useState(false);
   const [barberPosition, setBarberPosition] = useState<1 | 2 | null>(null);
+  const [barberId, setBarberId] = useState<string>('');
   const [localCountry, setLocalCountry] = useState<string | undefined>();
   const [remoteCountry, setRemoteCountry] = useState<string | undefined>();
+  
+  // Phase state machine
+  const [phase, setPhase] = useState<Phase>('preview');
+  const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
 
   // Use extracted hooks
   const { isFullscreen, toggleFullscreen } = useFullscreen(containerRef);
   const { showControls, handleScreenTap } = useAutoHideControls({ isMobile });
+
+  // Local camera preview (starts immediately)
+  const {
+    stream: previewStream,
+    isVideoEnabled: previewVideoEnabled,
+    isAudioEnabled: previewAudioEnabled,
+    toggleVideo: togglePreviewVideo,
+    toggleAudio: togglePreviewAudio,
+    startPreview,
+    stopPreview,
+    isPreviewActive,
+    error: previewError,
+  } = useLocalCameraPreview();
 
   // Fetch battle details
   const { data: battle, isLoading: battleLoading } = useQuery({
@@ -72,15 +97,52 @@ export default function ContenderTheater() {
       
       if (barber1?.user_id === user.id) {
         setBarberPosition(1);
+        setBarberId(barber1.id);
         setLocalCountry(barber1.country_code || undefined);
         setRemoteCountry(barber2?.country_code || undefined);
       } else if (barber2?.user_id === user.id) {
         setBarberPosition(2);
+        setBarberId(barber2.id);
         setLocalCountry(barber2.country_code || undefined);
         setRemoteCountry(barber1?.country_code || undefined);
       }
     }
   }, [barberProfiles, user, battle]);
+
+  // Get barber info
+  const currentBarber = barberProfiles?.find(b => 
+    barberPosition === 1 ? b.id === battle?.barber1_id : b.id === battle?.barber2_id
+  );
+  const opponentBarber = barberProfiles?.find(b => 
+    barberPosition === 1 ? b.id === battle?.barber2_id : b.id === battle?.barber1_id
+  );
+
+  // Get display names
+  const getDisplayName = (barber: typeof currentBarber) => {
+    if (!barber) return 'Unknown';
+    const profileData = barber.profiles as { display_name: string | null } | null;
+    return profileData?.display_name || barber.name || 'Barber';
+  };
+  
+  const currentBarberName = currentBarber ? getDisplayName(currentBarber) : 'You';
+  const opponentBarberName = opponentBarber ? getDisplayName(opponentBarber) : 'Opponent';
+
+  // Presence & readiness tracking
+  const {
+    localReady,
+    opponentReady,
+    opponentPresence,
+    isOpponentPresent,
+    setReady,
+    bothReady,
+  } = useContenderReadiness({
+    battleId: battleId || '',
+    barberId: barberId,
+    barberPosition: barberPosition || 1,
+    displayName: currentBarberName,
+    countryCode: localCountry,
+    hasCamera: isPreviewActive,
+  });
 
   // Initialize Battle Video Room hook with Twilio SDK
   const {
@@ -113,40 +175,60 @@ export default function ContenderTheater() {
     }
   });
 
-  const handleGoLive = async () => {
+  // Start camera preview on mount
+  useEffect(() => {
+    if (barberPosition !== null) {
+      startPreview();
+    }
+    return () => {
+      stopPreview();
+    };
+  }, [barberPosition, startPreview, stopPreview]);
+
+  // Handle ready button click
+  const handleReady = useCallback(async () => {
+    await setReady(true);
+    setPhase('standby');
+    toast.success('You are ready! Waiting for opponent...');
+  }, [setReady]);
+
+  // Watch for both ready to start countdown
+  useEffect(() => {
+    if (bothReady && phase === 'standby') {
+      setPhase('countdown');
+      setCountdown(COUNTDOWN_SECONDS);
+    }
+  }, [bothReady, phase]);
+
+  // Handle countdown complete - connect to Twilio
+  const handleCountdownComplete = useCallback(async () => {
     try {
+      // Stop preview and connect to Twilio room
+      stopPreview();
       await connect();
+      setPhase('live');
     } catch (error) {
       console.error('Failed to connect to battle room:', error);
+      setPhase('preview');
+      startPreview();
     }
-  };
+  }, [connect, stopPreview, startPreview]);
 
   const handleEndStream = async () => {
     try {
       disconnect();
       toast.success('Stream ended successfully');
+      setPhase('preview');
     } catch (error) {
       console.error('Failed to end stream:', error);
     }
   };
 
-  // Get barber info
-  const currentBarber = barberProfiles?.find(b => 
-    barberPosition === 1 ? b.id === battle?.barber1_id : b.id === battle?.barber2_id
-  );
-  const opponentBarber = barberProfiles?.find(b => 
-    barberPosition === 1 ? b.id === battle?.barber2_id : b.id === battle?.barber1_id
-  );
-
-  // Get display names - profiles is the joined table result
-  const getDisplayName = (barber: typeof currentBarber) => {
-    if (!barber) return 'Unknown';
-    const profileData = barber.profiles as { display_name: string | null } | null;
-    return profileData?.display_name || barber.name || 'Barber';
-  };
-  
-  const currentBarberName = currentBarber ? getDisplayName(currentBarber) : 'You';
-  const opponentBarberName = opponentBarber ? getDisplayName(opponentBarber) : 'Opponent';
+  // Determine which video/audio controls to use based on phase
+  const currentVideoEnabled = phase === 'live' ? isVideoEnabled : previewVideoEnabled;
+  const currentAudioEnabled = phase === 'live' ? isAudioEnabled : previewAudioEnabled;
+  const handleToggleVideo = phase === 'live' ? toggleVideo : togglePreviewVideo;
+  const handleToggleAudio = phase === 'live' ? toggleAudio : togglePreviewAudio;
 
   if (battleLoading) {
     return (
@@ -170,6 +252,32 @@ export default function ContenderTheater() {
     );
   }
 
+  // Show error if camera permission denied
+  if (previewError) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 p-4">
+        <AlertCircle className="w-16 h-16 text-destructive" />
+        <h1 className="text-2xl font-bold">Camera Access Required</h1>
+        <p className="text-muted-foreground text-center max-w-md">{previewError}</p>
+        <Button onClick={() => startPreview()} variant="default">
+          Try Again
+        </Button>
+        <Button onClick={() => navigate(-1)} variant="outline">
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          Go Back
+        </Button>
+      </div>
+    );
+  }
+
+  // Determine layout based on phase
+  const getLayout = () => {
+    if (phase === 'live') {
+      return hasOpponent ? 'split' : 'preview';
+    }
+    return 'standby';
+  };
+
   return (
     <div 
       ref={containerRef}
@@ -179,7 +287,7 @@ export default function ContenderTheater() {
       <ContenderTopBar
         title={battle?.title || 'Battle'}
         isStreaming={isConnected}
-        viewerCount={0} // Will be updated with real viewer count
+        viewerCount={0}
         formattedDuration={formattedDuration}
         isFullscreen={isFullscreen}
         showControls={showControls}
@@ -198,36 +306,56 @@ export default function ContenderTheater() {
           localTrack={localVideoTrack}
           remoteTrack={remoteVideoTrack}
           localBarberName={currentBarberName}
-          remoteBarberName={opponentBarberName}
+          remoteBarberName={opponentPresence?.display_name || opponentBarberName}
           localCountry={localCountry}
-          remoteCountry={remoteCountry}
+          remoteCountry={opponentPresence?.country_code || remoteCountry}
           isConnecting={isConnecting}
           isConnected={isConnected}
           hasOpponent={hasOpponent}
           duration={formattedDuration}
           viewerCount={0}
-          layout={isMobile ? 'pip' : (hasOpponent ? 'split' : 'preview')}
+          layout={getLayout()}
+          previewStream={previewStream}
+          localReady={localReady}
+          opponentReady={opponentReady}
+          isOpponentPresent={isOpponentPresent}
           className="w-full h-full"
         />
       </div>
 
+      {/* Preview Overlay */}
+      <ContenderPreviewOverlay
+        phase={phase}
+        isReady={localReady}
+        opponentReady={opponentReady}
+        opponentName={opponentPresence?.display_name || opponentBarberName}
+        isOpponentPresent={isOpponentPresent}
+        countdown={countdown}
+        onCountdownComplete={handleCountdownComplete}
+      />
+
       <ContenderControlBar
         isMobile={isMobile}
         showControls={showControls}
-        isMicEnabled={isAudioEnabled}
-        isVideoEnabled={isVideoEnabled}
+        isMicEnabled={currentAudioEnabled}
+        isVideoEnabled={currentVideoEnabled}
         isStreaming={isConnected}
         canStart={!isConnected && !isConnecting}
         streamStatus={streamStatus}
         viewerCount={0}
         formattedDuration={formattedDuration}
         showChat={showChat}
-        hasStream={!!localVideoTrack}
-        onToggleMic={toggleAudio}
-        onToggleVideo={toggleVideo}
-        onGoLive={handleGoLive}
+        hasStream={isPreviewActive || !!localVideoTrack}
+        onToggleMic={handleToggleAudio}
+        onToggleVideo={handleToggleVideo}
+        onGoLive={() => {}}
         onEndStream={handleEndStream}
         onToggleChat={() => setShowChat(!showChat)}
+        phase={phase}
+        isReady={localReady}
+        opponentReady={opponentReady}
+        isOpponentPresent={isOpponentPresent}
+        onReady={handleReady}
       />
 
       {battleId && (

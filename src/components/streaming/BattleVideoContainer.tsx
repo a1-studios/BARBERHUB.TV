@@ -2,6 +2,7 @@ import { useRef, useEffect, memo } from 'react';
 import { LocalVideoTrack, RemoteVideoTrack } from 'twilio-video';
 import { cn } from '@/lib/utils';
 import { Users, Wifi, WifiOff, Loader2 } from 'lucide-react';
+import { ReadinessBadge } from '@/components/contender/ReadinessBadge';
 
 interface VideoAttachProps {
   track: LocalVideoTrack | RemoteVideoTrack | null;
@@ -36,6 +37,40 @@ const VideoAttach = memo(({ track, className, muted = false }: VideoAttachProps)
 
 VideoAttach.displayName = 'VideoAttach';
 
+// Stream preview from MediaStream (for preview phase before Twilio connection)
+interface StreamPreviewProps {
+  stream: MediaStream | null;
+  className?: string;
+  muted?: boolean;
+}
+
+const StreamPreview = memo(({ stream, className, muted = true }: StreamPreviewProps) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (videoRef.current && stream) {
+      videoRef.current.srcObject = stream;
+    }
+    return () => {
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
+    };
+  }, [stream]);
+
+  return (
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      muted={muted}
+      className={cn("w-full h-full object-cover", className)}
+    />
+  );
+});
+
+StreamPreview.displayName = 'StreamPreview';
+
 interface BattleVideoContainerProps {
   localTrack: LocalVideoTrack | null;
   remoteTrack: RemoteVideoTrack | null;
@@ -49,7 +84,12 @@ interface BattleVideoContainerProps {
   duration?: string;
   viewerCount?: number;
   className?: string;
-  layout?: 'split' | 'pip' | 'preview';
+  layout?: 'split' | 'pip' | 'preview' | 'standby';
+  // Standby mode props
+  previewStream?: MediaStream | null;
+  localReady?: boolean;
+  opponentReady?: boolean;
+  isOpponentPresent?: boolean;
 }
 
 export const BattleVideoContainer = ({
@@ -66,7 +106,108 @@ export const BattleVideoContainer = ({
   viewerCount = 0,
   className,
   layout = 'split',
+  previewStream,
+  localReady = false,
+  opponentReady = false,
+  isOpponentPresent = false,
 }: BattleVideoContainerProps) => {
+  
+  // Standby layout - preview phase with ready status badges
+  if (layout === 'standby') {
+    return (
+      <div className={cn("relative w-full h-full bg-black overflow-hidden", className)}>
+        <div className="flex h-full">
+          {/* Local Video - LARGE (70%) */}
+          <div id="local-video-container" className="relative w-[70%] border-r border-white/10">
+            {previewStream ? (
+              <StreamPreview stream={previewStream} className="w-full h-full" />
+            ) : localTrack ? (
+              <VideoAttach track={localTrack} className="w-full h-full" muted />
+            ) : (
+              <div className="w-full h-full bg-muted flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-2">
+                    <Users className="w-8 h-8 text-primary" />
+                  </div>
+                  <p className="text-muted-foreground text-sm">Starting camera...</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Preview/Ready Badge */}
+            <div className="absolute top-2 left-2">
+              <ReadinessBadge variant={localReady ? 'ready' : 'preview'} />
+            </div>
+            
+            {/* Your Side Label */}
+            <div className="absolute top-2 right-2 flex items-center gap-2">
+              <span className="bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded-full">
+                YOUR SIDE
+              </span>
+              {localCountry && (
+                <span className="bg-background/60 text-foreground text-xs px-2 py-1 rounded">
+                  {localCountry}
+                </span>
+              )}
+            </div>
+            
+            {/* Barber Name */}
+            <div className="absolute bottom-2 left-2 bg-background/70 backdrop-blur-sm text-foreground text-sm px-2 py-1 rounded">
+              {localBarberName}
+            </div>
+          </div>
+          
+          {/* Opponent side - SMALLER (30%) */}
+          <div id="remote-video-container" className="relative w-[30%] bg-muted/50 flex items-center justify-center">
+            {isOpponentPresent ? (
+              <div className="w-full h-full flex flex-col items-center justify-center p-4">
+                <div className={cn(
+                  "w-16 h-16 rounded-full flex items-center justify-center mb-3 transition-colors",
+                  opponentReady 
+                    ? "bg-success/20 border-2 border-success" 
+                    : "bg-muted-foreground/20 border-2 border-muted-foreground/30"
+                )}>
+                  <Users className={cn(
+                    "w-8 h-8",
+                    opponentReady ? "text-success" : "text-muted-foreground"
+                  )} />
+                </div>
+                <p className="text-foreground text-sm font-medium text-center truncate max-w-full px-2">
+                  {remoteBarberName}
+                </p>
+                <ReadinessBadge 
+                  variant={opponentReady ? 'ready' : 'not-ready'} 
+                  className="mt-2"
+                />
+              </div>
+            ) : (
+              <div className="text-center">
+                <div className="w-12 h-12 rounded-full bg-muted-foreground/20 flex items-center justify-center mx-auto mb-3 animate-pulse">
+                  <Users className="w-6 h-6 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground text-sm">Waiting for</p>
+                <p className="text-muted-foreground text-sm">opponent...</p>
+              </div>
+            )}
+            
+            {/* Opponent Label */}
+            <div className="absolute top-2 right-2">
+              <span className="bg-destructive/50 text-destructive-foreground text-xs font-bold px-2 py-1 rounded-full">
+                OPPONENT
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        {/* VS badge */}
+        <div className="absolute left-[70%] top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-destructive flex items-center justify-center shadow-lg">
+            <span className="text-primary-foreground font-black text-xs">VS</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   // Preview layout - barber gets 70%, waiting indicator 30%
   if (layout === 'preview') {

@@ -2,11 +2,12 @@ import { memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { 
   Video, VideoOff, Mic, MicOff, Radio, Square, 
-  MessageCircle, Settings, Users, Clock 
+  MessageCircle, Settings, Users, Clock, CheckCircle2, Loader2 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type StreamStatus = 'idle' | 'connecting' | 'connected' | 'disconnected' | 'failed' | 'live' | 'ended';
+type Phase = 'preview' | 'standby' | 'countdown' | 'live';
 
 interface ContenderControlBarProps {
   isMobile: boolean;
@@ -25,6 +26,12 @@ interface ContenderControlBarProps {
   onGoLive: () => void;
   onEndStream: () => void;
   onToggleChat: () => void;
+  // New phase-based props
+  phase?: Phase;
+  isReady?: boolean;
+  opponentReady?: boolean;
+  isOpponentPresent?: boolean;
+  onReady?: () => void;
 }
 
 export const ContenderControlBar = memo(function ContenderControlBar({
@@ -44,7 +51,14 @@ export const ContenderControlBar = memo(function ContenderControlBar({
   onGoLive,
   onEndStream,
   onToggleChat,
+  phase = 'live',
+  isReady = false,
+  opponentReady = false,
+  isOpponentPresent = false,
+  onReady,
 }: ContenderControlBarProps) {
+  const isPreviewPhase = phase === 'preview' || phase === 'standby';
+  const bothReady = isReady && opponentReady;
   return (
     <div className={cn(
       "fixed bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-black/90 to-transparent controls-overlay",
@@ -94,8 +108,49 @@ export const ContenderControlBar = memo(function ContenderControlBar({
               : <VideoOff className={cn(isMobile ? "w-5 h-5" : "w-6 h-6")} />}
           </Button>
 
-          {/* Go Live / End Stream Button */}
-          {!isStreaming ? (
+          {/* Phase-based main action button */}
+          {isPreviewPhase && !isReady && (
+            <Button
+              onClick={(e) => { e.stopPropagation(); onReady?.(); }}
+              disabled={!hasStream}
+              className={cn(
+                "bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-bold rounded-full shadow-lg shadow-green-500/30 touch-manipulation border border-cyan/20",
+                isMobile ? "h-12 px-6 text-sm" : "h-14 px-8 text-lg"
+              )}
+            >
+              <CheckCircle2 className={cn(isMobile ? "w-4 h-4 mr-1.5" : "w-5 h-5 mr-2")} />
+              I'M READY
+            </Button>
+          )}
+          
+          {isPreviewPhase && isReady && !bothReady && (
+            <Button
+              disabled
+              className={cn(
+                "bg-muted text-muted-foreground font-bold rounded-full touch-manipulation",
+                isMobile ? "h-12 px-6 text-sm" : "h-14 px-8 text-lg"
+              )}
+            >
+              <Loader2 className={cn(isMobile ? "w-4 h-4 mr-1.5 animate-spin" : "w-5 h-5 mr-2 animate-spin")} />
+              {isOpponentPresent ? 'WAITING FOR OPPONENT...' : 'WAITING...'}
+            </Button>
+          )}
+          
+          {phase === 'countdown' && (
+            <Button
+              disabled
+              className={cn(
+                "bg-gradient-to-r from-primary to-destructive text-white font-bold rounded-full touch-manipulation animate-pulse",
+                isMobile ? "h-12 px-6 text-sm" : "h-14 px-8 text-lg"
+              )}
+            >
+              <Radio className={cn(isMobile ? "w-4 h-4 mr-1.5" : "w-5 h-5 mr-2")} />
+              STARTING...
+            </Button>
+          )}
+
+          {/* Live phase buttons */}
+          {phase === 'live' && !isStreaming && (
             <Button
               onClick={(e) => { e.stopPropagation(); onGoLive(); }}
               disabled={!canStart}
@@ -107,7 +162,9 @@ export const ContenderControlBar = memo(function ContenderControlBar({
               <Radio className={cn(isMobile ? "w-4 h-4 mr-1.5" : "w-5 h-5 mr-2")} />
               GO LIVE
             </Button>
-          ) : (
+          )}
+          
+          {phase === 'live' && isStreaming && (
             <Button
               onClick={(e) => { e.stopPropagation(); onEndStream(); }}
               variant="destructive"
