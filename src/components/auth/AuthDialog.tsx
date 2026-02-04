@@ -68,13 +68,11 @@ export function AuthDialog({
   };
 
   const handleArenaGateComplete = (result: ArenaGateResult) => {
-    setSignUpData(prev => ({
-      ...prev,
-      userType: 'barber',
-      countryCode: result.selectedCountry
-    }));
-    setArenaGateVerified(true);
+    // Account is already created inside Arena Gate!
+    // Just close the modal and dialog - auth state change will handle redirect
     setShowArenaGate(false);
+    setArenaGateVerified(true);
+    handleOpenChange(false);
   };
 
   const handleArenaGateClose = () => {
@@ -106,20 +104,13 @@ export function AuthDialog({
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Barbers MUST complete Arena Gate
-    if (signUpData.userType === 'barber' && !arenaGateVerified) {
-      toast.error('Please complete the Arena Gate verification');
+    // Barbers use Arena Gate for complete signup - redirect them there
+    if (signUpData.userType === 'barber') {
       setShowArenaGate(true);
       return;
     }
     
-    // Barbers MUST have country selected
-    if (signUpData.userType === 'barber' && !signUpData.countryCode) {
-      toast.error('Please complete nationality verification');
-      setShowArenaGate(true);
-      return;
-    }
-    
+    // Only fans reach here - simple signup flow
     setLoading(true);
     
     const { error } = await signUp(signUpData.email, signUpData.password, signUpData.displayName, signUpData.userType, signUpData.countryCode || undefined);
