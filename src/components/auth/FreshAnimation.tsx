@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Scissors, CheckCircle2 } from 'lucide-react';
+import { Scissors, CheckCircle2, Trophy, Flag } from 'lucide-react';
 
 interface FreshAnimationProps {
   show: boolean;
   countryCode: string;
   onComplete: () => void;
+  isFinalCelebration?: boolean;
 }
 
 const getCountryFlag = (countryCode: string) => {
@@ -14,15 +15,14 @@ const getCountryFlag = (countryCode: string) => {
   );
 };
 
-export const FreshAnimation = ({ show, countryCode, onComplete }: FreshAnimationProps) => {
+export const FreshAnimation = ({ show, countryCode, onComplete, isFinalCelebration = false }: FreshAnimationProps) => {
   useEffect(() => {
     if (show) {
-      // Simple verification success - NO confetti here (save for sign-up success)
-      // Auto-complete after animation
-      const timer = setTimeout(onComplete, 2000);
+      // Auto-complete after animation - longer for final celebration
+      const timer = setTimeout(onComplete, isFinalCelebration ? 3500 : 2000);
       return () => clearTimeout(timer);
     }
-  }, [show, onComplete]);
+  }, [show, onComplete, isFinalCelebration]);
 
   return (
     <AnimatePresence>
@@ -43,7 +43,7 @@ export const FreshAnimation = ({ show, countryCode, onComplete }: FreshAnimation
             {getCountryFlag(countryCode)}
           </motion.div>
 
-          {/* FRESH! text */}
+          {/* Main text - different for final vs intermediate */}
           <motion.div
             initial={{ scale: 0, opacity: 0 }}
             animate={{ 
@@ -57,11 +57,23 @@ export const FreshAnimation = ({ show, countryCode, onComplete }: FreshAnimation
             }}
             className="flex items-center gap-3 mb-4"
           >
-            <Scissors className="w-10 h-10 text-primary animate-pulse" />
-            <span className="text-5xl font-black bg-gradient-to-r from-primary via-orange-400 to-cyan-400 bg-clip-text text-transparent">
-              FRESH!
-            </span>
-            <Scissors className="w-10 h-10 text-primary animate-pulse" style={{ transform: 'scaleX(-1)' }} />
+            {isFinalCelebration ? (
+              <>
+                <Trophy className="w-10 h-10 text-primary animate-pulse" />
+                <span className="text-4xl md:text-5xl font-black bg-gradient-to-r from-primary via-orange-400 to-cyan-400 bg-clip-text text-transparent">
+                  FLAG CLAIMED!
+                </span>
+                <Trophy className="w-10 h-10 text-primary animate-pulse" />
+              </>
+            ) : (
+              <>
+                <Scissors className="w-10 h-10 text-primary animate-pulse" />
+                <span className="text-5xl font-black bg-gradient-to-r from-primary via-orange-400 to-cyan-400 bg-clip-text text-transparent">
+                  FRESH!
+                </span>
+                <Scissors className="w-10 h-10 text-primary animate-pulse" style={{ transform: 'scaleX(-1)' }} />
+              </>
+            )}
           </motion.div>
 
           {/* Verified badge */}
@@ -72,7 +84,9 @@ export const FreshAnimation = ({ show, countryCode, onComplete }: FreshAnimation
             className="flex items-center gap-2 text-cyan-400"
           >
             <CheckCircle2 className="w-5 h-5" />
-            <span className="text-sm font-medium">Nationality Verified</span>
+            <span className="text-sm font-medium">
+              {isFinalCelebration ? 'Account Created Successfully!' : 'Nationality Verified'}
+            </span>
           </motion.div>
 
           {/* Continue message */}
@@ -82,8 +96,24 @@ export const FreshAnimation = ({ show, countryCode, onComplete }: FreshAnimation
             transition={{ delay: 1.2 }}
             className="text-muted-foreground text-sm mt-8"
           >
-            Proceeding to sign up...
+            {isFinalCelebration 
+              ? 'Welcome to the World Cup of Barbering! 🏆' 
+              : 'Proceeding to sign up...'}
           </motion.p>
+
+          {/* Extra celebration elements for final */}
+          {isFinalCelebration && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 1.5, type: 'spring' }}
+              className="flex items-center gap-2 mt-4"
+            >
+              <Flag className="w-4 h-4 text-primary" />
+              <span className="text-xs text-primary font-medium">Check your email to confirm your account</span>
+              <Flag className="w-4 h-4 text-primary" />
+            </motion.div>
+          )}
         </motion.div>
       )}
     </AnimatePresence>

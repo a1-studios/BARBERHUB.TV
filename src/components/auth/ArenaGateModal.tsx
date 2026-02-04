@@ -5,9 +5,15 @@ import { Button } from '@/components/ui/button';
 import { FlagCarousel, getCountryFlag, CAROUSEL_COUNTRIES } from './FlagCarousel';
 import { ClipperSwipeVerifier } from './ClipperSwipeVerifier';
 import { FreshAnimation } from './FreshAnimation';
+import { ArenaGateProgressIndicator } from './ArenaGateProgressIndicator';
+import { ArenaGateCredentialsStep } from './ArenaGateCredentialsStep';
+import { ArenaGateBarberInfoStep } from './ArenaGateBarberInfoStep';
+import { ArenaGateInstagramStep } from './ArenaGateInstagramStep';
 import { SwipeMetrics, useGestureVerification } from '@/hooks/useGestureVerification';
 import { HapticFeedback } from '@/utils/hapticFeedback';
-import { getCountryCulturalData } from '@/utils/countryCelebration';
+import { getCountryCulturalData, triggerCountryCelebration } from '@/utils/countryCelebration';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export interface ArenaGateResult {
   selectedCountry: string;
@@ -21,12 +27,28 @@ interface ArenaGateModalProps {
   onComplete: (result: ArenaGateResult) => void;
 }
 
-type Step = 'select' | 'verify' | 'success';
+type Step = 'select' | 'verify' | 'credentials' | 'barber-info' | 'instagram' | 'success';
+
+interface FormData {
+  displayName: string;
+  email: string;
+  password: string;
+  phoneNumber: string;
+}
 
 export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalProps) => {
   const [step, setStep] = useState<Step>('select');
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [verificationToken, setVerificationToken] = useState<string>('');
+  
+  const [formData, setFormData] = useState<FormData>({
+    displayName: '',
+    email: '',
+    password: '',
+    phoneNumber: '',
+  });
   
   const { generateVerificationToken } = useGestureVerification();
 
@@ -46,33 +68,77 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
     if (!selectedCountry) return;
     
     const token = generateVerificationToken(selectedCountry, metrics);
-    setStep('success');
-    setShowCelebration(true);
+    setVerificationToken(token);
+    setStep('credentials');
+    HapticFeedback.follow();
   }, [selectedCountry, generateVerificationToken]);
 
   const handleSwipeFailed = (reason: string) => {
     console.log('Swipe failed:', reason);
-    // Hint is shown by the verifier component
+  };
+
+  const handleFormChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAccountCreation = async () => {
+    if (!selectedCountry) return;
+    
+    setLoading(true);
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { data, error } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            display_name: formData.displayName,
+            user_type: 'barber',
+            country_code: selectedCountry,
+            phone_number: formData.phoneNumber,
+          }
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (data.user) {
+        // SUCCESS! Show celebration
+        setStep('success');
+        setShowCelebration(true);
+        
+        // Fire MASSIVE country celebration - the real reward!
+        triggerCountryCelebration(selectedCountry);
+      }
+      
+    } catch (error: any) {
+      console.error('Sign up error:', error);
+      toast.error(error.message || 'Failed to create account');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCelebrationComplete = useCallback(() => {
     if (!selectedCountry) return;
     
-    const token = btoa(JSON.stringify({
-      country: selectedCountry,
-      timestamp: Date.now(),
-      verified: true,
-    }));
+    toast.success('Welcome to the Arena! Check your email to confirm your account.');
     
     onComplete({
       selectedCountry,
-      verificationToken: token,
+      verificationToken,
       verified: true,
     });
-  }, [selectedCountry, onComplete]);
+  }, [selectedCountry, verificationToken, onComplete]);
 
   const handleBack = () => {
-    setStep('select');
+    const stepOrder: Step[] = ['select', 'verify', 'credentials', 'barber-info', 'instagram', 'success'];
+    const currentIndex = stepOrder.indexOf(step);
+    if (currentIndex > 0) {
+      setStep(stepOrder[currentIndex - 1]);
+    }
   };
 
   if (!isOpen) return null;
@@ -114,9 +180,9 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
           </div>
 
           {/* Content */}
-          <div className="relative z-10 p-6 flex flex-col" style={{ height: '600px', maxHeight: '85vh' }}>
+          <div className="relative z-10 p-6 flex flex-col" style={{ height: '650px', maxHeight: '85vh' }}>
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Trophy className="w-6 h-6 text-primary" />
                 <span className="font-bold text-lg text-foreground">ARENA GATE</span>
@@ -131,13 +197,21 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
               </Button>
             </div>
 
+            {/* Progress Indicator */}
+            <ArenaGateProgressIndicator currentStep={step} />
+
             {/* Title */}
             <div className="text-center mb-4">
-              <h2 className="text-2xl font-black bg-gradient-to-r from-primary via-orange-400 to-cyan-400 bg-clip-text text-transparent mb-2">
+              <h2 className="text-2xl font-black bg-gradient-to-r from-primary via-orange-400 to-cyan-400 bg-clip-text text-transparent mb-1">
                 WORLD CUP OF BARBERING
               </h2>
               <p className="text-muted-foreground text-sm">
-                {step === 'select' ? 'Select your nation to represent' : 'Confirm with the signature swipe'}
+                {step === 'select' && 'Select your nation to represent'}
+                {step === 'verify' && 'Confirm with the signature swipe'}
+                {step === 'credentials' && 'Create your battle account'}
+                {step === 'barber-info' && 'Add your contact info'}
+                {step === 'instagram' && 'Join our community'}
+                {step === 'success' && 'Welcome to the Arena!'}
               </p>
             </div>
 
@@ -227,6 +301,35 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
                     </Button>
                   </motion.div>
                 )}
+
+                {step === 'credentials' && (
+                  <ArenaGateCredentialsStep
+                    displayName={formData.displayName}
+                    email={formData.email}
+                    password={formData.password}
+                    onChange={handleFormChange}
+                    onNext={() => setStep('barber-info')}
+                    onBack={() => setStep('verify')}
+                  />
+                )}
+
+                {step === 'barber-info' && (
+                  <ArenaGateBarberInfoStep
+                    phoneNumber={formData.phoneNumber}
+                    countryCode={selectedCountry || 'US'}
+                    onChange={handleFormChange}
+                    onNext={() => setStep('instagram')}
+                    onBack={() => setStep('credentials')}
+                  />
+                )}
+
+                {step === 'instagram' && (
+                  <ArenaGateInstagramStep
+                    onVerified={handleAccountCreation}
+                    onBack={() => setStep('barber-info')}
+                    isLoading={loading}
+                  />
+                )}
               </AnimatePresence>
             </div>
           </div>
@@ -236,6 +339,7 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
             show={showCelebration}
             countryCode={selectedCountry || 'US'}
             onComplete={handleCelebrationComplete}
+            isFinalCelebration={true}
           />
         </motion.div>
       </motion.div>

@@ -39,13 +39,11 @@ const LandingHero = () => {
   });
 
   const handleArenaGateComplete = (result: ArenaGateResult) => {
-    setSignUpData(prev => ({
-      ...prev,
-      userType: 'barber',
-      countryCode: result.selectedCountry
-    }));
-    setArenaGateVerified(true);
+    // Account is already created inside Arena Gate!
+    // Just close the modal and let auth state change handle redirect
     setShowArenaGate(false);
+    setArenaGateVerified(true);
+    // No need to set form data - account is already created
   };
 
   const handleArenaGateClose = () => {
@@ -73,20 +71,13 @@ const LandingHero = () => {
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Barbers MUST complete Arena Gate
-    if (signUpData.userType === 'barber' && !arenaGateVerified) {
-      toast.error('Please complete the Arena Gate verification');
+    // Barbers use Arena Gate for complete signup - redirect them there
+    if (signUpData.userType === 'barber') {
       setShowArenaGate(true);
       return;
     }
     
-    // Barbers MUST have country selected
-    if (signUpData.userType === 'barber' && !signUpData.countryCode) {
-      toast.error('Please complete nationality verification');
-      setShowArenaGate(true);
-      return;
-    }
-    
+    // Only fans reach here - simple signup flow
     setLoading(true);
     const { error } = await signUp(
       signUpData.email, 
@@ -98,10 +89,6 @@ const LandingHero = () => {
     setLoading(false);
     
     if (!error) {
-      // Fire MASSIVE celebration ONLY after successful barber sign-up!
-      if (signUpData.userType === 'barber' && signUpData.countryCode) {
-        triggerCountryCelebration(signUpData.countryCode);
-      }
       // User will be redirected by auth state change
     }
   };
