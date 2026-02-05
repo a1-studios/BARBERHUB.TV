@@ -3,8 +3,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SubscriptionBadge } from '@/components/SubscriptionBadge';
+import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
 import { Link } from 'react-router-dom';
-import { ExternalLink, Settings, Coins, Plus } from 'lucide-react';
+import { ExternalLink, Settings, Plus, ArrowDownToLine } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface BarberProfileHeaderProps {
   avatar_url?: string | null;
@@ -54,17 +56,36 @@ export function BarberProfileHeader({
     <Card className="relative overflow-hidden border-primary/20">
       <div className="absolute inset-0 bg-gradient-to-br from-background/90 via-background/80 to-primary/20" />
       
-      {/* Compact BB Display - Top Right */}
+      {/* Compact BB Display - Top Right with Rotating Coin */}
       {barberBucks !== undefined && (
-        <div className="absolute top-4 right-4 z-20 flex items-center gap-2 bg-background/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-cyan-500/20">
-          <Coins className="h-4 w-4 text-cyan-400" />
-          <span className="text-sm font-bold text-white">{barberBucks.toLocaleString()}</span>
-          <span className="text-xs text-muted-foreground">BB</span>
-          {onAddFundsClick && (
-            <Button size="sm" variant="ghost" className="h-6 w-6 p-0 hover:bg-cyan-500/20" onClick={onAddFundsClick}>
-              <Plus className="h-3 w-3 text-cyan-400" />
+        <div className="absolute top-4 right-4 z-20 flex items-center gap-3 bg-background/80 backdrop-blur-sm px-3 py-2 rounded-lg border border-cyan-500/20">
+          <RotatingBBCoin 
+            avatarUrl={avatar_url} 
+            displayName={display_name} 
+            size="xs" 
+            animate={true} 
+          />
+          <div className="flex flex-col">
+            <div className="flex items-baseline gap-1">
+              <span className="text-sm font-bold text-white">{barberBucks.toLocaleString()}</span>
+              <span className="text-xs text-cyan-400">BB</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            {onAddFundsClick && (
+              <Button size="sm" variant="ghost" className="h-6 w-6 p-0 hover:bg-cyan-500/20" onClick={onAddFundsClick}>
+                <Plus className="h-3 w-3 text-cyan-400" />
+              </Button>
+            )}
+            <Button 
+              size="sm" 
+              variant="ghost" 
+              className="h-6 w-6 p-0 hover:bg-primary/20" 
+              onClick={() => toast.info('Withdrawal requests are processed within 3-5 business days. Contact support to initiate a withdrawal.')}
+            >
+              <ArrowDownToLine className="h-3 w-3 text-primary" />
             </Button>
-          )}
+          </div>
         </div>
       )}
       

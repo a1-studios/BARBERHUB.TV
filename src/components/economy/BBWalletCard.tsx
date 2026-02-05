@@ -6,12 +6,32 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { AddFundsModal } from '@/components/AddFundsModal';
-import { Coins, Plus, TrendingUp, TrendingDown, History, Wallet } from 'lucide-react';
+import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
+import { Coins, Plus, TrendingUp, TrendingDown, History } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { useAuth } from '@/hooks/useAuth';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export const BBWalletCard = () => {
   const { barberBucks, transactions, isLoading, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
+  const { user } = useAuth();
   const [showHistory, setShowHistory] = useState(false);
+
+  // Fetch user profile for avatar
+  const { data: profile } = useQuery({
+    queryKey: ['user-profile-avatar', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_url, display_name')
+        .eq('user_id', user.id)
+        .single();
+      return data;
+    },
+    enabled: !!user?.id
+  });
 
   const getTransactionIcon = (type: string, amount: number) => {
     if (amount > 0) return <TrendingUp className="h-3 w-3 text-green-500" />;
@@ -54,7 +74,12 @@ export const BBWalletCard = () => {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-primary" />
+              <RotatingBBCoin 
+                avatarUrl={profile?.avatar_url} 
+                displayName={profile?.display_name} 
+                size="sm" 
+                animate={true} 
+              />
               <CardTitle className="text-lg">BB Wallet</CardTitle>
             </div>
             <Badge variant="outline" className="text-xs">
