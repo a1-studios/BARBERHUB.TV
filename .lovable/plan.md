@@ -1,220 +1,238 @@
 
-# Fix Notifications: Only Notify Recipients, Not Actors
+# BB Wallet Coin Redesign: Rotating Coin with Profile Avatar
 
-## Problem
+## Overview
 
-The user is receiving notifications for actions they perform themselves. For example, if User A follows User B, User A sees a notification about their own follow action. The notification should **only** go to User B (the barber being followed).
-
-## Root Cause Analysis
-
-Looking at the database:
-1. The trigger functions (`notify_on_new_follow`, `notify_on_new_like`, etc.) correctly send notifications to `NEW.creator_id` (the recipient)
-2. However, they don't check if the actor and recipient are the **same person** (edge case where someone interacts with their own profile)
-3. Data shows some notifications where `user_id` equals the actor's ID, indicating self-interactions occurred before the `isOwner` check was added
-
-## Solution
-
-Add a guard clause in each notification trigger function to skip notification creation when the **actor** is the **same as the recipient**. This ensures:
-- User A follows User B → User B gets notified (correct)
-- User A follows User A → No notification created (edge case prevented)
+Create an immersive 3D-style rotating coin component that serves as the Barber Bucks (BB) wallet display throughout the app. The coin:
+- **Front**: Shows the new BB logo (uploaded image)
+- **Back**: Shows the user's profile avatar
+- Continuously rotates with a smooth CSS/Framer Motion animation
+- All users see their wallet on their profile
+- Only barbers have a "Withdraw" option to convert BB to real money
 
 ---
 
-## Technical Changes
+## Visual Design
 
-### New Migration File
-
-Create a migration to update the trigger functions with self-action guards:
-
-```sql
--- Prevent self-follow notifications
-CREATE OR REPLACE FUNCTION notify_on_new_follow()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_follower_name TEXT;
-BEGIN
-  -- Skip if user is following themselves (edge case)
-  IF NEW.follower_id = NEW.creator_id THEN
-    RETURN NEW;
-  END IF;
-
-  -- Get follower's display name
-  SELECT display_name INTO v_follower_name
-  FROM profiles
-  WHERE user_id = NEW.follower_id;
-  
-  -- Create notification for the creator/barber
-  INSERT INTO notifications (user_id, type, title, message, data)
-  VALUES (
-    NEW.creator_id,
-    'new_follower',
-    'New Follower! 🎉',
-    COALESCE(v_follower_name, 'Someone') || ' started following you',
-    jsonb_build_object('follower_id', NEW.follower_id, 'follow_id', NEW.id)
-  );
-  
-  RETURN NEW;
-END;
-$$;
-
--- Prevent self-like notifications  
-CREATE OR REPLACE FUNCTION notify_on_new_like()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_liker_name TEXT;
-BEGIN
-  -- Skip if user is liking themselves (edge case)
-  IF NEW.user_id = NEW.creator_id THEN
-    RETURN NEW;
-  END IF;
-
-  -- Get liker's display name
-  SELECT display_name INTO v_liker_name
-  FROM profiles
-  WHERE user_id = NEW.user_id;
-  
-  -- Create notification for the creator/barber
-  INSERT INTO notifications (user_id, type, title, message, data)
-  VALUES (
-    NEW.creator_id,
-    'new_like',
-    'New Like! ❤️',
-    COALESCE(v_liker_name, 'Someone') || ' liked your profile',
-    jsonb_build_object('liker_id', NEW.user_id, 'like_id', NEW.id)
-  );
-  
-  RETURN NEW;
-END;
-$$;
-
--- Prevent self-subscription notifications
-CREATE OR REPLACE FUNCTION notify_on_new_subscription()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_subscriber_name TEXT;
-BEGIN
-  -- Skip if user is subscribing to themselves (edge case)
-  IF NEW.user_id = NEW.creator_id THEN
-    RETURN NEW;
-  END IF;
-
-  -- Get subscriber's display name
-  SELECT display_name INTO v_subscriber_name
-  FROM profiles
-  WHERE user_id = NEW.user_id;
-  
-  -- Create notification for the creator/barber
-  INSERT INTO notifications (user_id, type, title, message, data)
-  VALUES (
-    NEW.creator_id,
-    'new_subscriber',
-    'New Subscriber! 🌟',
-    COALESCE(v_subscriber_name, 'Someone') || ' subscribed to you',
-    jsonb_build_object('subscriber_id', NEW.user_id, 'subscription_id', NEW.id)
-  );
-  
-  RETURN NEW;
-END;
-$$;
-
--- Prevent self-donation notifications
-CREATE OR REPLACE FUNCTION notify_on_new_donation()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_donor_name TEXT;
-  v_amount_display TEXT;
-BEGIN
-  -- Skip if user is donating to themselves (edge case)
-  IF NEW.fan_id = NEW.creator_id THEN
-    RETURN NEW;
-  END IF;
-
-  -- Only notify on paid donations
-  IF NEW.status = 'paid' THEN
-    -- Get donor's display name
-    SELECT display_name INTO v_donor_name
-    FROM profiles
-    WHERE user_id = NEW.fan_id;
-    
-    -- Format amount (convert cents to dollars)
-    v_amount_display := '$' || (NEW.amount_cents::DECIMAL / 100)::TEXT;
-    
-    -- Create notification for the creator/barber
-    INSERT INTO notifications (user_id, type, title, message, data)
-    VALUES (
-      NEW.creator_id,
-      'new_donation',
-      'New Donation! 💰',
-      COALESCE(v_donor_name, 'Someone') || ' donated ' || v_amount_display || 
-      CASE WHEN NEW.message IS NOT NULL THEN ': "' || LEFT(NEW.message, 50) || '"' ELSE '' END,
-      jsonb_build_object(
-        'donor_id', NEW.fan_id, 
-        'donation_id', NEW.id, 
-        'amount_cents', NEW.amount_cents,
-        'message', NEW.message
-      )
-    );
-  END IF;
-  
-  RETURN NEW;
-END;
-$$;
-```
-
-### Optional: Cleanup Existing Invalid Notifications
-
-Add a one-time cleanup query:
-
-```sql
--- Delete self-action notifications that were incorrectly created
-DELETE FROM notifications
-WHERE type = 'new_like' 
-  AND user_id = (data->>'liker_id')::uuid;
-
-DELETE FROM notifications
-WHERE type = 'new_follower' 
-  AND user_id = (data->>'follower_id')::uuid;
-
-DELETE FROM notifications
-WHERE type = 'new_subscriber' 
-  AND user_id = (data->>'subscriber_id')::uuid;
-
-DELETE FROM notifications
-WHERE type = 'new_donation' 
-  AND user_id = (data->>'donor_id')::uuid;
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                     ROTATING BB COIN                             │
+│                                                                  │
+│  ┌────────────┐     flip     ┌────────────┐                     │
+│  │  ┌──────┐  │    ←────→    │  ┌──────┐  │                     │
+│  │  │  BB  │  │              │  │ 👤   │  │                     │
+│  │  │ LOGO │  │              │  │AVATAR│  │                     │
+│  │  └──────┘  │              │  └──────┘  │                     │
+│  │  FRONT     │              │   BACK     │                     │
+│  └────────────┘              └────────────┘                     │
+│                                                                  │
+│  Animation: Y-axis rotation (0° → 360°) every 6 seconds          │
+│  Perspective: 1000px for 3D depth effect                         │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Summary
+## Component Architecture
 
-| File | Action | Description |
-|------|--------|-------------|
-| `supabase/migrations/[timestamp]_fix_notification_triggers.sql` | **CREATE** | Add self-action guards to all notification trigger functions |
+### New Components
 
-## Result
+| Component | Purpose |
+|-----------|---------|
+| `src/components/economy/RotatingBBCoin.tsx` | The 3D rotating coin component with BB logo front and avatar back |
+| `src/components/economy/BBWalletWidget.tsx` | Compact wallet widget for profile pages (coin + balance + actions) |
 
-| Scenario | Before | After |
-|----------|--------|-------|
-| User A follows User B | User B notified ✓ | User B notified ✓ |
-| User A follows User A | User A notified ✗ | No notification ✓ |
-| User A likes User B | User B notified ✓ | User B notified ✓ |
-| User A subscribes to User B | User B notified ✓ | User B notified ✓ |
+### Modified Components
 
-This ensures notifications only go to the **recipient** of an action, never to the **actor**.
+| Component | Changes |
+|-----------|---------|
+| `src/pages/Profile.tsx` | Add BBWalletWidget for fans (barbers already have wallet via BarberProfileHeader) |
+| `src/components/barber/BarberProfileHeader.tsx` | Replace static Coins icon with RotatingBBCoin |
+| `src/components/economy/BBWalletCard.tsx` | Update to use RotatingBBCoin instead of Wallet icon |
+| `src/components/AddFundsModal.tsx` | Replace Zap icon header with RotatingBBCoin |
+
+---
+
+## Technical Implementation
+
+### 1. RotatingBBCoin Component
+
+```tsx
+interface RotatingBBCoinProps {
+  avatarUrl?: string | null;
+  displayName?: string;
+  size?: 'xs' | 'sm' | 'md' | 'lg';  // 24px, 32px, 48px, 64px
+  animate?: boolean;                  // Toggle rotation animation
+  onClick?: () => void;
+}
+```
+
+Key Features:
+- Uses CSS `transform-style: preserve-3d` for true 3D flip effect
+- Front face: BB logo image (imported from assets)
+- Back face: User's avatar with fallback initial
+- Framer Motion for smooth continuous Y-axis rotation
+- Orange metallic border matching the coin design
+- Configurable sizes for different contexts
+
+### 2. BBWalletWidget Component
+
+```tsx
+interface BBWalletWidgetProps {
+  isBarber: boolean;
+  barberBucks: number;
+  avatarUrl?: string | null;
+  displayName?: string;
+  onAddFunds: () => void;
+  onWithdraw?: () => void;  // Only for barbers
+}
+```
+
+Features:
+- Centered rotating coin as the visual focus
+- Balance display below coin
+- "Add Funds" button for all users
+- "Withdraw" button only visible for barbers
+- Compact card design for profile integration
+
+### 3. Withdraw Feature (Barbers Only)
+
+- New button in BBWalletWidget visible only when `isBarber === true`
+- Opens a modal to request BB → USD conversion
+- Placeholder for now - actual Stripe payout integration can be Phase 2
+- Show toast: "Withdrawal requests are processed within 3-5 business days"
+
+---
+
+## File Changes Summary
+
+### New Files
+
+| File | Description |
+|------|-------------|
+| `src/assets/bb-coin-logo.png` | Copy uploaded BB coin image to assets |
+| `src/components/economy/RotatingBBCoin.tsx` | 3D rotating coin component |
+| `src/components/economy/BBWalletWidget.tsx` | Profile wallet widget with coin |
+
+### Modified Files
+
+| File | Changes |
+|------|---------|
+| `src/pages/Profile.tsx` | Add BBWalletWidget card for fans in personal info section |
+| `src/components/barber/BarberProfileHeader.tsx` | Replace Coins icon with RotatingBBCoin in BB display |
+| `src/components/economy/BBWalletCard.tsx` | Use RotatingBBCoin instead of Wallet icon |
+| `src/components/AddFundsModal.tsx` | Use RotatingBBCoin in header instead of Zap icon |
+
+---
+
+## CSS Animation Details
+
+```css
+/* 3D Coin Container */
+.coin-container {
+  perspective: 1000px;
+}
+
+.coin {
+  transform-style: preserve-3d;
+  animation: rotate-coin 6s linear infinite;
+}
+
+@keyframes rotate-coin {
+  0% { transform: rotateY(0deg); }
+  100% { transform: rotateY(360deg); }
+}
+
+.coin-front, .coin-back {
+  backface-visibility: hidden;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+.coin-back {
+  transform: rotateY(180deg);
+}
+```
+
+Using Framer Motion for React integration:
+```tsx
+<motion.div
+  animate={{ rotateY: 360 }}
+  transition={{
+    duration: 6,
+    repeat: Infinity,
+    ease: "linear"
+  }}
+  style={{ transformStyle: "preserve-3d" }}
+>
+  {/* Front & Back faces */}
+</motion.div>
+```
+
+---
+
+## Profile Wallet Placement
+
+### Fan Users
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ Profile Page - Fan                                               │
+├─────────────────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ Personal Information Card                                   │ │
+│ │ ...existing fields...                                       │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│ ┌─────────────────────────────────────────────────────────────┐ │
+│ │ BB Wallet Card (NEW)                                        │ │
+│ │                                                             │ │
+│ │      ┌─────────┐                                            │ │
+│ │      │ 🪙      │  ← Rotating coin                           │ │
+│ │      │ BB/👤   │                                            │ │
+│ │      └─────────┘                                            │ │
+│ │                                                             │ │
+│ │      1,250 BB                                               │ │
+│ │                                                             │ │
+│ │   [Add Funds]                                               │ │
+│ │                                                             │ │
+│ └─────────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Barber Users
+
+Already have wallet display in BarberProfileHeader - will be enhanced with rotating coin instead of static Coins icon. Additionally, barbers get a "Withdraw" button.
+
+---
+
+## Coin Size Reference
+
+| Size | Pixels | Use Case |
+|------|--------|----------|
+| `xs` | 24px | Inline text, headers, compact displays |
+| `sm` | 32px | Buttons, list items |
+| `md` | 48px | Cards, modal headers |
+| `lg` | 64px | Profile wallet focal point |
+
+---
+
+## Implementation Order
+
+1. Copy BB coin logo image to `src/assets/bb-coin-logo.png`
+2. Create `RotatingBBCoin.tsx` component with 3D CSS animation
+3. Create `BBWalletWidget.tsx` for profile integration
+4. Update `Profile.tsx` to show wallet for fans
+5. Update `BarberProfileHeader.tsx` to use rotating coin + add Withdraw button for barbers
+6. Update `BBWalletCard.tsx` to use rotating coin
+7. Update `AddFundsModal.tsx` header to use rotating coin
+
+---
+
+## Future Considerations
+
+- **Phase 2**: Actual Stripe Connect payout integration for barber withdrawals
+- The coin animation can be paused on hover to show details
+- Consider adding particle effects or glow on balance changes
