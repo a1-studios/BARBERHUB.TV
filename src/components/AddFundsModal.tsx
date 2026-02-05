@@ -8,8 +8,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { AlertCircle, User, Globe, X, Zap } from "lucide-react";
+import { AlertCircle, User, Globe, X } from "lucide-react";
 import { CountrySelector } from "./CountrySelector";
+import { RotatingBBCoin } from "./economy/RotatingBBCoin";
+import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 
 interface AddFundsModalProps {
@@ -29,6 +31,21 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
   });
   const [loading, setLoading] = useState(false);
   const [checkingProfile, setCheckingProfile] = useState(false);
+
+  // Fetch user profile for avatar
+  const { data: userProfile } = useQuery({
+    queryKey: ['user-profile-modal', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_url, display_name')
+        .eq('user_id', user.id)
+        .single();
+      return data;
+    },
+    enabled: !!user?.id && isOpen
+  });
 
   useEffect(() => {
     setMounted(true);
@@ -142,10 +159,12 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
             
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Zap className="h-4 w-4 text-cyan" />
-                  <div className="absolute inset-0 blur-sm bg-cyan/30 rounded-full" />
-                </div>
+                <RotatingBBCoin 
+                  avatarUrl={userProfile?.avatar_url} 
+                  displayName={userProfile?.display_name || profileData.display_name} 
+                  size="sm" 
+                  animate={true} 
+                />
                 <h3 className="text-base font-bold">
                   <span className="text-cyan">BB</span>
                   <span className="text-foreground ml-1">Store</span>

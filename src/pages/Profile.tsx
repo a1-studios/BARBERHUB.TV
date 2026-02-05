@@ -14,9 +14,10 @@ import { toast } from 'sonner';
 import { BackButton } from '@/components/ui/BackButton';
 import { RoleBadge } from '@/components/RoleBadge';
 import { EmptyState } from '@/components/EmptyState';
-import { Scissors, Users, Trophy, Plus, User, Loader2, Globe, Edit3, X, Settings, Upload, Zap, CheckCircle, Clock, Award, Heart, Bell, DollarSign, Coins, Lock } from 'lucide-react';
+import { Scissors, Users, Trophy, Plus, User, Loader2, Globe, Edit3, X, Settings, Upload, CheckCircle, Clock, Award, Heart, Bell, DollarSign, Lock } from 'lucide-react';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { AddFundsModal } from '@/components/AddFundsModal';
+import { BBWalletWidget } from '@/components/economy/BBWalletWidget';
 import { Link, useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
 import { CountrySelector } from '@/components/CountrySelector';
@@ -430,6 +431,17 @@ const Profile = () => {
                   </form>
                 </CardContent>
               </Card>
+            )}
+            
+            {/* BB Wallet Widget - For fans only (barbers have it in header) */}
+            {!isBarber && (
+              <BBWalletWidget
+                isBarber={false}
+                barberBucks={barberBucks}
+                avatarUrl={profile?.avatar_url}
+                displayName={profile?.display_name}
+                onAddFunds={() => setShowAddFundsModal(true)}
+              />
             )}
           </div>
 
