@@ -58,9 +58,7 @@ serve(async (req) => {
 
     console.log("Token received - length:", token.length, "first 10 chars:", token.substring(0, 10));
 
-    // Validate JWT in an Edge-safe way.
-    // getUser() can still attempt to read a stored session in some runtimes; getClaims(jwt)
-    // verifies the token against Supabase signing keys and returns claims.
+    // Validate JWT via server-side getUser() — more reliable than getClaims() in edge runtime
     const supabaseAuth = createClient(
       supabaseUrl,
       Deno.env.get("SUPABASE_ANON_KEY")!,
@@ -70,17 +68,17 @@ serve(async (req) => {
       }
     );
 
-    console.log("AUTH_STRATEGY=CLAIMS_V2");
+    console.log("AUTH_STRATEGY=GET_USER");
 
-    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
-    const userId = claimsData?.claims?.sub;
+    const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser();
+    const userId = authUser?.id;
 
-    if (claimsError || !userId) {
+    if (authError || !userId) {
       console.error(
-        "Auth claims error:",
-        claimsError?.message,
+        "Auth error:",
+        authError?.message,
         "Code:",
-        (claimsError as any)?.code
+        (authError as any)?.code
       );
       return new Response(
         JSON.stringify({ error: "Invalid authentication. Please sign in again." }),
@@ -88,7 +86,6 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Authenticated user (claims.sub): ${userId}`);
     console.log(`Authenticated user: ${userId}`);
 
     // Create service role client for database operations
