@@ -54,6 +54,11 @@ const SignUpForm = ({ onSuccess, onSwitchToSignIn }: SignUpFormProps) => {
       return false;
     }
 
+    if (!formData.countryCode) {
+      toast.error('Please select your country');
+      return false;
+    }
+
     return true;
   };
 
@@ -299,7 +304,7 @@ const SignUpForm = ({ onSuccess, onSwitchToSignIn }: SignUpFormProps) => {
 
           {/* Country Selection */}
           <div className="space-y-2">
-            <Label htmlFor="country">Country (optional)</Label>
+            <Label htmlFor="country">Country *</Label>
             <CountrySelector
               value={formData.countryCode}
               onChange={(countryCode) => setFormData(prev => ({ ...prev, countryCode }))}
