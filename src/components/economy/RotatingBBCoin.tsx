@@ -67,12 +67,7 @@ const AvatarFace = ({
   initial: string;
   animate: boolean;
 }) => {
-  const rimWidth = Math.max(1, pixelSize * 0.04);
-  const innerRingWidth = Math.max(1, pixelSize * 0.02);
-  const bronzeGradient =
-    'linear-gradient(135deg, #CD7F32 0%, #F5A623 25%, #CD7F32 50%, #8B4513 75%, #CD7F32 100%)';
-  const darkMetallic =
-    'linear-gradient(135deg, #2D1F1F 0%, #4A3232 50%, #2D1F1F 100%)';
+  const rimWidth = Math.max(2, pixelSize * 0.05);
 
   return (
     <div
@@ -80,47 +75,41 @@ const AvatarFace = ({
       style={{
         backfaceVisibility: 'hidden',
         transform: 'rotateY(180deg)',
-        background: bronzeGradient,
-        padding: rimWidth,
         boxShadow: `
           0 4px 12px rgba(0,0,0,0.4),
-          0 2px 4px rgba(0,0,0,0.2),
-          inset 0 2px 4px rgba(255,255,255,0.2),
+          inset 0 2px 4px rgba(255,255,255,0.15),
           inset 0 -2px 4px rgba(0,0,0,0.3)
         `,
       }}
     >
-      {/* Inner ring */}
-      <div
-        className="w-full h-full rounded-full"
-        style={{
-          background: darkMetallic,
-          padding: innerRingWidth,
-          boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.5)',
-        }}
-      >
-        {/* Center – avatar */}
-        <div
-          className="w-full h-full rounded-full overflow-hidden relative"
-          style={{
-            background: 'linear-gradient(145deg, #1A1A1A 0%, #0D0D0D 100%)',
-            boxShadow: 'inset 0 2px 6px rgba(0,0,0,0.6)',
-          }}
+      {/* Avatar fills edge-to-edge, matching front face */}
+      <Avatar className="w-full h-full">
+        <AvatarImage src={avatarUrl || undefined} className="object-cover" />
+        <AvatarFallback
+          className="bg-gradient-to-br from-primary/40 to-primary/20 text-primary-foreground font-bold"
+          style={{ fontSize: pixelSize * 0.3 }}
         >
-          <Avatar className="w-full h-full">
-            <AvatarImage src={avatarUrl || undefined} className="object-cover" />
-            <AvatarFallback
-              className="bg-gradient-to-br from-primary/40 to-primary/20 text-primary-foreground font-bold"
-              style={{ fontSize: pixelSize * 0.25 }}
-            >
-              {initial}
-            </AvatarFallback>
-          </Avatar>
+          {initial}
+        </AvatarFallback>
+      </Avatar>
 
-          <SpecularHighlight />
-        </div>
-      </div>
+      {/* Gold rim overlay – decorative only, doesn't shrink content */}
+      <div
+        className="absolute inset-0 rounded-full pointer-events-none"
+        style={{
+          border: `${rimWidth}px solid transparent`,
+          borderImage: 'linear-gradient(135deg, #CD7F32, #F5C518, #CD7F32, #8B4513, #CD7F32) 1',
+          borderRadius: '50%',
+          backgroundClip: 'padding-box',
+          boxShadow: `
+            inset 0 0 0 ${rimWidth}px rgba(205,127,50,0.6),
+            inset 0 2px 4px rgba(255,255,255,0.2),
+            inset 0 -2px 4px rgba(0,0,0,0.3)
+          `,
+        }}
+      />
 
+      <SpecularHighlight />
       <ShineSweep animate={animate} />
     </div>
   );
