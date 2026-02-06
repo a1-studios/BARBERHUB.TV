@@ -271,16 +271,6 @@ export const DynamicBattleHero = () => {
       {/* Full viewport height on mobile, fixed aspect ratio on larger screens */}
       <div className="w-full h-[calc(100vh-5rem)] sm:h-auto sm:aspect-[2/1] lg:aspect-[21/9] bg-card sm:rounded-xl shadow-2xl border-0 sm:border border-cyan/20 overflow-hidden relative">
         
-        {/* Demo Mode Badge */}
-        {showDemoMode && (
-          <motion.div 
-            className="absolute top-3 left-1/2 -translate-x-1/2 z-30 px-3 py-1 rounded-full bg-gradient-to-r from-primary to-cyan text-white text-xs font-bold shadow-lg"
-            animate={{ scale: [1, 1.05, 1] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          >
-            ⚡ DEMO BATTLE ⚡
-          </motion.div>
-        )}
         
         <div className="h-full flex flex-col sm:flex-row">
           {/* Top/Left Side - Barber 1 */}
