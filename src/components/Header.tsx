@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Plus, User, LogOut, Sparkles, Zap, Scissors, Swords, Crown, ChevronDown, History } from 'lucide-react';
+import { Plus, User, LogOut, Sparkles, Zap, Scissors, Swords, Crown, History } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import barberPole from '@/assets/barber-pole.png';
 import { cn } from '@/lib/utils';
@@ -263,51 +263,24 @@ const Header = () => {
 
           {/* Right Side - Barber Bucks Balance Dropdown */}
           <div className="relative" ref={bbDropdownRef}>
-            <button
+            <RotatingBBCoin
+              balanceText={barberBucks.toLocaleString()}
+              size="xs"
+              animate={true}
               onClick={() => setBbDropdownOpen(!bbDropdownOpen)}
-              className={cn(
-                "flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all duration-200",
-                "bg-gradient-to-r from-primary/20 to-cyan/10",
-                "border border-primary/40 hover:border-cyan/40",
-                "hover:shadow-[0_0_8px_rgba(0,217,255,0.3)]",
-                bbDropdownOpen && "border-cyan/50 shadow-[0_0_8px_rgba(0,217,255,0.3)]"
-              )}
-              aria-label="Barber Bucks menu"
-            >
-              <RotatingBBCoin
-                avatarUrl={userProfile?.avatar_url}
-                displayName={userProfile?.display_name || ''}
-                size="xs"
-                animate={true}
-              />
-              <span className="text-sm font-semibold text-primary tabular-nums">
-                {barberBucks.toLocaleString()}
-              </span>
-              <ChevronDown className={cn(
-                "h-3 w-3 text-muted-foreground transition-transform duration-200",
-                bbDropdownOpen && "rotate-180"
-              )} />
-            </button>
+            />
 
             {/* BB Dropdown Menu */}
             {bbDropdownOpen && (
               <div className="absolute top-full right-0 mt-2 z-50 animate-scale-in">
-                <div className="w-48 bg-card/95 backdrop-blur-sm border border-border/50 rounded-lg shadow-lg overflow-hidden">
+                <div className="w-48 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
                   {/* Balance Header */}
-                  <div className="px-3 py-3 bg-gradient-to-r from-primary/10 to-cyan/5 border-b border-border/30 flex items-center gap-3">
-                    <RotatingBBCoin
-                      avatarUrl={userProfile?.avatar_url}
-                      displayName={userProfile?.display_name || ''}
-                      size="sm"
-                      animate={true}
-                    />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Your Balance</p>
-                      <p className="text-lg font-bold">
-                        <span className="text-primary">{barberBucks.toLocaleString()}</span>
-                        <span className="text-cyan text-sm ml-1">BB</span>
-                      </p>
-                    </div>
+                  <div className="px-3 py-3 bg-primary/10 border-b border-border/30">
+                    <p className="text-xs text-muted-foreground">Your Balance</p>
+                    <p className="text-lg font-bold">
+                      <span className="text-primary">{barberBucks.toLocaleString()}</span>
+                      <span className="text-cyan text-sm ml-1">BB</span>
+                    </p>
                   </div>
                   
                   {/* Actions */}
