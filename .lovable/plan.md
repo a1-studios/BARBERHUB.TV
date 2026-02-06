@@ -1,19 +1,18 @@
 
 
-# Fix Back Face Avatar Size to Match Front Face
+# Fix Back Face Avatar Rendering & Sizing
 
 ## Problem
 
-The back face of the coin (user avatar) appears smaller than the front face (BB logo) because of nested CSS padding layers:
+The coin's back face (user profile) is not rendering correctly — the avatar/fallback content appears as a tiny golden circle with no visible content. Two issues cause this:
 
-- **Front face**: Image fills the entire coin face edge-to-edge using `inset-0` + `object-cover`
-- **Back face**: Has `padding: 4%` (rim) + `padding: 2%` (inner ring) = avatar is ~12% smaller overall
+1. **Radix Avatar defaults fight the layout**: The Avatar component has hardcoded `h-10 w-10` (40px) and `shrink-0` classes. While `tailwind-merge` handles the width/height override, `shrink-0` remains and can prevent proper sizing in flex contexts within 3D transforms.
 
-This creates a visible size mismatch when the coin rotates.
+2. **Percentage sizing breaks inside 3D transforms**: The back face uses `transform: rotateY(180deg)` inside a `preserve-3d` container. CSS `w-full`/`h-full` can behave unpredictably in this context because the parent's computed dimensions may not propagate correctly through 3D transform boundaries.
 
 ## Solution
 
-Restructure the back face to match the front face approach: render the avatar edge-to-edge as the primary content, then overlay a thin gold rim border **on top** instead of using padding to shrink the content inward. This way both faces occupy the exact same visual area.
+Replace all percentage-based sizing in the `AvatarFace` component with explicit pixel values calculated from `pixelSize`, and override the Avatar's `shrink-0` class.
 
 ---
 
@@ -21,61 +20,78 @@ Restructure the back face to match the front face approach: render the avatar ed
 
 ### File: `src/components/economy/RotatingBBCoin.tsx`
 
-**Rewrite the `AvatarFace` component:**
+**Changes to `AvatarFace` component:**
 
-Current structure (shrinks content):
-```text
-Outer div (padding: 4%) 
-  Inner ring div (padding: 2%)
-    Center div
-      Avatar (shrunk by ~12%)
-```
+1. **Set explicit pixel dimensions on the Avatar root** instead of `w-full h-full`:
+   ```tsx
+   <Avatar
+     className="rounded-full"
+     style={{ width: pixelSize, height: pixelSize, flexShrink: 1 }}
+   >
+   ```
+   Using inline `style` with exact pixel values bypasses both the Radix default `h-10 w-10` and the `shrink-0` class. This guarantees the Avatar fills the coin face regardless of 3D transform context.
 
-New structure (full-size content with overlay border):
-```text
-Outer div (no padding, same as front face)
-  Avatar (fills entire face, object-cover)
-  Gold rim overlay (absolute, pointer-events-none, border only)
-  Specular highlight overlay
-  Shine sweep overlay
-```
+2. **Set explicit pixel dimensions on AvatarImage and AvatarFallback**:
+   ```tsx
+   <AvatarImage
+     src={avatarUrl || undefined}
+     className="object-cover"
+     style={{ width: pixelSize, height: pixelSize }}
+   />
+   <AvatarFallback
+     className="flex items-center justify-center bg-gradient-to-br from-amber-800 to-amber-950 text-amber-200 font-bold"
+     style={{ width: pixelSize, height: pixelSize, fontSize: pixelSize * 0.35 }}
+   >
+     {initial}
+   </AvatarFallback>
+   ```
 
-Key changes:
-1. Remove `padding: rimWidth` from outer container -- use `inset-0` like the front face
-2. Remove the inner ring `div` wrapper entirely
-3. Render the Avatar at full size with `object-cover` to fill the coin face
-4. Add a circular gold border as an overlay using `border` + `box-shadow` on an absolutely positioned div (pointer-events-none) -- this gives the coin edge look without shrinking the avatar
-5. Keep the fallback initial letter for users without a profile photo
+3. **Add explicit dimensions to the back face container div**:
+   ```tsx
+   <div
+     className="absolute rounded-full overflow-hidden"
+     style={{
+       width: pixelSize,
+       height: pixelSize,
+       top: 0,
+       left: 0,
+       backfaceVisibility: 'hidden',
+       transform: 'rotateY(180deg)',
+       ...
+     }}
+   >
+   ```
+   Replace `inset-0` with explicit `width`/`height`/`top`/`left` to avoid percentage resolution issues in 3D space.
 
-The back face will now match the front face in visual size while still showing the gold rim as a decorative overlay.
+4. **Same explicit dimensions for the rim overlay div**:
+   ```tsx
+   <div
+     className="absolute rounded-full pointer-events-none"
+     style={{
+       width: pixelSize,
+       height: pixelSize,
+       top: 0,
+       left: 0,
+       boxShadow: ...
+     }}
+   />
+   ```
+
+These changes ensure every element in the back face stack uses concrete pixel values that work correctly regardless of CSS 3D transform context.
 
 ---
 
-## Visual Comparison
+## Why This Works
 
-**Before (mismatched sizes):**
-```text
-FRONT (full)          BACK (smaller)
-┌──────────────┐      ┌──────────────┐
-│              │      │  ┌────────┐  │
-│   BB LOGO    │      │  │ Avatar │  │
-│  (edge-to-  │      │  │(shrunk)│  │
-│   edge)      │      │  └────────┘  │
-│              │      │   rim+ring   │
-└──────────────┘      └──────────────┘
-```
+| Element | Before (broken) | After (fixed) |
+|---------|-----------------|---------------|
+| Back face container | `className="absolute inset-0"` (percentage-based) | `style={{ width: pixelSize, height: pixelSize }}` (pixel-based) |
+| Avatar root | `className="w-full h-full"` + Radix `shrink-0` fighting | `style={{ width: pixelSize, height: pixelSize, flexShrink: 1 }}` |
+| AvatarImage | `className="w-full h-full"` (relative to broken parent) | `style={{ width: pixelSize, height: pixelSize }}` |
+| AvatarFallback | `className="w-full h-full"` (relative to broken parent) | `style={{ width: pixelSize, height: pixelSize }}` |
+| Rim overlay | `className="absolute inset-0"` | `style={{ width: pixelSize, height: pixelSize }}` |
 
-**After (matched sizes):**
-```text
-FRONT (full)          BACK (full)
-┌──────────────┐      ┌──────────────┐
-│              │      │              │
-│   BB LOGO    │      │   AVATAR     │
-│  (edge-to-  │      │  (edge-to-  │
-│   edge)      │      │   edge)      │
-│              │      │  + rim overlay│
-└──────────────┘      └──────────────┘
-```
+All elements now use the same `pixelSize` value that drives the front face, guaranteeing both faces render at identical dimensions.
 
 ---
 
@@ -83,7 +99,6 @@ FRONT (full)          BACK (full)
 
 | File | Change |
 |------|--------|
-| `src/components/economy/RotatingBBCoin.tsx` | Rewrite `AvatarFace` to render avatar full-size with gold rim as an overlay instead of padding-based shrinking |
+| `src/components/economy/RotatingBBCoin.tsx` | Replace percentage-based sizing with explicit pixel dimensions in `AvatarFace` component |
 
-No changes to any consumer components -- props stay identical.
-
+No changes to consumer components or the Avatar UI component.
