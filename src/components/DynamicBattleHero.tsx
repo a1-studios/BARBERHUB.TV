@@ -9,7 +9,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { Heart, Users, Eye, Compass } from "lucide-react";
 import { MobileVoteCenter } from "@/components/battles/MobileVoteCenter";
-import { NationBanner } from "@/components/battles/NationBanner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -284,26 +283,16 @@ export const DynamicBattleHero = () => {
         )}
         
         <div className="h-full flex flex-col sm:flex-row">
-          {/* Left Nation Banner - desktop only */}
-          <NationBanner
-            countryCode={barber1.country_code || 'US'}
-            barberName={barber1.display_name || barber1.name}
-            side="left"
-            isActive={isActiveBattle}
-          />
-
           {/* Top/Left Side - Barber 1 */}
           <div className="flex-1 relative overflow-hidden min-h-0">
-            {/* Flag Background - mobile only */}
-            <div className="sm:hidden absolute inset-0 animate-pulse-slow" style={{
+            {/* Flag Background */}
+            <div className="absolute inset-0 animate-pulse-slow" style={{
             backgroundImage: `url(${getFlagImageUrl(barber1.country_code)})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             opacity: 0.4
           }} />
-            <div className="sm:hidden absolute inset-0 bg-gradient-to-br from-red-900/20 via-black/70 to-black/90" />
-            {/* Clean dark background - desktop only */}
-            <div className="hidden sm:block absolute inset-0 bg-gradient-to-b from-card via-background to-card" />
+            <div className="absolute inset-0 bg-gradient-to-br from-red-900/20 via-black/70 to-black/90" />
 
             {/* Content */}
             <div className="relative h-full flex flex-col p-2 sm:p-3">
@@ -416,16 +405,14 @@ export const DynamicBattleHero = () => {
 
           {/* Bottom/Right Side - Barber 2 */}
           <div className="flex-1 relative overflow-hidden min-h-0">
-            {/* Flag Background - mobile only */}
-            <div className="sm:hidden absolute inset-0 animate-pulse-slow" style={{
+            {/* Flag Background */}
+            <div className="absolute inset-0 animate-pulse-slow" style={{
             backgroundImage: `url(${getFlagImageUrl(barber2.country_code)})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             opacity: 0.4
           }} />
-            <div className="sm:hidden absolute inset-0 bg-gradient-to-bl from-blue-900/20 via-black/70 to-black/90" />
-            {/* Clean dark background - desktop only */}
-            <div className="hidden sm:block absolute inset-0 bg-gradient-to-b from-card via-background to-card" />
+            <div className="absolute inset-0 bg-gradient-to-bl from-blue-900/20 via-black/70 to-black/90" />
 
             {/* Content */}
             <div className="relative h-full flex flex-col p-2 sm:p-3">
@@ -473,14 +460,6 @@ export const DynamicBattleHero = () => {
               </div>
             </div>
           </div>
-
-          {/* Right Nation Banner - desktop only */}
-          <NationBanner
-            countryCode={barber2.country_code || 'US'}
-            barberName={barber2.display_name || barber2.name}
-            side="right"
-            isActive={isActiveBattle}
-          />
         </div>
 
 
