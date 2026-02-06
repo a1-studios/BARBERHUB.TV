@@ -2,12 +2,15 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Plus, User, LogOut, Sparkles, Zap, Scissors, Swords, Crown, ChevronDown, History, Wallet } from 'lucide-react';
+import { Plus, User, LogOut, Sparkles, Zap, Scissors, Swords, Crown, ChevronDown, History } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import barberPole from '@/assets/barber-pole.png';
 import { cn } from '@/lib/utils';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { AddFundsModal } from './AddFundsModal';
+import { RotatingBBCoin } from './economy/RotatingBBCoin';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface QuickAction {
   id: string;
@@ -30,6 +33,21 @@ const Header = () => {
   const bbDropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
+
+  // Fetch user profile for avatar
+  const { data: userProfile } = useQuery({
+    queryKey: ['header-profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_url, display_name')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user?.id
+  });
 
   const quickActions: QuickAction[] = [
     {
@@ -248,7 +266,7 @@ const Header = () => {
             <button
               onClick={() => setBbDropdownOpen(!bbDropdownOpen)}
               className={cn(
-                "flex items-center gap-1 px-2 py-1 rounded-lg transition-all duration-200",
+                "flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all duration-200",
                 "bg-gradient-to-r from-primary/20 to-cyan/10",
                 "border border-primary/40 hover:border-cyan/40",
                 "hover:shadow-[0_0_8px_rgba(0,217,255,0.3)]",
@@ -256,7 +274,12 @@ const Header = () => {
               )}
               aria-label="Barber Bucks menu"
             >
-              <span className="text-xs font-bold text-cyan">BB</span>
+              <RotatingBBCoin
+                avatarUrl={userProfile?.avatar_url}
+                displayName={userProfile?.display_name || ''}
+                size="xs"
+                animate={true}
+              />
               <span className="text-sm font-semibold text-primary tabular-nums">
                 {barberBucks.toLocaleString()}
               </span>
@@ -269,14 +292,22 @@ const Header = () => {
             {/* BB Dropdown Menu */}
             {bbDropdownOpen && (
               <div className="absolute top-full right-0 mt-2 z-50 animate-scale-in">
-                <div className="w-44 bg-card/95 backdrop-blur-sm border border-border/50 rounded-lg shadow-lg overflow-hidden">
+                <div className="w-48 bg-card/95 backdrop-blur-sm border border-border/50 rounded-lg shadow-lg overflow-hidden">
                   {/* Balance Header */}
-                  <div className="px-3 py-2 bg-gradient-to-r from-primary/10 to-cyan/5 border-b border-border/30">
-                    <p className="text-xs text-muted-foreground">Your Balance</p>
-                    <p className="text-lg font-bold">
-                      <span className="text-cyan">BB</span>
-                      <span className="text-primary ml-1">{barberBucks.toLocaleString()}</span>
-                    </p>
+                  <div className="px-3 py-3 bg-gradient-to-r from-primary/10 to-cyan/5 border-b border-border/30 flex items-center gap-3">
+                    <RotatingBBCoin
+                      avatarUrl={userProfile?.avatar_url}
+                      displayName={userProfile?.display_name || ''}
+                      size="sm"
+                      animate={true}
+                    />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Your Balance</p>
+                      <p className="text-lg font-bold">
+                        <span className="text-primary">{barberBucks.toLocaleString()}</span>
+                        <span className="text-cyan text-sm ml-1">BB</span>
+                      </p>
+                    </div>
                   </div>
                   
                   {/* Actions */}
@@ -288,7 +319,7 @@ const Header = () => {
                       }}
                       className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-primary/10 transition-colors"
                     >
-                      <Wallet className="h-4 w-4 text-primary" />
+                      <Plus className="h-4 w-4 text-primary" />
                       <span>Add Funds</span>
                     </button>
                     <button
