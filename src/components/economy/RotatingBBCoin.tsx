@@ -71,8 +71,12 @@ const AvatarFace = ({
 
   return (
     <div
-      className="absolute inset-0 rounded-full overflow-hidden"
+      className="absolute rounded-full overflow-hidden"
       style={{
+        width: pixelSize,
+        height: pixelSize,
+        top: 0,
+        left: 0,
         backfaceVisibility: 'hidden',
         transform: 'rotateY(180deg)',
         boxShadow: `
@@ -82,21 +86,31 @@ const AvatarFace = ({
         `,
       }}
     >
-      {/* Avatar fills edge-to-edge, matching front face */}
-      <Avatar className="w-full h-full rounded-full">
-        <AvatarImage src={avatarUrl || undefined} className="w-full h-full object-cover" />
+      <Avatar
+        className="rounded-full"
+        style={{ width: pixelSize, height: pixelSize, flexShrink: 1 }}
+      >
+        <AvatarImage
+          src={avatarUrl || undefined}
+          className="object-cover"
+          style={{ width: pixelSize, height: pixelSize }}
+        />
         <AvatarFallback
-          className="w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-800 to-amber-950 text-amber-200 font-bold"
-          style={{ fontSize: pixelSize * 0.35 }}
+          className="flex items-center justify-center bg-gradient-to-br from-amber-800 to-amber-950 text-amber-200 font-bold"
+          style={{ width: pixelSize, height: pixelSize, fontSize: pixelSize * 0.35 }}
         >
           {initial}
         </AvatarFallback>
       </Avatar>
 
-      {/* Gold rim overlay using box-shadow (borderImage breaks border-radius) */}
+      {/* Gold rim overlay */}
       <div
-        className="absolute inset-0 rounded-full pointer-events-none"
+        className="absolute rounded-full pointer-events-none"
         style={{
+          width: pixelSize,
+          height: pixelSize,
+          top: 0,
+          left: 0,
           boxShadow: `
             inset 0 0 0 ${rimWidth}px #B8860B,
             inset 0 0 0 ${rimWidth + 1}px rgba(245,197,24,0.5),
