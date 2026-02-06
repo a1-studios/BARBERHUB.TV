@@ -1,18 +1,24 @@
 
 
-# Fix Back Face Avatar Rendering & Sizing
+# Fix Back Face - Use Plain HTML Instead of Radix Avatar
 
-## Problem
+## Root Cause
 
-The coin's back face (user profile) is not rendering correctly — the avatar/fallback content appears as a tiny golden circle with no visible content. Two issues cause this:
+The Radix `Avatar` component uses internal JavaScript to detect image loading status (`onLoadingStatusChange`). Inside a CSS 3D transform context (`preserve-3d` + `rotateY(180deg)` + `backfaceVisibility: hidden`), this detection can fail silently, causing:
+- The `AvatarImage` never transitions to "loaded" state, so it stays hidden
+- The `AvatarFallback` has a built-in render delay, and its amber-on-amber text is nearly invisible at small sizes
 
-1. **Radix Avatar defaults fight the layout**: The Avatar component has hardcoded `h-10 w-10` (40px) and `shrink-0` classes. While `tailwind-merge` handles the width/height override, `shrink-0` remains and can prevent proper sizing in flex contexts within 3D transforms.
-
-2. **Percentage sizing breaks inside 3D transforms**: The back face uses `transform: rotateY(180deg)` inside a `preserve-3d` container. CSS `w-full`/`h-full` can behave unpredictably in this context because the parent's computed dimensions may not propagate correctly through 3D transform boundaries.
+Meanwhile, the front face works perfectly because it uses a plain `<img>` tag with no state management.
 
 ## Solution
 
-Replace all percentage-based sizing in the `AvatarFace` component with explicit pixel values calculated from `pixelSize`, and override the Avatar's `shrink-0` class.
+Replace the Radix `Avatar`/`AvatarImage`/`AvatarFallback` with plain HTML elements in the `AvatarFace` component, matching the front face's approach:
+
+- Use a plain `<img>` tag for the user's avatar photo (with `onError` fallback)
+- Use a plain `<div>` for the initial letter fallback
+- Track image load state with a simple `useState` + `onLoad`/`onError`
+
+This sidesteps all Radix quirks inside 3D transforms.
 
 ---
 
@@ -20,78 +26,84 @@ Replace all percentage-based sizing in the `AvatarFace` component with explicit 
 
 ### File: `src/components/economy/RotatingBBCoin.tsx`
 
-**Changes to `AvatarFace` component:**
+**Rewrite `AvatarFace` to use plain HTML:**
 
-1. **Set explicit pixel dimensions on the Avatar root** instead of `w-full h-full`:
-   ```tsx
-   <Avatar
-     className="rounded-full"
-     style={{ width: pixelSize, height: pixelSize, flexShrink: 1 }}
-   >
-   ```
-   Using inline `style` with exact pixel values bypasses both the Radix default `h-10 w-10` and the `shrink-0` class. This guarantees the Avatar fills the coin face regardless of 3D transform context.
+```tsx
+const AvatarFace = ({ pixelSize, avatarUrl, initial, animate }) => {
+  const rimWidth = Math.max(2, pixelSize * 0.06);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
-2. **Set explicit pixel dimensions on AvatarImage and AvatarFallback**:
-   ```tsx
-   <AvatarImage
-     src={avatarUrl || undefined}
-     className="object-cover"
-     style={{ width: pixelSize, height: pixelSize }}
-   />
-   <AvatarFallback
-     className="flex items-center justify-center bg-gradient-to-br from-amber-800 to-amber-950 text-amber-200 font-bold"
-     style={{ width: pixelSize, height: pixelSize, fontSize: pixelSize * 0.35 }}
-   >
-     {initial}
-   </AvatarFallback>
-   ```
+  const showImage = avatarUrl && !imgError;
 
-3. **Add explicit dimensions to the back face container div**:
-   ```tsx
-   <div
-     className="absolute rounded-full overflow-hidden"
-     style={{
-       width: pixelSize,
-       height: pixelSize,
-       top: 0,
-       left: 0,
-       backfaceVisibility: 'hidden',
-       transform: 'rotateY(180deg)',
-       ...
-     }}
-   >
-   ```
-   Replace `inset-0` with explicit `width`/`height`/`top`/`left` to avoid percentage resolution issues in 3D space.
+  return (
+    <div style={{
+      width: pixelSize, height: pixelSize,
+      backfaceVisibility: 'hidden',
+      transform: 'rotateY(180deg)',
+      // ... shadows
+    }}>
+      {/* Plain img for avatar photo */}
+      {showImage && (
+        <img
+          src={avatarUrl}
+          alt="Profile"
+          onLoad={() => setImgLoaded(true)}
+          onError={() => setImgError(true)}
+          style={{
+            width: pixelSize, height: pixelSize,
+            objectFit: 'cover',
+            opacity: imgLoaded ? 1 : 0,
+          }}
+        />
+      )}
 
-4. **Same explicit dimensions for the rim overlay div**:
-   ```tsx
-   <div
-     className="absolute rounded-full pointer-events-none"
-     style={{
-       width: pixelSize,
-       height: pixelSize,
-       top: 0,
-       left: 0,
-       boxShadow: ...
-     }}
-   />
-   ```
+      {/* Plain div fallback with high-contrast initial */}
+      {(!showImage || !imgLoaded) && (
+        <div style={{
+          width: pixelSize, height: pixelSize,
+          background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+          color: '#F5C518',
+          fontSize: pixelSize * 0.4,
+          fontWeight: 'bold',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          {initial}
+        </div>
+      )}
 
-These changes ensure every element in the back face stack uses concrete pixel values that work correctly regardless of CSS 3D transform context.
+      {/* Gold rim overlay (unchanged) */}
+      {/* Specular + Shine overlays (unchanged) */}
+    </div>
+  );
+};
+```
+
+**Key improvements:**
+
+| Element | Before (broken) | After (fixed) |
+|---------|-----------------|---------------|
+| Avatar image | Radix `AvatarImage` (internal load detection fails in 3D) | Plain `<img>` with `onLoad`/`onError` |
+| Fallback | Radix `AvatarFallback` (delayed render, low contrast amber-on-amber) | Plain `<div>` (immediate render, gold text on dark blue background) |
+| State management | Radix internal (opaque, fails in 3D) | Simple `useState` (transparent, reliable) |
+| Fallback colors | `text-amber-200` on `from-amber-800 to-amber-950` (barely visible) | Gold `#F5C518` on dark blue `#1a1a2e` (high contrast, matches coin theme) |
+| Import needed | `Avatar, AvatarImage, AvatarFallback` from Radix | `useState` from React (already imported) |
+
+**Also remove the Radix Avatar import** since it's no longer used in this component.
 
 ---
 
 ## Why This Works
 
-| Element | Before (broken) | After (fixed) |
-|---------|-----------------|---------------|
-| Back face container | `className="absolute inset-0"` (percentage-based) | `style={{ width: pixelSize, height: pixelSize }}` (pixel-based) |
-| Avatar root | `className="w-full h-full"` + Radix `shrink-0` fighting | `style={{ width: pixelSize, height: pixelSize, flexShrink: 1 }}` |
-| AvatarImage | `className="w-full h-full"` (relative to broken parent) | `style={{ width: pixelSize, height: pixelSize }}` |
-| AvatarFallback | `className="w-full h-full"` (relative to broken parent) | `style={{ width: pixelSize, height: pixelSize }}` |
-| Rim overlay | `className="absolute inset-0"` | `style={{ width: pixelSize, height: pixelSize }}` |
+The front face already proves that plain `<img>` renders perfectly inside the 3D transform:
+```tsx
+{/* Front face - works great */}
+<img src={bbCoinLogo} className="w-full h-full object-cover rounded-full" />
+```
 
-All elements now use the same `pixelSize` value that drives the front face, guaranteeing both faces render at identical dimensions.
+The back face just needs the same approach but with dynamic `src` (user avatar) and a fallback state.
 
 ---
 
@@ -99,6 +111,6 @@ All elements now use the same `pixelSize` value that drives the front face, guar
 
 | File | Change |
 |------|--------|
-| `src/components/economy/RotatingBBCoin.tsx` | Replace percentage-based sizing with explicit pixel dimensions in `AvatarFace` component |
+| `src/components/economy/RotatingBBCoin.tsx` | Replace Radix Avatar with plain `<img>` + `<div>` fallback in `AvatarFace`; add `useState` import; remove Avatar imports |
 
-No changes to consumer components or the Avatar UI component.
+No changes needed to any consumer components -- the `RotatingBBCoinProps` interface stays identical.
