@@ -264,7 +264,8 @@ const Header = () => {
           {/* Right Side - Barber Bucks Balance Dropdown */}
           <div className="relative" ref={bbDropdownRef}>
             <RotatingBBCoin
-              balanceText={barberBucks.toLocaleString()}
+              avatarUrl={userProfile?.avatar_url}
+              displayName={userProfile?.display_name || undefined}
               size="xs"
               animate={true}
               onClick={() => setBbDropdownOpen(!bbDropdownOpen)}
