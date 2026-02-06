@@ -6,37 +6,21 @@ import { BarberVideoSection } from "@/components/barber/BarberVideoSection";
 import { BarberHeroStreamControls } from "@/components/streaming/BarberHeroStreamControls";
 import { useRealtimeBattleViewers } from "@/hooks/useRealtimeBattleViewers";
 import { useAuth } from "@/hooks/useAuth";
-import { useUserRole } from "@/hooks/useUserRole";
-import { Heart, Users, Eye, Compass } from "lucide-react";
+import { Eye } from "lucide-react";
 import { MobileVoteCenter } from "@/components/battles/MobileVoteCenter";
+import { ArenaActionBar } from "@/components/battles/ArenaActionBar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 
-// Minimal inline vote button component
-const VoteButton = ({
-  name,
-  variant,
-  onVote
-}: {
-  name: string;
-  variant: 'primary' | 'cyan';
-  onVote: () => void;
-}) => {
-  const [voted, setVoted] = useState(false);
-  const handleClick = () => {
-    if (voted) return;
-    setVoted(true);
-    onVote();
-  };
-  const colors = variant === 'primary' ? 'bg-primary/20 border-primary/40 hover:bg-primary/40 text-primary' : 'bg-cyan/20 border-cyan/40 hover:bg-cyan/40 text-cyan';
-  return <motion.button onClick={handleClick} disabled={voted} className={`px-2 py-0.5 rounded text-[8px] font-medium border transition-all truncate max-w-[50px] ${colors} ${voted ? 'opacity-50' : ''}`} whileTap={{
-    scale: 0.95
-  }}>
-      {voted ? '✓' : 'Vote'}
-    </motion.button>;
+const getCountryFlag = (countryCode?: string) => {
+  if (!countryCode) return '';
+  return String.fromCodePoint(
+    ...countryCode.toUpperCase().split('').map(char => 127397 + char.charCodeAt(0))
+  );
 };
+
 interface Battle {
   id: string;
   title: string;
@@ -60,9 +44,10 @@ interface BarberProfile {
 export const DynamicBattleHero = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isBarber, isFan } = useUserRole();
   const [rotationIndex, setRotationIndex] = useState(0);
   const [currentUserBarberPosition, setCurrentUserBarberPosition] = useState<1 | 2 | null>(null);
+  const [voted1, setVoted1] = useState(false);
+  const [voted2, setVoted2] = useState(false);
 
   // Fetch active battle (active, voting or upcoming)
   const {
@@ -284,49 +269,42 @@ export const DynamicBattleHero = () => {
           }} />
             <div className="absolute inset-0 bg-gradient-to-br from-red-900/20 via-black/70 to-black/90" />
 
-            {/* Content */}
-            <div className="relative h-full flex flex-col p-2 sm:p-3">
-              {/* Compact Header Row */}
-              <div className="flex items-center gap-2 mb-2">
-                <div onClick={() => navigate(`/barber/${barber1.user_id}`)} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden border border-cyan/40 cursor-pointer hover:scale-105 transition-all flex-shrink-0">
-                  {barber1.avatar_url ? <img src={barber1.avatar_url} alt={barber1.display_name} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400" />}
-                </div>
-                <div className="flex flex-col min-w-0 flex-1">
-                  <h3 onClick={() => navigate(`/barber/${barber1.user_id}`)} className="text-white text-xs sm:text-sm font-bold cursor-pointer hover:text-primary transition-colors truncate">
-                    {barber1.display_name}
-                  </h3>
-                  <div className="flex gap-2 text-white/70 text-[9px] sm:text-[10px]">
-                    <span className="flex items-center gap-0.5"><Heart className="w-2.5 h-2.5 text-red-400" fill="currentColor" />{barber1.likes || 0}</span>
-                    <span className="flex items-center gap-0.5"><Users className="w-2.5 h-2.5 text-cyan" />{barber1.followers || 0}</span>
-                  </div>
-                </div>
-                {/* Role-based action button - Vote for fans, Explore for barbers */}
-                {((isVotingPhase || showDemoMode) && !isCurrentUserInBattle) && (
-                  (isFan || !user) ? (
-                    <VoteButton name={barber1.display_name || barber1.name} variant="primary" onVote={() => handleVote(1)} />
-                  ) : isBarber ? (
-                    <motion.button
-                      onClick={() => navigate('/battles')}
-                      className="px-2 py-0.5 rounded text-[8px] font-medium border transition-all bg-cyan/20 border-cyan/40 hover:bg-cyan/40 text-cyan flex items-center gap-1"
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Compass className="w-2.5 h-2.5" />
-                      Explore
-                    </motion.button>
-                  ) : null
-                )}
-              </div>
-
+            {/* Content - full bleed */}
+            <div className="relative h-full">
               {/* Maximized Video Area */}
-              <div className="flex-1 min-h-0 relative">
-                {isBarber1CurrentUser && isStreamableBattle && battle ? <BarberHeroStreamControls battleId={battle.id} barberName={barber1.display_name || barber1.name} onEnterBattle={() => navigate(`/battle/${battle.id}/contender`)} className="h-full" /> : <div className="relative h-full">
+              <div className="h-full relative">
+                {isBarber1CurrentUser && isStreamableBattle && battle ? (
+                  <BarberHeroStreamControls battleId={battle.id} barberName={barber1.display_name || barber1.name} onEnterBattle={() => navigate(`/battle/${battle.id}/contender`)} className="h-full" />
+                ) : (
+                  <div className="relative h-full">
                     <BarberVideoSection videoId={barber1.is_live ? barber1.live_video_id : barber1.featured_video_id} isLive={barber1.is_live} aspectRatio="landscape" className="rounded-lg h-full border border-cyan/10" />
-                    {/* Viewer Count Overlay */}
-                    {isActiveBattle && <div className="absolute bottom-2 left-2 flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/70 text-[9px] sm:text-[10px] text-white/90">
-                        <Eye className="w-2.5 h-2.5" />
-                        <span>{viewerData.barber1}</span>
-                      </div>}
-                  </div>}
+                  </div>
+                )}
+
+                {/* Name overlay - top left */}
+                <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5 bg-black/20 backdrop-blur-sm rounded-full px-2 py-0.5">
+                  <span className="text-[10px]">{getCountryFlag(barber1.country_code)}</span>
+                  <span className="text-[10px] text-white/80 font-medium truncate max-w-[100px]">{barber1.display_name}</span>
+                </div>
+
+                {/* Viewer Count Overlay - top right */}
+                {isActiveBattle && (
+                  <div className="absolute top-2 right-2 z-10 flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/70 text-[9px] sm:text-[10px] text-white/90">
+                    <Eye className="w-2.5 h-2.5" />
+                    <span>{viewerData.barber1}</span>
+                  </div>
+                )}
+
+                {/* Action Bar */}
+                {!isBarber1CurrentUser && (
+                  <ArenaActionBar
+                    barber={barber1}
+                    variant="primary"
+                    showVote={(isVotingPhase || showDemoMode) && !isCurrentUserInBattle}
+                    onVote={() => { setVoted1(true); handleVote(1); }}
+                    hasVoted={voted1}
+                  />
+                )}
               </div>
             </div>
           </div>
@@ -404,49 +382,42 @@ export const DynamicBattleHero = () => {
           }} />
             <div className="absolute inset-0 bg-gradient-to-bl from-blue-900/20 via-black/70 to-black/90" />
 
-            {/* Content */}
-            <div className="relative h-full flex flex-col p-2 sm:p-3">
-              {/* Compact Header Row - Right Aligned */}
-              <div className="flex items-center justify-end gap-2 mb-2">
-                {/* Role-based action button - Vote for fans, Explore for barbers */}
-                {((isVotingPhase || showDemoMode) && !isCurrentUserInBattle) && (
-                  (isFan || !user) ? (
-                    <VoteButton name={barber2.display_name || barber2.name} variant="cyan" onVote={() => handleVote(2)} />
-                  ) : isBarber ? (
-                    <motion.button
-                      onClick={() => navigate('/battles')}
-                      className="px-2 py-0.5 rounded text-[8px] font-medium border transition-all bg-cyan/20 border-cyan/40 hover:bg-cyan/40 text-cyan flex items-center gap-1"
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      <Compass className="w-2.5 h-2.5" />
-                      Explore
-                    </motion.button>
-                  ) : null
-                )}
-                <div className="flex flex-col items-end min-w-0 flex-1">
-                  <h3 onClick={() => navigate(`/barber/${barber2.user_id}`)} className="text-white text-xs sm:text-sm font-bold cursor-pointer hover:text-primary transition-colors truncate">
-                    {barber2.display_name}
-                  </h3>
-                  <div className="flex gap-2 text-white/70 text-[9px] sm:text-[10px]">
-                    <span className="flex items-center gap-0.5"><Heart className="w-2.5 h-2.5 text-red-400" fill="currentColor" />{barber2.likes || 0}</span>
-                    <span className="flex items-center gap-0.5"><Users className="w-2.5 h-2.5 text-cyan" />{barber2.followers || 0}</span>
-                  </div>
-                </div>
-                <div onClick={() => navigate(`/barber/${barber2.user_id}`)} className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden border border-cyan/40 cursor-pointer hover:scale-105 transition-all flex-shrink-0">
-                  {barber2.avatar_url ? <img src={barber2.avatar_url} alt={barber2.display_name} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400" />}
-                </div>
-              </div>
-
+            {/* Content - full bleed */}
+            <div className="relative h-full">
               {/* Maximized Video Area */}
-              <div className="flex-1 min-h-0 relative">
-                {isBarber2CurrentUser && isStreamableBattle && battle ? <BarberHeroStreamControls battleId={battle.id} barberName={barber2.display_name || barber2.name} onEnterBattle={() => navigate(`/battle/${battle.id}/contender`)} className="h-full" /> : <div className="relative h-full">
+              <div className="h-full relative">
+                {isBarber2CurrentUser && isStreamableBattle && battle ? (
+                  <BarberHeroStreamControls battleId={battle.id} barberName={barber2.display_name || barber2.name} onEnterBattle={() => navigate(`/battle/${battle.id}/contender`)} className="h-full" />
+                ) : (
+                  <div className="relative h-full">
                     <BarberVideoSection videoId={barber2.is_live ? barber2.live_video_id : barber2.featured_video_id} isLive={barber2.is_live} aspectRatio="landscape" className="rounded-lg h-full border border-cyan/10" />
-                    {/* Viewer Count Overlay */}
-                    {isActiveBattle && <div className="absolute bottom-2 right-2 flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/70 text-[9px] sm:text-[10px] text-white/90">
-                        <Eye className="w-2.5 h-2.5" />
-                        <span>{viewerData.barber2}</span>
-                      </div>}
-                  </div>}
+                  </div>
+                )}
+
+                {/* Name overlay - top right */}
+                <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 bg-black/20 backdrop-blur-sm rounded-full px-2 py-0.5">
+                  <span className="text-[10px] text-white/80 font-medium truncate max-w-[100px]">{barber2.display_name}</span>
+                  <span className="text-[10px]">{getCountryFlag(barber2.country_code)}</span>
+                </div>
+
+                {/* Viewer Count Overlay - top left (mirrored) */}
+                {isActiveBattle && (
+                  <div className="absolute top-2 left-2 z-10 flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/70 text-[9px] sm:text-[10px] text-white/90">
+                    <Eye className="w-2.5 h-2.5" />
+                    <span>{viewerData.barber2}</span>
+                  </div>
+                )}
+
+                {/* Action Bar */}
+                {!isBarber2CurrentUser && (
+                  <ArenaActionBar
+                    barber={barber2}
+                    variant="cyan"
+                    showVote={(isVotingPhase || showDemoMode) && !isCurrentUserInBattle}
+                    onVote={() => { setVoted2(true); handleVote(2); }}
+                    hasVoted={voted2}
+                  />
+                )}
               </div>
             </div>
           </div>
