@@ -1,213 +1,147 @@
 
 
-# Enhanced 3D Realistic BB Coin
+# Replace Header BB Icon with Rotating 3D Coin
 
 ## Overview
 
-Transform the current `RotatingBBCoin` component into a hyper-realistic 3D coin with:
-- **Coin edge/rim** with visible thickness (simulating depth)
-- **Metallic textures** with gradient layers for bronze/gold appearance
-- **Dynamic lighting effects** that shift as the coin rotates
-- **Embossed/engraved appearance** for the BB logo
-- **Realistic shadows** and reflections
+Replace the static "BB" text icon in the header's Barber Bucks dropdown with the new `RotatingBBCoin` component. The coin will continuously rotate, showing the BB logo on one side and the user's avatar on the other. All existing dropdown functionality (Add Funds, Transaction History) will remain intact.
 
 ---
 
-## Visual Design
+## Current State
 
+The header currently displays:
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
-│                    3D REALISTIC COIN                             │
+│  [Barber Pole]     BARBER-HUB          [BB 1,250 ▼]            │
 │                                                                  │
-│       ┌─────────────────┐                                        │
-│       │ ╭─────────────╮ │  ← Outer rim (bronze/copper gradient)  │
-│       │ │ ┌─────────┐ │ │  ← Inner edge (dark metallic)          │
-│       │ │ │         │ │ │                                        │
-│       │ │ │   BB    │ │ │  ← Center with BB logo                 │
-│       │ │ │  LOGO   │ │ │                                        │
-│       │ │ └─────────┘ │ │                                        │
-│       │ ╰─────────────╯ │  ← Metallic shine sweep                │
-│       └─────────────────┘                                        │
-│              ↑                                                   │
-│       Visible edge thickness when rotating                       │
-│                                                                  │
-│  Effects:                                                        │
-│  • Multiple gradient layers for depth                            │
-│  • Animated shine sweep that follows rotation                    │
-│  • Drop shadow for floating effect                               │
-│  • Inner glow on the rim                                         │
-│  • Beveled edge appearance                                       │
+│                                         ↓ Dropdown               │
+│                                         ┌────────────────┐       │
+│                                         │ Your Balance   │       │
+│                                         │ BB 1,250       │       │
+│                                         │ Add Funds      │       │
+│                                         │ History        │       │
+│                                         └────────────────┘       │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Technical Implementation
-
-### Enhanced Coin Structure
-
-The coin will be built in layers:
-
-1. **Shadow Layer** - Soft drop shadow beneath the coin
-2. **Coin Edge** - Visible "thickness" ring (simulates 3D edge)
-3. **Outer Rim** - Bronze/copper metallic gradient ring
-4. **Inner Ring** - Darker decorative border
-5. **Center Face** - Contains BB logo or avatar
-6. **Shine Overlay** - Animated specular highlight sweep
-
-### CSS Techniques
+## New Design
 
 ```text
-Layer Stack (front to back):
-─────────────────────────────
-1. Animated Shine Sweep     ← Linear gradient rotating with coin
-2. Specular Highlight       ← White radial gradient (top-left)
-3. Logo/Avatar Image        ← Center content
-4. Inner Bevel              ← Inset shadow for depth
-5. Metallic Base            ← Bronze/gold gradient background
-6. Outer Rim Border         ← Gradient border (thicker)
-7. Edge/Thickness           ← Simulated side view during rotation
-8. Drop Shadow              ← Soft shadow on container
-```
-
-### Metallic Color Palette
-
-| Element | Colors |
-|---------|--------|
-| Outer Rim | `#CD7F32` → `#F5A623` → `#8B4513` (Bronze gradient) |
-| Inner Ring | `#2D1F1F` → `#4A3232` (Dark metallic) |
-| Center Background | `#1A1A1A` → `#0D0D0D` (Deep black) |
-| Shine Highlight | `rgba(255,255,255,0.4)` → `transparent` |
-| Edge Thickness | `#8B4513` → `#CD7F32` (Copper) |
-
-### Framer Motion Enhancements
-
-```tsx
-// Add subtle "wobble" for realism
-animate={animate ? { 
-  rotateY: 360,
-  rotateX: [0, 2, 0, -2, 0]  // Slight tilt wobble
-} : undefined}
-
-// Shine follows rotation
-<motion.div
-  animate={{ rotate: 360 }}
-  transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
-  className="shine-sweep"
-/>
+┌─────────────────────────────────────────────────────────────────┐
+│  [Barber Pole]     BARBER-HUB      [🪙 1,250 ▼]                 │
+│                                     ↑                            │
+│                            Rotating 3D Coin (xs size)            │
+│                            - Front: BB Logo                      │
+│                            - Back: User Avatar                   │
+│                                                                  │
+│                                         ↓ Dropdown (unchanged)   │
+│                                         ┌────────────────┐       │
+│                                         │ 🪙 (md size)   │       │
+│                                         │ Your Balance   │       │
+│                                         │ BB 1,250       │       │
+│                                         │ Add Funds      │       │
+│                                         │ History        │       │
+│                                         └────────────────┘       │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Component Changes
+## Technical Changes
 
-### File: `src/components/economy/RotatingBBCoin.tsx`
+### File: `src/components/Header.tsx`
 
-The enhanced component will include:
-
-1. **New size map** with additional padding for rim:
+**1. Add Imports**
 ```tsx
-const sizeMap = {
-  xs: 28,   // Was 24 - extra for rim
-  sm: 36,   // Was 32
-  md: 56,   // Was 48
-  lg: 72,   // Was 64
-  xl: 96    // New size for hero displays
-};
+import { RotatingBBCoin } from './economy/RotatingBBCoin';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 ```
 
-2. **Layered structure**:
+**2. Add Profile Query** (for avatar_url and display_name)
 ```tsx
-<div className="coin-container">
-  {/* Drop Shadow */}
-  <div className="coin-shadow" />
-  
-  <motion.div className="coin-rotator">
-    {/* Coin Edge (thickness visible during rotation) */}
-    <div className="coin-edge" />
-    
-    {/* Front Face */}
-    <div className="coin-face front">
-      <div className="outer-rim" />
-      <div className="inner-ring" />
-      <div className="center-face">
-        <img src={bbCoinLogo} />
-      </div>
-      <div className="shine-sweep" />
-      <div className="specular-highlight" />
-    </div>
-    
-    {/* Back Face */}
-    <div className="coin-face back">
-      {/* Similar structure with avatar */}
-    </div>
-  </motion.div>
+const { data: userProfile } = useQuery({
+  queryKey: ['header-profile', user?.id],
+  queryFn: async () => {
+    if (!user?.id) return null;
+    const { data } = await supabase
+      .from('profiles')
+      .select('avatar_url, display_name')
+      .eq('user_id', user.id)
+      .single();
+    return data;
+  },
+  enabled: !!user?.id
+});
+```
+
+**3. Replace BB Button Content**
+
+From:
+```tsx
+<span className="text-xs font-bold text-cyan">BB</span>
+<span className="text-sm font-semibold text-primary tabular-nums">
+  {barberBucks.toLocaleString()}
+</span>
+```
+
+To:
+```tsx
+<RotatingBBCoin
+  avatarUrl={userProfile?.avatar_url}
+  displayName={userProfile?.display_name}
+  size="xs"
+  animate={true}
+/>
+<span className="text-sm font-semibold text-primary tabular-nums">
+  {barberBucks.toLocaleString()}
+</span>
+```
+
+**4. Update Dropdown Balance Header**
+
+Add the rotating coin (medium size) to the dropdown balance display for visual consistency:
+
+```tsx
+{/* Balance Header in dropdown */}
+<div className="px-3 py-3 bg-gradient-to-r from-primary/10 to-cyan/5 border-b border-border/30 flex items-center gap-3">
+  <RotatingBBCoin
+    avatarUrl={userProfile?.avatar_url}
+    displayName={userProfile?.display_name}
+    size="sm"
+    animate={true}
+  />
+  <div>
+    <p className="text-xs text-muted-foreground">Your Balance</p>
+    <p className="text-lg font-bold">
+      <span className="text-primary">{barberBucks.toLocaleString()}</span>
+      <span className="text-cyan text-sm ml-1">BB</span>
+    </p>
+  </div>
 </div>
 ```
 
-3. **Enhanced CSS-in-JS styles**:
-```tsx
-// Outer rim with metallic gradient
-background: `linear-gradient(
-  135deg,
-  #CD7F32 0%,
-  #F5A623 25%,
-  #CD7F32 50%,
-  #8B4513 75%,
-  #CD7F32 100%
-)`;
-
-// Realistic shadow
-boxShadow: `
-  0 4px 12px rgba(0, 0, 0, 0.4),
-  0 2px 4px rgba(0, 0, 0, 0.2),
-  inset 0 1px 1px rgba(255, 255, 255, 0.1)
-`;
-
-// Embossed text effect (if using SVG)
-filter: 'drop-shadow(1px 1px 0 rgba(0,0,0,0.5))';
-```
-
----
-
-## Avatar Back Face Enhancement
-
-The back face (user avatar) will also get the realistic coin treatment:
-
-- Same outer rim and inner ring structure
-- Avatar centered with circular mask
-- Metallic frame around avatar
-- Same shine and shadow effects
-
-```text
-┌─────────────────┐
-│ ╭─────────────╮ │  ← Bronze rim (same as front)
-│ │ ┌─────────┐ │ │  ← Dark inner ring
-│ │ │   👤    │ │ │  ← User avatar (circular)
-│ │ │  USER   │ │ │
-│ │ └─────────┘ │ │
-│ ╰─────────────╯ │  ← Shine sweep
-└─────────────────┘
-```
-
----
-
-## Files to Modify
-
-| File | Change |
-|------|--------|
-| `src/components/economy/RotatingBBCoin.tsx` | Complete rewrite with realistic 3D coin styling, layered structure, metallic gradients, and enhanced animations |
+**5. Remove Unused Icons**
+- Remove `Wallet` from lucide imports (no longer needed)
 
 ---
 
 ## Summary
 
-The enhanced coin will feature:
-- Bronze/copper metallic rim with gradient
-- Visible coin edge thickness during rotation
-- Layered shine and specular highlights
-- Realistic drop shadows
-- Smooth 6-second rotation (unchanged)
-- All existing sizes plus new `xl` size
-- Both faces (BB logo + avatar) get the premium treatment
+| File | Change |
+|------|--------|
+| `src/components/Header.tsx` | Replace "BB" text with RotatingBBCoin, add profile query for avatar, update dropdown balance header with coin |
+
+---
+
+## Result
+
+- The header BB balance button now features the 3D rotating coin (xs size - 28px)
+- The coin shows the BB logo on one side and the user's avatar on the other
+- Dropdown menu remains fully functional with Add Funds and Transaction History
+- The dropdown header also shows the rotating coin for visual consistency
+- All existing functionality preserved - only the visual icon changes
 
