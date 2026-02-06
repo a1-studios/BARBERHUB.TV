@@ -55,6 +55,7 @@ export const useBattleVideoRoom = ({
   const roomRef = useRef<Room | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<Date | null>(null);
+  const connectingRef = useRef(false);
 
   // Handle remote participant's track subscriptions
   const handleTrackSubscribed = useCallback((track: RemoteTrack) => {
@@ -107,20 +108,34 @@ export const useBattleVideoRoom = ({
   }, [onOpponentLeave]);
 
   // Connect to the battle room
+  // Helper to get a fresh access token
+  const getFreshToken = useCallback(async (): Promise<string> => {
+    // First try refreshing the session to ensure a valid token
+    const { data: refreshData } = await supabase.auth.refreshSession();
+    if (refreshData?.session?.access_token) {
+      return refreshData.session.access_token;
+    }
+    // Fallback to current session
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError || !sessionData.session?.access_token) {
+      throw new Error('Please sign in again to join the battle');
+    }
+    return sessionData.session.access_token;
+  }, []);
+
   const connect = useCallback(async () => {
+    // Prevent duplicate concurrent connect calls
+    if (connectingRef.current) {
+      console.log('Connect already in progress, skipping duplicate call');
+      return;
+    }
+    connectingRef.current = true;
+
     try {
       setState(prev => ({ ...prev, status: 'connecting', error: null }));
 
-      // CRITICAL: Get the current session and explicitly pass the token
-      // This ensures the Authorization header is always sent correctly
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !sessionData.session?.access_token) {
-        throw new Error('Please sign in again to join the battle');
-      }
-
-      const accessToken = sessionData.session.access_token;
-      console.log('Calling generate-battle-token with explicit auth token');
+      const accessToken = await getFreshToken();
+      console.log('Calling generate-battle-token with fresh auth token');
 
       // Get token from edge function with explicit Authorization header
       const { data: tokenData, error: tokenError } = await supabase.functions.invoke('generate-battle-token', {
@@ -239,8 +254,10 @@ export const useBattleVideoRoom = ({
 
       toast.error(errorMessage);
       throw error;
+    } finally {
+      connectingRef.current = false;
     }
-  }, [battleId, handleParticipantConnected, handleParticipantDisconnected, onDisconnect]);
+  }, [battleId, getFreshToken, handleParticipantConnected, handleParticipantDisconnected, onDisconnect]);
 
   // Disconnect from the room
   const disconnect = useCallback(() => {
