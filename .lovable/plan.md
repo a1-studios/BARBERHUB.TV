@@ -1,147 +1,131 @@
 
+# Fix Coin Edge Thickness & Enlarge BB Logo
 
-# Replace Header BB Icon with Rotating 3D Coin
+## Issues to Fix
 
-## Overview
-
-Replace the static "BB" text icon in the header's Barber Bucks dropdown with the new `RotatingBBCoin` component. The coin will continuously rotate, showing the BB logo on one side and the user's avatar on the other. All existing dropdown functionality (Add Funds, Transaction History) will remain intact.
-
----
-
-## Current State
-
-The header currently displays:
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  [Barber Pole]     BARBER-HUB          [BB 1,250 ▼]            │
-│                                                                  │
-│                                         ↓ Dropdown               │
-│                                         ┌────────────────┐       │
-│                                         │ Your Balance   │       │
-│                                         │ BB 1,250       │       │
-│                                         │ Add Funds      │       │
-│                                         │ History        │       │
-│                                         └────────────────┘       │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## New Design
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  [Barber Pole]     BARBER-HUB      [🪙 1,250 ▼]                 │
-│                                     ↑                            │
-│                            Rotating 3D Coin (xs size)            │
-│                            - Front: BB Logo                      │
-│                            - Back: User Avatar                   │
-│                                                                  │
-│                                         ↓ Dropdown (unchanged)   │
-│                                         ┌────────────────┐       │
-│                                         │ 🪙 (md size)   │       │
-│                                         │ Your Balance   │       │
-│                                         │ BB 1,250       │       │
-│                                         │ Add Funds      │       │
-│                                         │ History        │       │
-│                                         └────────────────┘       │
-└─────────────────────────────────────────────────────────────────┘
-```
+1. **Hollow Edge**: Currently only one edge layer at `translateZ(-4px)` - need multiple stacked layers for solid 3D thickness
+2. **Small Logo**: The BB logo image is too small due to cumulative padding from rim (6%) + inner ring (3%) - need to reduce these to make the center image larger
 
 ---
 
 ## Technical Changes
 
-### File: `src/components/Header.tsx`
+### File: `src/components/economy/RotatingBBCoin.tsx`
 
-**1. Add Imports**
+**1. Add Multiple Edge Layers for Solid Thickness**
+
+Replace single edge layer with 8 stacked layers:
 ```tsx
-import { RotatingBBCoin } from './economy/RotatingBBCoin';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+// Edge configuration
+const edgeDepth = Math.max(6, pixelSize * 0.15);
+const edgeLayers = 8;
+
+// Render stacked edge layers
+{Array.from({ length: edgeLayers }).map((_, i) => (
+  <div
+    key={i}
+    className="absolute rounded-full"
+    style={{
+      width: pixelSize - 2,
+      height: pixelSize - 2,
+      left: 1,
+      top: 1,
+      background: getEdgeColor(i, edgeLayers), // Beveled shading
+      transform: `translateZ(${-((i + 1) * (edgeDepth / edgeLayers))}px)`,
+    }}
+  />
+))}
 ```
 
-**2. Add Profile Query** (for avatar_url and display_name)
+**2. Add Beveled Edge Color Function**
 ```tsx
-const { data: userProfile } = useQuery({
-  queryKey: ['header-profile', user?.id],
-  queryFn: async () => {
-    if (!user?.id) return null;
-    const { data } = await supabase
-      .from('profiles')
-      .select('avatar_url, display_name')
-      .eq('user_id', user.id)
-      .single();
-    return data;
-  },
-  enabled: !!user?.id
+const getEdgeColor = (index: number, total: number) => {
+  // Darker at front/back edges, lighter in middle for bevel effect
+  if (index < 2) {
+    return 'linear-gradient(90deg, #5C3D2E 0%, #8B5A2B 50%, #5C3D2E 100%)';
+  }
+  if (index >= total - 2) {
+    return 'linear-gradient(90deg, #5C3D2E 0%, #8B5A2B 50%, #5C3D2E 100%)';
+  }
+  return copperEdgeGradient;
+};
+```
+
+**3. Reduce Rim/Ring Padding to Enlarge Logo by ~15%**
+
+Update proportions to show more of the center image:
+```tsx
+const getProportions = (size: number) => ({
+  rimWidth: Math.max(1, size * 0.04),      // Was 0.06 → 0.04 (reduced)
+  innerRingWidth: Math.max(1, size * 0.02), // Was 0.03 → 0.02 (reduced)
+  centerSize: size * 0.82,                  // Was 0.7 → 0.82 (~15% increase)
+  edgeThickness: Math.max(3, size * 0.08),
 });
 ```
 
-**3. Replace BB Button Content**
+**4. Scale Logo Image Beyond Container**
 
-From:
+Add `transform: scale(1.15)` to the logo image for additional enlargement:
 ```tsx
-<span className="text-xs font-bold text-cyan">BB</span>
-<span className="text-sm font-semibold text-primary tabular-nums">
-  {barberBucks.toLocaleString()}
-</span>
-```
-
-To:
-```tsx
-<RotatingBBCoin
-  avatarUrl={userProfile?.avatar_url}
-  displayName={userProfile?.display_name}
-  size="xs"
-  animate={true}
+<img
+  src={bbCoinLogo}
+  alt="BB Coin"
+  className="w-full h-full object-cover"
+  style={{
+    transform: 'scale(1.15)',  // 15% larger
+    filter: 'drop-shadow(1px 1px 1px rgba(0,0,0,0.5))',
+  }}
 />
-<span className="text-sm font-semibold text-primary tabular-nums">
-  {barberBucks.toLocaleString()}
-</span>
 ```
 
-**4. Update Dropdown Balance Header**
+---
 
-Add the rotating coin (medium size) to the dropdown balance display for visual consistency:
+## Visual Result
 
-```tsx
-{/* Balance Header in dropdown */}
-<div className="px-3 py-3 bg-gradient-to-r from-primary/10 to-cyan/5 border-b border-border/30 flex items-center gap-3">
-  <RotatingBBCoin
-    avatarUrl={userProfile?.avatar_url}
-    displayName={userProfile?.display_name}
-    size="sm"
-    animate={true}
-  />
-  <div>
-    <p className="text-xs text-muted-foreground">Your Balance</p>
-    <p className="text-lg font-bold">
-      <span className="text-primary">{barberBucks.toLocaleString()}</span>
-      <span className="text-cyan text-sm ml-1">BB</span>
-    </p>
-  </div>
-</div>
+**Before:**
+```text
+┌──────────────────┐
+│ ████████████████ │  ← Thick rim (6%)
+│ ██ ┌────────┐ ██ │  ← Thick inner ring (3%)
+│ ██ │   BB   │ ██ │  ← Small logo
+│ ██ │  LOGO  │ ██ │
+│ ██ └────────┘ ██ │
+│ ████████████████ │
+└──────────────────┘
+   Gap (hollow)
 ```
 
-**5. Remove Unused Icons**
-- Remove `Wallet` from lucide imports (no longer needed)
+**After:**
+```text
+┌──────────────────┐
+│ ██████████████ │  ← Thinner rim (4%)
+│ █ ┌──────────┐ █ │  ← Thinner ring (2%)
+│ █ │    BB    │ █ │  ← Larger logo (+15%)
+│ █ │   LOGO   │ █ │
+│ █ └──────────┘ █ │
+│ ██████████████ │
+├──────────────────┤  ← 8 solid edge layers
+├──────────────────┤
+├──────────────────┤
+└──────────────────┘
+```
 
 ---
 
 ## Summary
 
-| File | Change |
-|------|--------|
-| `src/components/Header.tsx` | Replace "BB" text with RotatingBBCoin, add profile query for avatar, update dropdown balance header with coin |
+| Change | Before | After |
+|--------|--------|-------|
+| Edge layers | 1 (hollow) | 8 (solid) |
+| Rim width | 6% | 4% |
+| Inner ring | 3% | 2% |
+| Logo scale | 100% | 115% |
+| Total logo visibility | ~70% | ~85% |
 
 ---
 
-## Result
+## File Modified
 
-- The header BB balance button now features the 3D rotating coin (xs size - 28px)
-- The coin shows the BB logo on one side and the user's avatar on the other
-- Dropdown menu remains fully functional with Add Funds and Transaction History
-- The dropdown header also shows the rotating coin for visual consistency
-- All existing functionality preserved - only the visual icon changes
-
+| File | Changes |
+|------|---------|
+| `src/components/economy/RotatingBBCoin.tsx` | Add multiple edge layers for solid thickness, reduce rim/ring padding, scale logo image 15% larger |
