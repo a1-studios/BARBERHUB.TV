@@ -5,17 +5,26 @@ import bbCoinLogo from '@/assets/bb-coin-logo.png';
 interface RotatingBBCoinProps {
   avatarUrl?: string | null;
   displayName?: string;
-  size?: 'xs' | 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   animate?: boolean;
   onClick?: () => void;
 }
 
 const sizeMap = {
-  xs: 24,
-  sm: 32,
-  md: 48,
-  lg: 64
+  xs: 28,
+  sm: 36,
+  md: 56,
+  lg: 72,
+  xl: 96
 };
+
+// Proportional sizing for inner elements
+const getProportions = (size: number) => ({
+  rimWidth: Math.max(2, size * 0.06),
+  innerRingWidth: Math.max(1, size * 0.03),
+  centerSize: size * 0.7,
+  edgeThickness: Math.max(3, size * 0.08),
+});
 
 export const RotatingBBCoin = ({
   avatarUrl,
@@ -25,7 +34,13 @@ export const RotatingBBCoin = ({
   onClick
 }: RotatingBBCoinProps) => {
   const pixelSize = sizeMap[size];
+  const proportions = getProportions(pixelSize);
   const initial = (displayName || 'U').charAt(0).toUpperCase();
+
+  // Metallic gradient colors
+  const bronzeGradient = 'linear-gradient(135deg, #CD7F32 0%, #F5A623 25%, #CD7F32 50%, #8B4513 75%, #CD7F32 100%)';
+  const darkMetallicGradient = 'linear-gradient(135deg, #2D1F1F 0%, #4A3232 50%, #2D1F1F 100%)';
+  const copperEdgeGradient = 'linear-gradient(90deg, #8B4513 0%, #CD7F32 50%, #8B4513 100%)';
 
   return (
     <div
@@ -37,56 +52,183 @@ export const RotatingBBCoin = ({
       }}
       onClick={onClick}
     >
+      {/* Drop Shadow */}
+      <div
+        className="absolute rounded-full"
+        style={{
+          width: pixelSize * 0.9,
+          height: pixelSize * 0.15,
+          bottom: -pixelSize * 0.05,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.4) 0%, transparent 70%)',
+          filter: 'blur(2px)',
+        }}
+      />
+
       <motion.div
         className="relative w-full h-full"
         style={{ transformStyle: 'preserve-3d' }}
-        animate={animate ? { rotateY: 360 } : undefined}
+        animate={animate ? { 
+          rotateY: 360,
+        } : undefined}
         transition={animate ? {
           duration: 6,
           repeat: Infinity,
           ease: 'linear'
         } : undefined}
       >
+        {/* Coin Edge (thickness visible during rotation) */}
+        <div
+          className="absolute rounded-full"
+          style={{
+            width: pixelSize,
+            height: pixelSize,
+            background: copperEdgeGradient,
+            transform: 'translateZ(-4px)',
+            boxShadow: 'inset 0 0 10px rgba(0, 0, 0, 0.5)',
+          }}
+        />
+
         {/* Front Face - BB Logo */}
         <div
           className="absolute inset-0 rounded-full overflow-hidden"
           style={{ 
             backfaceVisibility: 'hidden',
-            boxShadow: '0 0 12px rgba(249, 115, 22, 0.4), inset 0 0 8px rgba(0, 0, 0, 0.3)'
+            background: bronzeGradient,
+            padding: proportions.rimWidth,
+            boxShadow: `
+              0 4px 12px rgba(0, 0, 0, 0.4),
+              0 2px 4px rgba(0, 0, 0, 0.2),
+              inset 0 2px 4px rgba(255, 255, 255, 0.2),
+              inset 0 -2px 4px rgba(0, 0, 0, 0.3)
+            `,
           }}
         >
-          <img
-            src={bbCoinLogo}
-            alt="BB Coin"
-            className="w-full h-full object-cover"
-          />
-          {/* Metallic shine overlay */}
-          <div 
-            className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-black/10 pointer-events-none"
+          {/* Inner Ring */}
+          <div
+            className="w-full h-full rounded-full"
+            style={{
+              background: darkMetallicGradient,
+              padding: proportions.innerRingWidth,
+              boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.5)',
+            }}
+          >
+            {/* Center Face with Logo */}
+            <div
+              className="w-full h-full rounded-full overflow-hidden relative"
+              style={{
+                background: 'linear-gradient(145deg, #1A1A1A 0%, #0D0D0D 100%)',
+                boxShadow: 'inset 0 2px 6px rgba(0, 0, 0, 0.6)',
+              }}
+            >
+              <img
+                src={bbCoinLogo}
+                alt="BB Coin"
+                className="w-full h-full object-cover"
+                style={{
+                  filter: 'drop-shadow(1px 1px 1px rgba(0,0,0,0.5))',
+                }}
+              />
+              
+              {/* Specular Highlight (top-left) */}
+              <div 
+                className="absolute inset-0 pointer-events-none rounded-full"
+                style={{
+                  background: 'radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.25) 0%, transparent 50%)',
+                }}
+              />
+            </div>
+          </div>
+          
+          {/* Animated Shine Sweep */}
+          <motion.div
+            className="absolute inset-0 pointer-events-none rounded-full"
+            style={{
+              background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.3) 50%, transparent 60%)',
+            }}
+            animate={animate ? { 
+              opacity: [0, 1, 0],
+              x: ['-100%', '100%'],
+            } : undefined}
+            transition={animate ? {
+              duration: 3,
+              repeat: Infinity,
+              ease: 'easeInOut',
+              repeatDelay: 3,
+            } : undefined}
           />
         </div>
 
         {/* Back Face - User Avatar */}
         <div
-          className="absolute inset-0 rounded-full overflow-hidden border-2 border-primary/60"
+          className="absolute inset-0 rounded-full overflow-hidden"
           style={{ 
             backfaceVisibility: 'hidden',
             transform: 'rotateY(180deg)',
-            boxShadow: '0 0 12px rgba(249, 115, 22, 0.4), inset 0 0 8px rgba(0, 0, 0, 0.3)'
+            background: bronzeGradient,
+            padding: proportions.rimWidth,
+            boxShadow: `
+              0 4px 12px rgba(0, 0, 0, 0.4),
+              0 2px 4px rgba(0, 0, 0, 0.2),
+              inset 0 2px 4px rgba(255, 255, 255, 0.2),
+              inset 0 -2px 4px rgba(0, 0, 0, 0.3)
+            `,
           }}
         >
-          <Avatar className="w-full h-full">
-            <AvatarImage src={avatarUrl || undefined} className="object-cover" />
-            <AvatarFallback 
-              className="bg-gradient-to-br from-primary/40 to-primary/20 text-primary-foreground font-bold"
-              style={{ fontSize: pixelSize * 0.4 }}
+          {/* Inner Ring */}
+          <div
+            className="w-full h-full rounded-full"
+            style={{
+              background: darkMetallicGradient,
+              padding: proportions.innerRingWidth,
+              boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.5)',
+            }}
+          >
+            {/* Center Face with Avatar */}
+            <div
+              className="w-full h-full rounded-full overflow-hidden relative"
+              style={{
+                background: 'linear-gradient(145deg, #1A1A1A 0%, #0D0D0D 100%)',
+                boxShadow: 'inset 0 2px 6px rgba(0, 0, 0, 0.6)',
+              }}
             >
-              {initial}
-            </AvatarFallback>
-          </Avatar>
-          {/* Metallic shine overlay */}
-          <div 
-            className="absolute inset-0 bg-gradient-to-br from-white/20 via-transparent to-black/10 pointer-events-none rounded-full"
+              <Avatar className="w-full h-full">
+                <AvatarImage src={avatarUrl || undefined} className="object-cover" />
+                <AvatarFallback 
+                  className="bg-gradient-to-br from-primary/40 to-primary/20 text-primary-foreground font-bold"
+                  style={{ fontSize: pixelSize * 0.25 }}
+                >
+                  {initial}
+                </AvatarFallback>
+              </Avatar>
+              
+              {/* Specular Highlight (top-left) */}
+              <div 
+                className="absolute inset-0 pointer-events-none rounded-full"
+                style={{
+                  background: 'radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.2) 0%, transparent 50%)',
+                }}
+              />
+            </div>
+          </div>
+          
+          {/* Animated Shine Sweep */}
+          <motion.div
+            className="absolute inset-0 pointer-events-none rounded-full"
+            style={{
+              background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.3) 50%, transparent 60%)',
+            }}
+            animate={animate ? { 
+              opacity: [0, 1, 0],
+              x: ['-100%', '100%'],
+            } : undefined}
+            transition={animate ? {
+              duration: 3,
+              repeat: Infinity,
+              ease: 'easeInOut',
+              repeatDelay: 3,
+            } : undefined}
           />
         </div>
       </motion.div>
