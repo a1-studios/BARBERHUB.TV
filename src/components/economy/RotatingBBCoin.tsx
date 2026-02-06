@@ -1,5 +1,5 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import bbCoinLogo from '@/assets/bb-coin-logo.png';
 
 interface RotatingBBCoinProps {
@@ -68,6 +68,10 @@ const AvatarFace = ({
   animate: boolean;
 }) => {
   const rimWidth = Math.max(2, pixelSize * 0.06);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
+
+  const showImage = avatarUrl && !imgError;
 
   return (
     <div
@@ -86,22 +90,43 @@ const AvatarFace = ({
         `,
       }}
     >
-      <Avatar
-        className="rounded-full"
-        style={{ width: pixelSize, height: pixelSize, flexShrink: 1 }}
-      >
-        <AvatarImage
-          src={avatarUrl || undefined}
-          className="object-cover"
-          style={{ width: pixelSize, height: pixelSize }}
+      {/* Plain img for avatar photo */}
+      {showImage && (
+        <img
+          src={avatarUrl}
+          alt="Profile"
+          onLoad={() => setImgLoaded(true)}
+          onError={() => setImgError(true)}
+          className="absolute inset-0 rounded-full"
+          style={{
+            width: pixelSize,
+            height: pixelSize,
+            objectFit: 'cover',
+            opacity: imgLoaded ? 1 : 0,
+            transition: 'opacity 0.2s ease',
+          }}
         />
-        <AvatarFallback
-          className="flex items-center justify-center bg-gradient-to-br from-amber-800 to-amber-950 text-amber-200 font-bold"
-          style={{ width: pixelSize, height: pixelSize, fontSize: pixelSize * 0.35 }}
+      )}
+
+      {/* Plain div fallback with high-contrast initial */}
+      {(!showImage || !imgLoaded) && (
+        <div
+          className="absolute inset-0 rounded-full"
+          style={{
+            width: pixelSize,
+            height: pixelSize,
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+            color: '#F5C518',
+            fontSize: pixelSize * 0.4,
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
           {initial}
-        </AvatarFallback>
-      </Avatar>
+        </div>
+      )}
 
       {/* Gold rim overlay */}
       <div
