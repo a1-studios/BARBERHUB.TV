@@ -34,6 +34,10 @@ export function ClientProfileForm({ onProfileCreated, existingProfile }: ClientP
       newErrors.username = 'Username must be at least 3 characters';
     }
 
+    if (!formData.country_code) {
+      newErrors.country_code = 'Country is required';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -49,15 +53,16 @@ export function ClientProfileForm({ onProfileCreated, existingProfile }: ClientP
 
     setLoading(true);
     try {
-      const profileData = {
-        ...formData,
-        user_id: user.id
+      const clientProfileData = {
+        username: formData.username,
+        avatar_url: formData.avatar_url || null,
+        user_id: user.id,
       };
 
       if (existingProfile) {
         const { error } = await supabase
           .from('client_profiles')
-          .update(profileData)
+          .update(clientProfileData)
           .eq('id', existingProfile.id);
 
         if (error) throw error;
@@ -65,7 +70,7 @@ export function ClientProfileForm({ onProfileCreated, existingProfile }: ClientP
       } else {
         const { error } = await supabase
           .from('client_profiles')
-          .insert(profileData);
+          .insert(clientProfileData);
 
         if (error) throw error;
         toast.success('Profile created successfully!');
@@ -136,14 +141,15 @@ export function ClientProfileForm({ onProfileCreated, existingProfile }: ClientP
           <div>
             <Label className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
-              Country (optional)
+              Country *
             </Label>
             <CountrySelector
               value={formData.country_code}
               onChange={(code) => setFormData({ ...formData, country_code: code || '' })}
               placeholder="Select your country"
             />
-            <p className="text-xs text-muted-foreground mt-1">Show your flag when voting and cheering</p>
+            {errors.country_code && <p className="text-xs text-destructive mt-1">{errors.country_code}</p>}
+            <p className="text-xs text-muted-foreground mt-1">Represent your nation in battles and tournaments</p>
           </div>
 
           <div>
