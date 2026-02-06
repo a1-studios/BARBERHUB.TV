@@ -20,11 +20,19 @@ const sizeMap = {
 
 // Proportional sizing for inner elements
 const getProportions = (size: number) => ({
-  rimWidth: Math.max(2, size * 0.06),
-  innerRingWidth: Math.max(1, size * 0.03),
-  centerSize: size * 0.7,
+  rimWidth: Math.max(1, size * 0.04),
+  innerRingWidth: Math.max(1, size * 0.02),
+  centerSize: size * 0.82,
   edgeThickness: Math.max(3, size * 0.08),
 });
+
+// Beveled edge color function for realistic 3D effect
+const getEdgeColor = (index: number, total: number, copperGradient: string) => {
+  if (index < 2 || index >= total - 2) {
+    return 'linear-gradient(90deg, #5C3D2E 0%, #8B5A2B 50%, #5C3D2E 100%)';
+  }
+  return copperGradient;
+};
 
 export const RotatingBBCoin = ({
   avatarUrl,
@@ -78,17 +86,25 @@ export const RotatingBBCoin = ({
           ease: 'linear'
         } : undefined}
       >
-        {/* Coin Edge (thickness visible during rotation) */}
-        <div
-          className="absolute rounded-full"
-          style={{
-            width: pixelSize,
-            height: pixelSize,
-            background: copperEdgeGradient,
-            transform: 'translateZ(-4px)',
-            boxShadow: 'inset 0 0 10px rgba(0, 0, 0, 0.5)',
-          }}
-        />
+        {/* Coin Edge - Multiple layers for solid 3D thickness */}
+        {Array.from({ length: 8 }).map((_, i) => {
+          const edgeDepth = Math.max(6, pixelSize * 0.15);
+          return (
+            <div
+              key={i}
+              className="absolute rounded-full"
+              style={{
+                width: pixelSize - 2,
+                height: pixelSize - 2,
+                left: 1,
+                top: 1,
+                background: getEdgeColor(i, 8, copperEdgeGradient),
+                transform: `translateZ(${-((i + 1) * (edgeDepth / 8))}px)`,
+                boxShadow: i === 7 ? 'inset 0 0 8px rgba(0, 0, 0, 0.6)' : 'none',
+              }}
+            />
+          );
+        })}
 
         {/* Front Face - BB Logo */}
         <div
@@ -127,6 +143,7 @@ export const RotatingBBCoin = ({
                 alt="BB Coin"
                 className="w-full h-full object-cover"
                 style={{
+                  transform: 'scale(1.15)',
                   filter: 'drop-shadow(1px 1px 1px rgba(0,0,0,0.5))',
                 }}
               />
