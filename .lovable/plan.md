@@ -1,59 +1,82 @@
 
 
-# Center Play Buttons in Hero Card Boxes
+# Minimize BB Coin Header Footprint
 
-## Problem
+## What Changes
 
-The play buttons (rotating barber pole icons) inside each hero card appear off-center. This happens because the `BarberVideoSection` placeholder applies both `aspect-video` and `h-full` simultaneously. When `h-full` forces the container to match the parent's height, the `aspect-video` ratio constrains its width, making the container narrower than the card. The "centered" content then sits in the center of this narrower box, not the visual center of the card.
+The BB coin area in the header currently takes up space with a gradient background box, the numeric balance text beside the coin, and a chevron arrow. This plan strips all surrounding elements so only the bare rotating coin sits in the header. The balance amount moves onto the back face of the coin itself, replacing the user avatar/initials -- a clever space-saver that keeps the information accessible at a glance every rotation.
 
-## Root Cause
+## Changes
 
-In `src/components/barber/BarberVideoSection.tsx`, the aspect ratio class is always computed:
+### 1. RotatingBBCoin -- Add balance display on the back face
 
-```tsx
-const aspectClass = aspectRatio === 'portrait' ? 'aspect-[9/16]' : 'aspect-video';
+**File: `src/components/economy/RotatingBBCoin.tsx`**
+
+- Add a new optional prop: `balanceText?: string` (e.g., `"1,250"`)
+- When `balanceText` is provided, the **back face** renders the balance amount instead of the avatar/initials:
+  - Dark gradient background (same engraved style)
+  - Balance number in gold (#F5C518), sized proportionally to the coin
+  - Small "BB" label underneath in a dimmer gold
+  - The engraving overlay stays for visual consistency
+- When `balanceText` is **not** provided, the back face behaves exactly as it does now (avatar or initial fallback) -- so no regression for other uses of the coin (BarberProfileHeader, AddFundsModal, etc.)
+
+### 2. Header -- Strip the BB button down to just the coin
+
+**File: `src/components/Header.tsx`**
+
+**Trigger button** (lines 266-290) simplified from:
+```text
+[gradient box] [coin] [1,250] [chevron] [/gradient box]
+```
+To just:
+```text
+[coin]
 ```
 
-But the hero cards pass `className="rounded-lg h-full border border-cyan/10"` which includes `h-full`. These two properties fight each other -- `h-full` wins for height, but `aspect-video` then forces a narrower width, creating an off-center appearance.
+Specific removals from the trigger button:
+- Remove the wrapping gradient background, border, padding, and glow styles
+- Remove the `barberBucks.toLocaleString()` text span
+- Remove the `ChevronDown` icon
+- Pass the new `balanceText={barberBucks.toLocaleString()}` prop to the coin so the balance shows on the back face
+- Keep the `onClick` to toggle the dropdown
+- Keep the `ref` wrapper for outside-click detection
 
-## Fix
+**Dropdown menu** (lines 293-338) -- streamline the header section:
+- Remove the duplicate `RotatingBBCoin` from the dropdown balance header
+- Simplify the balance header to just show "Your Balance: X BB" as a compact text row (no second coin)
+- Keep "Add Funds" and "Transaction History" action buttons exactly as they are
+- Ensure solid `bg-card` background (not transparent) with proper `z-50`
 
-**File: `src/components/barber/BarberVideoSection.tsx`**
+### 3. Remove unused import
 
-Update the `aspectClass` logic to detect when `h-full` is in the className and skip the aspect ratio, using `w-full h-full` instead. This ensures the placeholder fills the entire card area, making the centered play button truly centered.
+- The `ChevronDown` import from lucide-react can be removed from Header.tsx since it's no longer used
 
-Change the aspect class calculation (around lines 35-39):
+## Visual Result
 
-```tsx
-// Before
-const aspectClass = className.includes('aspect-square') 
-  ? 'aspect-square' 
-  : aspectRatio === 'portrait' 
-    ? 'aspect-[9/16]' 
-    : 'aspect-video';
-
-// After
-const hasExplicitHeight = className.includes('h-full') || className.includes('h-[');
-const aspectClass = hasExplicitHeight
-  ? 'w-full h-full'
-  : className.includes('aspect-square') 
-    ? 'aspect-square' 
-    : aspectRatio === 'portrait' 
-      ? 'aspect-[9/16]' 
-      : 'aspect-video';
+**Before (header right side):**
+```text
+[ gradient-box | [coin] 1,250 v ]
 ```
 
-When `h-full` is detected in the className, the component uses `w-full h-full` to fill the parent in both directions. Otherwise, it falls back to the original aspect ratio behavior (used on profile pages, etc.).
+**After (header right side):**
+```text
+[coin]
+```
 
-This single change fixes centering for all three placeholder states in the component (the owner upload UI, the arena placeholder, and the video embed) because they all use `aspectClass` for their container sizing.
-
----
+The coin rotates showing BB logo on front, and "1,250 BB" engraved in gold on the back. Clicking it opens the dropdown with balance details and actions. Same functionality, dramatically less space.
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `src/components/barber/BarberVideoSection.tsx` | Detect `h-full` in className and skip aspect ratio constraint, use `w-full h-full` instead |
+| `src/components/economy/RotatingBBCoin.tsx` | Add optional `balanceText` prop; render balance on back face when provided |
+| `src/components/Header.tsx` | Strip BB button to bare coin only; pass `balanceText` prop; simplify dropdown header; remove `ChevronDown` import |
 
-No changes to `DynamicBattleHero.tsx` or any other consumer files.
+## What Stays the Same
+
+- All dropdown functionality (Add Funds, Transaction History)
+- AddFundsModal integration
+- Outside-click and Escape key dismissal
+- The coin's front face (BB logo) is unchanged
+- Other components using RotatingBBCoin (BarberProfileHeader, AddFundsModal dropdown header) are unaffected since `balanceText` is optional
 
