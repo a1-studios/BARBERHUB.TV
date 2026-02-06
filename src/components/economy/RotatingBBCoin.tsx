@@ -67,7 +67,7 @@ const AvatarFace = ({
   initial: string;
   animate: boolean;
 }) => {
-  const rimWidth = Math.max(2, pixelSize * 0.05);
+  const rimWidth = Math.max(2, pixelSize * 0.06);
 
   return (
     <div
@@ -83,28 +83,26 @@ const AvatarFace = ({
       }}
     >
       {/* Avatar fills edge-to-edge, matching front face */}
-      <Avatar className="w-full h-full">
-        <AvatarImage src={avatarUrl || undefined} className="object-cover" />
+      <Avatar className="w-full h-full rounded-full">
+        <AvatarImage src={avatarUrl || undefined} className="w-full h-full object-cover" />
         <AvatarFallback
-          className="bg-gradient-to-br from-primary/40 to-primary/20 text-primary-foreground font-bold"
-          style={{ fontSize: pixelSize * 0.3 }}
+          className="w-full h-full flex items-center justify-center bg-gradient-to-br from-amber-800 to-amber-950 text-amber-200 font-bold"
+          style={{ fontSize: pixelSize * 0.35 }}
         >
           {initial}
         </AvatarFallback>
       </Avatar>
 
-      {/* Gold rim overlay – decorative only, doesn't shrink content */}
+      {/* Gold rim overlay using box-shadow (borderImage breaks border-radius) */}
       <div
         className="absolute inset-0 rounded-full pointer-events-none"
         style={{
-          border: `${rimWidth}px solid transparent`,
-          borderImage: 'linear-gradient(135deg, #CD7F32, #F5C518, #CD7F32, #8B4513, #CD7F32) 1',
-          borderRadius: '50%',
-          backgroundClip: 'padding-box',
           boxShadow: `
-            inset 0 0 0 ${rimWidth}px rgba(205,127,50,0.6),
-            inset 0 2px 4px rgba(255,255,255,0.2),
-            inset 0 -2px 4px rgba(0,0,0,0.3)
+            inset 0 0 0 ${rimWidth}px #B8860B,
+            inset 0 0 0 ${rimWidth + 1}px rgba(245,197,24,0.5),
+            inset 0 0 ${rimWidth * 2}px rgba(139,105,20,0.4),
+            inset 0 2px 4px rgba(255,255,255,0.25),
+            inset 0 -2px 4px rgba(0,0,0,0.4)
           `,
         }}
       />
