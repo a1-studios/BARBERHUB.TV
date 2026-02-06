@@ -32,11 +32,14 @@ export const BarberVideoSection = ({
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
   
-  const aspectClass = className.includes('aspect-square') 
-    ? 'aspect-square' 
-    : aspectRatio === 'portrait' 
-      ? 'aspect-[9/16]' 
-      : 'aspect-video';
+  const hasExplicitHeight = className.includes('h-full') || className.includes('h-[');
+  const aspectClass = hasExplicitHeight
+    ? 'w-full h-full'
+    : className.includes('aspect-square') 
+      ? 'aspect-square' 
+      : aspectRatio === 'portrait' 
+        ? 'aspect-[9/16]' 
+        : 'aspect-video';
 
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
