@@ -1,24 +1,14 @@
 
 
-# Fix Back Face - Use Plain HTML Instead of Radix Avatar
+# Rebuild Barber Coin - Follow the Logic Blueprint
 
-## Root Cause
+## Problem
 
-The Radix `Avatar` component uses internal JavaScript to detect image loading status (`onLoadingStatusChange`). Inside a CSS 3D transform context (`preserve-3d` + `rotateY(180deg)` + `backfaceVisibility: hidden`), this detection can fail silently, causing:
-- The `AvatarImage` never transitions to "loaded" state, so it stays hidden
-- The `AvatarFallback` has a built-in render delay, and its amber-on-amber text is nearly invisible at small sizes
-
-Meanwhile, the front face works perfectly because it uses a plain `<img>` tag with no state management.
+The coin's back face (profile side) has been broken through multiple fix attempts. The root cause is over-engineering: complex nested layers, edge gradients, and box-shadow rims create rendering conflicts inside CSS 3D transforms. The user's screenshots show the profile side appearing as a tiny unreadable golden dot.
 
 ## Solution
 
-Replace the Radix `Avatar`/`AvatarImage`/`AvatarFallback` with plain HTML elements in the `AvatarFace` component, matching the front face's approach:
-
-- Use a plain `<img>` tag for the user's avatar photo (with `onError` fallback)
-- Use a plain `<div>` for the initial letter fallback
-- Track image load state with a simple `useState` + `onLoad`/`onError`
-
-This sidesteps all Radix quirks inside 3D transforms.
+Rewrite the `RotatingBBCoin` component following the user's "Logic Blueprint" approach -- a cleaner, simpler CSS 3D coin flip that reliably renders both faces at full size.
 
 ---
 
@@ -26,84 +16,137 @@ This sidesteps all Radix quirks inside 3D transforms.
 
 ### File: `src/components/economy/RotatingBBCoin.tsx`
 
-**Rewrite `AvatarFace` to use plain HTML:**
+**Complete rewrite of the component internals while preserving the existing props interface** (so all 6 consumer files continue working unchanged).
 
-```tsx
-const AvatarFace = ({ pixelSize, avatarUrl, initial, animate }) => {
-  const rimWidth = Math.max(2, pixelSize * 0.06);
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const [imgError, setImgError] = useState(false);
+### 1. Simplify the coin structure
 
-  const showImage = avatarUrl && !imgError;
+Replace the 8-layer edge system and complex box-shadow rims with the blueprint's simpler approach:
 
-  return (
-    <div style={{
-      width: pixelSize, height: pixelSize,
-      backfaceVisibility: 'hidden',
-      transform: 'rotateY(180deg)',
-      // ... shadows
-    }}>
-      {/* Plain img for avatar photo */}
-      {showImage && (
-        <img
-          src={avatarUrl}
-          alt="Profile"
-          onLoad={() => setImgLoaded(true)}
-          onError={() => setImgError(true)}
-          style={{
-            width: pixelSize, height: pixelSize,
-            objectFit: 'cover',
-            opacity: imgLoaded ? 1 : 0,
-          }}
-        />
-      )}
+```text
+Current (broken):
+  perspective container
+    motion.div (preserve-3d, auto-rotate 360)
+      8x edge layer divs (translateZ)
+      front face (inset-0, box-shadow)
+      AvatarFace (rotateY 180, box-shadow rim, specular, shine)
 
-      {/* Plain div fallback with high-contrast initial */}
-      {(!showImage || !imgLoaded) && (
-        <div style={{
-          width: pixelSize, height: pixelSize,
-          background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
-          color: '#F5C518',
-          fontSize: pixelSize * 0.4,
-          fontWeight: 'bold',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-          {initial}
-        </div>
-      )}
-
-      {/* Gold rim overlay (unchanged) */}
-      {/* Specular + Shine overlays (unchanged) */}
-    </div>
-  );
-};
+New (blueprint-aligned):
+  perspective container
+    motion.div (preserve-3d, auto-rotate OR click-flip)
+      FRONT face div (backface-hidden, gold border, shadow)
+        BB logo img (full size)
+      BACK face div (backface-hidden, rotateY 180, gold border, shadow)
+        User avatar img OR initial fallback (full size)
+        Metallic engraving overlay (gold gradient, low opacity)
 ```
 
-**Key improvements:**
+### 2. Front face -- keep the BB logo
 
-| Element | Before (broken) | After (fixed) |
-|---------|-----------------|---------------|
-| Avatar image | Radix `AvatarImage` (internal load detection fails in 3D) | Plain `<img>` with `onLoad`/`onError` |
-| Fallback | Radix `AvatarFallback` (delayed render, low contrast amber-on-amber) | Plain `<div>` (immediate render, gold text on dark blue background) |
-| State management | Radix internal (opaque, fails in 3D) | Simple `useState` (transparent, reliable) |
-| Fallback colors | `text-amber-200` on `from-amber-800 to-amber-950` (barely visible) | Gold `#F5C518` on dark blue `#1a1a2e` (high contrast, matches coin theme) |
-| Import needed | `Avatar, AvatarImage, AvatarFallback` from Radix | `useState` from React (already imported) |
+```tsx
+<div style={{
+  position: 'absolute',
+  width: pixelSize, height: pixelSize,
+  backfaceVisibility: 'hidden',
+  borderRadius: '50%',
+  border: `${borderWidth}px solid #B8860B`,
+  boxShadow: '0 4px 15px rgba(0,0,0,0.4), inset 0 1px 3px rgba(255,255,255,0.2)',
+  overflow: 'hidden',
+}}>
+  <img src={bbCoinLogo} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+</div>
+```
 
-**Also remove the Radix Avatar import** since it's no longer used in this component.
+### 3. Back face -- user profile with engraved look (from blueprint)
+
+Use plain `<img>` (no Radix Avatar) with the blueprint's metallic overlay:
+
+```tsx
+<div style={{
+  position: 'absolute',
+  width: pixelSize, height: pixelSize,
+  backfaceVisibility: 'hidden',
+  transform: 'rotateY(180deg)',
+  borderRadius: '50%',
+  border: `${borderWidth}px solid #B8860B`,
+  boxShadow: '0 4px 15px rgba(0,0,0,0.4), inset 0 1px 3px rgba(255,255,255,0.2)',
+  overflow: 'hidden',
+  background: '#111',
+}}>
+  {/* User avatar - full size */}
+  {showImage ? (
+    <img src={avatarUrl}
+      style={{ width: '100%', height: '100%', objectFit: 'cover',
+               opacity: 0.85, filter: 'contrast(1.2) saturate(0.8)' }}
+    />
+  ) : (
+    <div /* fallback initial letter, gold on dark blue */ />
+  )}
+
+  {/* Engraving overlay - gold gradient from blueprint */}
+  <div style={{
+    position: 'absolute', inset: 0, borderRadius: '50%',
+    background: 'linear-gradient(135deg, rgba(184,134,11,0.3) 0%, transparent 60%)',
+    pointerEvents: 'none',
+  }} />
+</div>
+```
+
+The key differences from the broken version:
+- Uses `border` for the rim (reliable with `border-radius`) instead of `box-shadow inset` layers
+- Avatar rendered at `width: 100%` / `height: 100%` inside the bordered container -- no absolute positioning conflicts
+- Metallic overlay uses `opacity: 0.85` + `contrast(1.2)` + `saturate(0.8)` for the "engraved on coin" look
+- Gold gradient overlay on top for the engraving effect
+- No edge layers, no specular highlights, no shine sweeps -- just clean, working renders
+
+### 4. Keep auto-rotate behavior (backward compatible)
+
+The `animate` prop continues to work for continuous rotation:
+
+```tsx
+<motion.div
+  style={{ transformStyle: 'preserve-3d', width: pixelSize, height: pixelSize }}
+  animate={animate ? { rotateY: 360 } : undefined}
+  transition={animate ? { duration: 6, repeat: Infinity, ease: 'linear' } : undefined}
+>
+```
+
+All 6 consumer files pass `animate={true}`, so this stays the same.
+
+### 5. Maintain the exact same props interface
+
+```tsx
+interface RotatingBBCoinProps {
+  avatarUrl?: string | null;   // unchanged
+  displayName?: string;         // unchanged
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';  // unchanged
+  animate?: boolean;            // unchanged
+  onClick?: () => void;         // unchanged
+}
+```
+
+Zero changes needed in any consumer component.
 
 ---
 
-## Why This Works
+## What Gets Removed (Simplification)
 
-The front face already proves that plain `<img>` renders perfectly inside the 3D transform:
-```tsx
-{/* Front face - works great */}
-<img src={bbCoinLogo} className="w-full h-full object-cover rounded-full" />
-```
+| Removed Element | Why |
+|----------------|-----|
+| 8 edge layer divs with `translateZ` | Over-engineered, causes z-fighting and rendering glitches |
+| `getEdgeGradient` function | No longer needed without edge layers |
+| `SpecularHighlight` component | Unnecessary complexity, adds visual noise at small sizes |
+| `ShineSweep` animated component | Unnecessary, conflicts with 3D transforms |
+| `AvatarFace` sub-component | Replaced by inline back face div (simpler, no abstraction needed) |
+| Drop shadow ellipse div | Replaced by standard `box-shadow` on the coin |
+| `box-shadow inset` rim approach | Replaced by reliable `border` property |
 
-The back face just needs the same approach but with dynamic `src` (user avatar) and a fallback state.
+## What Gets Added
+
+| New Element | Purpose |
+|------------|---------|
+| Metallic filter on avatar | `opacity: 0.85`, `contrast(1.2)`, `saturate(0.8)` -- makes avatar look "printed" on the coin |
+| Gold engraving overlay | `linear-gradient` from gold/transparent -- from the blueprint |
+| Simple `border` rim | Reliable gold border that works with `border-radius` in all contexts |
 
 ---
 
@@ -111,6 +154,6 @@ The back face just needs the same approach but with dynamic `src` (user avatar) 
 
 | File | Change |
 |------|--------|
-| `src/components/economy/RotatingBBCoin.tsx` | Replace Radix Avatar with plain `<img>` + `<div>` fallback in `AvatarFace`; add `useState` import; remove Avatar imports |
+| `src/components/economy/RotatingBBCoin.tsx` | Full rewrite of internals following the blueprint; same props interface |
 
-No changes needed to any consumer components -- the `RotatingBBCoinProps` interface stays identical.
+No changes to consumer files: `Header.tsx`, `BBWalletCard.tsx`, `BBWalletWidget.tsx`, `AddFundsModal.tsx`, `BarberProfileHeader.tsx`.
