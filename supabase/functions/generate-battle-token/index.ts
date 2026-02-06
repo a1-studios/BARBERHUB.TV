@@ -58,27 +58,26 @@ serve(async (req) => {
 
     console.log("Token received - length:", token.length, "first 10 chars:", token.substring(0, 10));
 
-    // Validate JWT via server-side getUser() — more reliable than getClaims() in edge runtime
+    // Validate JWT via server-side getUser(token) — passes JWT explicitly for verification
     const supabaseAuth = createClient(
       supabaseUrl,
       Deno.env.get("SUPABASE_ANON_KEY")!,
       {
-        global: { headers: { Authorization: `Bearer ${token}` } },
         auth: { persistSession: false, autoRefreshToken: false },
       }
     );
 
-    console.log("AUTH_STRATEGY=GET_USER");
+    console.log("AUTH_STRATEGY=GET_USER_WITH_TOKEN");
 
-    const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser();
+    const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser(token);
     const userId = authUser?.id;
 
     if (authError || !userId) {
       console.error(
         "Auth error:",
         authError?.message,
-        "Code:",
-        (authError as any)?.code
+        "Status:",
+        (authError as any)?.status
       );
       return new Response(
         JSON.stringify({ error: "Invalid authentication. Please sign in again." }),
