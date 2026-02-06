@@ -1,131 +1,128 @@
 
-# Fix Coin Edge Thickness & Enlarge BB Logo
 
-## Issues to Fix
+# Rebuild RotatingBBCoin - Clean 3D Coin with New Logo
 
-1. **Hollow Edge**: Currently only one edge layer at `translateZ(-4px)` - need multiple stacked layers for solid 3D thickness
-2. **Small Logo**: The BB logo image is too small due to cumulative padding from rim (6%) + inner ring (3%) - need to reduce these to make the center image larger
+## Overview
+
+Complete rewrite of the RotatingBBCoin component using a smarter, cleaner approach. The new coin image (image-9.png) already contains its own gold rim, Greek meander pattern, and center logo -- so the front face should render the image directly without any CSS rim/ring layers doubling up. The edge styling will match the thick, polished, beveled gold look from the reference image.
 
 ---
 
-## Technical Changes
+## Step 1: Replace the Logo Asset
 
-### File: `src/components/economy/RotatingBBCoin.tsx`
+Copy `user-uploads://image-9.png` to `src/assets/bb-coin-logo.png`, replacing the current file. This image already includes the complete coin face design (gold rim + pattern border + BB logo on black center).
 
-**1. Add Multiple Edge Layers for Solid Thickness**
+---
 
-Replace single edge layer with 8 stacked layers:
+## Step 2: Rewrite `src/components/economy/RotatingBBCoin.tsx`
+
+### Architecture: 3 Clean Elements
+
+Instead of the current complex layering (8 edge divs + nested rim/ring/center divs duplicated for both faces), the new approach uses just 3 core pieces:
+
+```text
+┌─────────────────────────────────────────────────┐
+│  1. FRONT FACE (Z = 0)                          │
+│     - Image rendered directly, no CSS rim layers │
+│     - backfaceVisibility: hidden                 │
+│     - Specular highlight + shine sweep overlays  │
+│                                                  │
+│  2. EDGE RING (multiple layers at Z offsets)     │
+│     - Polished gold gradient matching reference  │
+│     - Smooth beveled shading (lighter center,    │
+│       darker at front/back)                      │
+│     - Subtle ridged texture via box-shadow       │
+│                                                  │
+│  3. BACK FACE (rotateY 180deg)                   │
+│     - CSS-built rim (bronze gradient)            │
+│     - User avatar in center                      │
+│     - Same specular + shine effects              │
+└─────────────────────────────────────────────────┘
+```
+
+### Front Face (Simplified)
+
+Since the new image IS the complete coin face, remove all CSS rim, inner ring, and center padding layers:
+
 ```tsx
-// Edge configuration
-const edgeDepth = Math.max(6, pixelSize * 0.15);
-const edgeLayers = 8;
-
-// Render stacked edge layers
-{Array.from({ length: edgeLayers }).map((_, i) => (
-  <div
-    key={i}
-    className="absolute rounded-full"
-    style={{
-      width: pixelSize - 2,
-      height: pixelSize - 2,
-      left: 1,
-      top: 1,
-      background: getEdgeColor(i, edgeLayers), // Beveled shading
-      transform: `translateZ(${-((i + 1) * (edgeDepth / edgeLayers))}px)`,
-    }}
+{/* Front Face - Full coin image */}
+<div style={{ backfaceVisibility: 'hidden' }}>
+  <img
+    src={bbCoinLogo}
+    alt="BB Coin"
+    className="w-full h-full object-cover rounded-full"
   />
-))}
+  {/* Specular highlight overlay */}
+  {/* Animated shine sweep */}
+</div>
 ```
 
-**2. Add Beveled Edge Color Function**
+No `transform: scale()` needed -- the image fills the face naturally.
+
+### Edge Layers (Polished Gold Style from Reference)
+
+Keep the multi-layer approach but refine the colors to match the reference image's thick polished gold look:
+
+| Layer Position | Color |
+|----------------|-------|
+| Front layers (0-1) | Darker bronze `#8B6914` to `#A67C00` -- shadow from front face lip |
+| Middle layers (2-5) | Bright polished gold `#D4A017` to `#F5C518` -- main visible edge |
+| Back layers (6-7) | Darker bronze again -- shadow toward back face |
+
+This creates the smooth, rounded bevel visible in the reference.
+
+### Back Face (Avatar - Unchanged Structure)
+
+The back face still needs CSS-built layers since it renders dynamic content (user avatar):
+- Bronze gradient rim
+- Dark metallic inner ring  
+- Center area with Avatar component and fallback initial
+- Specular highlight + shine sweep
+
+### Shared CoinFace Helper
+
+Extract a reusable function for the back face's rim/ring/center structure + overlays to reduce code duplication. The front face won't use it since it's just an image.
+
+### Props Interface (Unchanged)
+
 ```tsx
-const getEdgeColor = (index: number, total: number) => {
-  // Darker at front/back edges, lighter in middle for bevel effect
-  if (index < 2) {
-    return 'linear-gradient(90deg, #5C3D2E 0%, #8B5A2B 50%, #5C3D2E 100%)';
-  }
-  if (index >= total - 2) {
-    return 'linear-gradient(90deg, #5C3D2E 0%, #8B5A2B 50%, #5C3D2E 100%)';
-  }
-  return copperEdgeGradient;
-};
+interface RotatingBBCoinProps {
+  avatarUrl?: string | null;
+  displayName?: string;
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  animate?: boolean;
+  onClick?: () => void;
+}
 ```
 
-**3. Reduce Rim/Ring Padding to Enlarge Logo by ~15%**
-
-Update proportions to show more of the center image:
-```tsx
-const getProportions = (size: number) => ({
-  rimWidth: Math.max(1, size * 0.04),      // Was 0.06 → 0.04 (reduced)
-  innerRingWidth: Math.max(1, size * 0.02), // Was 0.03 → 0.02 (reduced)
-  centerSize: size * 0.82,                  // Was 0.7 → 0.82 (~15% increase)
-  edgeThickness: Math.max(3, size * 0.08),
-});
-```
-
-**4. Scale Logo Image Beyond Container**
-
-Add `transform: scale(1.15)` to the logo image for additional enlargement:
-```tsx
-<img
-  src={bbCoinLogo}
-  alt="BB Coin"
-  className="w-full h-full object-cover"
-  style={{
-    transform: 'scale(1.15)',  // 15% larger
-    filter: 'drop-shadow(1px 1px 1px rgba(0,0,0,0.5))',
-  }}
-/>
-```
+All 5 consumer files (Header, BBWalletWidget, BBWalletCard, BarberProfileHeader, AddFundsModal) continue to work without changes.
 
 ---
 
-## Visual Result
+## What Changes vs What Stays
 
-**Before:**
-```text
-┌──────────────────┐
-│ ████████████████ │  ← Thick rim (6%)
-│ ██ ┌────────┐ ██ │  ← Thick inner ring (3%)
-│ ██ │   BB   │ ██ │  ← Small logo
-│ ██ │  LOGO  │ ██ │
-│ ██ └────────┘ ██ │
-│ ████████████████ │
-└──────────────────┘
-   Gap (hollow)
-```
-
-**After:**
-```text
-┌──────────────────┐
-│ ██████████████ │  ← Thinner rim (4%)
-│ █ ┌──────────┐ █ │  ← Thinner ring (2%)
-│ █ │    BB    │ █ │  ← Larger logo (+15%)
-│ █ │   LOGO   │ █ │
-│ █ └──────────┘ █ │
-│ ██████████████ │
-├──────────────────┤  ← 8 solid edge layers
-├──────────────────┤
-├──────────────────┤
-└──────────────────┘
-```
+| Element | Before | After |
+|---------|--------|-------|
+| Logo asset | Old small BB logo | New full coin face image (gold rim + Greek pattern + logo) |
+| Front face | CSS rim + inner ring + center + scaled image | Image rendered directly (no CSS layers) |
+| Front face centering | `transform: scale(1.15)` hack | `object-fit: cover` -- naturally centered |
+| Edge layers | 8 layers, copper/brown colors | 8 layers, polished gold colors matching reference |
+| Edge bevel | Basic dark/light alternation | Smooth gradient: dark front, bright middle, dark back |
+| Back face | CSS rim + avatar (complex nesting) | Same structure, extracted into helper |
+| Code size | ~254 lines with duplication | ~180 lines with shared helper |
+| Props interface | No change | No change |
+| Animation (rotation) | 6s Y-axis, linear | No change |
+| Animation (shine) | 3s sweep with delay | No change |
+| Drop shadow | Elliptical blur below | No change |
 
 ---
 
-## Summary
+## Files Modified
 
-| Change | Before | After |
-|--------|--------|-------|
-| Edge layers | 1 (hollow) | 8 (solid) |
-| Rim width | 6% | 4% |
-| Inner ring | 3% | 2% |
-| Logo scale | 100% | 115% |
-| Total logo visibility | ~70% | ~85% |
+| File | Change |
+|------|--------|
+| `src/assets/bb-coin-logo.png` | Replaced with new uploaded image (image-9.png) |
+| `src/components/economy/RotatingBBCoin.tsx` | Full rewrite: simplified front face (image only), polished gold edge colors, shared helper for back face |
 
----
+No changes needed to any consumer components -- the interface stays identical.
 
-## File Modified
-
-| File | Changes |
-|------|---------|
-| `src/components/economy/RotatingBBCoin.tsx` | Add multiple edge layers for solid thickness, reduce rim/ring padding, scale logo image 15% larger |
