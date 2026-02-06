@@ -1,149 +1,121 @@
 
 
-# Add 3D Thickness to the Barber Coin
+# Make Country Required for All Users + Fix Profile Save Crash
 
-## Goal
+## Two Problems, One Fix
 
-Give the coin a realistic thick, 3D cylindrical edge that's visible when it rotates -- like a real coin you'd hold between your fingers.
+### Problem 1: Profile save crashes
+When a fan clicks "Create Profile", the form sends `country_code` to the `client_profiles` table -- but that table doesn't have a `country_code` column. That's the error you're seeing. The country should only be saved to the `profiles` table.
 
-## How It Works
-
-Right now the coin is just two flat faces (front logo + back profile). When it rotates sideways, there's no visible edge -- it looks paper-thin. Real coins have a thick gold rim visible from the side.
-
-The trick: stack multiple thin "edge slice" divs between the front and back faces at different Z-depths using CSS `translateZ`. When the coin turns, these slices merge visually into a solid gold edge.
-
-```text
-Current (paper-thin):
-  [Front Face] ←→ [Back Face]
-
-New (thick 3D):
-  [Front Face]
-    ↕ edge slice at Z=-1px
-    ↕ edge slice at Z=-2px
-    ↕ edge slice at Z=-3px
-    ...
-  [Back Face]
-```
+### Problem 2: Country is optional
+Currently, the country selector is labeled "optional" on the sign-up form. You want **every user** (barber or fan) to pick a country.
 
 ---
 
-## Technical Changes
+## Changes
 
-### File: `src/components/economy/RotatingBBCoin.tsx`
+### 1. Fix the crash in ClientProfileForm
 
-**1. Calculate edge thickness based on coin size**
+**File: `src/components/profiles/ClientProfileForm.tsx`**
 
-Scale the edge depth proportionally so small coins (28px) get a subtle edge and large coins (96px) get a chunky one:
+Stop spreading the full `formData` (which includes `country_code`) into the `client_profiles` insert/update. Instead, only send columns that exist on `client_profiles`:
 
+- Build a separate `clientProfileData` object with just `username`, `avatar_url`, and `user_id`
+- Keep the existing code that saves `country_code` to the `profiles` table (lines 74-81) -- that part is correct
+
+### 2. Make country required on the sign-up form
+
+**File: `src/components/auth/SignUpForm.tsx`**
+
+- Change the label from "Country (optional)" to "Country *"
+- Add validation: if no country is selected, show an error and block sign-up
+- Add a helper text like "Represent your nation in battles and tournaments"
+
+### 3. Make country required on the client profile form too
+
+**File: `src/components/profiles/ClientProfileForm.tsx`**
+
+- Change the label from "Country (optional)" to "Country *"
+- Add validation: require `country_code` before allowing profile creation
+- Update the helper text to emphasize its importance
+
+---
+
+## Technical Details
+
+### ClientProfileForm.tsx -- Fix the insert payload
+
+Current (broken):
 ```tsx
-const edgeDepth = Math.max(2, Math.round(pixelSize * 0.06));
-// xs(28px) = 2px, sm(36px) = 2px, md(56px) = 3px, lg(72px) = 4px, xl(96px) = 6px
+const profileData = {
+  ...formData,        // includes country_code -- crashes!
+  user_id: user.id
+};
+await supabase.from('client_profiles').insert(profileData);
 ```
 
-**2. Generate edge slice layers**
-
-Create an array of thin circular divs, each pushed back by 1px in Z-space. Each gets a gold gradient that shifts slightly to simulate light hitting a curved metallic edge:
-
+Fixed:
 ```tsx
-const edgeLayers = Array.from({ length: edgeDepth }, (_, i) => (
-  <div
-    key={`edge-${i}`}
-    style={{
-      position: 'absolute',
-      width: pixelSize,
-      height: pixelSize,
-      borderRadius: '50%',
-      transform: `translateZ(${-(i + 1)}px)`,
-      background: `linear-gradient(
-        ${90 + (i * 15)}deg,
-        #B8860B 0%, #DAA520 30%, #8B6914 60%, #B8860B 100%
-      )`,
-      // Slightly darker on deeper layers for depth illusion
-      filter: `brightness(${1 - i * 0.05})`,
-    }}
-  />
-));
+const clientProfileData = {
+  username: formData.username,
+  avatar_url: formData.avatar_url || null,
+  user_id: user.id,
+};
+await supabase.from('client_profiles').insert(clientProfileData);
+
+// country_code goes to profiles table only (already exists)
+await supabase
+  .from('profiles')
+  .update({ username: formData.username, country_code: formData.country_code || null })
+  .eq('user_id', user.id);
 ```
 
-**3. Position the front face forward**
-
-Push the front face forward by half the edge depth so the edge is centered:
+### SignUpForm.tsx -- Add country validation
 
 ```tsx
-// Front face
-<div style={{
-  ...faceBase,
-  transform: `translateZ(${edgeDepth / 2}px)`,
-}}>
-```
+const validateForm = () => {
+  // ... existing checks ...
 
-**4. Position the back face backward**
+  if (!formData.countryCode) {
+    toast.error('Please select your country');
+    return false;
+  }
 
-Push the back face to the other end of the edge:
-
-```tsx
-// Back face
-<div style={{
-  ...faceBase,
-  transform: `translateZ(${-edgeDepth / 2}px) rotateY(180deg)`,
-}}>
-```
-
-**5. Add a subtle drop shadow beneath the coin**
-
-A small elliptical shadow below the coin sells the "floating 3D object" illusion:
-
-```tsx
-<div style={{
-  position: 'absolute',
-  bottom: -4,
-  left: '10%',
-  width: '80%',
-  height: 4,
-  borderRadius: '50%',
-  background: 'radial-gradient(ellipse, rgba(0,0,0,0.3), transparent)',
-  pointerEvents: 'none',
-}} />
-```
-
-**6. Upgrade the border to a gradient border**
-
-Replace the flat `border: solid #B8860B` on each face with a richer multi-tone gold using a pseudo-approach via box-shadow:
-
-```tsx
-const faceBase: React.CSSProperties = {
-  // ... existing properties
-  border: `${borderWidth}px solid #B8860B`,
-  boxShadow: `
-    0 4px 15px rgba(0,0,0,0.4),
-    inset 0 1px 3px rgba(255,255,255,0.2),
-    inset 0 0 0 1px rgba(218,165,32,0.4)
-  `,
+  return true;
 };
 ```
 
-The extra `inset 0 0 0 1px` adds a subtle inner gold highlight that catches the light.
+And update the label:
+```tsx
+<Label htmlFor="country">Country *</Label>
+```
+
+### ClientProfileForm.tsx -- Add country validation
+
+```tsx
+const validate = () => {
+  // ... existing username check ...
+
+  if (!formData.country_code) {
+    newErrors.country_code = 'Country is required';
+  }
+
+  return Object.keys(newErrors).length === 0;
+};
+```
+
+And update the label:
+```tsx
+<Label>Country *</Label>
+```
 
 ---
-
-## Summary of Changes
-
-| Element | Purpose |
-|---------|---------|
-| Edge slice array (translateZ layers) | Creates visible gold thickness when coin rotates |
-| Front face `translateZ(+half)` | Pushes front forward to center the edge |
-| Back face `translateZ(-half)` | Pushes back backward to match |
-| Gradient rotation per slice | Simulates light hitting a curved metallic surface |
-| Brightness falloff on deeper slices | Adds depth perception to the edge |
-| Drop shadow ellipse | Grounds the coin visually |
-
-## Props Interface
-
-No changes -- the same `RotatingBBCoinProps` interface. All consumer files continue working unchanged.
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `src/components/economy/RotatingBBCoin.tsx` | Add edge thickness layers, offset faces in Z-space, add drop shadow |
+| `src/components/profiles/ClientProfileForm.tsx` | Fix insert payload (don't send `country_code` to `client_profiles`); make country required with validation |
+| `src/components/auth/SignUpForm.tsx` | Make country required with validation; update label from "optional" to required |
 
+No database changes needed -- `country_code` already exists on the `profiles` table where it belongs.
