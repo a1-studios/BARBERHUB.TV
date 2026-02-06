@@ -1,119 +1,81 @@
 
 
-# Rebuild RotatingBBCoin - Clean 3D Coin with New Logo
+# Fix Back Face Avatar Size to Match Front Face
 
-## Overview
+## Problem
 
-Complete rewrite of the RotatingBBCoin component using a smarter, cleaner approach. The new coin image (image-9.png) already contains its own gold rim, Greek meander pattern, and center logo -- so the front face should render the image directly without any CSS rim/ring layers doubling up. The edge styling will match the thick, polished, beveled gold look from the reference image.
+The back face of the coin (user avatar) appears smaller than the front face (BB logo) because of nested CSS padding layers:
+
+- **Front face**: Image fills the entire coin face edge-to-edge using `inset-0` + `object-cover`
+- **Back face**: Has `padding: 4%` (rim) + `padding: 2%` (inner ring) = avatar is ~12% smaller overall
+
+This creates a visible size mismatch when the coin rotates.
+
+## Solution
+
+Restructure the back face to match the front face approach: render the avatar edge-to-edge as the primary content, then overlay a thin gold rim border **on top** instead of using padding to shrink the content inward. This way both faces occupy the exact same visual area.
 
 ---
 
-## Step 1: Replace the Logo Asset
+## Technical Changes
 
-Copy `user-uploads://image-9.png` to `src/assets/bb-coin-logo.png`, replacing the current file. This image already includes the complete coin face design (gold rim + pattern border + BB logo on black center).
+### File: `src/components/economy/RotatingBBCoin.tsx`
 
----
+**Rewrite the `AvatarFace` component:**
 
-## Step 2: Rewrite `src/components/economy/RotatingBBCoin.tsx`
-
-### Architecture: 3 Clean Elements
-
-Instead of the current complex layering (8 edge divs + nested rim/ring/center divs duplicated for both faces), the new approach uses just 3 core pieces:
-
+Current structure (shrinks content):
 ```text
-┌─────────────────────────────────────────────────┐
-│  1. FRONT FACE (Z = 0)                          │
-│     - Image rendered directly, no CSS rim layers │
-│     - backfaceVisibility: hidden                 │
-│     - Specular highlight + shine sweep overlays  │
-│                                                  │
-│  2. EDGE RING (multiple layers at Z offsets)     │
-│     - Polished gold gradient matching reference  │
-│     - Smooth beveled shading (lighter center,    │
-│       darker at front/back)                      │
-│     - Subtle ridged texture via box-shadow       │
-│                                                  │
-│  3. BACK FACE (rotateY 180deg)                   │
-│     - CSS-built rim (bronze gradient)            │
-│     - User avatar in center                      │
-│     - Same specular + shine effects              │
-└─────────────────────────────────────────────────┘
+Outer div (padding: 4%) 
+  Inner ring div (padding: 2%)
+    Center div
+      Avatar (shrunk by ~12%)
 ```
 
-### Front Face (Simplified)
-
-Since the new image IS the complete coin face, remove all CSS rim, inner ring, and center padding layers:
-
-```tsx
-{/* Front Face - Full coin image */}
-<div style={{ backfaceVisibility: 'hidden' }}>
-  <img
-    src={bbCoinLogo}
-    alt="BB Coin"
-    className="w-full h-full object-cover rounded-full"
-  />
-  {/* Specular highlight overlay */}
-  {/* Animated shine sweep */}
-</div>
+New structure (full-size content with overlay border):
+```text
+Outer div (no padding, same as front face)
+  Avatar (fills entire face, object-cover)
+  Gold rim overlay (absolute, pointer-events-none, border only)
+  Specular highlight overlay
+  Shine sweep overlay
 ```
 
-No `transform: scale()` needed -- the image fills the face naturally.
+Key changes:
+1. Remove `padding: rimWidth` from outer container -- use `inset-0` like the front face
+2. Remove the inner ring `div` wrapper entirely
+3. Render the Avatar at full size with `object-cover` to fill the coin face
+4. Add a circular gold border as an overlay using `border` + `box-shadow` on an absolutely positioned div (pointer-events-none) -- this gives the coin edge look without shrinking the avatar
+5. Keep the fallback initial letter for users without a profile photo
 
-### Edge Layers (Polished Gold Style from Reference)
-
-Keep the multi-layer approach but refine the colors to match the reference image's thick polished gold look:
-
-| Layer Position | Color |
-|----------------|-------|
-| Front layers (0-1) | Darker bronze `#8B6914` to `#A67C00` -- shadow from front face lip |
-| Middle layers (2-5) | Bright polished gold `#D4A017` to `#F5C518` -- main visible edge |
-| Back layers (6-7) | Darker bronze again -- shadow toward back face |
-
-This creates the smooth, rounded bevel visible in the reference.
-
-### Back Face (Avatar - Unchanged Structure)
-
-The back face still needs CSS-built layers since it renders dynamic content (user avatar):
-- Bronze gradient rim
-- Dark metallic inner ring  
-- Center area with Avatar component and fallback initial
-- Specular highlight + shine sweep
-
-### Shared CoinFace Helper
-
-Extract a reusable function for the back face's rim/ring/center structure + overlays to reduce code duplication. The front face won't use it since it's just an image.
-
-### Props Interface (Unchanged)
-
-```tsx
-interface RotatingBBCoinProps {
-  avatarUrl?: string | null;
-  displayName?: string;
-  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
-  animate?: boolean;
-  onClick?: () => void;
-}
-```
-
-All 5 consumer files (Header, BBWalletWidget, BBWalletCard, BarberProfileHeader, AddFundsModal) continue to work without changes.
+The back face will now match the front face in visual size while still showing the gold rim as a decorative overlay.
 
 ---
 
-## What Changes vs What Stays
+## Visual Comparison
 
-| Element | Before | After |
-|---------|--------|-------|
-| Logo asset | Old small BB logo | New full coin face image (gold rim + Greek pattern + logo) |
-| Front face | CSS rim + inner ring + center + scaled image | Image rendered directly (no CSS layers) |
-| Front face centering | `transform: scale(1.15)` hack | `object-fit: cover` -- naturally centered |
-| Edge layers | 8 layers, copper/brown colors | 8 layers, polished gold colors matching reference |
-| Edge bevel | Basic dark/light alternation | Smooth gradient: dark front, bright middle, dark back |
-| Back face | CSS rim + avatar (complex nesting) | Same structure, extracted into helper |
-| Code size | ~254 lines with duplication | ~180 lines with shared helper |
-| Props interface | No change | No change |
-| Animation (rotation) | 6s Y-axis, linear | No change |
-| Animation (shine) | 3s sweep with delay | No change |
-| Drop shadow | Elliptical blur below | No change |
+**Before (mismatched sizes):**
+```text
+FRONT (full)          BACK (smaller)
+┌──────────────┐      ┌──────────────┐
+│              │      │  ┌────────┐  │
+│   BB LOGO    │      │  │ Avatar │  │
+│  (edge-to-  │      │  │(shrunk)│  │
+│   edge)      │      │  └────────┘  │
+│              │      │   rim+ring   │
+└──────────────┘      └──────────────┘
+```
+
+**After (matched sizes):**
+```text
+FRONT (full)          BACK (full)
+┌──────────────┐      ┌──────────────┐
+│              │      │              │
+│   BB LOGO    │      │   AVATAR     │
+│  (edge-to-  │      │  (edge-to-  │
+│   edge)      │      │   edge)      │
+│              │      │  + rim overlay│
+└──────────────┘      └──────────────┘
+```
 
 ---
 
@@ -121,8 +83,7 @@ All 5 consumer files (Header, BBWalletWidget, BBWalletCard, BarberProfileHeader,
 
 | File | Change |
 |------|--------|
-| `src/assets/bb-coin-logo.png` | Replaced with new uploaded image (image-9.png) |
-| `src/components/economy/RotatingBBCoin.tsx` | Full rewrite: simplified front face (image only), polished gold edge colors, shared helper for back face |
+| `src/components/economy/RotatingBBCoin.tsx` | Rewrite `AvatarFace` to render avatar full-size with gold rim as an overlay instead of padding-based shrinking |
 
-No changes needed to any consumer components -- the interface stays identical.
+No changes to any consumer components -- props stay identical.
 
