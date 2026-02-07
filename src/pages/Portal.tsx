@@ -17,7 +17,8 @@ import { TournamentQueueStatus } from "@/components/tournament/TournamentQueueSt
 import { LiveMatchCounter } from "@/components/tournament/LiveMatchCounter";
 import { MyBattlesSection } from "@/components/barber/MyBattlesSection";
 
-import { Trophy, Users, Clock, Vote, DollarSign, Play, Calendar, Target, Loader2, BarChart3 } from "lucide-react";
+import { Trophy, Users, Clock, Vote, DollarSign, Play, Calendar, Target, Loader2, Swords, Hash } from "lucide-react";
+import { useBarberStats } from "@/hooks/useBarberStats";
 import { OpenChallengeQueue } from "@/components/battles/OpenChallengeQueue";
 import { ImmersiveFactionBanners } from "@/components/factions/ImmersiveFactionBanners";
 import { CountryLeaderboard } from "@/components/portal/CountryLeaderboard";
@@ -44,6 +45,7 @@ const Portal = () => {
   const { toast } = useToast();
   const [isCreatingBattle, setIsCreatingBattle] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
+  const { data: barberStats } = useBarberStats(user?.id);
   const {
     data: upcomingBattles,
     refetch: refetchBattles
@@ -170,18 +172,37 @@ const Portal = () => {
             </div>
           )}
 
-          {/* Analytics Link for Barbers */}
-          {isBarber && (
-            <div className="mb-8 flex justify-end">
-              <Link to="/analytics">
-                <Button variant="outline" size="lg">
-                  <BarChart3 className="w-5 h-5 mr-2" />
-                  <div className="text-left">
-                    <div className="font-semibold">Analytics</div>
-                    <div className="text-xs text-muted-foreground">View Stats</div>
-                  </div>
-                </Button>
-              </Link>
+          {/* Barber Quick Stats */}
+          {isBarber && barberStats && (
+            <div className="mb-8 grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Card className="bg-muted/50">
+                <CardContent className="p-4 text-center">
+                  <Trophy className="h-5 w-5 mx-auto mb-1 text-primary" />
+                  <p className="text-2xl font-bold text-foreground">{barberStats.totalPoints}</p>
+                  <p className="text-xs text-muted-foreground">Points</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-muted/50">
+                <CardContent className="p-4 text-center">
+                  <Hash className="h-5 w-5 mx-auto mb-1 text-primary" />
+                  <p className="text-2xl font-bold text-foreground">{barberStats.rank ?? '—'}</p>
+                  <p className="text-xs text-muted-foreground">Global Rank</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-muted/50">
+                <CardContent className="p-4 text-center">
+                  <Vote className="h-5 w-5 mx-auto mb-1 text-primary" />
+                  <p className="text-2xl font-bold text-foreground">{barberStats.totalVotesReceived}</p>
+                  <p className="text-xs text-muted-foreground">Votes Received</p>
+                </CardContent>
+              </Card>
+              <Card className="bg-muted/50">
+                <CardContent className="p-4 text-center">
+                  <Swords className="h-5 w-5 mx-auto mb-1 text-primary" />
+                  <p className="text-2xl font-bold text-foreground">{barberStats.battlesWon}/{barberStats.battlesPlayed}</p>
+                  <p className="text-xs text-muted-foreground">Wins / Battles</p>
+                </CardContent>
+              </Card>
             </div>
           )}
 
