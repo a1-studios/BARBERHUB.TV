@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 import { BackButton } from '@/components/ui/BackButton';
 import { RoleBadge } from '@/components/RoleBadge';
 import { EmptyState } from '@/components/EmptyState';
-import { Scissors, Users, Trophy, Plus, User, Loader2, Globe, Edit3, X, Settings, Upload, CheckCircle, Clock, Award, Heart, Bell, DollarSign, Lock } from 'lucide-react';
+import { Scissors, Users, Trophy, Plus, User, Loader2, Globe, Edit3, X, Settings, Heart, DollarSign, Lock } from 'lucide-react';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { AddFundsModal } from '@/components/AddFundsModal';
 import { BBWalletWidget } from '@/components/economy/BBWalletWidget';
@@ -92,58 +92,6 @@ const Profile = () => {
     }
   }, [profile]);
 
-  // Fetch battles where user is a participant (for barbers only)
-  const {
-    data: myBattles
-  } = useQuery({
-    queryKey: ['myBattles', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-
-      // Get participant records
-      const {
-        data: participants,
-        error: partError
-      } = await supabase.from('battle_participants').select('id, battle_id, joined_at').eq('user_id', user.id).order('joined_at', {
-        ascending: false
-      });
-      if (partError) throw partError;
-      if (!participants || participants.length === 0) return [];
-
-      // Get battle details for those battles
-      const battleIds = participants.map(p => p.battle_id);
-      const {
-        data: battles,
-        error: battleError
-      } = await supabase.from('battles').select('id, title, description, status, prize_amount, currency, category, starts_at, voting_ends_at').in('id', battleIds);
-      if (battleError) throw battleError;
-
-      // Combine the data
-      return participants.map(p => ({
-        ...p,
-        battles: battles?.find(b => b.id === p.battle_id)
-      }));
-    },
-    enabled: !!user?.id && isUserBarber
-  });
-
-  // Fetch battle submissions for the user
-  const {
-    data: mySubmissions
-  } = useQuery({
-    queryKey: ['mySubmissions', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return [];
-      const {
-        data,
-        error
-      } = await supabase.from('battle_submissions').select('battle_id, status, created_at').eq('user_id', user.id);
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id && isUserBarber
-  });
-
   // Fetch barber stats (must be at top level, not inside JSX!)
   const {
     data: barberStats
@@ -165,24 +113,6 @@ const Profile = () => {
     },
     enabled: !!barberProfile?.id && isBarber
   });
-
-  // Get submission status for a battle
-  const getSubmissionStatus = (battleId: string) => {
-    const submission = mySubmissions?.find(s => s.battle_id === battleId);
-    return submission?.status || 'pending';
-  };
-
-  // Check if battle needs submission
-  const needsSubmission = (battle: any) => {
-    if (!battle) return false;
-    const hasSubmission = mySubmissions?.some(s => s.battle_id === battle.id);
-    return !hasSubmission && (battle.status === 'upcoming' || battle.status === 'active');
-  };
-
-  // Categorize battles
-  const activeBattles = myBattles?.filter((b: any) => b.battles && (b.battles.status === 'voting' || b.battles.status === 'active')) || [];
-  const upcomingBattles = myBattles?.filter((b: any) => b.battles && b.battles.status === 'upcoming') || [];
-  const pastBattles = myBattles?.filter((b: any) => b.battles && b.battles.status === 'completed') || [];
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
@@ -445,117 +375,6 @@ const Profile = () => {
             )}
           </div>
 
-          {/* My Battles Section - Barbers Only */}
-          {isBarber && myBattles && myBattles.length > 0 && <div className="mt-8">
-              <h3 className="text-2xl font-bold mb-6">My Battles</h3>
-              
-              {/* Active Battles */}
-              {activeBattles.length > 0 && <div className="mb-8">
-                  <h4 className="text-xl font-semibold mb-4 text-primary">Active Battles</h4>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {activeBattles.map(({
-                battles
-              }: any) => {
-                const hasSubmission = !needsSubmission(battles);
-                return <Card key={battles.id} className="border-primary/50 hover:border-primary cursor-pointer" onClick={() => navigate(`/battles/${battles.id}`)}>
-                          <CardHeader>
-                            <div className="flex items-center justify-between mb-2">
-                              <Badge className="bg-green-500/20 text-green-400 border-green-500/30">
-                                Active
-                              </Badge>
-                              {hasSubmission ? <Badge className="bg-green-500 text-white">
-                                  <CheckCircle className="w-3 h-3 mr-1" />
-                                  Submitted
-                                </Badge> : <Badge variant="outline" className="border-orange-500 text-orange-500">
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  Pending
-                                </Badge>}
-                            </div>
-                            <CardTitle className="text-lg">{battles.title}</CardTitle>
-                            <CardDescription className="line-clamp-2">
-                              {battles.description}
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-muted-foreground">{battles.category}</span>
-                              <span className="text-primary font-semibold">
-                                ${battles.prize_amount}
-                              </span>
-                            </div>
-                            {!hasSubmission && <Button className="w-full mt-3" size="sm" variant="outline">
-                                <Upload className="w-4 h-4 mr-2" />
-                                Upload Submission
-                              </Button>}
-                          </CardContent>
-                        </Card>;
-              })}
-                  </div>
-                </div>}
-
-              {/* Upcoming Battles */}
-              {upcomingBattles.length > 0 && <div className="mb-8">
-                  <h4 className="text-xl font-semibold mb-4">Upcoming Battles</h4>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {upcomingBattles.map(({
-                battles
-              }: any) => <Card key={battles.id} className="hover:border-primary cursor-pointer" onClick={() => navigate(`/battles/${battles.id}`)}>
-                        <CardHeader>
-                          <div className="flex items-center justify-between mb-2">
-                            <Badge variant="secondary">Upcoming</Badge>
-                            <Badge variant="outline">{battles.category}</Badge>
-                          </div>
-                          <CardTitle className="text-lg">{battles.title}</CardTitle>
-                          <CardDescription className="line-clamp-2">
-                            {battles.description}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="text-sm text-muted-foreground">
-                            {battles.starts_at && <div>Starts: {new Date(battles.starts_at).toLocaleDateString()}</div>}
-                            <div className="text-primary font-semibold mt-2">
-                              Prize: ${battles.prize_amount}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>)}
-                  </div>
-                </div>}
-
-              {/* Past Battles */}
-              {pastBattles.length > 0 && <div>
-                  <h4 className="text-xl font-semibold mb-4">Past Battles</h4>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {pastBattles.map(({
-                battles
-              }: any) => <Card key={battles.id} className="opacity-80 hover:opacity-100 cursor-pointer" onClick={() => navigate(`/battles/${battles.id}`)}>
-                        <CardHeader>
-                          <div className="flex items-center justify-between mb-2">
-                            <Badge variant="outline">
-                              <Award className="w-3 h-3 mr-1" />
-                              Completed
-                            </Badge>
-                            <Badge variant="outline">{battles.category}</Badge>
-                          </div>
-                          <CardTitle className="text-lg">{battles.title}</CardTitle>
-                          <CardDescription className="line-clamp-2">
-                            {battles.description}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <Button className="w-full" size="sm" variant="ghost">
-                            View Results
-                          </Button>
-                        </CardContent>
-                      </Card>)}
-                  </div>
-                </div>}
-            </div>}
-
-          {/* Empty State for Barbers with No Battles */}
-          {isBarber && (!myBattles || myBattles.length === 0) && <div className="mt-8">
-              <EmptyState icon={Trophy} title="No Battles Yet" description="Create your first battle or join a tournament to start competing!" actionLabel="Go to Portal" onAction={() => navigate('/portal')} />
-            </div>}
 
           {/* Creation Upload Modal */}
           {showCreationUpload && isBarber && barberProfile && <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
