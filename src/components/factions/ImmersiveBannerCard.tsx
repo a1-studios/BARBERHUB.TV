@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Crown, Zap } from 'lucide-react';
+import { Users, Crown, Zap, Swords } from 'lucide-react';
 import { TournamentCategory } from '@/config/categories';
 import { HoverParticles } from './HoverParticles';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -17,6 +17,7 @@ interface ImmersiveBannerCardProps {
     name: string;
     avatar_url: string | null;
   } | null;
+  isBarber?: boolean;
 }
 
 const formatCurrency = (cents: number) => {
@@ -35,7 +36,8 @@ export const ImmersiveBannerCard = ({
   onSelect,
   isSelected,
   index,
-  topBarber
+  topBarber,
+  isBarber
 }: ImmersiveBannerCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
@@ -49,10 +51,34 @@ export const ImmersiveBannerCard = ({
         duration: 0.4,
         ease: "easeOut"
       }}
-      className="relative flex-1 min-w-0"
+      className="relative flex-1 min-w-0 flex flex-col items-center"
       style={{ perspective: '1000px' }}
     >
-      
+      {/* Small Join Button above banner - barbers only */}
+      {isBarber && (
+        <motion.button
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: index * 0.08 + 0.3, duration: 0.3 }}
+          whileHover={{ 
+            scale: 1.1,
+            boxShadow: '0 0 14px hsl(187 100% 50% / 0.5)',
+          }}
+          whileTap={{ scale: 0.9 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(category.id);
+          }}
+          className="mb-2 flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-primary/90 text-primary-foreground border border-cyan/30 hover:border-cyan/60 transition-all cursor-pointer"
+          style={{
+            boxShadow: '0 0 8px hsl(24 100% 50% / 0.3)',
+          }}
+        >
+          <Swords className="w-3 h-3" />
+          <span className="hidden sm:inline">Join</span>
+        </motion.button>
+      )}
+
       {/* Main Banner */}
       <motion.div
         animate={{
@@ -78,7 +104,7 @@ export const ImmersiveBannerCard = ({
         }}
         onTapCancel={() => setIsPressed(false)}
         className={cn(
-          "relative cursor-pointer transform-gpu h-[220px] sm:h-[260px] lg:h-[280px]",
+          "relative cursor-pointer transform-gpu w-full h-[220px] sm:h-[260px] lg:h-[280px]",
           isHovered && "animate-electric-pulse",
           isPressed && "animate-energy-burst"
         )}
