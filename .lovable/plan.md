@@ -1,98 +1,109 @@
 
 
-# Direct Join Queue from Faction Banners
+# Redesign Faction Banners as Universal Highlight Showcase
 
 ## Overview
 
-When a barber clicks the "Join" button on a faction banner, they will be **immediately registered** for that specific category's tournament queue (no dialog, no category picker needed -- the category is already known). If they don't have enough BB (250), the Add Funds modal opens instead.
+Transform the faction banners area into a universal highlight section visible to **all users** (fans, guests, barbers). Instead of hiding categories from non-barbers or showing a stripped-down version, all users see the same **3 featured banners** as an engaging showcase -- similar to social media story highlights or feature cards. Barbers additionally see the full 5-banner row with join buttons above it.
+
+## Current Issues
+
+- Non-barbers see 3 banners that still look like "tournament registration cards" with entry fees, barber counts, and prize pools -- data that doesn't engage fans
+- The "Featured Categories" header is generic and doesn't draw users in
+- The banners display identical content regardless of audience, missing an opportunity to hook fans into the platform's competitive culture
+- The layout feels like a barber-only feature that fans stumbled into
 
 ## What Changes
 
-### 1. Update `ImmersiveFactionBanners.tsx` -- Add inline registration logic
+### 1. Universal 3-Banner Showcase (All Users)
 
-The parent component gains all the registration logic that currently lives in `TournamentRegistration`, but streamlined for direct action:
+Replace the current non-barber view with an engaging social-media-style highlight row that all users see. The 3 banners shift focus from "join the tournament" to "explore the action":
 
-- **New queries**: Fetch barber profile (for `id` and `country_code`) and existing queue entries
-- **New mutation**: Call `register-tournament-bb` edge function directly when a barber clicks Join
-- **New state**: `showAddFunds` boolean + `joiningCategory` to track which category is being processed
-- **New callback**: `handleJoinQueue(categoryId)` passed to each `ImmersiveBannerCard` as a separate `onJoin` prop
-- **AddFundsModal**: Rendered at the bottom of the component for insufficient balance cases
-- **Toast feedback**: Success toast on join, error toast on failure, "already in queue" toast if duplicate
+**Content per banner (non-barber view):**
+- Category icon + name (keep)
+- Top barber avatar with crown (keep -- this is the social hook)
+- Replace "prize pool" emphasis with the **top barber's name** prominently displayed (like a social media featured creator card)
+- Replace "X barbers" count with a social-style label: "Trending" / "Hot" / "Live" badge
+- Replace "$50 Entry" with a contextual action label: "Watch Now" or "Explore" as a small pill at the bottom
+- On tap, navigate to `/portal?category={id}` (keep existing behavior)
 
-Flow:
-1. Barber clicks Join on "Creative Color" banner
-2. `handleJoinQueue('creative_color')` fires
-3. Checks BB balance (250 required). If insufficient, opens AddFundsModal
-4. Checks if already in queue for that category. If yes, shows toast
-5. Checks barber profile has country_code. If missing, shows toast to update profile
-6. Calls `register-tournament-bb` edge function with `{ category: shortName, barber_profile_id, country_code }`
-7. On success: invalidates queries, shows success toast
-8. On error: shows error toast
+**Content per banner (barber view):**
+- Keep the full current display with prize pools, participant counts, entry fees
+- Keep the Join button above each banner
+- Show all 5 categories
 
-### 2. Update `ImmersiveBannerCard.tsx` -- Separate Join from Select
+### 2. Section Header Redesign (All Users)
 
-- Add new `onJoin` callback prop (separate from `onSelect` which navigates to portal)
-- The small Join button calls `onJoin(category.shortName)` instead of `onSelect(category.id)`
-- The main banner body still calls `onSelect(category.id)` for portal navigation
-- Add `isJoining` prop to show a small spinner on the button during registration
-- Add `isInQueue` prop to swap the button to a "Queued" badge (green checkmark) when already registered
+Replace the plain "Featured Categories" text with a more engaging, social-media-style header:
+- Title: **"Top Arenas"** -- short, punchy, uppercase with cyan glow
+- Subtitle: **"See who's dominating right now"** -- creates curiosity and FOMO
+- A small "See All" link-button on the right side that navigates to `/portal` (only for non-barbers, since barbers already see all 5)
 
-### 3. Visual States for the Join Button
+### 3. Layout Adjustments
 
-| State | Button Appearance |
-|-------|-------------------|
-| Default | Orange pill with Swords icon + "Join" text |
-| Hover | Cyan glow effect (existing) |
-| Processing | Small spinner replacing icon |
-| Already in queue | Green pill with CheckCircle icon + "Queued" |
-| Insufficient BB | Opens AddFundsModal (button stays default) |
+- Non-barber 3-banner row: slightly larger banners since there are only 3 (increase max width usage and allow each banner to breathe)
+- Add a subtle stagger animation where the center banner is slightly taller/elevated than the two flanking banners, creating a "podium" effect that naturally draws the eye
+- Keep the existing background glow, hover particles, and electric arc effects -- they create the premium feel
 
 ## Technical Details
 
 ### File: `src/components/factions/ImmersiveFactionBanners.tsx`
 
-New imports:
-- `useMutation`, `useQuery`, `useQueryClient` from `@tanstack/react-query`
-- `supabase` from `@/integrations/supabase/client`
-- `useAuth` from `@/hooks/useAuth`
-- `useBarberBucks` from `@/hooks/useBarberBucks`
-- `AddFundsModal` from `@/components/AddFundsModal`
-- `TOURNAMENT_CONFIG` from `@/config/tournament`
-- `toast` from `sonner`
-
-New logic in the component:
-- `useAuth()` for user ID
-- `useBarberBucks()` for balance check
-- Query for barber profile (`barber_profiles` table -- `id`, `country_code`)
-- Query for existing queue entries (`tournament_queue` table -- same as TournamentRegistration)
-- `useMutation` calling `register-tournament-bb` edge function
-- `handleJoinQueue(categoryShortName)` function with all validation checks
-- State: `showAddFunds`, `joiningCategory`
-- Render `AddFundsModal` at the bottom
-
-Pass to each `ImmersiveBannerCard`:
-- `onJoin={handleJoinQueue}`
-- `isJoining={joiningCategory === category.shortName}`
-- `isInQueue={queueEntries?.some(e => e.category === category.shortName)}`
+Changes:
+- Update the section header to show for **all users** (remove the `!isBarber` condition), with updated copy
+- Add a "See All" button next to the header for non-barbers that navigates to `/portal`
+- Keep the `displayCategories` logic (3 for non-barbers, 5 for barbers)
+- Pass a new `viewMode` prop to `ImmersiveBannerCard`: `'showcase'` for non-barbers, `'compete'` for barbers
+- Adjust the non-barber container to use `max-w-2xl lg:max-w-3xl` and slightly larger `gap-4 sm:gap-5`
 
 ### File: `src/components/factions/ImmersiveBannerCard.tsx`
 
-Updated props interface:
-- Add `onJoin?: (categoryShortName: string) => void`
-- Add `isJoining?: boolean`
-- Add `isInQueue?: boolean`
+Changes to the props interface:
+- Add `viewMode?: 'showcase' | 'compete'` prop (defaults to `'compete'` for backward compatibility)
 
-Updated Join button:
-- Calls `onJoin?.(category.shortName)` instead of `onSelect(category.id)`
-- Shows `Loader2` spinner when `isJoining` is true
-- Swaps to green "Queued" pill with `CheckCircle` icon when `isInQueue` is true
-- Disabled when `isJoining` or `isInQueue`
+Changes to rendering based on `viewMode`:
+- When `viewMode === 'showcase'`:
+  - Show the top barber name below their avatar (truncated, `text-xs font-semibold`)
+  - Replace the large prize pool amount with a smaller, secondary display
+  - Replace the participant count with a "Trending" badge (using a `TrendingUp` icon from lucide)
+  - Replace "$50 Entry" text with an "Explore" pill button styled with cyan outline
+  - Hide the Join button (already gated by `isBarber`, but also skip for clarity)
+  - Make the center banner (index 1) slightly taller: add 20px extra height via conditional class
+
+- When `viewMode === 'compete'` (barber view):
+  - Everything stays exactly as it is now -- prize pools, barber counts, entry fees, join buttons
+
+### Visual Layout
+
+For non-barbers (showcase mode):
+```text
+         Top Arenas                    [See All ->]
+    See who's dominating right now
+
+   [Banner]      [Banner]      [Banner]
+   (shorter)     (tallest)     (shorter)
+    
+   Avatar         Avatar        Avatar
+   "DJ Cuts"     "FadeKing"    "BladeArt"
+   Signature     Creative      Beard &
+    Style         Color        Scissor
+   Trending      Trending      Trending
+   [Explore]     [Explore]     [Explore]
+```
+
+For barbers (compete mode -- unchanged):
+```text
+  [Join] [Join] [Join] [Join] [Join]
+  [Ban1] [Ban2] [Ban3] [Ban4] [Ban5]
+   ...full prize pools, counts, fees...
+```
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/components/factions/ImmersiveFactionBanners.tsx` | Add registration logic, queries, mutation, AddFundsModal |
-| `src/components/factions/ImmersiveBannerCard.tsx` | Add `onJoin`, `isJoining`, `isInQueue` props; update button states |
+| `src/components/factions/ImmersiveFactionBanners.tsx` | Universal header, "See All" link, pass `viewMode` prop, layout tweaks |
+| `src/components/factions/ImmersiveBannerCard.tsx` | Add `viewMode` prop, conditional content rendering for showcase vs compete modes |
 
-No new files. No database changes. No edge function changes -- reuses `register-tournament-bb` as-is.
+No new files. No database changes. No edge function changes.
+
