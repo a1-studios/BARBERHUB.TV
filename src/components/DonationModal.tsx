@@ -26,6 +26,7 @@ export const DonationModal = ({ isOpen, onClose, creatorId, creatorName }: Donat
   const [customAmount, setCustomAmount] = useState('');
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [pausedForFunds, setPausedForFunds] = useState(false);
   const { user } = useAuth();
   const { barberBucks, checkFunds, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
 
@@ -88,7 +89,7 @@ export const DonationModal = ({ isOpen, onClose, creatorId, creatorName }: Donat
 
   return (
     <>
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen && !pausedForFunds} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-foreground">
@@ -192,6 +193,7 @@ export const DonationModal = ({ isOpen, onClose, creatorId, creatorName }: Donat
                 size="sm"
                 onClick={() => {
                   setShowAddFundsModal(true);
+                  setPausedForFunds(true);
                 }}
                 className="border-destructive/30 text-destructive hover:bg-destructive/10"
               >
@@ -236,7 +238,10 @@ export const DonationModal = ({ isOpen, onClose, creatorId, creatorName }: Donat
 
     <AddFundsModal 
       isOpen={showAddFundsModal} 
-      onClose={() => setShowAddFundsModal(false)} 
+      onClose={() => {
+        setShowAddFundsModal(false);
+        setPausedForFunds(false);
+      }} 
     />
     </>
   );
