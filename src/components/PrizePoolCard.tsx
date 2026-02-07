@@ -365,136 +365,111 @@ export const PrizePoolCard = () => {
           </div>
         </div>
 
-        {/* Community Notes Section - Compact */}
-        <div className="max-w-2xl mx-auto space-y-2">
-          <div className="flex items-center gap-2 mb-2">
-            <MessageCircle className="w-5 h-5 text-primary" />
-            <h3 className="text-lg font-bold">Community Notes</h3>
-          </div>
+        {/* Community Notes - Minimal Popover Button */}
+        <div className="flex justify-center pt-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="flex items-center gap-1.5 text-xs text-muted-foreground/60 hover:text-foreground/80 transition-colors bg-transparent border-none cursor-pointer">
+                <MessageCircle className="w-3.5 h-3.5" />
+                <span>Community Notes</span>
+                {notes && notes.length > 0 && (
+                  <span className="text-[10px] text-primary/60">({notes.length})</span>
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent 
+              className="w-80 sm:w-96 p-0 bg-background/95 backdrop-blur-md border-border/50 shadow-2xl" 
+              side="top" 
+              align="center"
+              sideOffset={8}
+            >
+              <div className="p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-semibold">Community Notes</span>
+                </div>
 
-          {/* Post Note Input - Compact */}
-          {user && (
-            <div className="relative mb-3">
-              <div className="relative bg-background/80 backdrop-blur-sm border border-border rounded-lg p-3">
-                <div className="relative">
-                  <Textarea
-                    ref={textareaRef}
-                    placeholder="Share your thoughts... Use @username to mention someone!"
-                    value={noteContent}
-                    onChange={handleTextareaChange}
-                    className="min-h-[60px] bg-transparent border-0 focus-visible:ring-0 resize-none text-sm"
-                    maxLength={500}
-                  />
-                  
-                  {/* @Mention Dropdown */}
-                  {showMentions && filteredUsers.length > 0 && (
-                    <div className="absolute bottom-full left-0 mb-2 w-full sm:w-64 bg-background border border-border rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
-                      <div className="p-2 space-y-1">
-                        <div className="px-2 py-1 text-xs text-muted-foreground flex items-center gap-1">
-                          <AtSign className="w-3 h-3" />
-                          Mention someone
+                {/* Post Input */}
+                {user && (
+                  <div className="relative">
+                    <div className="relative">
+                      <Textarea
+                        ref={textareaRef}
+                        placeholder="Type @ to mention users"
+                        value={noteContent}
+                        onChange={handleTextareaChange}
+                        className="min-h-[50px] bg-muted/30 border-border/30 focus-visible:ring-primary/30 resize-none text-sm"
+                        maxLength={500}
+                      />
+                      
+                      {/* @Mention Dropdown */}
+                      {showMentions && filteredUsers.length > 0 && (
+                        <div className="absolute bottom-full left-0 mb-1 w-full bg-background border border-border rounded-lg shadow-lg z-50 max-h-36 overflow-y-auto">
+                          <div className="p-1.5 space-y-0.5">
+                            {filteredUsers.map((u) => {
+                              const roleColor = u.role === 'barber' ? 'text-orange-500' : 'text-green-500';
+                              return (
+                                <button
+                                  key={u.user_id}
+                                  onClick={() => insertMention(u.username || '')}
+                                  className="w-full text-left px-2 py-1.5 rounded hover:bg-accent flex items-center gap-2 transition-colors text-xs"
+                                >
+                                  <span className={`font-semibold ${roleColor}`}>@{u.username}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                        {filteredUsers.map((u) => {
-                          const roleColor = u.role === 'barber' ? 'text-orange-500' : 'text-green-500';
-                          return (
-                            <button
-                              key={u.user_id}
-                              onClick={() => insertMention(u.username || '')}
-                              className="w-full text-left px-2 py-2 rounded hover:bg-accent flex items-center gap-2 transition-colors"
-                            >
-                              <span className={`font-semibold ${roleColor}`}>
-                                @{u.username}
-                              </span>
-                              {u.display_name && (
-                                <span className="text-xs text-muted-foreground">
-                                  {u.display_name}
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
+                      )}
                     </div>
+                    
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-[10px] text-muted-foreground">{noteContent.length}/500</span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={handlePostNote}
+                        disabled={postNoteMutation.isPending || !noteContent.trim()}
+                        className="h-7 px-3 text-xs text-primary hover:text-primary"
+                      >
+                        <Send className="w-3 h-3 mr-1" />
+                        Post
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Notes Feed */}
+                <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
+                  {notes?.map((note: any) => {
+                    const isBarberNote = note.role === 'barber';
+                    const usernameColor = isBarberNote ? 'text-orange-500' : 'text-green-500';
+                    const username = note.profiles?.username || note.profiles?.display_name?.toLowerCase().replace(/\s+/g, '_') || 'anonymous';
+
+                    return (
+                      <div key={note.id} className="py-1.5 border-b border-border/20 last:border-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`font-semibold ${usernameColor} text-[11px]`}>
+                            @{username}
+                            {isBarberNote && <span className="text-[9px] ml-0.5">✂️</span>}
+                          </span>
+                          <span className="text-[9px] text-muted-foreground/50">
+                            {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-foreground/80 break-words mt-0.5">
+                          {renderNoteContent(note.content)}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {(!notes || notes.length === 0) && (
+                    <p className="text-xs text-muted-foreground/50 text-center py-3">No notes yet</p>
                   )}
                 </div>
-                
-                <div className="flex items-center justify-between mt-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {noteContent.length}/500
-                    </span>
-                    <span className="text-xs text-muted-foreground/70">
-                      • Type @ to mention users
-                    </span>
-                  </div>
-                  <Button
-                    size="default"
-                    onClick={handlePostNote}
-                    disabled={postNoteMutation.isPending || !noteContent.trim()}
-                    className="gap-2"
-                  >
-                    <Send className="w-4 h-4" />
-                    Post
-                  </Button>
-                </div>
               </div>
-            </div>
-          )}
-
-          {/* Recent Notes Feed - Compact */}
-          <div className="relative">
-            <div className="space-y-2 max-h-[160px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent">
-            {notes?.map((note: any) => {
-              const isBarber = note.role === 'barber';
-              const isFan = note.role === 'fan';
-              const usernameColor = isBarber ? 'text-orange-500' : 'text-green-500';
-              const username = note.profiles?.username || note.profiles?.display_name?.toLowerCase().replace(/\s+/g, '_') || 'anonymous';
-
-              return (
-                <div
-                  key={note.id}
-                  className="group relative bg-background/80 backdrop-blur-sm border border-border/50 rounded-md p-2 transition-all hover:bg-background/90 hover:border-primary/30"
-                >
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => window.location.href = `/barber/${note.user_id}`}
-                      className={`font-semibold ${usernameColor} hover:underline cursor-pointer text-xs flex items-center gap-0.5`}
-                    >
-                      @{username}
-                      {isBarber && <span className="text-[10px]">✂️</span>}
-                    </button>
-                    <span className="text-[10px] text-muted-foreground">
-                      {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
-                    </span>
-                  </div>
-                  <div className="text-xs text-foreground break-words line-clamp-1 mt-0.5">
-                    {renderNoteContent(note.content)}
-                  </div>
-                </div>
-              );
-            })}
-            {(!notes || notes.length === 0) && (
-              <div className="text-center py-4 text-muted-foreground">
-                <MessageCircle className="w-8 h-8 mx-auto mb-1 opacity-50" />
-                <p className="text-xs">No notes yet. Be the first to share!</p>
-              </div>
-            )}
-            </div>
-            {notes && notes.length > 3 && (
-              <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-background to-transparent pointer-events-none" />
-            )}
-          </div>
-
-          {/* Live Indicator */}
-          <div className="flex items-center justify-center gap-2 pt-2">
-            <div className="relative">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <div className="absolute inset-0 w-2 h-2 bg-green-500 rounded-full animate-ping" />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Community Live & Growing
-            </p>
-          </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </CardContent>
     </Card>
