@@ -48,6 +48,9 @@ export const useCategoryTopBarbers = () => {
         `)
         .order('rating', { ascending: false, nullsFirst: false })
         .limit(50);
+      
+      // Note: Rankings are based on barber_profiles ratings which are only
+      // updated by official tournament results (battle_type = 'official')
 
       if (error) {
         console.error('Error fetching top barbers:', error);

@@ -99,7 +99,8 @@ serve(async (req) => {
         stake_amount,
         pot_total: stake_amount,
         donations_total: 0,
-        status: 'open'
+        status: 'open',
+        battle_type: 'challenge'
       })
       .select()
       .single();
