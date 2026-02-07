@@ -21,9 +21,9 @@ export interface TournamentCategory {
 export const TOURNAMENT_CATEGORIES: TournamentCategory[] = [
   {
     id: 'speed_fade',
-    name: 'Technical Precision: The Speed Fade',
-    shortName: 'Speed Fade',
-    description: 'Showcase your technical mastery with precision fades executed at lightning speed',
+    name: 'Technical Precision: The Signature Style',
+    shortName: 'Signature Style',
+    description: 'Showcase your technical mastery with a precision signature style that defines your craft',
     icon: '⚡',
     colorTheme: {
       primary: 'hsl(195, 100%, 50%)',
@@ -35,8 +35,8 @@ export const TOURNAMENT_CATEGORIES: TournamentCategory[] = [
   },
   {
     id: 'gentleman_cut',
-    name: 'Classic Artistry: The Gentleman\'s Cut',
-    shortName: 'Gentleman\'s Cut',
+    name: 'Classic Artistry: The Classic Cut',
+    shortName: 'Classic Cut',
     description: 'Demonstrate timeless barbering skills with classic, sophisticated cuts',
     icon: '👔',
     colorTheme: {
