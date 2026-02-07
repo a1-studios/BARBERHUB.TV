@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Plus, User, LogOut, Sparkles, Zap, Scissors, Swords, Crown, History } from 'lucide-react';
+import { Plus, User, LogOut, Zap, Scissors, Swords, Crown, History } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import barberPole from '@/assets/barber-pole.png';
 import { cn } from '@/lib/utils';
@@ -87,13 +87,6 @@ const Header = () => {
       path: '/creator-hub',
       requiresAuth: true,
       barberOnly: true
-    },
-    {
-      id: 'ai-style',
-      label: 'AI Style',
-      icon: <Sparkles className="w-5 h-5" />,
-      path: '/haircut-advisor',
-      requiresAuth: true
     },
     {
       id: 'profile',

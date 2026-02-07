@@ -15,7 +15,7 @@ import Profile from "./pages/Profile";
 import BattlesPage from "./pages/BattlesPage";
 import CreateBattle from "./pages/CreateBattle";
 import BattleDetails from "./pages/BattleDetails";
-import HaircutAdvisor from "./pages/HaircutAdvisor";
+
 import Analytics from "./pages/Analytics";
 import Portal from "./pages/Portal";
 import PaymentSuccess from "./pages/PaymentSuccess";
@@ -91,14 +91,6 @@ const AppContent = () => {
                   <BarberGuard>
                     <ContenderTheater />
                   </BarberGuard>
-                </AuthGuard>
-              } 
-            />
-            <Route 
-              path="/haircut-advisor" 
-              element={
-                <AuthGuard>
-                  <HaircutAdvisor />
                 </AuthGuard>
               } 
             />

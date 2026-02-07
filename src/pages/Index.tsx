@@ -7,7 +7,7 @@ import Footer from "@/components/Footer";
 import { CreatorHub } from "@/components/creator/CreatorHub";
 import GrantsSection from "@/components/GrantsSection";
 import { GlobalLeagueDashboard } from "@/components/GlobalLeagueDashboard";
-import { VirtualHaircutTryOn } from "@/components/VirtualHaircutTryOn";
+
 import { LiveBarberStreams } from "@/components/battles/LiveBarberStreams";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -55,8 +55,6 @@ const Index = () => {
           {/* Main Battles Section with all navigation and features */}
           <BattlesSection />
           
-          {/* AI Haircut Coach - Available to all users */}
-          <VirtualHaircutTryOn />
           
           {/* Creator Hub for Barbers */}
           {FEATURES.CREATOR_HUB_ENABLED && isBarber && (
@@ -76,7 +74,6 @@ const Index = () => {
       ) : (
         <>
           <LandingHero />
-          <VirtualHaircutTryOn />
         </>
       )}
       

@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useNavigate } from "react-router-dom";
-import { Scissors, Eye, Vote, Trophy, Play, DollarSign, Users, Sparkles } from "lucide-react";
+import { Scissors, Eye, Vote, Trophy, Play, DollarSign, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const STORAGE_KEY = "barberhub_welcome_seen";
@@ -53,7 +53,7 @@ export const WelcomeModal = () => {
       <DialogContent className="sm:max-w-md bg-card border-border/50">
         <DialogHeader className="text-center">
           <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-            <Sparkles className="h-8 w-8 text-primary-foreground" />
+            <Trophy className="h-8 w-8 text-primary-foreground" />
           </div>
           <DialogTitle className="text-2xl font-bold">
             Welcome to BarberHub!
@@ -120,11 +120,10 @@ export const WelcomeModal = () => {
               </Button>
               <Button 
                 variant="outline" 
-                onClick={() => handleAction("/haircut-advisor")}
+                onClick={handleDismiss}
                 className="w-full"
               >
-                <Sparkles className="mr-2 h-4 w-4" />
-                Try AI Style Advisor
+                Explore First
               </Button>
             </>
           )}
