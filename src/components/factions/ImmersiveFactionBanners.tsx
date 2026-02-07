@@ -157,6 +157,8 @@ export const ImmersiveFactionBanners = () => {
     ? TOURNAMENT_CATEGORIES
     : TOURNAMENT_CATEGORIES.filter(c => HIGHLIGHT_IDS.includes(c.id));
 
+  const viewMode = isBarber ? 'compete' : 'showcase';
+
   return (
     <section className="relative py-10 sm:py-14 overflow-hidden">
       {/* Background with subtle cyan glow */}
@@ -169,22 +171,34 @@ export const ImmersiveFactionBanners = () => {
       </div>
       
       <div className="container mx-auto px-4 relative z-10">
-        {/* Section header for non-barbers */}
-        {!isBarber && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="text-center mb-4"
-          >
-            <h3 className="text-sm sm:text-base font-bold uppercase tracking-widest text-cyan">
-              Featured Categories
+        {/* Section header — universal */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="flex items-center justify-between mb-6"
+        >
+          <div>
+            <h3
+              className="text-sm sm:text-base font-black uppercase tracking-widest text-cyan"
+              style={{ textShadow: '0 0 12px hsl(187 100% 50% / 0.4)' }}
+            >
+              Top Arenas
             </h3>
-            <p className="text-xs text-muted-foreground mt-1">
-              Explore the top competition arenas
+            <p className="text-xs text-muted-foreground mt-0.5">
+              See who's dominating right now
             </p>
-          </motion.div>
-        )}
+          </div>
+          {!isBarber && (
+            <button
+              onClick={() => navigate('/portal')}
+              className="text-xs font-semibold text-cyan hover:text-cyan/80 transition-colors flex items-center gap-1"
+            >
+              See All
+              <span aria-hidden>→</span>
+            </button>
+          )}
+        </motion.div>
 
         {/* Banners Row */}
         <motion.div
@@ -192,8 +206,10 @@ export const ImmersiveFactionBanners = () => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}
           className={cn(
-            "flex gap-2 sm:gap-3 lg:gap-4 justify-center items-end pt-8 mx-auto",
-            isBarber ? "max-w-5xl lg:max-w-6xl" : "max-w-3xl lg:max-w-4xl"
+            "flex justify-center items-end pt-4 mx-auto",
+            isBarber
+              ? "gap-2 sm:gap-3 lg:gap-4 max-w-5xl lg:max-w-6xl"
+              : "gap-4 sm:gap-5 lg:gap-6 max-w-2xl lg:max-w-3xl"
           )}
         >
           {displayCategories.map((category, index) => {
@@ -215,6 +231,7 @@ export const ImmersiveFactionBanners = () => {
                 onJoin={handleJoinQueue}
                 isJoining={joiningCategory === category.shortName}
                 isInQueue={inQueue}
+                viewMode={viewMode}
               />
             );
           })}
