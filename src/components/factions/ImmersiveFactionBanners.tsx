@@ -1,15 +1,12 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
 import { TOURNAMENT_CATEGORIES } from '@/config/categories';
 import { useCategoryPrizePools } from '@/hooks/useCategoryPrizePools';
 import { useCategoryTopBarbers } from '@/hooks/useCategoryTopBarbers';
 import { useUserRole } from '@/hooks/useUserRole';
 import { ImmersiveBannerCard } from './ImmersiveBannerCard';
-import { TournamentRegistration } from '@/components/tournament/TournamentRegistration';
 import { useNavigate } from 'react-router-dom';
-import { Eye } from 'lucide-react';
 
 export const ImmersiveFactionBanners = () => {
   const navigate = useNavigate();
@@ -49,50 +46,7 @@ export const ImmersiveFactionBanners = () => {
       </div>
       
       <div className="container mx-auto px-4 relative z-10">
-        {/* Energetic CTA Block */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex flex-col items-center gap-3 py-2 mb-4"
-        >
-          <p
-            className="text-sm sm:text-base text-muted-foreground text-center tracking-wide"
-            style={{ textShadow: '0 0 12px hsl(var(--cyan) / 0.4)' }}
-          >
-            Pick your faction. Rep your flag. Battle every Sunday.
-          </p>
-
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.15 }}
-          >
-            {isBarber ? (
-              <TournamentRegistration />
-            ) : (
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => navigate('/portal')}
-                className="border-cyan/40 hover:border-cyan/70 hover:shadow-[0_0_16px_hsl(var(--cyan)/0.3)] transition-all"
-              >
-                <Eye className="mr-2 h-4 w-4 text-cyan" />
-                Watch the Battles
-              </Button>
-            )}
-          </motion.div>
-
-          {/* Pulsing gradient divider */}
-          <div
-            className="h-px w-1/2 max-w-xs mx-auto mt-1 animate-pulse"
-            style={{
-              background: 'linear-gradient(90deg, transparent, hsl(var(--primary)), hsl(var(--cyan)), hsl(var(--primary)), transparent)',
-            }}
-          />
-        </motion.div>
-
-        {/* Banners Row - Match hero card width */}
+        {/* Banners Row */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -113,6 +67,7 @@ export const ImmersiveFactionBanners = () => {
                 isSelected={selectedCategory === category.id}
                 index={index}
                 topBarber={topBarber}
+                isBarber={isBarber}
               />
             );
           })}
