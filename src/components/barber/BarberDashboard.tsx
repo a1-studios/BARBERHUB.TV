@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Trophy, Users, Target, DollarSign, Upload, Eye, TrendingUp, Award, Calendar, Zap, Crown, ShoppingBag, FileText, BarChart3, X, Radio, Video } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CreationUpload } from '@/components/creations/CreationUpload';
-import { SubscriptionStatusCard } from './SubscriptionStatusCard';
+
 import { StreamControlPanel } from '@/components/streaming/StreamControlPanel';
 
 interface BarberStats {
@@ -118,7 +118,7 @@ const BarberDashboard = () => {
           
           {/* Left Panel - Subscription & Rank */}
           <div className="space-y-6">
-            <SubscriptionStatusCard />
+            
             
             <Card className="card-gradient border-primary/20">
             <CardHeader className="pb-3">
