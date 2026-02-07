@@ -1,147 +1,65 @@
 
 
-# Battle System Audit: Official vs Unofficial Battles + Challenge System
+# Add Energetic Battle CTA Above Faction Banners
 
 ## Overview
 
-Restructure the battle system into two distinct tiers:
-
-1. **Official Tournament Battles** -- The existing 5-category tournament queue system. These count toward global rankings, prizes, and leaderboards. Entry: 250 BB.
-2. **Unofficial Custom Battles** -- Premium barbers (Bronze+) can host custom battles that do NOT affect rankings or official prizes. These are for fun, practice, or personal showdowns.
-3. **Personal Challenge System** -- Any barber can directly challenge another barber. Requires a minimum 100 BB stake from each side. Does NOT count toward rankings.
+Add a compact, high-energy description and "Join the Battle" call-to-action above the faction category banners. The section stays tight and minimalistic but packs visual punch using the existing orange/cyan glow system, subtle animated accents, and role-aware buttons.
 
 ## What Changes
 
-### 1. Database: Add `battle_type` column to `battles` table
+### Update `ImmersiveFactionBanners.tsx`
 
-Add a new column to distinguish official from unofficial battles:
+A new CTA block is inserted **above** the banner row, inside the existing container. It includes:
 
-- `battle_type TEXT NOT NULL DEFAULT 'official'` -- values: `'official'`, `'unofficial'`, `'challenge'`
+1. **One-liner tagline** -- Short, punchy text like: *"Pick your faction. Rep your flag. Battle every Sunday."* -- styled with a subtle cyan text-shadow glow, keeping it minimal (no heading tag, just a `p` element).
 
-This lets every part of the system (rankings, leaderboards, prize pools) filter on `battle_type = 'official'` to exclude unofficial and challenge battles.
+2. **Role-aware CTA button** with energetic styling:
+   - **Barbers**: "Join the Battle" button that opens the existing `TournamentRegistration` dialog. Uses a gradient orange background with a cyan glow hover effect and a `Trophy` icon.
+   - **Fans**: "Watch the Battles" button that navigates to `/portal`. Uses an outline style with cyan border glow.
+   - Both buttons use `framer-motion` for a subtle entrance animation (fade-up).
 
-### 2. Rework the CreateBattle Page (Unofficial Battles Only)
+3. **Compact layout** -- The description + button sit in a tight `flex-col items-center gap-3` container with minimal padding (`py-2`), so they don't add vertical bloat. The entire section flows naturally into the banners below.
 
-Keep `src/pages/CreateBattle.tsx` but repurpose it for **unofficial battles only**:
+4. **Energy effects** -- A thin horizontal gradient line (orange-to-cyan-to-orange) separates the CTA from the banners, matching the existing accent line pattern used in `SphereHolographicWrapper`. This line pulses subtly on a 3s loop.
 
-- Add a clear "UNOFFICIAL" banner at the top explaining these battles don't count for rankings
-- Gate access to **premium subscribers only** (Bronze, Silver, Gold) using `useSubscriptionLimits`
-- Free-tier barbers see an upgrade prompt instead
-- When the battle is inserted into the database, set `battle_type: 'unofficial'`
-- Remove the bounty/USD prize fields (unofficial battles use BB stakes or are just for fun)
-- Keep category selection from the 5 official categories (so the battles are still organized)
+## Technical Details
 
-### 3. Rebuild the Challenge System
+### File: `src/components/factions/ImmersiveFactionBanners.tsx`
 
-Overhaul the existing challenge components to enforce the 100 BB minimum stake:
+New imports:
+- `Button` from `@/components/ui/button`
+- `useUserRole` from `@/hooks/useUserRole`
+- `TournamentRegistration` from `@/components/tournament/TournamentRegistration`
+- `Trophy`, `Eye` from `lucide-react`
 
-**`IssueChallenge.tsx`** -- Major rework:
-- Remove the YouTube "Go Live" button and stream URL fields (challenges are video-submission based, not live)
-- Replace the USD bounty section with a **BB stake field** (minimum 100 BB)
-- On submit: call the existing `create-challenge-stake` edge function (already enforces 100 BB min and escrow)
-- The created battle gets `battle_type: 'challenge'`
-- Show the user's current BB balance
+Changes inside the component:
+- Call `useUserRole()` to get `isBarber`
+- Add a new `motion.div` block above the existing banners `motion.div` containing:
+  - A tagline paragraph with `text-sm sm:text-base text-muted-foreground` and a subtle cyan `text-shadow`
+  - Conditional rendering:
+    - If barber: render `TournamentRegistration` component (it self-contains the dialog trigger button -- we'll wrap it or use its dialog trigger)
+    - If fan: render a `Button` with outline variant navigating to `/portal`
+  - A decorative pulsing gradient divider line below the button
 
-**`AcceptChallengeModal.tsx`** -- Update:
-- Show the stake amount the acceptor must match
-- Call the existing `match-challenge-stake` edge function (already handles escrow matching)
-- Remove the YouTube stream URL requirement; replace with a simple confirmation
+The existing banner row and all background glow effects remain completely untouched.
 
-**`ChallengeFeed.tsx`** -- Update:
-- Display the BB stake amount prominently (instead of USD bounty)
-- Show "UNOFFICIAL - No Ranking Impact" badge on each challenge card
-- Keep real-time subscription and 2-hour expiry
+### Visual Layout
 
-**`ChallengeStreamSection.tsx`** -- Remove entirely:
-- The camera-preview-based challenge flow is overly complex and not aligned with the video-submission model
+```text
+           "Pick your faction. Rep your flag. Battle every Sunday."
+                        [ Join the Battle ]
+              -------- (pulsing gradient line) --------
+        [Banner] [Banner] [Banner] [Banner] [Banner]
+```
 
-**`OpenChallengeQueue.tsx`** -- Simplify:
-- Remove the camera/stream references
-- Keep as the container for IssueChallenge + ChallengeFeed
-
-### 4. Edge Function Updates
-
-**`create-challenge-stake/index.ts`** -- Minor update:
-- When creating the battle record, set `battle_type: 'challenge'`
-- Already enforces 100 BB minimum -- no change needed there
-
-**`match-challenge-stake/index.ts`** -- No changes needed (already handles escrow matching correctly)
-
-**`complete-open-challenge/index.ts`** -- Update:
-- Set `battle_type: 'challenge'` on the battle when completing
-- Remove YouTube stream URL requirement from validation
-
-**`distribute-pot/index.ts`** -- No changes needed (already handles pot distribution)
-
-### 5. UI Cleanup
-
-**`src/pages/Portal.tsx`**:
-- Remove `ChallengeStreamSection` import and rendering (camera-based challenges removed)
-- Keep `OpenChallengeQueue` (with the new simplified challenge flow)
-- Keep `TournamentRegistration` (official path)
-
-**`src/pages/BattlesPage.tsx`**:
-- Change the "Create Battle" button to say "Create Unofficial Battle" 
-- Gate it behind premium subscription check
-- Add badge showing "UNOFFICIAL" on unofficial/challenge battles in the grid
-- Add badge showing "OFFICIAL" on tournament battles
-
-**`src/components/barber/MyBattlesSection.tsx`**:
-- Change empty state button from "Create a Battle" to link to Portal (tournament registration)
-- Add a small "or create an unofficial battle" link below for premium barbers
-- Show battle type badges (Official / Unofficial / Challenge) on each battle card
-
-**`src/components/BattlesSection.tsx`**:
-- Remove the static fallback battles with fake categories
-- Add battle type badge to "My Active Battles" cards
-
-### 6. Ranking Protection
-
-Any existing ranking, leaderboard, or prize pool queries that read from the `battles` table should be updated to filter by `battle_type = 'official'`. Key areas:
-
-- `src/hooks/useCategoryPrizePools.tsx` -- add filter
-- `src/hooks/useCategoryTopBarbers.tsx` -- add filter
-- `src/components/portal/CountryLeaderboard.tsx` -- add filter
-- Any RPC functions that aggregate battle results for rankings
+The entire addition is roughly 80-100px of vertical space, keeping the section compact.
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| **Database migration** | Add `battle_type` column to `battles` table |
-| `src/pages/CreateBattle.tsx` | Repurpose for unofficial battles, gate behind premium subscription |
-| `src/components/battles/IssueChallenge.tsx` | Replace with BB-stake challenge form (100 BB min) |
-| `src/components/battles/AcceptChallengeModal.tsx` | Show stake matching, remove stream URL |
-| `src/components/battles/ChallengeFeed.tsx` | Show BB stake, add unofficial badge |
-| `src/components/battles/OpenChallengeQueue.tsx` | Simplify (remove stream references) |
-| `src/pages/Portal.tsx` | Remove ChallengeStreamSection |
-| `src/pages/BattlesPage.tsx` | Add unofficial badge, gate create button |
-| `src/components/barber/MyBattlesSection.tsx` | Update empty state, add battle type badges |
-| `src/components/BattlesSection.tsx` | Remove fallback battles, add type badges |
-| `supabase/functions/create-challenge-stake/index.ts` | Set battle_type on challenge creation |
-| `supabase/functions/complete-open-challenge/index.ts` | Set battle_type on challenge completion |
-| `src/hooks/useCategoryPrizePools.tsx` | Filter by official battles only |
-| `src/hooks/useCategoryTopBarbers.tsx` | Filter by official battles only |
+| `src/components/factions/ImmersiveFactionBanners.tsx` | Add tagline, role-aware CTA button, and decorative divider above banners |
 
-## Files to Delete
-
-| File | Reason |
-|------|--------|
-| `src/components/battles/ChallengeStreamSection.tsx` | Camera-based challenge system replaced by simpler BB-stake model |
-
-## Battle Type Summary
-
-```text
-+---------------------+------------------+------------------+-------------------+
-| Feature             | Official         | Unofficial       | Challenge         |
-+---------------------+------------------+------------------+-------------------+
-| Entry Point         | Tournament Queue | Create Battle pg | Issue Challenge    |
-| Cost                | 250 BB           | Free (premium)   | 100 BB min stake  |
-| Who Can Create      | Any barber       | Premium barbers  | Any barber        |
-| Affects Rankings    | Yes              | No               | No                |
-| Prize Pool          | Official prizes  | None             | Winner takes pot  |
-| Categories          | 5 official       | 5 official       | Freestyle         |
-| Subscription Needed | No               | Yes (Bronze+)    | No                |
-+---------------------+------------------+------------------+-------------------+
-```
+No new files. No database changes. Reuses existing `TournamentRegistration`, `useUserRole`, and `Button` components.
 
