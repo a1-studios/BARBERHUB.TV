@@ -8,12 +8,13 @@ import { Button } from '@/components/ui/button';
 import { 
   Swords, 
   Plus, 
-   
   User, 
   Crown, 
   Coins,
   Zap,
-  Loader2
+  Loader2,
+  Shield,
+  Trophy
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -54,15 +55,23 @@ export function QuickActionsMenu() {
       onClick: () => setShowAddFundsModal(true)
     },
     {
+      id: 'portal',
+      label: 'Battle Portal',
+      icon: <Trophy className="w-5 h-5 text-primary" />,
+      path: '/portal',
+      requiresAuth: true,
+      barberOnly: true
+    },
+    {
       id: 'battles',
-      label: 'View Battles',
+      label: 'Watch Battles',
       icon: <Swords className="w-5 h-5" />,
       path: '/battles',
       requiresAuth: true
     },
     {
       id: 'create-battle',
-      label: 'Create Battle',
+      label: 'Unofficial Battle',
       icon: <Plus className="w-5 h-5" />,
       path: '/battles/create',
       requiresAuth: true,
