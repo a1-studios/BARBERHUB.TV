@@ -1,54 +1,38 @@
 
 
-# Fix BB Coin Rendering Quality
+# Center BB Coin Image to Fill the Circle
 
 ## Problem
 
-The BB coin logo image (`bb-coin-logo.png`) is a square PNG with a **black background** containing a circular coin design. When rendered at small sizes (xs=28px, sm=36px), several issues make it look bad:
-
-1. **`objectFit: 'cover'` crops the coin** -- The image fills the circular frame edge-to-edge, cutting into the gold rim and Greek meander border detail of the coin design
-2. **The component's gold border doubles up** with the coin image's own gold rim, creating an awkward double-border effect
-3. **At tiny sizes** (xs/sm), the thick component border eats significant pixel space from the already-small image
+With `objectFit: 'contain'`, the square PNG is scaled to fit entirely inside the circular container. Since the container is clipped to a circle (via `borderRadius: 50%`), the image gets scaled down to fit within the inscribed area, leaving black gaps around the coin edges. The coin appears smaller than the circular frame.
 
 ## Solution
 
-Adjust the `RotatingBBCoin` component rendering so the coin image displays correctly at all sizes.
+Change `objectFit` from `contain` back to `cover` on the front face image. Since we already removed the border from the front face in the previous fix, there is no longer a double-border issue. With `cover`:
+
+- The image scales to fill the entire circular area edge-to-edge
+- The black corners of the square PNG are naturally clipped by `borderRadius: 50%`
+- The circular coin design perfectly fills the circular container
+- The gold rim of the coin aligns flush with the edge of the frame
 
 ### File: `src/components/economy/RotatingBBCoin.tsx`
 
-**1. Change front face image fit from `cover` to `contain`**
+**Single change on line 73:**
 
-Switch `objectFit: 'cover'` to `objectFit: 'contain'` on the logo image (line 62). This ensures the full circular coin design (including its own gold rim) is visible without being cropped.
+Change:
+```
+objectFit: 'contain'
+```
+To:
+```
+objectFit: 'cover'
+```
 
-**2. Add black background to the front face**
-
-Add `background: '#000'` to the front face div so the black corners of the square PNG blend seamlessly with the face background, making the circular coin appear to float naturally inside the frame.
-
-**3. Remove the component's own gold border on the front face**
-
-The coin image already has its own detailed gold rim with the Greek meander pattern. The component's additional `border: Xpx solid #B8860B` creates an ugly double-rim effect. Remove the border from the front face style to let the coin's built-in rim be the only border.
-
-**4. Keep the border on the back face only**
-
-The back face (user avatar/initial) still needs the gold border since it doesn't have its own built-in rim.
-
-**5. Refactor face styles to separate front and back**
-
-Split `faceBase` into shared base properties plus separate front/back overrides:
-- Shared: position, dimensions, backfaceVisibility, borderRadius, overflow, boxShadow
-- Front only: no border, black background
-- Back only: gold border, dark background
-
-## What This Achieves
-
-- The full coin design (gold outer rim, Greek meander inner ring, black center, BB logo) renders cleanly at all sizes
-- No double-border effect at any size
-- The coin looks crisp at xs (28px) through xl (96px)
-- The back face retains its gold-bordered engraved look for avatars/initials
+This is safe now because the previous fix already removed the CSS border from the front face, so there is no space being consumed by a component border. The coin's own built-in gold rim becomes the outermost visual edge.
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `src/components/economy/RotatingBBCoin.tsx` | Split face styles, remove front border, set contain + black bg for logo |
+| `src/components/economy/RotatingBBCoin.tsx` | Change front face image objectFit from `contain` to `cover` |
 
