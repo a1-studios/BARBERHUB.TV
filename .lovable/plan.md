@@ -1,65 +1,98 @@
 
 
-# Add Energetic Battle CTA Above Faction Banners
+# Direct Join Queue from Faction Banners
 
 ## Overview
 
-Add a compact, high-energy description and "Join the Battle" call-to-action above the faction category banners. The section stays tight and minimalistic but packs visual punch using the existing orange/cyan glow system, subtle animated accents, and role-aware buttons.
+When a barber clicks the "Join" button on a faction banner, they will be **immediately registered** for that specific category's tournament queue (no dialog, no category picker needed -- the category is already known). If they don't have enough BB (250), the Add Funds modal opens instead.
 
 ## What Changes
 
-### Update `ImmersiveFactionBanners.tsx`
+### 1. Update `ImmersiveFactionBanners.tsx` -- Add inline registration logic
 
-A new CTA block is inserted **above** the banner row, inside the existing container. It includes:
+The parent component gains all the registration logic that currently lives in `TournamentRegistration`, but streamlined for direct action:
 
-1. **One-liner tagline** -- Short, punchy text like: *"Pick your faction. Rep your flag. Battle every Sunday."* -- styled with a subtle cyan text-shadow glow, keeping it minimal (no heading tag, just a `p` element).
+- **New queries**: Fetch barber profile (for `id` and `country_code`) and existing queue entries
+- **New mutation**: Call `register-tournament-bb` edge function directly when a barber clicks Join
+- **New state**: `showAddFunds` boolean + `joiningCategory` to track which category is being processed
+- **New callback**: `handleJoinQueue(categoryId)` passed to each `ImmersiveBannerCard` as a separate `onJoin` prop
+- **AddFundsModal**: Rendered at the bottom of the component for insufficient balance cases
+- **Toast feedback**: Success toast on join, error toast on failure, "already in queue" toast if duplicate
 
-2. **Role-aware CTA button** with energetic styling:
-   - **Barbers**: "Join the Battle" button that opens the existing `TournamentRegistration` dialog. Uses a gradient orange background with a cyan glow hover effect and a `Trophy` icon.
-   - **Fans**: "Watch the Battles" button that navigates to `/portal`. Uses an outline style with cyan border glow.
-   - Both buttons use `framer-motion` for a subtle entrance animation (fade-up).
+Flow:
+1. Barber clicks Join on "Creative Color" banner
+2. `handleJoinQueue('creative_color')` fires
+3. Checks BB balance (250 required). If insufficient, opens AddFundsModal
+4. Checks if already in queue for that category. If yes, shows toast
+5. Checks barber profile has country_code. If missing, shows toast to update profile
+6. Calls `register-tournament-bb` edge function with `{ category: shortName, barber_profile_id, country_code }`
+7. On success: invalidates queries, shows success toast
+8. On error: shows error toast
 
-3. **Compact layout** -- The description + button sit in a tight `flex-col items-center gap-3` container with minimal padding (`py-2`), so they don't add vertical bloat. The entire section flows naturally into the banners below.
+### 2. Update `ImmersiveBannerCard.tsx` -- Separate Join from Select
 
-4. **Energy effects** -- A thin horizontal gradient line (orange-to-cyan-to-orange) separates the CTA from the banners, matching the existing accent line pattern used in `SphereHolographicWrapper`. This line pulses subtly on a 3s loop.
+- Add new `onJoin` callback prop (separate from `onSelect` which navigates to portal)
+- The small Join button calls `onJoin(category.shortName)` instead of `onSelect(category.id)`
+- The main banner body still calls `onSelect(category.id)` for portal navigation
+- Add `isJoining` prop to show a small spinner on the button during registration
+- Add `isInQueue` prop to swap the button to a "Queued" badge (green checkmark) when already registered
+
+### 3. Visual States for the Join Button
+
+| State | Button Appearance |
+|-------|-------------------|
+| Default | Orange pill with Swords icon + "Join" text |
+| Hover | Cyan glow effect (existing) |
+| Processing | Small spinner replacing icon |
+| Already in queue | Green pill with CheckCircle icon + "Queued" |
+| Insufficient BB | Opens AddFundsModal (button stays default) |
 
 ## Technical Details
 
 ### File: `src/components/factions/ImmersiveFactionBanners.tsx`
 
 New imports:
-- `Button` from `@/components/ui/button`
-- `useUserRole` from `@/hooks/useUserRole`
-- `TournamentRegistration` from `@/components/tournament/TournamentRegistration`
-- `Trophy`, `Eye` from `lucide-react`
+- `useMutation`, `useQuery`, `useQueryClient` from `@tanstack/react-query`
+- `supabase` from `@/integrations/supabase/client`
+- `useAuth` from `@/hooks/useAuth`
+- `useBarberBucks` from `@/hooks/useBarberBucks`
+- `AddFundsModal` from `@/components/AddFundsModal`
+- `TOURNAMENT_CONFIG` from `@/config/tournament`
+- `toast` from `sonner`
 
-Changes inside the component:
-- Call `useUserRole()` to get `isBarber`
-- Add a new `motion.div` block above the existing banners `motion.div` containing:
-  - A tagline paragraph with `text-sm sm:text-base text-muted-foreground` and a subtle cyan `text-shadow`
-  - Conditional rendering:
-    - If barber: render `TournamentRegistration` component (it self-contains the dialog trigger button -- we'll wrap it or use its dialog trigger)
-    - If fan: render a `Button` with outline variant navigating to `/portal`
-  - A decorative pulsing gradient divider line below the button
+New logic in the component:
+- `useAuth()` for user ID
+- `useBarberBucks()` for balance check
+- Query for barber profile (`barber_profiles` table -- `id`, `country_code`)
+- Query for existing queue entries (`tournament_queue` table -- same as TournamentRegistration)
+- `useMutation` calling `register-tournament-bb` edge function
+- `handleJoinQueue(categoryShortName)` function with all validation checks
+- State: `showAddFunds`, `joiningCategory`
+- Render `AddFundsModal` at the bottom
 
-The existing banner row and all background glow effects remain completely untouched.
+Pass to each `ImmersiveBannerCard`:
+- `onJoin={handleJoinQueue}`
+- `isJoining={joiningCategory === category.shortName}`
+- `isInQueue={queueEntries?.some(e => e.category === category.shortName)}`
 
-### Visual Layout
+### File: `src/components/factions/ImmersiveBannerCard.tsx`
 
-```text
-           "Pick your faction. Rep your flag. Battle every Sunday."
-                        [ Join the Battle ]
-              -------- (pulsing gradient line) --------
-        [Banner] [Banner] [Banner] [Banner] [Banner]
-```
+Updated props interface:
+- Add `onJoin?: (categoryShortName: string) => void`
+- Add `isJoining?: boolean`
+- Add `isInQueue?: boolean`
 
-The entire addition is roughly 80-100px of vertical space, keeping the section compact.
+Updated Join button:
+- Calls `onJoin?.(category.shortName)` instead of `onSelect(category.id)`
+- Shows `Loader2` spinner when `isJoining` is true
+- Swaps to green "Queued" pill with `CheckCircle` icon when `isInQueue` is true
+- Disabled when `isJoining` or `isInQueue`
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/components/factions/ImmersiveFactionBanners.tsx` | Add tagline, role-aware CTA button, and decorative divider above banners |
+| `src/components/factions/ImmersiveFactionBanners.tsx` | Add registration logic, queries, mutation, AddFundsModal |
+| `src/components/factions/ImmersiveBannerCard.tsx` | Add `onJoin`, `isJoining`, `isInQueue` props; update button states |
 
-No new files. No database changes. Reuses existing `TournamentRegistration`, `useUserRole`, and `Button` components.
-
+No new files. No database changes. No edge function changes -- reuses `register-tournament-bb` as-is.
