@@ -2,18 +2,134 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TOURNAMENT_CATEGORIES } from '@/config/categories';
+import { TOURNAMENT_CONFIG } from '@/config/tournament';
 import { useCategoryPrizePools } from '@/hooks/useCategoryPrizePools';
 import { useCategoryTopBarbers } from '@/hooks/useCategoryTopBarbers';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useAuth } from '@/hooks/useAuth';
 import { ImmersiveBannerCard } from './ImmersiveBannerCard';
+import { AddFundsModal } from '@/components/AddFundsModal';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export const ImmersiveFactionBanners = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
   const { prizePools, isLoading } = useCategoryPrizePools();
   const { data: topBarbers } = useCategoryTopBarbers();
   const { isBarber } = useUserRole();
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
+  const [showAddFunds, setShowAddFunds] = useState(false);
+  const [joiningCategory, setJoiningCategory] = useState<string | null>(null);
+
+  // Fetch barber profile
+  const { data: barberProfile } = useQuery({
+    queryKey: ['barber-profile-banner', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from('barber_profiles')
+        .select('id, country_code')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!user && isBarber,
+  });
+
+  // Fetch BB balance
+  const { data: bbBalance } = useQuery({
+    queryKey: ['bb-balance-banner', user?.id],
+    queryFn: async () => {
+      if (!user) return 0;
+      const { data } = await supabase
+        .from('profiles')
+        .select('barber_bucks')
+        .eq('user_id', user.id)
+        .single();
+      return data?.barber_bucks || 0;
+    },
+    enabled: !!user && isBarber,
+  });
+
+  // Fetch existing queue entries
+  const { data: queueEntries } = useQuery({
+    queryKey: ['tournament-queue-banner', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      const { data } = await supabase
+        .from('tournament_queue')
+        .select('id, category, status')
+        .eq('user_id', user.id)
+        .in('status', ['waiting', 'matched']);
+      return data || [];
+    },
+    enabled: !!user && isBarber,
+  });
+
+  // Registration mutation
+  const registerMutation = useMutation({
+    mutationFn: async ({ category, barber_profile_id, country_code }: { category: string; barber_profile_id: string; country_code: string }) => {
+      const { data, error } = await supabase.functions.invoke('register-tournament-bb', {
+        body: { category, barber_profile_id, country_code },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success(data.message || 'Joined tournament queue!');
+      queryClient.invalidateQueries({ queryKey: ['tournament-queue-banner'] });
+      queryClient.invalidateQueries({ queryKey: ['bb-balance-banner'] });
+      queryClient.invalidateQueries({ queryKey: ['barber_bucks'] });
+      queryClient.invalidateQueries({ queryKey: ['category-prize-pools'] });
+      setJoiningCategory(null);
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Failed to join queue');
+      setJoiningCategory(null);
+    },
+  });
+
+  const handleJoinQueue = (categoryShortName: string) => {
+    if (!user) {
+      toast.error('Please sign in first');
+      return;
+    }
+
+    if (!barberProfile) {
+      toast.error('Please complete your barber profile first');
+      return;
+    }
+
+    if (!barberProfile.country_code) {
+      toast.error('Please set your country in your barber profile');
+      return;
+    }
+
+    // Check if already in queue
+    if (queueEntries?.some(e => e.category === categoryShortName)) {
+      toast.info("You're already in the queue for this category");
+      return;
+    }
+
+    // Check BB balance
+    if ((bbBalance || 0) < TOURNAMENT_CONFIG.ENTRY_FEE_BB) {
+      toast.error(`You need ${TOURNAMENT_CONFIG.ENTRY_FEE_BB} BB to join. Please add funds.`);
+      setShowAddFunds(true);
+      return;
+    }
+
+    setJoiningCategory(categoryShortName);
+    registerMutation.mutate({
+      category: categoryShortName,
+      barber_profile_id: barberProfile.id,
+      country_code: barberProfile.country_code,
+    });
+  };
 
   const handleSelectCategory = (categoryId: string) => {
     setSelectedCategory(categoryId);
@@ -56,6 +172,7 @@ export const ImmersiveFactionBanners = () => {
           {TOURNAMENT_CATEGORIES.map((category, index) => {
             const poolData = prizePools.find(p => p.category === category.id);
             const topBarber = topBarbers?.[category.id];
+            const inQueue = queueEntries?.some(e => e.category === category.shortName) || false;
             
             return (
               <ImmersiveBannerCard
@@ -68,11 +185,17 @@ export const ImmersiveFactionBanners = () => {
                 index={index}
                 topBarber={topBarber}
                 isBarber={isBarber}
+                onJoin={handleJoinQueue}
+                isJoining={joiningCategory === category.shortName}
+                isInQueue={inQueue}
               />
             );
           })}
         </motion.div>
       </div>
+
+      {/* Add Funds Modal */}
+      <AddFundsModal isOpen={showAddFunds} onClose={() => setShowAddFunds(false)} />
     </section>
   );
 };
