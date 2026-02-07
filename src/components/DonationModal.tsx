@@ -9,6 +9,7 @@ import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Coins, Heart, AlertCircle } from 'lucide-react';
+import { AddFundsModal } from './AddFundsModal';
 
 interface DonationModalProps {
   isOpen: boolean;
@@ -26,7 +27,7 @@ export const DonationModal = ({ isOpen, onClose, creatorId, creatorName }: Donat
   const [message, setMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { user } = useAuth();
-  const { barberBucks, checkFunds, setShowAddFundsModal } = useBarberBucks();
+  const { barberBucks, checkFunds, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
 
   const getAmount = () => {
     if (selectedAmount) return selectedAmount;
@@ -86,6 +87,7 @@ export const DonationModal = ({ isOpen, onClose, creatorId, creatorName }: Donat
   const insufficientFunds = getAmount() ? barberBucks < getAmount()! : false;
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -231,5 +233,11 @@ export const DonationModal = ({ isOpen, onClose, creatorId, creatorName }: Donat
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <AddFundsModal 
+      isOpen={showAddFundsModal} 
+      onClose={() => setShowAddFundsModal(false)} 
+    />
+    </>
   );
 };
