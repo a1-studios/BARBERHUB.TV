@@ -73,16 +73,14 @@ export const BarberProfileCard = ({
     queryFn: async () => {
       if (!user?.id) return { isFollowing: false, hasLiked: false, isSubscribed: false };
       
-      const [followResult, likeResult, subscriptionResult] = await Promise.all([
+      const [followResult, likeResult] = await Promise.all([
         supabase.from('creator_follows').select('id').eq('creator_id', userId).eq('follower_id', user.id).maybeSingle(),
-        supabase.from('creator_likes').select('id').eq('creator_id', userId).eq('user_id', user.id).maybeSingle(),
-        supabase.from('creator_subscriptions').select('id').eq('creator_id', userId).eq('user_id', user.id).maybeSingle()
+        supabase.from('creator_likes').select('id').eq('creator_id', userId).eq('user_id', user.id).maybeSingle()
       ]);
 
       return {
         isFollowing: !followResult.error && followResult.data !== null,
-        hasLiked: !likeResult.error && likeResult.data !== null,
-        isSubscribed: !subscriptionResult.error && subscriptionResult.data !== null
+        hasLiked: !likeResult.error && likeResult.data !== null
       };
     },
     enabled: !!user?.id
@@ -140,31 +138,6 @@ export const BarberProfileCard = ({
     }
   });
 
-  // Subscribe/Unsubscribe mutation
-  const subscribeMutation = useMutation({
-    mutationFn: async (action: 'subscribe' | 'unsubscribe') => {
-      if (!user?.id) throw new Error('Not authenticated');
-      
-      if (action === 'subscribe') {
-        const { error } = await supabase
-          .from('creator_subscriptions')
-          .insert({ creator_id: userId, user_id: user.id });
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('creator_subscriptions')
-          .delete()
-          .eq('creator_id', userId)
-          .eq('user_id', user.id);
-        if (error) throw error;
-      }
-    },
-    onSuccess: (_, action) => {
-      queryClient.invalidateQueries({ queryKey: ['barber-relations'] });
-      queryClient.invalidateQueries({ queryKey: ['public-barber-profile'] });
-      toast.success(`${action}d successfully`);
-    }
-  });
 
   const getCountryFlag = (countryCode: string | null) => {
     if (!countryCode) return null;
@@ -266,10 +239,6 @@ export const BarberProfileCard = ({
             <div>
               <div className="text-lg font-semibold text-white">{barberProfile.like_count || 0}</div>
               <div className="text-xs text-muted-foreground">Likes</div>
-            </div>
-            <div>
-              <div className="text-lg font-semibold text-white">{barberProfile.subscription_count || 0}</div>
-              <div className="text-xs text-muted-foreground">Subscribers</div>
             </div>
           </div>
 

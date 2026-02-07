@@ -321,10 +321,6 @@ export default function BarberPublicProfile() {
                     <div className="text-sm text-muted-foreground">Likes</div>
                   </div>
                   <div className="text-center">
-                    <div className="text-3xl font-bold text-white">{stats?.subscription_count || 0}</div>
-                    <div className="text-sm text-muted-foreground">Subscribers</div>
-                  </div>
-                  <div className="text-center">
                     <div className="text-3xl font-bold text-white">${((stats?.total_donations_cents || 0) / 100).toFixed(0)}</div>
                     <div className="text-sm text-muted-foreground">Donated</div>
                   </div>

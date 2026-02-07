@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { 
   Swords, 
   Plus, 
-  Sparkles, 
+   
   User, 
   Crown, 
   Coins,
@@ -67,13 +67,6 @@ export function QuickActionsMenu() {
       path: '/battles/create',
       requiresAuth: true,
       barberOnly: true
-    },
-    {
-      id: 'ai-style',
-      label: 'AI Style',
-      icon: <Sparkles className="w-5 h-5" />,
-      path: '/haircut-advisor',
-      requiresAuth: true
     },
     {
       id: 'profile',
