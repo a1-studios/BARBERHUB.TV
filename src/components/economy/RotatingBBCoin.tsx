@@ -70,7 +70,7 @@ export const RotatingBBCoin = ({
           <img
             src={bbCoinLogo}
             alt="BB Coin"
-            style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
         </div>
 
