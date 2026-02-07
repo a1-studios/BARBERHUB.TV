@@ -27,15 +27,26 @@ export const RotatingBBCoin = ({
   const [imgError, setImgError] = useState(false);
   const showImage = avatarUrl && !imgError;
 
-  const faceBase: React.CSSProperties = {
+  const faceShared: React.CSSProperties = {
     position: 'absolute',
     width: pixelSize,
     height: pixelSize,
     backfaceVisibility: 'hidden',
     borderRadius: '50%',
-    border: `${borderWidth}px solid #B8860B`,
     boxShadow: '0 4px 15px rgba(0,0,0,0.4), inset 0 1px 3px rgba(255,255,255,0.2)',
     overflow: 'hidden',
+  };
+
+  const frontFace: React.CSSProperties = {
+    ...faceShared,
+    background: '#000',
+  };
+
+  const backFace: React.CSSProperties = {
+    ...faceShared,
+    border: `${borderWidth}px solid #B8860B`,
+    transform: 'rotateY(180deg)',
+    background: '#111',
   };
 
   return (
@@ -55,16 +66,16 @@ export const RotatingBBCoin = ({
         }
       >
         {/* ── FRONT FACE ── BB Logo */}
-        <div style={faceBase}>
+        <div style={frontFace}>
           <img
             src={bbCoinLogo}
             alt="BB Coin"
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
           />
         </div>
 
         {/* ── BACK FACE ── User Profile (engraved look) */}
-        <div style={{ ...faceBase, transform: 'rotateY(180deg)', background: '#111' }}>
+        <div style={backFace}>
           {/* User avatar */}
           {showImage && (
             <img
