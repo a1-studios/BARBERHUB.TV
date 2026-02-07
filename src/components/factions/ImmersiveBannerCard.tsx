@@ -60,17 +60,17 @@ export const ImmersiveBannerCard = ({
       className="relative flex-1 min-w-0 flex flex-col items-center"
       style={{ perspective: '1000px' }}
     >
-      {/* Small Join Button above banner - barbers only */}
+      {/* Join Button above banner - barbers only */}
       {isBarber && (
         <motion.button
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: index * 0.08 + 0.3, duration: 0.3 }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.08 + 0.3, duration: 0.35, ease: "easeOut" }}
           whileHover={!isJoining && !isInQueue ? { 
-            scale: 1.1,
-            boxShadow: '0 0 14px hsl(187 100% 50% / 0.5)',
+            scale: 1.08,
+            y: -1,
           } : {}}
-          whileTap={!isJoining && !isInQueue ? { scale: 0.9 } : {}}
+          whileTap={!isJoining && !isInQueue ? { scale: 0.92 } : {}}
           onClick={(e) => {
             e.stopPropagation();
             if (!isJoining && !isInQueue) {
@@ -79,27 +79,62 @@ export const ImmersiveBannerCard = ({
           }}
           disabled={isJoining || isInQueue}
           className={cn(
-            "mb-2 flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-semibold transition-all cursor-pointer",
+            "relative mb-1.5 flex items-center gap-1 px-3 py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wide uppercase transition-all overflow-hidden",
             isInQueue
-              ? "bg-green-600/90 text-white border border-green-400/50"
-              : "bg-primary/90 text-primary-foreground border border-cyan/30 hover:border-cyan/60",
-            (isJoining || isInQueue) && "cursor-default"
+              ? "text-foreground cursor-default"
+              : "text-primary-foreground cursor-pointer",
+            isJoining && "cursor-wait"
           )}
           style={{
+            background: isInQueue
+              ? 'linear-gradient(135deg, hsl(187 100% 35%) 0%, hsl(187 80% 25%) 100%)'
+              : 'linear-gradient(135deg, hsl(24 100% 55%) 0%, hsl(24 100% 42%) 50%, hsl(15 100% 38%) 100%)',
+            border: isInQueue
+              ? '1px solid hsl(187 100% 50% / 0.5)'
+              : '1px solid hsl(24 100% 65% / 0.6)',
             boxShadow: isInQueue
-              ? '0 0 8px hsl(142 70% 45% / 0.4)'
-              : '0 0 8px hsl(24 100% 50% / 0.3)',
+              ? '0 0 10px hsl(187 100% 50% / 0.3), inset 0 1px 0 hsl(187 100% 70% / 0.2)'
+              : '0 2px 8px hsl(24 100% 40% / 0.4), 0 0 12px hsl(24 100% 50% / 0.2), inset 0 1px 0 hsl(24 100% 70% / 0.3)',
           }}
         >
-          {isJoining ? (
-            <Loader2 className="w-3 h-3 animate-spin" />
-          ) : isInQueue ? (
-            <CheckCircle className="w-3 h-3" />
-          ) : (
-            <Swords className="w-3 h-3" />
+          {/* Shimmer sweep on default state */}
+          {!isInQueue && !isJoining && (
+            <motion.div
+              className="absolute inset-0 pointer-events-none"
+              animate={{
+                backgroundPosition: ['200% 0', '-200% 0'],
+              }}
+              transition={{ duration: 3, repeat: Infinity, ease: "linear", repeatDelay: 2 }}
+              style={{
+                background: 'linear-gradient(90deg, transparent 0%, hsl(187 100% 80% / 0.15) 50%, transparent 100%)',
+                backgroundSize: '200% 100%',
+              }}
+            />
           )}
-          <span className="hidden sm:inline">
-            {isJoining ? '...' : isInQueue ? 'Queued' : 'Join'}
+          
+          {/* Queued pulse ring */}
+          {isInQueue && (
+            <motion.div
+              className="absolute inset-0 rounded-full pointer-events-none"
+              animate={{ opacity: [0.4, 0, 0.4] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              style={{
+                boxShadow: 'inset 0 0 8px hsl(187 100% 50% / 0.4)',
+              }}
+            />
+          )}
+
+          <span className="relative z-10 flex items-center gap-1">
+            {isJoining ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : isInQueue ? (
+              <CheckCircle className="w-3 h-3 text-cyan" />
+            ) : (
+              <Swords className="w-3 h-3" style={{ filter: 'drop-shadow(0 0 3px hsl(187 100% 70% / 0.5))' }} />
+            )}
+            <span className="hidden sm:inline">
+              {isJoining ? '...' : isInQueue ? 'Queued' : 'Join'}
+            </span>
           </span>
         </motion.button>
       )}
