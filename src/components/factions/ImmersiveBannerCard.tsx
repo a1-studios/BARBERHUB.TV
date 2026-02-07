@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, Crown, Zap, Swords } from 'lucide-react';
+import { Users, Crown, Zap, Swords, Loader2, CheckCircle } from 'lucide-react';
 import { TournamentCategory } from '@/config/categories';
 import { HoverParticles } from './HoverParticles';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -18,6 +18,9 @@ interface ImmersiveBannerCardProps {
     avatar_url: string | null;
   } | null;
   isBarber?: boolean;
+  onJoin?: (categoryShortName: string) => void;
+  isJoining?: boolean;
+  isInQueue?: boolean;
 }
 
 const formatCurrency = (cents: number) => {
@@ -37,7 +40,10 @@ export const ImmersiveBannerCard = ({
   isSelected,
   index,
   topBarber,
-  isBarber
+  isBarber,
+  onJoin,
+  isJoining,
+  isInQueue
 }: ImmersiveBannerCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
@@ -60,22 +66,41 @@ export const ImmersiveBannerCard = ({
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: index * 0.08 + 0.3, duration: 0.3 }}
-          whileHover={{ 
+          whileHover={!isJoining && !isInQueue ? { 
             scale: 1.1,
             boxShadow: '0 0 14px hsl(187 100% 50% / 0.5)',
-          }}
-          whileTap={{ scale: 0.9 }}
+          } : {}}
+          whileTap={!isJoining && !isInQueue ? { scale: 0.9 } : {}}
           onClick={(e) => {
             e.stopPropagation();
-            onSelect(category.id);
+            if (!isJoining && !isInQueue) {
+              onJoin?.(category.shortName);
+            }
           }}
-          className="mb-2 flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-primary/90 text-primary-foreground border border-cyan/30 hover:border-cyan/60 transition-all cursor-pointer"
+          disabled={isJoining || isInQueue}
+          className={cn(
+            "mb-2 flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-semibold transition-all cursor-pointer",
+            isInQueue
+              ? "bg-green-600/90 text-white border border-green-400/50"
+              : "bg-primary/90 text-primary-foreground border border-cyan/30 hover:border-cyan/60",
+            (isJoining || isInQueue) && "cursor-default"
+          )}
           style={{
-            boxShadow: '0 0 8px hsl(24 100% 50% / 0.3)',
+            boxShadow: isInQueue
+              ? '0 0 8px hsl(142 70% 45% / 0.4)'
+              : '0 0 8px hsl(24 100% 50% / 0.3)',
           }}
         >
-          <Swords className="w-3 h-3" />
-          <span className="hidden sm:inline">Join</span>
+          {isJoining ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : isInQueue ? (
+            <CheckCircle className="w-3 h-3" />
+          ) : (
+            <Swords className="w-3 h-3" />
+          )}
+          <span className="hidden sm:inline">
+            {isJoining ? '...' : isInQueue ? 'Queued' : 'Join'}
+          </span>
         </motion.button>
       )}
 
