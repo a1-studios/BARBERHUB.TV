@@ -1,57 +1,54 @@
 
 
-# Fix AddFundsModal Click Blocking Inside DonationModal
+# Fix BB Coin Rendering Quality
 
 ## Problem
 
-The Radix UI `Dialog` component (used by `DonationModal`) implements a **focus trap and pointer-event lock**. Even though the `AddFundsModal` renders via `createPortal` at `z-[60]` (visually above the Dialog at `z-50`), Radix blocks all pointer events outside its own content area. This means the BB Store package buttons are visible but completely unclickable.
+The BB coin logo image (`bb-coin-logo.png`) is a square PNG with a **black background** containing a circular coin design. When rendered at small sizes (xs=28px, sm=36px), several issues make it look bad:
+
+1. **`objectFit: 'cover'` crops the coin** -- The image fills the circular frame edge-to-edge, cutting into the gold rim and Greek meander border detail of the coin design
+2. **The component's gold border doubles up** with the coin image's own gold rim, creating an awkward double-border effect
+3. **At tiny sizes** (xs/sm), the thick component border eats significant pixel space from the already-small image
 
 ## Solution
 
-When the AddFundsModal opens, **temporarily close the DonationModal's Dialog** so Radix releases its pointer-event lock. When the AddFundsModal closes, reopen the DonationModal so the user can continue their donation flow.
+Adjust the `RotatingBBCoin` component rendering so the coin image displays correctly at all sizes.
 
-## Changes
+### File: `src/components/economy/RotatingBBCoin.tsx`
 
-### File: `src/components/DonationModal.tsx`
+**1. Change front face image fit from `cover` to `contain`**
 
-1. **Track "paused" state** -- Add a state variable to track when the DonationModal should temporarily hide because the AddFundsModal is open:
-   ```typescript
-   const [pausedForFunds, setPausedForFunds] = useState(false);
-   ```
+Switch `objectFit: 'cover'` to `objectFit: 'contain'` on the logo image (line 62). This ensures the full circular coin design (including its own gold rim) is visible without being cropped.
 
-2. **Sync with showAddFundsModal** -- When `showAddFundsModal` becomes true, set `pausedForFunds = true`. When the AddFundsModal closes, set it back to false.
+**2. Add black background to the front face**
 
-3. **Conditionally control Dialog open state** -- Change the Dialog's `open` prop from `isOpen` to `isOpen && !pausedForFunds`. This closes the Radix Dialog (releasing its focus/pointer lock) while the AddFundsModal is active.
+Add `background: '#000'` to the front face div so the black corners of the square PNG blend seamlessly with the face background, making the circular coin appear to float naturally inside the frame.
 
-4. **Handle AddFundsModal close** -- When the AddFundsModal closes, reset `pausedForFunds` to false and also reset `showAddFundsModal`. This reopens the DonationModal automatically.
+**3. Remove the component's own gold border on the front face**
 
-The key change in the return block:
-```typescript
-<Dialog open={isOpen && !pausedForFunds} onOpenChange={handleClose}>
-```
+The coin image already has its own detailed gold rim with the Greek meander pattern. The component's additional `border: Xpx solid #B8860B` creates an ugly double-rim effect. Remove the border from the front face style to let the coin's built-in rim be the only border.
 
-And the AddFundsModal onClose handler:
-```typescript
-<AddFundsModal 
-  isOpen={showAddFundsModal} 
-  onClose={() => {
-    setShowAddFundsModal(false);
-    setPausedForFunds(false);  // Reopen DonationModal
-  }} 
-/>
-```
+**4. Keep the border on the back face only**
+
+The back face (user avatar/initial) still needs the gold border since it doesn't have its own built-in rim.
+
+**5. Refactor face styles to separate front and back**
+
+Split `faceBase` into shared base properties plus separate front/back overrides:
+- Shared: position, dimensions, backfaceVisibility, borderRadius, overflow, boxShadow
+- Front only: no border, black background
+- Back only: gold border, dark background
 
 ## What This Achieves
 
-- Clicking "Add Funds" in the insufficient funds warning temporarily hides the DonationModal
-- The BB Store (AddFundsModal) opens with full interactivity -- all package buttons are clickable
-- Clicking a package triggers Stripe checkout as expected
-- Clicking "Cancel" or closing the BB Store reopens the DonationModal where the user left off
-- All existing state (selected amount, message, etc.) is preserved because the component stays mounted
+- The full coin design (gold outer rim, Greek meander inner ring, black center, BB logo) renders cleanly at all sizes
+- No double-border effect at any size
+- The coin looks crisp at xs (28px) through xl (96px)
+- The back face retains its gold-bordered engraved look for avatars/initials
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `src/components/DonationModal.tsx` | Add pausedForFunds state to temporarily dismiss Dialog while AddFundsModal is active |
+| `src/components/economy/RotatingBBCoin.tsx` | Split face styles, remove front border, set contain + black bg for logo |
 
