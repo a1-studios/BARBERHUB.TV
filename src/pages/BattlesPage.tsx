@@ -166,12 +166,12 @@ const BattlesPage = () => {
           </p>
         </div>
         
-        {/* Barber-only Create Button */}
+        {/* Barber-only Create Unofficial Battle Button */}
         {isBarber && (
-          <Button asChild size="lg">
+          <Button asChild size="lg" variant="outline">
             <Link to="/battles/create">
               <Plus className="w-4 h-4 mr-2" />
-              Create Battle
+              Create Unofficial Battle
             </Link>
           </Button>
         )}
@@ -245,7 +245,7 @@ const BattlesPage = () => {
                       <Trophy className="w-12 h-12 text-primary/50" />
                     </div>
                   )}
-                  <div className="absolute top-4 left-4">
+                  <div className="absolute top-4 left-4 flex items-center gap-2">
                     <Badge variant={
                       battle.status === 'upcoming' ? 'secondary' :
                       battle.status === 'active' ? 'default' :
@@ -254,12 +254,17 @@ const BattlesPage = () => {
                     }>
                       {battle.status.toUpperCase()}
                     </Badge>
+                    {battle.battle_type && battle.battle_type !== 'official' && (
+                      <Badge variant="outline" className="text-[10px] border-yellow-500/50 text-yellow-500 bg-background/80">
+                        {battle.battle_type === 'challenge' ? 'CHALLENGE' : 'UNOFFICIAL'}
+                      </Badge>
+                    )}
+                    {battle.battle_type === 'official' && (
+                      <Badge variant="default" className="text-[10px] bg-green-600">
+                        OFFICIAL
+                      </Badge>
+                    )}
                   </div>
-                  {battle.category && (
-                    <div className="absolute top-4 right-4">
-                      <Badge variant="outline">{battle.category}</Badge>
-                    </div>
-                  )}
                 </div>
 
                 <CardHeader className="pb-3">
@@ -362,10 +367,10 @@ const BattlesPage = () => {
             }
           </p>
           {isBarber && (
-            <Button asChild size="lg">
-              <Link to="/battles/create">
-                <Plus className="w-4 h-4 mr-2" />
-                Create First Battle
+            <Button asChild size="lg" variant="outline">
+              <Link to="/portal">
+                <Trophy className="w-4 h-4 mr-2" />
+                Enter Tournament Portal
               </Link>
             </Button>
           )}

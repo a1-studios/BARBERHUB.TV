@@ -684,6 +684,7 @@ export type Database = {
           barber2_stream_sid: string | null
           barber2_stream_started_at: string | null
           barber2_youtube_video_id: string | null
+          battle_type: string
           category: string | null
           cover_image_url: string | null
           created_at: string
@@ -738,6 +739,7 @@ export type Database = {
           barber2_stream_sid?: string | null
           barber2_stream_started_at?: string | null
           barber2_youtube_video_id?: string | null
+          battle_type?: string
           category?: string | null
           cover_image_url?: string | null
           created_at?: string
@@ -792,6 +794,7 @@ export type Database = {
           barber2_stream_sid?: string | null
           barber2_stream_started_at?: string | null
           barber2_youtube_video_id?: string | null
+          battle_type?: string
           category?: string | null
           cover_image_url?: string | null
           created_at?: string

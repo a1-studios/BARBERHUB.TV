@@ -3,104 +3,75 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Youtube, Flame, AlertCircle, CheckCircle2, DollarSign } from 'lucide-react';
+import { Flame, Coins, AlertCircle, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { extractYouTubeVideoId, buildYouTubeWatchUrl } from '@/utils/youtubeHelpers';
+import { useBarberBucks } from '@/hooks/useBarberBucks';
+import { Badge } from '@/components/ui/badge';
+
+const MIN_STAKE_BB = 100;
 
 export const IssueChallenge = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { barberBucks: balance } = useBarberBucks();
   const [title, setTitle] = useState('');
-  const [streamUrl, setStreamUrl] = useState('');
-  const [videoIdError, setVideoIdError] = useState('');
+  const [stakeAmount, setStakeAmount] = useState<string>(String(MIN_STAKE_BB));
+  const [challengeMessage, setChallengeMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [bountyAmount, setBountyAmount] = useState('');
-  const [bountyDescription, setBountyDescription] = useState('');
 
-  const handleStreamUrlChange = (value: string) => {
-    setStreamUrl(value);
-    if (value) {
-      const videoId = extractYouTubeVideoId(value);
-      if (videoId) {
-        setVideoIdError('');
-      } else {
-        setVideoIdError('Invalid YouTube URL or Video ID');
-      }
-    } else {
-      setVideoIdError('');
-    }
-  };
+  const stakeValue = parseInt(stakeAmount) || 0;
+  const isValidStake = stakeValue >= MIN_STAKE_BB;
+  const hasEnoughBalance = (balance || 0) >= stakeValue;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!user) return;
 
-    const videoId = extractYouTubeVideoId(streamUrl);
-    if (!videoId) {
-      setVideoIdError('Please enter a valid YouTube URL or Video ID');
+    if (!isValidStake) {
+      toast({
+        title: "Invalid Stake",
+        description: `Minimum stake is ${MIN_STAKE_BB} BB`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!hasEnoughBalance) {
+      toast({
+        title: "Insufficient Barber Bucks",
+        description: `You need ${stakeValue} BB but have ${balance || 0} BB`,
+        variant: "destructive"
+      });
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      // Get user profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('display_name, username')
-        .eq('user_id', user.id)
-        .single();
-
-      const username = profile?.username || profile?.display_name || 'Unknown';
-
-      // Step 1: Create battle immediately (instant go-live)
-      const { data: battle, error: battleError } = await supabase
-        .from('battles')
-        .insert({
-          organizer_id: user.id,
-          barber1_id: user.id,
-          barber1_youtube_video_id: videoId,
+      const { data, error } = await supabase.functions.invoke('create-challenge-stake', {
+        body: {
           title,
-          status: 'waiting_for_opponent',
-          prize_amount: bountyAmount ? parseInt(bountyAmount) : 0,
-          currency: 'USD'
-        })
-        .select()
-        .single();
+          stake_amount: stakeValue,
+          stream_url: 'pending', // No stream URL required for video-submission challenges
+          challenge_message: challengeMessage || null,
+        }
+      });
 
-      if (battleError) throw battleError;
-
-      // Step 2: Create challenge linked to battle
-      const { error: challengeError } = await supabase
-        .from('open_challenges')
-        .insert({
-          challenger_id: user.id,
-          challenger_username: username,
-          title,
-          challenger_stream_url: buildYouTubeWatchUrl(videoId),
-          challenger_youtube_video_id: videoId,
-          battle_id: battle.id,
-          bounty_amount: bountyAmount ? parseInt(bountyAmount) : null,
-          bounty_currency: 'USD',
-          bounty_description: bountyDescription || null,
-          status: 'waiting_for_opponent'
-        });
-
-      if (challengeError) throw challengeError;
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
       toast({
-        title: "🔴 LIVE NOW! Challenge Issued! 🔥",
-        description: "Your stream is live! Waiting for an opponent to accept..."
+        title: "🔥 Challenge Issued!",
+        description: `${stakeValue} BB staked. Waiting for an opponent to match your stake!`
       });
 
       // Reset form
       setTitle('');
-      setStreamUrl('');
-      setBountyAmount('');
-      setBountyDescription('');
+      setStakeAmount(String(MIN_STAKE_BB));
+      setChallengeMessage('');
       
     } catch (error: any) {
       console.error('Error issuing challenge:', error);
@@ -116,38 +87,35 @@ export const IssueChallenge = () => {
 
   return (
     <div className="bg-card/50 backdrop-blur-sm border border-border rounded-lg p-6">
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center gap-3 mb-4">
         <div className="p-3 bg-gradient-to-br from-red-500 to-orange-500 rounded-lg">
           <Flame className="w-6 h-6 text-white" />
         </div>
         <div>
           <h3 className="text-xl font-bold text-foreground">Issue a Challenge</h3>
-          <p className="text-sm text-muted-foreground">Go live and challenge the arena</p>
+          <p className="text-sm text-muted-foreground">Stake BB and challenge the arena</p>
         </div>
       </div>
 
-      {/* Go Live Button */}
-      <a
-        href="https://www.youtube.com/upload?livestream=1"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block mb-6"
-      >
-        <Button 
-          type="button"
-          className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white font-bold py-6 text-lg"
-        >
-          <Youtube className="w-6 h-6 mr-2" />
-          Go Live on YouTube Now
-        </Button>
-      </a>
+      <Badge variant="outline" className="mb-4 text-xs border-yellow-500/50 text-yellow-500">
+        UNOFFICIAL — No Ranking Impact
+      </Badge>
+
+      {/* Balance display */}
+      <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg mb-4 border border-border/50">
+        <span className="text-sm text-muted-foreground">Your Balance</span>
+        <div className="flex items-center gap-1.5 font-bold text-foreground">
+          <Coins className="w-4 h-4 text-yellow-500" />
+          {balance?.toLocaleString() || 0} BB
+        </div>
+      </div>
 
       {/* Challenge Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <Label htmlFor="title">Challenge Title</Label>
+          <Label htmlFor="challenge-title">Challenge Title</Label>
           <Input
-            id="title"
+            id="challenge-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g., Best Fade in Miami - Come at me!"
@@ -156,72 +124,68 @@ export const IssueChallenge = () => {
           />
         </div>
 
-        <div>
-          <Label htmlFor="streamUrl">Your YouTube Stream URL or Video ID</Label>
-          <Input
-            id="streamUrl"
-            value={streamUrl}
-            onChange={(e) => handleStreamUrlChange(e.target.value)}
-            placeholder="https://youtube.com/watch?v=... or video ID"
-            required
-            className="mt-1"
-          />
-          {videoIdError && (
-            <div className="flex items-center gap-2 mt-2 text-destructive text-sm">
-              <AlertCircle className="w-4 h-4" />
-              {videoIdError}
-            </div>
-          )}
-          {streamUrl && !videoIdError && (
-            <div className="flex items-center gap-2 mt-2 text-green-500 text-sm">
-              <CheckCircle2 className="w-4 h-4" />
-              Valid YouTube URL
-            </div>
-          )}
-          <p className="text-xs text-muted-foreground mt-1">
-            Paste your YouTube Live Stream URL or just the video ID
-          </p>
-        </div>
-
-        {/* Bounty Section */}
+        {/* BB Stake Section */}
         <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-lg p-4 space-y-3">
           <div className="flex items-center gap-2 text-yellow-500">
-            <DollarSign className="w-5 h-5" />
-            <h4 className="font-semibold">Add a Bounty (Optional)</h4>
+            <Coins className="w-5 h-5" />
+            <h4 className="font-semibold">Stake Amount (BB)</h4>
           </div>
           
           <div>
-            <Label htmlFor="bountyAmount">Prize Amount ($)</Label>
+            <Label htmlFor="stakeAmount">Barber Bucks to Stake</Label>
             <Input
-              id="bountyAmount"
+              id="stakeAmount"
               type="number"
-              value={bountyAmount}
-              onChange={(e) => setBountyAmount(e.target.value)}
-              placeholder="250"
-              min="0"
+              value={stakeAmount}
+              onChange={(e) => setStakeAmount(e.target.value)}
+              placeholder={String(MIN_STAKE_BB)}
+              min={MIN_STAKE_BB}
               className="mt-1"
+              required
             />
+            {!isValidStake && stakeAmount && (
+              <div className="flex items-center gap-2 mt-2 text-destructive text-sm">
+                <AlertCircle className="w-4 h-4" />
+                Minimum stake is {MIN_STAKE_BB} BB
+              </div>
+            )}
+            {isValidStake && !hasEnoughBalance && (
+              <div className="flex items-center gap-2 mt-2 text-destructive text-sm">
+                <AlertCircle className="w-4 h-4" />
+                Insufficient balance ({balance || 0} BB)
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground mt-1">
+              Opponent must match your stake. Winner takes the pot (minus 5% platform fee).
+            </p>
           </div>
+        </div>
 
-          <div>
-            <Label htmlFor="bountyDescription">Challenge Message</Label>
-            <Textarea
-              id="bountyDescription"
-              value={bountyDescription}
-              onChange={(e) => setBountyDescription(e.target.value)}
-              placeholder="I can beat you doing a flat top!"
-              className="mt-1"
-              rows={2}
-            />
-          </div>
+        <div>
+          <Label htmlFor="challengeMessage">Challenge Message (Optional)</Label>
+          <Textarea
+            id="challengeMessage"
+            value={challengeMessage}
+            onChange={(e) => setChallengeMessage(e.target.value)}
+            placeholder="I can beat you doing a flat top!"
+            className="mt-1"
+            rows={2}
+          />
         </div>
 
         <Button
           type="submit"
-          disabled={isSubmitting || !title || !streamUrl || !!videoIdError}
+          disabled={isSubmitting || !title || !isValidStake || !hasEnoughBalance}
           className="w-full bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-600"
         >
-          {isSubmitting ? 'Going Live...' : '🔴 Go Live & Issue Challenge'}
+          {isSubmitting ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Creating Challenge...
+            </>
+          ) : (
+            `🔥 Stake ${stakeValue} BB & Issue Challenge`
+          )}
         </Button>
       </form>
     </div>

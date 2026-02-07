@@ -110,13 +110,17 @@ export const MyBattlesSection = ({ userId }: MyBattlesSectionProps) => {
           <Trophy className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
           <h3 className="text-lg font-semibold mb-2">No Active Battles</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            You don't have any battles awaiting submission or voting at the moment.
+            Register for an official tournament to start competing, or create an unofficial battle for practice.
           </p>
-          <Button 
-            onClick={() => navigate('/battles/create')}
-          >
-            Create a Battle
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            <Button onClick={() => navigate('/portal')}>
+              <Trophy className="w-4 h-4 mr-2" />
+              Enter Tournament Portal
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/battles/create')} className="text-sm">
+              Create Unofficial Battle
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );

@@ -95,35 +95,8 @@ const BattlesSection = () => {
       setBattles(formattedBattles);
     } catch (error) {
       console.error('Error fetching battles:', error);
-      // Fallback to static data if database fetch fails
-      setBattles([{
-        id: "sample-1",
-        title: "Best Fade Competition",
-        description: "Show us your cleanest fade technique and compete for the monthly crown",
-        status: "active",
-        participants: 24,
-        prize_amount: 500,
-        currency: "USD",
-        category: "Technical Skills"
-      }, {
-        id: "sample-2",
-        title: "Creative Color Challenge",
-        description: "Push the boundaries with innovative color combinations and artistic flair",
-        status: "upcoming",
-        participants: 18,
-        prize_amount: 750,
-        currency: "USD",
-        category: "Creativity"
-      }, {
-        id: "sample-3",
-        title: "Speed Cut Championship",
-        description: "Precision meets speed in this ultimate barber showdown",
-        status: "voting",
-        participants: 32,
-        prize_amount: 1000,
-        currency: "USD",
-        category: "Speed & Precision"
-      }]);
+      // Fallback: show empty state instead of fake data
+      setBattles([]);
     } finally {
       setLoading(false);
     }

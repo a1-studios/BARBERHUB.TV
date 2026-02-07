@@ -87,7 +87,7 @@ serve(async (req) => {
 
     console.log('Updating existing battle:', challenge.battle_id);
 
-    // Update existing battle with barber2 details
+    // Update existing battle with barber2 details and set battle_type to challenge
     const { data: battle, error: battleError } = await supabase
       .from('battles')
       .update({
@@ -96,7 +96,8 @@ serve(async (req) => {
         barber2_youtube_video_id: accepter_youtube_video_id,
         status: 'voting',
         voting_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
-        starts_at: new Date().toISOString()
+        starts_at: new Date().toISOString(),
+        battle_type: 'challenge'
       })
       .eq('id', challenge.battle_id)
       .select()
