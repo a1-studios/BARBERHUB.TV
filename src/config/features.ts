@@ -5,7 +5,7 @@ export const FEATURES = {
   HEADER_MOBILE_QUICK_MENU: false,
   
   // Main sections
-  GRANTS_SECTION: true,
+  GRANTS_SECTION: false,
   COMMUNITY_LEADERBOARD: true,
   
   // Creator system
