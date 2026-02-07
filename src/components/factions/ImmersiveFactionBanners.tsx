@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { ImmersiveBannerCard } from './ImmersiveBannerCard';
 import { AddFundsModal } from '@/components/AddFundsModal';
 import { useNavigate } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -150,6 +151,12 @@ export const ImmersiveFactionBanners = () => {
     );
   }
 
+  // Non-barbers see only 3 highlighted categories
+  const HIGHLIGHT_IDS = ['speed_fade', 'creative_color', 'beard_scissor'];
+  const displayCategories = isBarber
+    ? TOURNAMENT_CATEGORIES
+    : TOURNAMENT_CATEGORIES.filter(c => HIGHLIGHT_IDS.includes(c.id));
+
   return (
     <section className="relative py-10 sm:py-14 overflow-hidden">
       {/* Background with subtle cyan glow */}
@@ -162,14 +169,34 @@ export const ImmersiveFactionBanners = () => {
       </div>
       
       <div className="container mx-auto px-4 relative z-10">
+        {/* Section header for non-barbers */}
+        {!isBarber && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="text-center mb-4"
+          >
+            <h3 className="text-sm sm:text-base font-bold uppercase tracking-widest text-cyan">
+              Featured Categories
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              Explore the top competition arenas
+            </p>
+          </motion.div>
+        )}
+
         {/* Banners Row */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className="flex gap-2 sm:gap-3 lg:gap-4 justify-center items-end pt-8 max-w-5xl lg:max-w-6xl mx-auto"
+          className={cn(
+            "flex gap-2 sm:gap-3 lg:gap-4 justify-center items-end pt-8 mx-auto",
+            isBarber ? "max-w-5xl lg:max-w-6xl" : "max-w-3xl lg:max-w-4xl"
+          )}
         >
-          {TOURNAMENT_CATEGORIES.map((category, index) => {
+          {displayCategories.map((category, index) => {
             const poolData = prizePools.find(p => p.category === category.id);
             const topBarber = topBarbers?.[category.id];
             const inQueue = queueEntries?.some(e => e.category === category.shortName) || false;
