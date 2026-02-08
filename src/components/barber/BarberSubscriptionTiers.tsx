@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Loader2, Crown, Star, Sparkles, Coins, AlertTriangle } from "lucide-react";
+import { Check, Loader2, Crown, Star, Sparkles, Coins } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useBarberBucks } from "@/hooks/useBarberBucks";
@@ -38,7 +38,6 @@ export const BarberSubscriptionTiers = () => {
   const [processingTier, setProcessingTier] = useState<string | null>(null);
   const [confirmingTier, setConfirmingTier] = useState<{ id: string; name: string; displayName: string; bbPrice: number } | null>(null);
   const [showAddFunds, setShowAddFunds] = useState(false);
-  const [insufficientInfo, setInsufficientInfo] = useState<{ required: number; balance: number } | null>(null);
 
   const { data: tiers, isLoading: loadingTiers } = useQuery({
     queryKey: ['subscription-tiers'],
@@ -80,11 +79,11 @@ export const BarberSubscriptionTiers = () => {
     const bbPrice = Math.round((priceCents / 100) * 5);
 
     if (barberBucks >= bbPrice) {
-      // Show confirmation dialog
       setConfirmingTier({ id: tierId, name: tierName, displayName, bbPrice });
     } else {
-      // Show insufficient funds
-      setInsufficientInfo({ required: bbPrice, balance: barberBucks });
+      const shortfall = bbPrice - barberBucks;
+      toast.info(`You need ${shortfall} more BB to subscribe to ${displayName}`);
+      setShowAddFunds(true);
     }
   };
 
@@ -102,7 +101,9 @@ export const BarberSubscriptionTiers = () => {
       if (error) throw error;
 
       if (data?.error === 'insufficient_funds') {
-        setInsufficientInfo({ required: data.required, balance: data.balance });
+        const shortfall = (data.required || 0) - (data.balance || 0);
+        toast.info(`You need ${shortfall} more BB. Top up to subscribe!`);
+        setShowAddFunds(true);
         return;
       }
 
@@ -268,34 +269,8 @@ export const BarberSubscriptionTiers = () => {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Insufficient Funds Dialog */}
-      <AlertDialog open={!!insufficientInfo} onOpenChange={() => setInsufficientInfo(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-amber-500" />
-              Insufficient Barber Bucks
-            </AlertDialogTitle>
-            <AlertDialogDescription asChild>
-              <div className="space-y-2">
-                <p>
-                  You need <span className="font-bold text-primary">{insufficientInfo?.required} BB</span> but only have{" "}
-                  <span className="font-bold">{insufficientInfo?.balance} BB</span>.
-                </p>
-                <p>
-                  Top up <span className="font-bold text-primary">{(insufficientInfo?.required ?? 0) - (insufficientInfo?.balance ?? 0)} BB</span> more to subscribe.
-                </p>
-              </div>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { setInsufficientInfo(null); setShowAddFunds(true); }}>
-              Add Funds
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
+
 
       {/* Add Funds Modal */}
       <AddFundsModal isOpen={showAddFunds} onClose={() => setShowAddFunds(false)} />
