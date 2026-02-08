@@ -27,28 +27,29 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Authenticate user
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      throw new Error("Missing authorization header");
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser(token);
-
-    if (authError || !user) {
-      throw new Error("Invalid authentication");
-    }
-
     const { session_id } = await req.json();
     if (!session_id) {
       throw new Error("Missing session_id");
     }
 
-    console.log(`[verify-bb-purchase] Verifying session ${session_id} for user ${user.id}`);
+    // Try to authenticate user from header; fall back to Stripe metadata
+    let userId: string | null = null;
+    const authHeader = req.headers.get("Authorization");
+
+    if (authHeader) {
+      const token = authHeader.replace("Bearer ", "");
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+      if (!authError && user) {
+        userId = user.id;
+        console.log(`[verify-bb-purchase] Authenticated user: ${userId}`);
+      } else {
+        console.warn(`[verify-bb-purchase] Auth header present but invalid, will use Stripe metadata`);
+      }
+    } else {
+      console.log(`[verify-bb-purchase] No auth header, will resolve user from Stripe metadata`);
+    }
+
+    console.log(`[verify-bb-purchase] Verifying session ${session_id}`);
 
     // Retrieve Stripe checkout session
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
@@ -66,15 +67,22 @@ serve(async (req) => {
       );
     }
 
-    // Verify user matches session metadata
+    // Resolve the user: prefer authenticated user, fall back to Stripe metadata
     const sessionUserId = session.metadata?.user_id;
-    if (sessionUserId !== user.id) {
-      console.error(`[verify-bb-purchase] User mismatch: token=${user.id}, session=${sessionUserId}`);
+    if (!sessionUserId) {
+      throw new Error("No user_id in Stripe session metadata");
+    }
+
+    if (userId && userId !== sessionUserId) {
+      console.error(`[verify-bb-purchase] User mismatch: token=${userId}, session=${sessionUserId}`);
       return new Response(
         JSON.stringify({ success: false, error: "User mismatch" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
       );
     }
+
+    // Use the Stripe metadata user_id (trusted, set during checkout creation)
+    const resolvedUserId = sessionUserId;
 
     const paymentIntentId = session.payment_intent as string;
     const packageAmount = parseInt(session.metadata?.package_amount || "0");
@@ -88,11 +96,10 @@ serve(async (req) => {
 
     if (existingTx) {
       console.log(`[verify-bb-purchase] Already credited tx ${existingTx.id}, returning existing`);
-      // Fetch current balance to return
       const { data: profile } = await supabase
         .from("profiles")
         .select("barber_bucks")
-        .eq("user_id", user.id)
+        .eq("user_id", resolvedUserId)
         .single();
 
       return new Response(
@@ -119,7 +126,7 @@ serve(async (req) => {
     const { data: currentProfile } = await supabase
       .from("profiles")
       .select("barber_bucks")
-      .eq("user_id", user.id)
+      .eq("user_id", resolvedUserId)
       .single();
 
     const currentBalance = currentProfile?.barber_bucks ?? 0;
@@ -129,7 +136,7 @@ serve(async (req) => {
     const { error: txError } = await supabase
       .from("barber_bucks_transactions")
       .insert({
-        user_id: user.id,
+        user_id: resolvedUserId,
         amount: totalBB,
         transaction_type: "purchase",
         description: `Purchased ${bbPackage.display}`,
@@ -146,7 +153,7 @@ serve(async (req) => {
     const { error: updateError } = await supabase
       .from("profiles")
       .update({ barber_bucks: newBalance })
-      .eq("user_id", user.id);
+      .eq("user_id", resolvedUserId);
 
     if (updateError) {
       console.error("[verify-bb-purchase] Profile update failed:", updateError);
@@ -154,14 +161,14 @@ serve(async (req) => {
 
     // Create notification
     await supabase.from("notifications").insert({
-      user_id: user.id,
+      user_id: resolvedUserId,
       type: "bb_purchase",
       title: "Barber Bucks Purchased! 💰",
       message: `You received ${totalBB} Barber Bucks. New balance: ${newBalance} BB`,
       data: { amount: totalBB, balance: newBalance },
     });
 
-    console.log(`[verify-bb-purchase] Credited ${totalBB} BB to user ${user.id}. New balance: ${newBalance}`);
+    console.log(`[verify-bb-purchase] Credited ${totalBB} BB to user ${resolvedUserId}. New balance: ${newBalance}`);
 
     return new Response(
       JSON.stringify({
