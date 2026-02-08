@@ -22,6 +22,7 @@ const TIER_LIMITS = {
 export const SubscriptionStatusCard = () => {
   const { user } = useAuth();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [pausedForFunds, setPausedForFunds] = useState(false);
 
   const { data: subscription } = useQuery({
     queryKey: ['barberSubscription', user?.id],
@@ -164,12 +165,12 @@ export const SubscriptionStatusCard = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={showUpgradeModal} onOpenChange={setShowUpgradeModal}>
+      <Dialog open={showUpgradeModal && !pausedForFunds} onOpenChange={setShowUpgradeModal}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Upgrade Your Subscription</DialogTitle>
           </DialogHeader>
-          <BarberSubscriptionTiers />
+          <BarberSubscriptionTiers onFundsModalStateChange={setPausedForFunds} />
         </DialogContent>
       </Dialog>
     </>

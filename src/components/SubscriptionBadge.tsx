@@ -45,6 +45,7 @@ const TIER_CONFIG = {
 
 export const SubscriptionBadge = ({ tier, size = 'md', showTooltip = true, interactive = false }: SubscriptionBadgeProps) => {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [pausedForFunds, setPausedForFunds] = useState(false);
   
   const tierKey = (tier?.toLowerCase() || 'free') as keyof typeof TIER_CONFIG;
   const config = TIER_CONFIG[tierKey] || TIER_CONFIG.free;
@@ -110,12 +111,12 @@ export const SubscriptionBadge = ({ tier, size = 'md', showTooltip = true, inter
       ) : badge}
 
       {interactive && (
-        <Dialog open={showUpgradeModal} onOpenChange={setShowUpgradeModal}>
+        <Dialog open={showUpgradeModal && !pausedForFunds} onOpenChange={setShowUpgradeModal}>
           <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Upgrade Your Subscription</DialogTitle>
             </DialogHeader>
-            <BarberSubscriptionTiers />
+            <BarberSubscriptionTiers onFundsModalStateChange={setPausedForFunds} />
           </DialogContent>
         </Dialog>
       )}
