@@ -1,22 +1,15 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { LiveBattleFeed } from '@/components/LiveBattleFeed';
 import SphereImageGrid, { ImageData } from '@/components/SphereImageGrid';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SphereHolographicWrapper } from '@/components/SphereHolographicWrapper';
+import { BarberSearchAutocomplete } from '@/components/BarberSearchAutocomplete';
 
 export const GlobalLeagueDashboard = () => {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const handleSearch = () => {
-    navigate(`/barbers${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''}`);
-  };
 
   // Fetch ALL registered barbers using unified view
   const { data: contendersData = { contenders: [], championId: null }, isLoading: isLoadingContenders } = useQuery({
@@ -66,27 +59,8 @@ export const GlobalLeagueDashboard = () => {
   return (
     <div className="min-h-screen">
       <div className="container mx-auto px-4 py-8 space-y-12">
-        {/* Minimal Search Bar */}
-        <div className="max-w-md mx-auto">
-          <div className="relative flex items-center rounded-full border border-border/60 bg-muted/30 backdrop-blur-sm px-4 py-2">
-            <Search className="w-4 h-4 text-muted-foreground mr-3 flex-shrink-0" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="Find the best barber near you"
-              className="border-0 bg-transparent focus-visible:ring-0 p-0 h-auto text-sm placeholder:text-muted-foreground/60"
-            />
-            <Button
-              onClick={handleSearch}
-              variant="ghost"
-              size="sm"
-              className="text-xs text-primary hover:text-primary/80 flex-shrink-0 px-2"
-            >
-              Search
-            </Button>
-          </div>
-        </div>
+        {/* Smart Search Bar */}
+        <BarberSearchAutocomplete />
 
         {/* 3D Sphere */}
         <div className="relative">
