@@ -169,23 +169,18 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
     mutationFn: async (data: typeof profileForm) => {
       if (!user?.id) throw new Error('No user');
       
-      // Update profiles
+      // Update profiles — country_code is intentionally excluded (permanently locked)
       const { error: profileError } = await supabase
         .from('profiles')
-        .update(data)
+        .update({
+          display_name: data.display_name,
+          username: data.username,
+          bio: data.bio,
+          avatar_url: data.avatar_url
+        })
         .eq('user_id', user.id);
       
       if (profileError) throw profileError;
-      
-      // Also update barber_profiles.country_code if barber exists
-      if (barberProfile?.id) {
-        const { error: barberError } = await supabase
-          .from('barber_profiles')
-          .update({ country_code: data.country_code })
-          .eq('user_id', user.id);
-        
-        if (barberError) throw barberError;
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
@@ -194,7 +189,12 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
       toast.success('Profile updated successfully!');
     },
     onError: (error: any) => {
-      toast.error('Failed to update profile: ' + error.message);
+      // Handle duplicate username error
+      if (error.code === '23505' || error.message?.includes('duplicate key value') || error.message?.includes('profiles_username_key')) {
+        toast.error('This username is already taken. Please choose another one.');
+      } else {
+        toast.error('Failed to update profile: ' + error.message);
+      }
     },
   });
 
@@ -203,6 +203,7 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
     mutationFn: async (data: any) => {
       if (!user?.id) throw new Error('No user');
       
+      // country_code is intentionally excluded (permanently locked)
       const barberData = {
         user_id: user.id,
         name: data.name,
@@ -210,7 +211,6 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
         specialty: data.specialty,
         bio: data.bio,
         location: data.location,
-        country_code: data.country_code,
         years_experience: data.years_experience ? parseInt(data.years_experience) : null,
         portfolio_url: data.portfolio_url
       };
