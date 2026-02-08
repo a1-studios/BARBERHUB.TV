@@ -4,7 +4,7 @@ import CommunitySection from "@/components/CommunitySection";
 import { DynamicBattleHero } from "@/components/DynamicBattleHero";
 import BattlesSection from "@/components/BattlesSection";
 import Footer from "@/components/Footer";
-import { CreatorHub } from "@/components/creator/CreatorHub";
+
 import GrantsSection from "@/components/GrantsSection";
 import { GlobalLeagueDashboard } from "@/components/GlobalLeagueDashboard";
 
@@ -55,11 +55,8 @@ const Index = () => {
           {/* Main Battles Section with all navigation and features */}
           <BattlesSection />
           
-          
-          {/* Creator Hub for Barbers */}
-          {FEATURES.CREATOR_HUB_ENABLED && isBarber && (
-            <CreatorHub />
-          )}
+
+
           
           {/* Community Leaderboard */}
           {FEATURES.COMMUNITY_LEADERBOARD && (
