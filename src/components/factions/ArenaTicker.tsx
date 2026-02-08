@@ -1,17 +1,17 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Sparkles } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import ScratchReveal from './ScratchReveal';
 import ColorfulText from './ColorfulText';
 import SponsoredBadge from './SponsoredBadge';
+import { useSponsorAds } from '@/hooks/useSponsorAds';
 
 interface SponsorSlide {
   id: string;
   name: string;
   message: string;
-  highlightEnd: number; // char index where bold portion ends
-  icon: LucideIcon;
+  highlightEnd: number;
+  logoUrl?: string;
   link?: string;
 }
 
@@ -29,16 +29,16 @@ interface ArenaTickerProps {
 
 type DisplaySlide =
   | { type: 'prize-pool'; id: string }
-  | { type: 'sponsor'; id: string; name: string; message: string; highlightEnd: number; icon: LucideIcon; link?: string };
+  | { type: 'sponsor'; id: string; name: string; message: string; highlightEnd: number; logoUrl?: string; link?: string };
 
 const INTERVAL_MS = 5000;
 const COUNTER_DURATION_MS = 1500;
 
-const SPONSORS: SponsorSlide[] = [
-  { id: 'slot1', name: 'Premium', message: 'YOUR BRAND HERE — Premium Sponsor Slot', highlightEnd: 15, icon: Sparkles },
-  { id: 'slot2', name: 'Spotlight', message: 'SPONSOR SPOTLIGHT — Be the Face of the Arena', highlightEnd: 17, icon: Sparkles },
-  { id: 'slot3', name: 'Partner', message: 'FEATURED PARTNER — Reach Thousands of Barbers', highlightEnd: 16, icon: Sparkles },
-  { id: 'slot4', name: 'Available', message: 'AD SPACE AVAILABLE — Join the Movement', highlightEnd: 18, icon: Sparkles },
+const FALLBACK_SPONSORS: SponsorSlide[] = [
+  { id: 'slot1', name: 'Premium', message: 'YOUR BRAND HERE — Premium Sponsor Slot', highlightEnd: 15 },
+  { id: 'slot2', name: 'Spotlight', message: 'SPONSOR SPOTLIGHT — Be the Face of the Arena', highlightEnd: 17 },
+  { id: 'slot3', name: 'Partner', message: 'FEATURED PARTNER — Reach Thousands of Barbers', highlightEnd: 16 },
+  { id: 'slot4', name: 'Available', message: 'AD SPACE AVAILABLE — Join the Movement', highlightEnd: 18 },
 ];
 
 const formatCurrency = (cents: number) =>
@@ -55,6 +55,22 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
   const [displayValue, setDisplayValue] = useState(0);
   const hasAnimated = useRef(false);
 
+  const { data: dbSponsors = [] } = useSponsorAds(true);
+
+  const sponsors = useMemo<SponsorSlide[]>(() => {
+    if (dbSponsors.length > 0) {
+      return dbSponsors.map((s) => ({
+        id: s.id,
+        name: s.name,
+        message: s.message,
+        highlightEnd: s.highlight_end,
+        logoUrl: s.logo_url ?? undefined,
+        link: s.link ?? undefined,
+      }));
+    }
+    return FALLBACK_SPONSORS;
+  }, [dbSponsors]);
+
   const totalPool = useMemo(
     () => prizePools.reduce((s, p) => s + p.total_pool_cents, 0),
     [prizePools],
@@ -62,11 +78,11 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
 
   const displaySlides = useMemo<DisplaySlide[]>(
     () =>
-      SPONSORS.flatMap((sponsor) => [
+      sponsors.flatMap((sponsor) => [
         { type: 'prize-pool' as const, id: `prize-before-${sponsor.id}` },
         { type: 'sponsor' as const, ...sponsor },
       ]),
-    [],
+    [sponsors],
   );
 
   // Animated counter on first prize-pool appearance
@@ -164,7 +180,19 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
               transition={{ duration: 0.5, delay: 0.25 }}
               className="flex items-center justify-center gap-3 flex-wrap"
             >
-              <Sparkles className="w-5 h-5 shrink-0 text-primary drop-shadow-[0_0_6px_hsl(var(--primary))]" />
+              {/* Logo or fallback icon */}
+              {currentSlide.logoUrl ? (
+                <motion.img
+                  src={currentSlide.logoUrl}
+                  alt={currentSlide.name}
+                  className="h-8 w-auto sm:h-10 object-contain rounded-md border border-white/10 shrink-0"
+                  initial={{ filter: 'blur(8px)', opacity: 0 }}
+                  animate={{ filter: 'blur(0px)', opacity: 1 }}
+                  transition={{ duration: 0.4, delay: 0.3 }}
+                />
+              ) : (
+                <Sparkles className="w-5 h-5 shrink-0 text-primary drop-shadow-[0_0_6px_hsl(var(--primary))]" />
+              )}
               <ColorfulText
                 text={currentSlide.message}
                 highlightEnd={currentSlide.highlightEnd}

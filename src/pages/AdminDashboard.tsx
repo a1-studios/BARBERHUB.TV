@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState } from "react";
 import { BarberBucksAwardModal } from "@/components/admin/BarberBucksAwardModal";
-import { Users, Trophy, DollarSign, Zap, Award, TrendingUp } from "lucide-react";
+import { Users, Trophy, DollarSign, Zap, Award, TrendingUp, Megaphone } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function AdminDashboard() {
@@ -115,7 +115,7 @@ export default function AdminDashboard() {
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+        <CardContent className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
           <Button variant="outline" onClick={() => navigate('/admin/users')} className="justify-start">
             <Users className="w-4 h-4 mr-2" />
             Manage Users
@@ -131,6 +131,10 @@ export default function AdminDashboard() {
           <Button variant="outline" onClick={() => navigate('/admin/analytics')} className="justify-start">
             <TrendingUp className="w-4 h-4 mr-2" />
             View Analytics
+          </Button>
+          <Button variant="outline" onClick={() => navigate('/admin/sponsors')} className="justify-start">
+            <Megaphone className="w-4 h-4 mr-2" />
+            Manage Sponsors
           </Button>
         </CardContent>
       </Card>

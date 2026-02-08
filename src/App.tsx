@@ -34,6 +34,7 @@ import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import BattleTheater from "./pages/BattleTheater";
 import ContenderTheater from "./pages/ContenderTheater";
 import SovereignHQ from "./pages/SovereignHQ";
+import SponsorAdsPage from "./pages/admin/SponsorAdsPage";
 
 const queryClient = new QueryClient();
 
@@ -167,6 +168,16 @@ const AppContent = () => {
                 <AuthGuard>
                   <AdminGuard>
                     <AdminAnalytics />
+                  </AdminGuard>
+                </AuthGuard>
+              } 
+            />
+            <Route 
+              path="/admin/sponsors" 
+              element={
+                <AuthGuard>
+                  <AdminGuard>
+                    <SponsorAdsPage />
                   </AdminGuard>
                 </AuthGuard>
               } 
