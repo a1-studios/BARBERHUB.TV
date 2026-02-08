@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Trophy, ArrowRight, Coins, Wallet } from "lucide-react";
+import { CheckCircle, Trophy, ArrowRight, Coins, Wallet, Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -12,49 +13,79 @@ const PaymentSuccess = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const sessionId = searchParams.get('session_id');
-  const paymentType = searchParams.get('type'); // 'bb' for Barber Bucks, null for tournament
+  const paymentType = searchParams.get('type');
+
+  const [bbVerifying, setBbVerifying] = useState(false);
+  const [bbResult, setBbResult] = useState<{ bb_credited: number; new_balance: number } | null>(null);
+  const [bbError, setBbError] = useState<string | null>(null);
 
   useEffect(() => {
-    const verifyPayment = async () => {
-      if (!sessionId) return;
-      
-      // BB purchases are handled by webhook - no verification needed
-      if (paymentType === 'bb') {
+    if (!sessionId) return;
+
+    if (paymentType === 'bb') {
+      verifyBbPurchase();
+    } else {
+      verifyTournament();
+    }
+  }, [sessionId, paymentType]);
+
+  const verifyBbPurchase = async () => {
+    setBbVerifying(true);
+    setBbError(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-bb-purchase', {
+        body: { session_id: sessionId }
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Verification failed');
+
+      setBbResult({ bb_credited: data.bb_credited, new_balance: data.new_balance });
+
+      // Refresh BB balance everywhere
+      queryClient.invalidateQueries({ queryKey: ['barber_bucks'] });
+      queryClient.invalidateQueries({ queryKey: ['barber-bucks'] });
+      queryClient.invalidateQueries({ queryKey: ['barber_bucks_transactions'] });
+
+      toast({
+        title: "Barber Bucks Added!",
+        description: `+${data.bb_credited} BB credited to your account`,
+      });
+    } catch (err: any) {
+      console.error("BB verification error:", err);
+      setBbError(err.message || "Verification failed. Your balance may update shortly.");
+    } finally {
+      setBbVerifying(false);
+    }
+  };
+
+  const verifyTournament = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-tournament-payment", {
+        body: { session_id: sessionId }
+      });
+
+      if (error) {
+        console.error("Payment verification error:", error);
         toast({
-          title: "Barber Bucks Added!",
-          description: "Your balance has been updated. It may take a moment to reflect.",
+          title: "Verification Issue",
+          description: "Payment received but verification pending. Check your queue status.",
+          variant: "destructive"
         });
-        return;
-      }
-      
-      // Tournament verification (existing logic)
-      try {
-        const { data, error } = await supabase.functions.invoke("verify-tournament-payment", {
-          body: { session_id: sessionId }
+      } else {
+        toast({
+          title: "Payment Successful!",
+          description: "You've been added to the tournament queue!",
         });
-
-        if (error) {
-          console.error("Payment verification error:", error);
-          toast({
-            title: "Verification Issue",
-            description: "Payment received but verification pending. Check your queue status.",
-            variant: "destructive"
-          });
-        } else {
-          toast({
-            title: "Payment Successful!",
-            description: "You've been added to the tournament queue!",
-          });
-        }
-      } catch (err) {
-        console.error("Payment verification failed:", err);
       }
-    };
-
-    verifyPayment();
-  }, [sessionId, paymentType, toast]);
+    } catch (err) {
+      console.error("Payment verification failed:", err);
+    }
+  };
 
   // Barber Bucks success content
   if (paymentType === 'bb') {
@@ -66,77 +97,92 @@ const PaymentSuccess = () => {
             <div className="max-w-2xl mx-auto">
               <Card className="text-center">
                 <CardHeader className="pb-8">
-                  <div className="mx-auto mb-6">
-                    <CheckCircle className="h-16 w-16 text-green-500" />
-                  </div>
-                  <CardTitle className="text-3xl font-bold text-foreground mb-2">
-                    Barber Bucks Added!
-                  </CardTitle>
-                  <CardDescription className="text-lg">
-                    Your purchase is complete
-                  </CardDescription>
+                  {bbVerifying ? (
+                    <>
+                      <div className="mx-auto mb-6">
+                        <Loader2 className="h-16 w-16 text-primary animate-spin" />
+                      </div>
+                      <CardTitle className="text-3xl font-bold text-foreground mb-2">
+                        Verifying Purchase...
+                      </CardTitle>
+                      <CardDescription className="text-lg">
+                        Confirming your payment with Stripe
+                      </CardDescription>
+                    </>
+                  ) : bbError ? (
+                    <>
+                      <div className="mx-auto mb-6">
+                        <AlertCircle className="h-16 w-16 text-destructive" />
+                      </div>
+                      <CardTitle className="text-3xl font-bold text-foreground mb-2">
+                        Verification Issue
+                      </CardTitle>
+                      <CardDescription className="text-lg text-destructive">
+                        {bbError}
+                      </CardDescription>
+                    </>
+                  ) : (
+                    <>
+                      <div className="mx-auto mb-6">
+                        <CheckCircle className="h-16 w-16 text-green-500" />
+                      </div>
+                      <CardTitle className="text-3xl font-bold text-foreground mb-2">
+                        Barber Bucks Added!
+                      </CardTitle>
+                      <CardDescription className="text-lg">
+                        Your purchase is complete
+                      </CardDescription>
+                    </>
+                  )}
                 </CardHeader>
+
                 <CardContent className="space-y-6">
-                  <div className="bg-amber-50 dark:bg-amber-950/20 p-6 rounded-lg">
-                    <div className="flex items-center justify-center mb-4">
-                      <Coins className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+                  {bbResult && (
+                    <div className="bg-amber-50 dark:bg-amber-950/20 p-6 rounded-lg">
+                      <div className="flex items-center justify-center mb-4">
+                        <Coins className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+                      </div>
+                      <h3 className="text-xl font-semibold mb-2">
+                        +{bbResult.bb_credited} BB Credited
+                      </h3>
+                      <p className="text-2xl font-bold text-primary">
+                        New Balance: {bbResult.new_balance.toLocaleString()} BB
+                      </p>
                     </div>
-                    <h3 className="text-xl font-semibold mb-2">Balance Updated</h3>
-                    <p className="text-muted-foreground">
-                      Your Barber Bucks have been added to your account. 
-                      Check your balance in the header to see your updated total.
-                    </p>
-                  </div>
+                  )}
 
-                  <div className="space-y-4">
-                    <h4 className="text-lg font-semibold">What can you do with Barber Bucks?</h4>
-                    <div className="text-left space-y-3">
-                      <div className="flex items-start space-x-3">
-                        <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
-                          1
-                        </div>
-                        <p className="text-muted-foreground">
-                          Donate to your favorite barbers during battles
-                        </p>
-                      </div>
-                      <div className="flex items-start space-x-3">
-                        <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
-                          2
-                        </div>
-                        <p className="text-muted-foreground">
-                          Enter tournaments and compete for prizes
-                        </p>
-                      </div>
-                      <div className="flex items-start space-x-3">
-                        <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
-                          3
-                        </div>
-                        <p className="text-muted-foreground">
-                          Purchase gear and exclusive items
-                        </p>
-                      </div>
+                  {bbError && (
+                    <div className="space-y-4">
+                      <p className="text-muted-foreground">
+                        Your payment was received. If your balance doesn't update within a few minutes, please contact support.
+                      </p>
+                      <Button onClick={verifyBbPurchase} variant="outline">
+                        Retry Verification
+                      </Button>
                     </div>
-                  </div>
+                  )}
 
-                  <div className="flex flex-col sm:flex-row gap-4 pt-6">
-                    <Button 
-                      onClick={() => navigate('/profile')}
-                      size="lg"
-                      className="flex-1"
-                    >
-                      <Wallet className="mr-2 h-4 w-4" />
-                      View Balance
-                    </Button>
-                    <Button 
-                      onClick={() => navigate('/creator-hub')}
-                      variant="outline"
-                      size="lg"
-                      className="flex-1"
-                    >
-                      Explore Creator Hub
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
+                  {!bbVerifying && (
+                    <div className="flex flex-col sm:flex-row gap-4 pt-6">
+                      <Button
+                        onClick={() => navigate('/profile')}
+                        size="lg"
+                        className="flex-1"
+                      >
+                        <Wallet className="mr-2 h-4 w-4" />
+                        View Profile
+                      </Button>
+                      <Button
+                        onClick={() => navigate('/')}
+                        variant="outline"
+                        size="lg"
+                        className="flex-1"
+                      >
+                        Back to Home
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
 
                   {sessionId && (
                     <div className="pt-4 border-t">
@@ -155,7 +201,7 @@ const PaymentSuccess = () => {
     );
   }
 
-  // Tournament success content (existing)
+  // Tournament success content
   return (
     <div className="min-h-screen">
       <Header />
@@ -181,7 +227,7 @@ const PaymentSuccess = () => {
                   </div>
                   <h3 className="text-xl font-semibold mb-2">Tournament Entry Confirmed</h3>
                   <p className="text-muted-foreground">
-                    Your $50 entry fee has been processed. You're now eligible to participate 
+                    Your $50 entry fee has been processed. You're now eligible to participate
                     in the year-round single-elimination tournament.
                   </p>
                 </div>
@@ -189,48 +235,27 @@ const PaymentSuccess = () => {
                 <div className="space-y-4">
                   <h4 className="text-lg font-semibold">What's Next?</h4>
                   <div className="text-left space-y-3">
-                    <div className="flex items-start space-x-3">
-                      <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
-                        1
+                    {[
+                      "Check the portal for your match schedule and bracket position",
+                      "Prepare for live battles every Sunday from 10:00 AM - 6:00 PM",
+                      "Create battles and compete to advance in the tournament",
+                    ].map((text, i) => (
+                      <div key={i} className="flex items-start space-x-3">
+                        <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
+                          {i + 1}
+                        </div>
+                        <p className="text-muted-foreground">{text}</p>
                       </div>
-                      <p className="text-muted-foreground">
-                        Check the portal for your match schedule and bracket position
-                      </p>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
-                        2
-                      </div>
-                      <p className="text-muted-foreground">
-                        Prepare for live battles every Sunday from 10:00 AM - 6:00 PM
-                      </p>
-                    </div>
-                    <div className="flex items-start space-x-3">
-                      <div className="w-6 h-6 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
-                        3
-                      </div>
-                      <p className="text-muted-foreground">
-                        Create battles and compete to advance in the tournament
-                      </p>
-                    </div>
+                    ))}
                   </div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-4 pt-6">
-                  <Button 
-                    onClick={() => navigate('/portal')}
-                    size="lg"
-                    className="flex-1"
-                  >
+                  <Button onClick={() => navigate('/portal')} size="lg" className="flex-1">
                     Go to Portal
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
-                  <Button 
-                    onClick={() => navigate('/battles')}
-                    variant="outline"
-                    size="lg"
-                    className="flex-1"
-                  >
+                  <Button onClick={() => navigate('/battles')} variant="outline" size="lg" className="flex-1">
                     View All Battles
                   </Button>
                 </div>

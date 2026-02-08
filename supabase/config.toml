@@ -127,3 +127,6 @@ verify_jwt = false
 
 [functions.subscribe-with-bb]
 verify_jwt = false
+
+[functions.verify-bb-purchase]
+verify_jwt = false

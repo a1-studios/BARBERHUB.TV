@@ -120,8 +120,10 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
 
   const handleAddFunds = (usdAmount: number) => {
     purchaseBucks.mutate(usdAmount, {
-      onSuccess: () => {
-        onClose(); // Close modal when redirecting to Stripe
+      onSuccess: (data) => {
+        onClose();
+        // Direct navigation — reliable in iframes & all environments
+        window.location.href = data.url;
       }
     });
   };
