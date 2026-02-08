@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Plus, User, LogOut, Zap, Scissors, Swords, Crown, History } from 'lucide-react';
+import { Plus, User, LogOut, Zap, Scissors, Swords, Crown } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import barberPole from '@/assets/barber-pole.png';
 import { cn } from '@/lib/utils';
@@ -87,13 +87,6 @@ const Header = () => {
       path: '/creator-hub',
       requiresAuth: true,
       barberOnly: true
-    },
-    {
-      id: 'profile',
-      label: 'Profile',
-      icon: <User className="w-5 h-5" />,
-      path: '/profile',
-      requiresAuth: true
     },
     {
       id: 'admin-dashboard',
@@ -291,13 +284,13 @@ const Header = () => {
                     </button>
                     <button
                       onClick={() => {
-                        navigate('/profile?tab=transactions');
+                        navigate('/profile');
                         setBbDropdownOpen(false);
                       }}
                       className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-primary/10 transition-colors"
                     >
-                      <History className="h-4 w-4 text-cyan" />
-                      <span>Transaction History</span>
+                      <User className="h-4 w-4 text-cyan" />
+                      <span>Profile</span>
                     </button>
                   </div>
                 </div>
