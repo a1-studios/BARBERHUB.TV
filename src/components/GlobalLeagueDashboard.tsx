@@ -5,7 +5,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { PrizePoolCard } from '@/components/PrizePoolCard';
 import { LiveBattleFeed } from '@/components/LiveBattleFeed';
 import SphereImageGrid, { ImageData } from '@/components/SphereImageGrid';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -133,8 +132,6 @@ export const GlobalLeagueDashboard = () => {
           </div>
         </div>
 
-        {/* Prize Pool Feature Card */}
-        <PrizePoolCard />
 
         {/* Live Battles */}
         <LiveBattleFeed />
