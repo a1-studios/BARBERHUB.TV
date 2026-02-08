@@ -8,7 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { AlertCircle, User, Globe, X } from "lucide-react";
+import { AlertCircle, User, Globe, X, ExternalLink } from "lucide-react";
 import { CountrySelector } from "./CountrySelector";
 import { RotatingBBCoin } from "./economy/RotatingBBCoin";
 import { useQuery } from "@tanstack/react-query";
@@ -25,6 +25,7 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
   const { isFan, isLoading: rolesLoading } = useUserRole();
   const [mounted, setMounted] = useState(false);
   const [showProfilePrompt, setShowProfilePrompt] = useState(false);
+  const [pendingCheckoutUrl, setPendingCheckoutUrl] = useState<string | null>(null);
   const [profileData, setProfileData] = useState({
     display_name: '',
     country_code: ''
@@ -118,12 +119,32 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
     }
   };
 
+  const isInIframe = () => {
+    try {
+      return window.self !== window.top;
+    } catch {
+      return true; // cross-origin iframe
+    }
+  };
+
   const handleAddFunds = (usdAmount: number) => {
+    setPendingCheckoutUrl(null);
     purchaseBucks.mutate(usdAmount, {
       onSuccess: (data) => {
-        onClose();
-        // Direct navigation — reliable in iframes & all environments
-        window.location.href = data.url;
+        if (isInIframe()) {
+          const win = window.open(data.url, '_blank');
+          if (win) {
+            onClose();
+            toast.success('Stripe checkout opened in a new tab. Complete your purchase there!');
+          } else {
+            // Popup blocked — show manual link
+            setPendingCheckoutUrl(data.url);
+            toast.error('Popup blocked — use the link below to open checkout.');
+          }
+        } else {
+          onClose();
+          window.location.href = data.url;
+        }
       }
     });
   };
@@ -305,6 +326,22 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
                     </button>
                   ))}
                 </div>
+
+                {/* Fallback checkout link when popup is blocked */}
+                {pendingCheckoutUrl && (
+                  <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-center space-y-2">
+                    <p className="text-xs text-muted-foreground">Popup was blocked. Click below to open checkout:</p>
+                    <a
+                      href={pendingCheckoutUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-sm font-semibold text-cyan hover:underline"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Open Stripe Checkout
+                    </a>
+                  </div>
+                )}
 
                 {/* Cancel button - minimal */}
                 <button 
