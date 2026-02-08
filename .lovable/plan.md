@@ -1,138 +1,69 @@
 
 
-# ArenaTicker Redesign: Sponsor Ad Showcase with Prize Pool Anchor
+# ArenaTicker: 50% Bigger with Bold Centered Ads
 
 ## Overview
 
-Rebuild the ArenaTicker as a dedicated **sponsor ad rotation system**. The dynamic total prize pool (e.g., "$25,000 IN PRIZES") becomes the **anchor slide** that plays between every sponsor ad, creating a repeating pattern:
+Scale the ArenaTicker up by 50%, reduce the bottom padding of the DynamicBattleHero card (not the banner section) to close the gap, and make all ad content bold, centered with energetic spring animations.
 
-```text
-Prize Pool -> Sponsor Ad 1 -> Prize Pool -> Sponsor Ad 2 -> Prize Pool -> Sponsor Ad 3 -> ...
-```
+## Where the Space Comes From
 
-Every sponsor gets equal screen time, and the prize pool acts as a branded "bumper" that resets user attention between ads -- just like a TV broadcast returning to the score ticker between commercial breaks.
+The gap between the battle hero videos and the ticker bar currently comes from two sources:
+- `DynamicBattleHero` outer wrapper: `pb-2 sm:pb-4` (bottom padding)
+- `ImmersiveFactionBanners` section: `py-10 sm:py-14` (top + bottom padding)
 
-## Rotation Pattern
+Per your request, the banner section padding stays unchanged. Instead, the DynamicBattleHero bottom padding gets removed entirely (`pb-0`) to pull the ticker closer to the video containers.
 
-With 4 sponsor ads configured, the sequence looks like this (each slide holds for 5 seconds):
+## What Changes
 
-| Second | Slide |
-|--------|-------|
-| 0-5 | **$18,750+ IN PRIZES** (animated counter rolls up) |
-| 5-10 | Wahl Pro -- Official Clippers of the Arena |
-| 10-15 | **$18,750+ IN PRIZES** |
-| 15-20 | Andis -- Precision Tools for Champions |
-| 20-25 | **$18,750+ IN PRIZES** |
-| 25-30 | BabylissPRO -- Power Behind the Fade |
-| 30-35 | **$18,750+ IN PRIZES** |
-| 35-40 | Barber Strong -- Built for the Arena |
-| 40+ | *Cycle repeats from Sponsor 1* |
+### 1. DynamicBattleHero -- Remove Bottom Padding
 
-The prize pool slide always shows first on mount with the animated counter rolling up from $0 to the current total. On subsequent appearances it displays instantly (no re-animation).
+| Property | Current | New |
+|----------|---------|-----|
+| Outer wrapper padding | `pb-2 sm:pb-4` | `pb-0` |
 
-## Visual Design
+This closes the gap between the video battle boxes and the ticker without touching the banner section spacing.
 
-### Prize Pool Slide (Anchor)
+### 2. ArenaTicker -- 50% Bigger
 
-```text
-+================================================================+
-| [===-------] progress bar (cyan-to-orange gradient)            |
-|                                                                |
-|   [Trophy]   $18,750+  IN PRIZES                              |
-|                                                                |
-|   [dot] [dot] [dot] [dot] [dot] [dot] [dot] [dot] [dot]       |
-+================================================================+
-```
+| Property | Current | New |
+|----------|---------|-----|
+| Min height | `min-h-[48px]` | `min-h-[72px]` |
+| Content padding | `px-3 sm:px-4 py-3` | `px-4 sm:px-6 py-5` |
+| Progress bar | `h-1` | `h-1.5` |
+| Dot size | `w-1.5 h-1.5` (active: `w-4`) | `w-2 h-2` (active: `w-5`) |
 
-- Trophy icon on the left in cyan with glow
-- Dollar amount in large bold text (`text-base sm:text-lg lg:text-xl font-extrabold`) with gradient text (cyan-to-white)
-- "IN PRIZES" label in smaller uppercase tracking text
-- No "Sponsored" badge on this slide
+### 3. Bold Centered Text
 
-### Sponsor Ad Slide
+All slide content becomes centered with bigger, bolder typography:
 
-```text
-+================================================================+
-| [===-------] progress bar                                      |
-|                                                                |
-|   [Megaphone]  "Powered by Wahl Pro -- Official..."  [Sponsored]|
-|                                                                |
-|   [dot] [dot] [dot] [dot] [dot] [dot] [dot] [dot] [dot]       |
-+================================================================+
-```
+**Prize pool slides:**
+- Trophy icon: `w-5 h-5` becomes `w-7 h-7 sm:w-8 sm:h-8`
+- Amount: `text-base sm:text-lg lg:text-xl font-extrabold` becomes `text-xl sm:text-2xl lg:text-3xl font-black`
+- "IN PRIZES" label: `text-[10px] sm:text-xs` becomes `text-xs sm:text-sm`
+- Added continuous heartbeat pulse animation on the amount
 
-- Megaphone icon (or custom per sponsor) in muted foreground color
-- Sponsor message text in `text-xs sm:text-sm font-semibold`
-- "Sponsored" pill badge on the right
-- Clicking navigates to sponsor link (if provided)
+**Sponsor ad slides:**
+- Icon: `w-3.5 h-3.5` becomes `w-5 h-5`
+- Message text: `text-xs sm:text-sm font-semibold` becomes `text-sm sm:text-base lg:text-lg font-bold`
+- "Sponsored" badge: `text-[9px]` becomes `text-[10px] sm:text-xs`
 
-## Technical Details
+**Layout:** Switch from `justify-between` to `justify-center`. The ChevronRight arrow is removed since it conflicts with centered design. All content wraps in a centered flex column.
 
-### File: `src/components/factions/ArenaTicker.tsx`
+### 4. Energetic Animations
 
-**Sponsor data array**: Replace the current mixed `slides` array with a clean sponsor-only list. Each sponsor is defined as:
+Replace the subtle slide-up transitions with high-energy motion:
 
-```typescript
-interface SponsorSlide {
-  id: string;
-  name: string;
-  message: string;
-  icon: LucideIcon;
-  link?: string;
-}
-```
-
-Initial sponsors (hardcoded, easily swappable for database later):
-1. Wahl Pro -- "Official Clippers of the Arena"
-2. Andis -- "Precision Tools for Champions"
-3. BabylissPRO -- "Power Behind the Fade"
-4. Barber Strong -- "Built for the Arena"
-
-**Interleaving logic**: Build the actual display sequence by interleaving prize pool slides between each sponsor:
-
-```typescript
-// Build interleaved sequence: [prize, sponsor1, prize, sponsor2, ...]
-const displaySlides = sponsors.flatMap(sponsor => [
-  { type: 'prize-pool' as const, id: `prize-before-${sponsor.id}` },
-  { type: 'sponsor' as const, ...sponsor },
-]);
-```
-
-This creates an array of length `sponsors.length * 2`. The `activeIndex` cycles through this interleaved array.
-
-**Animated prize counter**: On the prize pool slide, render the total prize pool amount with a roll-up animation on first mount:
-- Use `requestAnimationFrame` counting loop (same pattern as existing `AnimatedCounter` component)
-- Track `hasAnimated` ref so the counter only rolls up once (on first appearance), then displays the value instantly on subsequent cycles
-- Format as currency using the existing `formatCurrency` helper
-
-**Dot indicators**: Show one dot per actual position in the interleaved array. Since there are `sponsors.length * 2` positions, with 4 sponsors that's 8 dots. Prize pool dots use cyan color, sponsor dots use muted foreground -- this visually communicates the alternating pattern.
-
-**Container styling**: Keep the existing dark glass container (`bg-black/40 backdrop-blur-sm border border-cyan/20 rounded-lg`). Increase vertical padding slightly (`py-3` instead of `py-2.5`) for the prize pool slide to give the larger text room to breathe. Min-height increases to `min-h-[48px]` to prevent layout shift between the two slide types.
-
-**Progress bar**: Keep the existing 5-second filling progress bar, keyed to `activeIndex` so it resets on each slide transition.
-
-**Pause on hover**: Keep existing behavior -- hovering pauses the rotation, leaving pauses it again.
-
-**Click behavior**: 
-- Prize pool slides navigate to `/portal`
-- Sponsor slides navigate to `sponsor.link` if provided, otherwise no-op
-
-### Removed Content
-
-The following slides are removed entirely (they are not sponsor ads and dilute the purpose):
-- "Top Arenas -- See who's dominating right now" (platform message)
-- "Battle Sunday is coming -- Register your faction now" (platform message)
-- "X barbers competing across all categories" (stat)
-- The old prize pool stat slide (replaced by the dedicated anchor slide)
-
-### File: `src/components/factions/ImmersiveFactionBanners.tsx`
-
-No changes needed. It already passes `prizePools`, `isBarber`, and `onNavigate` to `ArenaTicker`.
+- **Prize pool entrance**: `initial={{ opacity: 0, scale: 0.8, y: 20 }}` with spring physics (`stiffness: 300, damping: 20`) -- punches in from below with a bounce
+- **Prize pool pulse**: Continuous `scale: [1, 1.03, 1]` breathing animation on the dollar amount (2s loop)
+- **Sponsor entrance**: `initial={{ opacity: 0, x: 30, scale: 0.95 }}` -- slides in from the right with spring bounce for visual variety
+- **Exit (both)**: `exit={{ opacity: 0, scale: 1.1, y: -15 }}` with quick 0.2s ease-out -- "punch out" effect
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/components/factions/ArenaTicker.tsx` | Full rewrite: sponsor-focused rotation with prize pool anchor, interleaved sequence, animated counter, updated visuals |
+| `src/components/DynamicBattleHero.tsx` | Remove bottom padding (`pb-2 sm:pb-4` to `pb-0`) on outer wrapper |
+| `src/components/factions/ArenaTicker.tsx` | 50% height increase, centered bold text, energetic spring animations, remove chevron, larger dots and progress bar |
 
-No new files. No database changes. No edge functions. No new dependencies.
+No changes to `ImmersiveFactionBanners.tsx`. No new files. No database changes. No new dependencies.
