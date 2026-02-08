@@ -119,28 +119,17 @@ const Profile = () => {
     mutationFn: async (data: typeof formData) => {
       if (!user?.id) throw new Error('No user');
       
-      // Update profiles table
+      // Update profiles table — country_code is intentionally excluded (permanently locked)
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
           display_name: data.display_name,
           bio: data.bio,
-          username: data.username,
-          country_code: data.country_code
+          username: data.username
         })
         .eq('user_id', user.id);
       
       if (profileError) throw profileError;
-      
-      // If user is a barber, ALSO update barber_profiles.country_code
-      if (isUserBarber && barberProfile?.id) {
-        const { error: barberError } = await supabase
-          .from('barber_profiles')
-          .update({ country_code: data.country_code })
-          .eq('user_id', user.id);
-        
-        if (barberError) throw barberError;
-      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
@@ -151,8 +140,8 @@ const Profile = () => {
       setIsEditing(false);
     },
     onError: (error: any) => {
-      // Handle duplicate username error specifically
-      if (error.code === '23505' && error.message.includes('profiles_username_key')) {
+      // Handle duplicate username error — catch both specific code and raw constraint message
+      if (error.code === '23505' || error.message?.includes('duplicate key value') || error.message?.includes('profiles_username_key')) {
         toast.error('This username is already taken. Please choose another one.');
       } else {
         toast.error('Failed to update profile: ' + error.message);
@@ -316,13 +305,22 @@ const Profile = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Country</Label>
+                      <Label className="flex items-center gap-2">
+                        Country
+                        <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-500 border-amber-500/30">
+                          <Lock className="h-3 w-3 mr-1" />
+                          Locked
+                        </Badge>
+                      </Label>
                       <CountrySelector 
                         value={formData.country_code} 
-                        onChange={country_code => setFormData(prev => ({ ...prev, country_code }))} 
+                        onChange={() => {}} 
                         placeholder="Select your country" 
-                        disabled={!isEditing}
+                        disabled={true}
                       />
+                      <p className="text-xs text-amber-500/80">
+                        Nationality is permanently set during sign-up
+                      </p>
                     </div>
 
                     <div className="space-y-2">
