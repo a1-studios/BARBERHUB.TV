@@ -1,76 +1,111 @@
 
 
-## Allow Profile Editing While Keeping Country Locked
+## Add Social Media Links to Barber Profile Header (Max 3)
 
 ### What This Does
-Makes all profile fields (display name, username, bio, avatar) editable for both barbers and fans, while ensuring the country/flag can never be changed after sign-up. This enforces the platform rule that nationality is permanent for tournament integrity.
+Displays up to 3 social media icons (Instagram, Facebook, Twitter/X, YouTube) on the barber's profile header card, right below the specialty text. Each icon links out to the barber's social profile. The data is saved in the database and managed through Barber Settings.
 
-### Current Issues Found
+### Current State
+- The **BarberSettings** form already has input fields for Instagram, Facebook, Twitter, and YouTube
+- However, these fields are **never saved** -- the `barber_profiles` database table has no social media columns
+- The form always resets social media fields to empty strings on load (lines 153-156 in BarberSettings.tsx)
+- The social media data is completely non-functional right now
 
-1. **Fan profile page**: The country selector becomes editable when the user clicks "Edit Profile" -- it should always be locked
-2. **Fan profile page**: The save mutation sends `country_code` to the database, so even though the UI locks it, the data payload could overwrite it
-3. **Barber settings page**: The country selector is visually locked (good), but both mutations still include `country_code` in the update payload -- a safety hole
-4. **Fan profile page**: The duplicate username error is already handled with a toast, but the error message from the screenshot ("duplicate key value violates unique constraint") suggests the specific handler might not be catching all cases
+### Changes Required
 
-### Changes
+#### 1. Database Migration -- Add Social Media Columns
+Add 4 nullable text columns to `barber_profiles`:
+- `instagram_handle`
+- `facebook_handle`
+- `twitter_handle`
+- `youtube_handle`
 
-#### 1. Fan Profile Page (`src/pages/Profile.tsx`)
+Also update the `public_barber_profiles` view to include these new columns so they're available on the public profile page too.
 
-- Lock the country selector permanently (always `disabled={true}`, regardless of edit mode)
-- Add the "Locked" badge and helper text matching the barber settings style
-- Remove `country_code` from the mutation payload so it is never sent to the database on save
-- Improve the duplicate username error handler to also catch the raw constraint message
+#### 2. BarberSettings.tsx -- Save and Load Social Media
+- **Load**: Populate the form fields from `barberProfile.instagram_handle`, `.facebook_handle`, `.twitter_handle`, `.youtube_handle` instead of hardcoded empty strings
+- **Save**: Add the 4 social media fields to the `barberData` object in the `updateBarberMutation` so they actually persist to the database
 
-#### 2. Barber Settings (`src/components/profiles/BarberSettings.tsx`)
+#### 3. BarberProfileHeader.tsx -- Display Social Icons
+- Add a new optional prop `socialLinks` with type `{ instagram?: string; facebook?: string; twitter?: string; youtube?: string }`
+- Below the specialty text, render a row of clickable social media icons
+- Only show icons for platforms the barber has filled in
+- Cap display at 3 icons maximum (in the order: Instagram, Twitter, YouTube, Facebook)
+- Each icon opens the social profile in a new tab
+- Use branded colors: Instagram (pink), Twitter/X (blue), YouTube (red), Facebook (blue)
 
-- **Profile mutation**: Instead of sending the full `data` object (which includes `country_code`), explicitly send only `display_name`, `username`, `bio`, and `avatar_url` -- exclude `country_code`
-- **Barber mutation**: Remove `country_code` from the barber data payload so it cannot be overwritten
-- Remove the secondary barber_profiles country sync logic (no longer needed since country never changes)
-- Add duplicate username error handling (same pattern as the fan profile)
+#### 4. Profile.tsx -- Pass Social Data to Header
+- Pass the new `socialLinks` prop to `BarberProfileHeader` using data from `barberProfile`
+
+#### 5. BarberPublicProfile.tsx -- Show Social on Public Profile Too
+- After the view is updated, read the social columns from `public_barber_profiles`
+- Display the same social icons on the public-facing barber profile
+
+### Visual Layout
+
+The social icons will appear as small, colored icon buttons in a horizontal row:
+
+```text
+ BarberProfileHeader
++-----------------------------------------------+
+| [Avatar]  Display Name  [Tier Badge] [Flag]   |
+|           texture (specialty)                  |
+|           [IG] [X] [YT]  <-- social icons     |
+|                                                |
+|  7 Followers  7 Likes  4 Subscribers  $0 Don.  |
+|  [View Public Profile]  [Settings]             |
++-----------------------------------------------+
+```
 
 ### Technical Details
 
-**Profile.tsx mutation change:**
-```
-// Before (sends country_code)
-.update({ display_name, bio, username, country_code })
+**Database migration SQL:**
+```sql
+ALTER TABLE barber_profiles
+  ADD COLUMN instagram_handle text,
+  ADD COLUMN facebook_handle text,
+  ADD COLUMN twitter_handle text,
+  ADD COLUMN youtube_handle text;
 
-// After (excludes country_code)
-.update({ display_name, bio, username })
-```
-
-**Profile.tsx country field change:**
-```
-// Before (editable in edit mode)
-<CountrySelector disabled={!isEditing} onChange={...} />
-
-// After (always locked)
-<Label>Country <Badge>Locked</Badge></Label>
-<CountrySelector disabled={true} onChange={() => {}} />
-<p>Nationality is permanently set during sign-up</p>
-```
-
-**BarberSettings.tsx profile mutation change:**
-```
-// Before (sends everything including country_code)
-.update(data)
-
-// After (explicit fields, no country_code)  
-.update({ display_name: data.display_name, username: data.username, bio: data.bio, avatar_url: data.avatar_url })
+CREATE OR REPLACE VIEW public_barber_profiles AS
+  SELECT ... (existing columns) ...,
+    bp.instagram_handle,
+    bp.facebook_handle,
+    bp.twitter_handle,
+    bp.youtube_handle
+  FROM barber_profiles bp
+  LEFT JOIN profiles p ON ...
+  (rest of existing view definition);
 ```
 
-**BarberSettings.tsx barber mutation change:**
+**BarberProfileHeader social rendering logic:**
+```typescript
+const socialLinks = [
+  { key: 'instagram', url: socialLinks?.instagram, icon: Instagram, color: 'text-pink-500' },
+  { key: 'twitter', url: socialLinks?.twitter, icon: Twitter, color: 'text-blue-400' },
+  { key: 'youtube', url: socialLinks?.youtube, icon: Youtube, color: 'text-red-500' },
+  { key: 'facebook', url: socialLinks?.facebook, icon: Facebook, color: 'text-blue-500' },
+].filter(s => s.url).slice(0, 3); // max 3
 ```
-// Before
-country_code: data.country_code  // included in barberData
 
-// After
-// country_code line removed from barberData object
+**BarberSettings save fix:**
+```typescript
+const barberData = {
+  ...existingFields,
+  instagram_handle: data.instagram,
+  facebook_handle: data.facebook,
+  twitter_handle: data.twitter,
+  youtube_handle: data.youtube
+};
 ```
 
 ### Files Modified
 
 | File | Change |
 |------|--------|
-| `src/pages/Profile.tsx` | Lock country field, remove country_code from mutation, improve error handling |
-| `src/components/profiles/BarberSettings.tsx` | Remove country_code from both mutation payloads, add username error handling |
+| Database migration | Add 4 social media columns to `barber_profiles`, update `public_barber_profiles` view |
+| `src/components/profiles/BarberSettings.tsx` | Load and save social media fields to/from database |
+| `src/components/barber/BarberProfileHeader.tsx` | Add `socialLinks` prop, render up to 3 social icons |
+| `src/pages/Profile.tsx` | Pass social data from `barberProfile` to `BarberProfileHeader` |
+| `src/pages/BarberPublicProfile.tsx` | Display social icons on public profile |
+
