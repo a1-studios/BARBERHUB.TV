@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import Header from "@/components/Header";
@@ -8,12 +8,14 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle, Trophy, ArrowRight, Coins, Wallet, Loader2, AlertCircle } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user, loading: authLoading } = useAuth();
 
   const sessionId = searchParams.get('session_id');
   const paymentType = searchParams.get('type');
@@ -21,16 +23,24 @@ const PaymentSuccess = () => {
   const [bbVerifying, setBbVerifying] = useState(false);
   const [bbResult, setBbResult] = useState<{ bb_credited: number; new_balance: number } | null>(null);
   const [bbError, setBbError] = useState<string | null>(null);
+  const hasTriggeredVerify = useRef(false);
 
+  // Wait for auth to restore before verifying BB purchase
   useEffect(() => {
     if (!sessionId) return;
 
     if (paymentType === 'bb') {
+      // Wait until auth is done loading
+      if (authLoading) return;
+      // Prevent double-trigger
+      if (hasTriggeredVerify.current) return;
+      hasTriggeredVerify.current = true;
       verifyBbPurchase();
     } else {
+      if (authLoading) return;
       verifyTournament();
     }
-  }, [sessionId, paymentType]);
+  }, [sessionId, paymentType, authLoading, user]);
 
   const verifyBbPurchase = async () => {
     setBbVerifying(true);
