@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -12,12 +13,21 @@ import { BarberProfileCard } from '@/components/barber/BarberProfileCard';
 import { BackButton } from '@/components/ui/BackButton';
 
 export default function BarbersDirectory() {
+  const [searchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [specialtyFilter, setSpecialtyFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
   const [liveFilter, setLiveFilter] = useState('all');
   const [tierFilter, setTierFilter] = useState('all');
   const [sortBy, setSortBy] = useState('tier');
+
+  // Pre-populate filters from URL params
+  useEffect(() => {
+    const search = searchParams.get('search');
+    const country = searchParams.get('country');
+    if (search) setSearchTerm(search);
+    if (country) setCountryFilter(country);
+  }, [searchParams]);
 
   // Fetch all barbers using unified view
   const { data: barbers, isLoading } = useQuery({
