@@ -1,31 +1,34 @@
 
 
-## Streamline Subscription: Skip Straight to Add Funds
+## Fix: BB Store Purchase Buttons Not Working
 
 ### The Problem
-When a user with insufficient BB clicks "Subscribe", they currently go through two unnecessary steps:
-1. An "Insufficient Barber Bucks" dialog appears showing the shortfall
-2. They must click "Add Funds" on that dialog to finally open the BB Store
+When you click a BB package in the store, nothing happens. The purchase never goes through because the browser is silently blocking the request due to a CORS (cross-origin) header mismatch.
 
-This is annoying -- the user already knows they want to subscribe, just take them straight to the store.
+The `purchase-barber-bucks` edge function only allows a few request headers, but the Supabase client now sends additional headers. The browser checks these first (called a "preflight check") and rejects the whole request when they don't match -- before the function even runs.
 
 ### The Fix
-Remove the intermediate "Insufficient Funds" dialog entirely. When balance is too low, open the Add Funds modal (BB Store) directly with a single toast message explaining the shortfall.
+Update the CORS headers in the `purchase-barber-bucks` edge function to include all the headers the Supabase client sends. This is a one-line change.
 
-### How It Will Work After the Change
-1. User clicks "Subscribe for 125 BB"
-2. If they have enough BB -- confirmation dialog appears (no change)
-3. If they don't have enough BB -- the BB Store opens immediately with a toast like "You need 85 more BB to subscribe to Silver Master"
-4. Same behavior if the edge function returns `insufficient_funds` -- just open the store directly
+### What Changes
+
+**Current (broken):**
+```
+"Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type"
+```
+
+**Fixed:**
+```
+"Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version"
+```
+
+Also fix the OPTIONS handler -- it currently returns `null` instead of a proper `"ok"` string, which can cause issues with some browsers.
 
 ### Technical Details
 
-#### File Modified: `src/components/barber/BarberSubscriptionTiers.tsx`
+#### File Modified: `supabase/functions/purchase-barber-bucks/index.ts`
 
-- Remove the `insufficientInfo` state variable entirely
-- Remove the "Insufficient Funds" `AlertDialog` component (lines 271-298)
-- In `handleSubscribeClick`: when `barberBucks < bbPrice`, show a toast with the shortfall info and immediately call `setShowAddFunds(true)` instead of setting `insufficientInfo`
-- In `handleConfirmSubscribe`: when the edge function returns `insufficient_funds`, show a toast and immediately call `setShowAddFunds(true)` instead of setting `insufficientInfo`
+1. Update `corsHeaders` object at line 6 to include the full set of allowed headers
+2. Fix the OPTIONS response at line 21 from `Response(null, ...)` to `Response("ok", ...)` for consistency
 
-This reduces the flow from 3 clicks (Subscribe -> Add Funds button -> pick package) down to 2 clicks (Subscribe -> pick package), with a helpful toast explaining the shortfall.
-
+No frontend changes needed -- the AddFundsModal and useBarberBucks hook are already wired correctly. Once the CORS headers are fixed, clicking a package will successfully call the edge function, which creates a Stripe checkout session and redirects the user to pay.
