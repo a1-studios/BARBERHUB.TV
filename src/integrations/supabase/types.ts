@@ -2156,6 +2156,48 @@ export type Database = {
         }
         Relationships: []
       }
+      sponsor_ads: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          display_order: number
+          highlight_end: number
+          id: string
+          is_active: boolean
+          link: string | null
+          logo_url: string | null
+          message: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          highlight_end?: number
+          id?: string
+          is_active?: boolean
+          link?: string | null
+          logo_url?: string | null
+          message: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          highlight_end?: number
+          id?: string
+          is_active?: boolean
+          link?: string | null
+          logo_url?: string | null
+          message?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stream_sessions: {
         Row: {
           barber_id: string | null
