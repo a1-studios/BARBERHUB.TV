@@ -260,6 +260,12 @@ const Profile = () => {
                 onSettingsClick={() => setShowBarberSettings(true)}
                 onAddFundsClick={() => setShowAddFundsModal(true)}
                 showActions={true}
+                socialLinks={{
+                  instagram: (barberProfile as any).instagram_handle,
+                  facebook: (barberProfile as any).facebook_handle,
+                  twitter: (barberProfile as any).twitter_handle,
+                  youtube: (barberProfile as any).youtube_handle,
+                }}
               />
             </div>
           )}

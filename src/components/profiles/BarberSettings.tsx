@@ -150,10 +150,10 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
         country_code: barberProfile.country_code || '',
         years_experience: barberProfile.years_experience?.toString() || '',
         portfolio_url: barberProfile.portfolio_url || '',
-        instagram: '',
-        facebook: '',
-        twitter: '',
-        youtube: '',
+        instagram: (barberProfile as any).instagram_handle || '',
+        facebook: (barberProfile as any).facebook_handle || '',
+        twitter: (barberProfile as any).twitter_handle || '',
+        youtube: (barberProfile as any).youtube_handle || '',
         phone: '',
         website: '',
         accepting_clients: true,
@@ -212,7 +212,11 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
         bio: data.bio,
         location: data.location,
         years_experience: data.years_experience ? parseInt(data.years_experience) : null,
-        portfolio_url: data.portfolio_url
+        portfolio_url: data.portfolio_url,
+        instagram_handle: data.instagram || null,
+        facebook_handle: data.facebook || null,
+        twitter_handle: data.twitter || null,
+        youtube_handle: data.youtube || null
       };
 
       const { error } = await supabase
