@@ -77,7 +77,6 @@ export default function CreatorHub() {
       return data || {
         follower_count: 0,
         like_count: 0,
-        subscription_count: 0,
         total_donations_cents: 0
       };
     },
@@ -227,7 +226,6 @@ export default function CreatorHub() {
                 stats={{
                   follower_count: barberStats.follower_count || 0,
                   like_count: barberStats.like_count || 0,
-                  subscription_count: barberStats.subscription_count || 0,
                   total_donations_cents: barberStats.total_donations_cents || 0
                 }}
                 barber_id={barberProfile.id}

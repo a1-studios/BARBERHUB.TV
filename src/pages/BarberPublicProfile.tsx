@@ -62,7 +62,6 @@ export default function BarberPublicProfile() {
   const stats = barberData ? {
     follower_count: barberData.follower_count,
     like_count: barberData.like_count,
-    subscription_count: barberData.subscription_count,
     total_donations_cents: barberData.total_donations_cents
   } : null;
 
