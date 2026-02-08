@@ -1,68 +1,31 @@
 
 
-## Pay for Subscriptions with Barber Bucks
+## Streamline Subscription: Skip Straight to Add Funds
 
-### What Changes
+### The Problem
+When a user with insufficient BB clicks "Subscribe", they currently go through two unnecessary steps:
+1. An "Insufficient Barber Bucks" dialog appears showing the shortfall
+2. They must click "Add Funds" on that dialog to finally open the BB Store
 
-The subscription tier cards will show prices in Barber Bucks (BB) instead of raw USD, and clicking "Subscribe Now" will attempt to pay directly from the user's BB wallet. If the user doesn't have enough BB, the Add Funds modal (BB Store) will pop up so they can top up first.
+This is annoying -- the user already knows they want to subscribe, just take them straight to the store.
 
-### Pricing Conversion ($1 = 5 BB)
+### The Fix
+Remove the intermediate "Insufficient Funds" dialog entirely. When balance is too low, open the Add Funds modal (BB Store) directly with a single toast message explaining the shortfall.
 
-| Tier | USD/month | BB/month |
-|------|-----------|----------|
-| Bronze | $10 | 50 BB |
-| Silver | $25 | 125 BB |
-| Gold | $50 | 250 BB |
-
-Each card will show the BB price prominently (e.g. "50 BB") with a small "~$10/mo" subtitle for reference.
-
-### New Subscribe Flow
-
-1. User clicks "Subscribe Now" on a tier
-2. System checks their BB balance
-3. **Enough BB** -- A confirmation dialog appears: "Pay 50 BB for Bronze Creator? Your balance: 320 BB" with Confirm/Cancel buttons
-4. On confirm, an edge function deducts the BB and activates the subscription in the database
-5. **Not enough BB** -- A prompt appears showing the shortfall (e.g. "You need 125 BB but only have 40 BB") with a button to open the BB Store (AddFundsModal)
-
----
+### How It Will Work After the Change
+1. User clicks "Subscribe for 125 BB"
+2. If they have enough BB -- confirmation dialog appears (no change)
+3. If they don't have enough BB -- the BB Store opens immediately with a toast like "You need 85 more BB to subscribe to Silver Master"
+4. Same behavior if the edge function returns `insufficient_funds` -- just open the store directly
 
 ### Technical Details
 
-#### 1. New Edge Function: `subscribe-with-bb`
+#### File Modified: `src/components/barber/BarberSubscriptionTiers.tsx`
 
-Creates `supabase/functions/subscribe-with-bb/index.ts` that:
-- Authenticates the user
-- Verifies they are a barber
-- Looks up the tier and its BB cost (`price_monthly_cents / 100 * 5`)
-- Checks the user's `barber_bucks` balance
-- If sufficient: deducts BB, records a `barber_bucks_transactions` entry (type: subscription), creates/updates a row in `barber_subscriptions` with status `active`, sets `current_period_start` to now and `current_period_end` to 30 days from now
-- If insufficient: returns an error with the required amount and current balance
-- All done atomically using the service role key
+- Remove the `insufficientInfo` state variable entirely
+- Remove the "Insufficient Funds" `AlertDialog` component (lines 271-298)
+- In `handleSubscribeClick`: when `barberBucks < bbPrice`, show a toast with the shortfall info and immediately call `setShowAddFunds(true)` instead of setting `insufficientInfo`
+- In `handleConfirmSubscribe`: when the edge function returns `insufficient_funds`, show a toast and immediately call `setShowAddFunds(true)` instead of setting `insufficientInfo`
 
-#### 2. Modify `BarberSubscriptionTiers.tsx`
-
-- Import `useBarberBucks` hook to get current balance and `setShowAddFundsModal`
-- Import `AddFundsModal` component
-- Convert displayed price from cents to BB: `const bbPrice = (tier.price_monthly_cents / 100) * 5`
-- Replace the USD price display with BB price + small USD reference text
-- Replace `handleSubscribe` logic:
-  - Instead of calling `create-barber-subscription` (Stripe), show an inline confirmation step
-  - Add state: `confirmingTier` (which tier is being confirmed), `showAddFunds` (boolean)
-  - If balance >= bbPrice: show confirmation dialog
-  - If balance < bbPrice: show insufficient funds message with "Add Funds" button
-  - On confirm: call the new `subscribe-with-bb` edge function
-  - On success: invalidate queries, show success toast, close modal
-- Add a "Your Balance: X BB" indicator at the top of the tiers section
-- Render `AddFundsModal` with the `pausedForFunds` pattern (same as DonationModal) so it layers properly
-
-#### 3. Modify `UpgradePrompt.tsx`
-
-- Update the quick-preview cards in the grid to show BB prices instead of battle counts (e.g. "50 BB/mo" instead of "3 battles/mo") for consistency
-
-#### Files Created
-- `supabase/functions/subscribe-with-bb/index.ts`
-
-#### Files Modified
-- `src/components/barber/BarberSubscriptionTiers.tsx` -- BB pricing display, confirmation flow, insufficient funds prompt, AddFundsModal integration
-- `src/components/barber/UpgradePrompt.tsx` -- Update quick preview cards to show BB prices
+This reduces the flow from 3 clicks (Subscribe -> Add Funds button -> pick package) down to 2 clicks (Subscribe -> pick package), with a helpful toast explaining the shortfall.
 
