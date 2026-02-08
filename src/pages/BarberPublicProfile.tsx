@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, MapPin, Award, Upload, Image as ImageIcon, Video, Trash2, Calendar } from 'lucide-react';
+import { ArrowLeft, MapPin, Award, Upload, Image as ImageIcon, Video, Trash2, Calendar, Instagram, Twitter, Youtube, Facebook } from 'lucide-react';
 import { BarberVideoSection } from '@/components/barber/BarberVideoSection';
 import { BarberActionButtons } from '@/components/barber/BarberActionButtons';
 import { SubscriptionBadge } from '@/components/SubscriptionBadge';
@@ -308,6 +308,34 @@ export default function BarberPublicProfile() {
                   {barberData.specialty && (
                     <p className="text-lg text-muted-foreground mt-2">{barberData.specialty}</p>
                   )}
+
+                  {/* Social Media Icons - Max 3 */}
+                  {(() => {
+                    const socials = [
+                      { key: 'instagram', url: (barberData as any).instagram_handle, icon: Instagram, hoverClass: 'hover:text-pink-500' },
+                      { key: 'twitter', url: (barberData as any).twitter_handle, icon: Twitter, hoverClass: 'hover:text-blue-400' },
+                      { key: 'youtube', url: (barberData as any).youtube_handle, icon: Youtube, hoverClass: 'hover:text-red-500' },
+                      { key: 'facebook', url: (barberData as any).facebook_handle, icon: Facebook, hoverClass: 'hover:text-blue-500' },
+                    ].filter(s => s.url).slice(0, 3);
+
+                    if (socials.length === 0) return null;
+
+                    return (
+                      <div className="flex items-center gap-2 mt-2">
+                        {socials.map(({ key, url, icon: Icon, hoverClass }) => (
+                          <a
+                            key={key}
+                            href={url!.startsWith('http') ? url! : `https://${url}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={`text-muted-foreground ${hoverClass} transition-colors`}
+                          >
+                            <Icon className="h-5 w-5" />
+                          </a>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 {/* Stats Row */}

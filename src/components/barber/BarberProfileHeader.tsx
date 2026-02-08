@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { SubscriptionBadge } from '@/components/SubscriptionBadge';
 import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
 import { Link } from 'react-router-dom';
-import { ExternalLink, Settings, Plus, ArrowDownToLine } from 'lucide-react';
+import { ExternalLink, Settings, Plus, ArrowDownToLine, Instagram, Twitter, Youtube, Facebook } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface BarberProfileHeaderProps {
@@ -26,6 +26,12 @@ interface BarberProfileHeaderProps {
   onAddFundsClick?: () => void;
   barberBucks?: number;
   showActions?: boolean;
+  socialLinks?: {
+    instagram?: string | null;
+    facebook?: string | null;
+    twitter?: string | null;
+    youtube?: string | null;
+  };
 }
 
 export function BarberProfileHeader({
@@ -40,7 +46,8 @@ export function BarberProfileHeader({
   onSettingsClick,
   onAddFundsClick,
   barberBucks,
-  showActions = true
+  showActions = true,
+  socialLinks
 }: BarberProfileHeaderProps) {
   const getCountryFlag = (code: string) => {
     const codePoints = code
@@ -118,6 +125,34 @@ export function BarberProfileHeader({
               {specialty && (
                 <p className="text-base md:text-lg text-muted-foreground mt-2">{specialty}</p>
               )}
+
+              {/* Social Media Icons - Max 3 */}
+              {(() => {
+                const activeSocials = [
+                  { key: 'instagram', url: socialLinks?.instagram, icon: Instagram, hoverClass: 'hover:text-pink-500' },
+                  { key: 'twitter', url: socialLinks?.twitter, icon: Twitter, hoverClass: 'hover:text-blue-400' },
+                  { key: 'youtube', url: socialLinks?.youtube, icon: Youtube, hoverClass: 'hover:text-red-500' },
+                  { key: 'facebook', url: socialLinks?.facebook, icon: Facebook, hoverClass: 'hover:text-blue-500' },
+                ].filter(s => s.url).slice(0, 3);
+
+                if (activeSocials.length === 0) return null;
+
+                return (
+                  <div className="flex items-center gap-2 mt-2">
+                    {activeSocials.map(({ key, url, icon: Icon, hoverClass }) => (
+                      <a
+                        key={key}
+                        href={url!.startsWith('http') ? url! : `https://${url}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`text-muted-foreground ${hoverClass} transition-colors`}
+                      >
+                        <Icon className="h-5 w-5" />
+                      </a>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Stats Row */}

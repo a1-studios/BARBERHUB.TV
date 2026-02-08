@@ -88,8 +88,10 @@ export type Database = {
           can_stream: boolean | null
           country_code: string | null
           created_at: string
+          facebook_handle: string | null
           featured_video_id: string | null
           id: string
+          instagram_handle: string | null
           is_live: boolean | null
           last_battle_reset: string
           last_live_check: string | null
@@ -104,10 +106,12 @@ export type Database = {
           subscription_expires_at: string | null
           total_stream_minutes: number | null
           total_streams: number | null
+          twitter_handle: string | null
           updated_at: string
           user_id: string
           years_experience: number | null
           youtube_channel_id: string | null
+          youtube_handle: string | null
         }
         Insert: {
           active_subscription_tier?: string | null
@@ -116,8 +120,10 @@ export type Database = {
           can_stream?: boolean | null
           country_code?: string | null
           created_at?: string
+          facebook_handle?: string | null
           featured_video_id?: string | null
           id?: string
+          instagram_handle?: string | null
           is_live?: boolean | null
           last_battle_reset?: string
           last_live_check?: string | null
@@ -132,10 +138,12 @@ export type Database = {
           subscription_expires_at?: string | null
           total_stream_minutes?: number | null
           total_streams?: number | null
+          twitter_handle?: string | null
           updated_at?: string
           user_id: string
           years_experience?: number | null
           youtube_channel_id?: string | null
+          youtube_handle?: string | null
         }
         Update: {
           active_subscription_tier?: string | null
@@ -144,8 +152,10 @@ export type Database = {
           can_stream?: boolean | null
           country_code?: string | null
           created_at?: string
+          facebook_handle?: string | null
           featured_video_id?: string | null
           id?: string
+          instagram_handle?: string | null
           is_live?: boolean | null
           last_battle_reset?: string
           last_live_check?: string | null
@@ -160,10 +170,12 @@ export type Database = {
           subscription_expires_at?: string | null
           total_stream_minutes?: number | null
           total_streams?: number | null
+          twitter_handle?: string | null
           updated_at?: string
           user_id?: string
           years_experience?: number | null
           youtube_channel_id?: string | null
+          youtube_handle?: string | null
         }
         Relationships: [
           {
@@ -2696,8 +2708,10 @@ export type Database = {
           barber_updated_at: string | null
           country_code: string | null
           display_name: string | null
+          facebook_handle: string | null
           featured_video_id: string | null
           follower_count: number | null
+          instagram_handle: string | null
           is_live: boolean | null
           last_live_check: string | null
           like_count: number | null
@@ -2708,11 +2722,13 @@ export type Database = {
           specialty: string | null
           subscription_count: number | null
           total_donations_cents: number | null
+          twitter_handle: string | null
           user_bio: string | null
           user_id: string | null
           username: string | null
           years_experience: number | null
           youtube_channel_id: string | null
+          youtube_handle: string | null
         }
         Relationships: [
           {
