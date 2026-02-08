@@ -1,66 +1,58 @@
 
 
-## Fix: BB Balance Not Updating After Purchase
+## Fix: White Page When Clicking BB Store Packages
 
 ### Root Cause
 
-The `/payment-success` route is **not wrapped in AuthGuard** and the `PaymentSuccess` component does not wait for authentication to restore before calling the `verify-bb-purchase` edge function.
+When a user clicks a BB package in the AddFundsModal, the code runs `window.location.href = stripeUrl`. Inside the Lovable preview iframe, this navigates the **iframe content** to Stripe's checkout URL. Stripe blocks iframe embedding (via `X-Frame-Options: DENY`), so the iframe shows a completely blank white page. The user is stuck and cannot get back to the app.
 
-Here is what happens:
+### Solution
 
-```text
-1. User clicks a BB package in AddFundsModal
-2. window.location.href redirects to Stripe checkout (full page unload)
-3. User completes payment on Stripe
-4. Stripe redirects back to /payment-success?session_id=xxx&type=bb
-5. App reloads from scratch -- auth session restoring from localStorage (async)
-6. PaymentSuccess useEffect fires IMMEDIATELY (sessionId is available from URL)
-7. supabase.functions.invoke('verify-bb-purchase') is called WITHOUT auth token
-8. Edge function rejects: "Missing authorization header"
-9. BB is never credited -- balance stays at 0
-```
+Replace the `window.location.href` redirect with a smarter approach:
 
-The auth session restoration is asynchronous, but the `useEffect` has no dependency on auth state. It fires before the Supabase client has restored the session from localStorage.
+1. **Try `window.open(url, '_blank')`** to open Stripe checkout in a new browser tab
+2. **If popup is blocked** (returns `null`), show a visible "Open Checkout" link the user can click manually
+3. **If not in an iframe** (e.g. published site), use `window.location.href` directly since it works fine there
 
-### Fix
-
-#### 1. PaymentSuccess.tsx -- Wait for Auth Before Verifying
-
-- Import and use `useAuth()` hook to access `user` and `loading` state
-- Add `user` and `loading` as dependencies to the verification `useEffect`
-- Only call `verifyBbPurchase()` once `loading === false` and `user` is present
-- Show a loading spinner while auth is restoring
-- Handle the edge case where auth never loads (session expired) with a clear message and retry option
-
-#### 2. verify-bb-purchase Edge Function -- Add Resilient Auth Fallback
-
-As an extra safety net, make the edge function handle missing auth gracefully:
-- If the auth header is present, verify the user matches the Stripe session metadata (current behavior)
-- If the auth header is missing, still allow verification but rely entirely on the Stripe session's `user_id` metadata for crediting
-- This ensures that even if there is a timing issue, the purchase can still be completed
-
-This does not compromise security because:
-- The Stripe session ID is a secret known only to the paying user
-- The `user_id` in the session metadata was set during checkout creation (by the server, not the client)
-- Idempotency check prevents any double-crediting
+This keeps the app running in the preview while the user completes payment in a separate tab.
 
 ### Changes
 
-| File | Change |
-|------|--------|
-| `src/pages/PaymentSuccess.tsx` | Import `useAuth`, wait for auth loading to complete before calling verify; add loading/error states for auth restoration |
-| `supabase/functions/verify-bb-purchase/index.ts` | Make auth optional -- if auth header present, verify user match; if absent, trust Stripe session metadata for user_id |
+#### 1. AddFundsModal.tsx -- Smart Redirect Logic
 
-### Updated PaymentSuccess Flow
+Replace `handleAddFunds` with iframe-aware logic:
+
+- Detect if running inside an iframe (`window.self !== window.top`)
+- If iframe: use `window.open(url, '_blank')`, show toast confirming new tab opened
+- If popup blocked: display a clickable checkout link directly in the modal
+- If not iframe: use `window.location.href` directly (production behavior)
+- Add a `pendingCheckoutUrl` state for the fallback link
+- Add loading state to prevent double-clicks on packages
+
+#### 2. useBarberBucks.tsx -- No Changes Needed
+
+The hook already returns the URL cleanly from the mutation. No modifications required.
+
+### Technical Details
 
 ```text
-1. App reloads after Stripe redirect
-2. PaymentSuccess mounts, shows "Restoring session..." spinner
-3. Auth provider restores session from localStorage (takes ~200-500ms)
-4. useEffect detects: loading=false, user=present, sessionId=present
-5. Calls verify-bb-purchase WITH valid auth token
-6. Edge function verifies Stripe session, credits BB, returns new balance
-7. UI shows "+X BB Credited" with new balance
-8. Query cache invalidated -- header BB widget updates immediately
+User clicks package
+  -> purchaseBucks.mutate(amount) calls edge function
+  -> Edge function creates Stripe session, returns { url }
+  -> AddFundsModal receives URL in onSuccess
+  -> Check: window.self !== window.top? (iframe detection)
+     -> YES (preview): window.open(url, '_blank')
+        -> Success: close modal, show "checkout opened in new tab" toast
+        -> Blocked: show clickable checkout link inside modal
+     -> NO (production): window.location.href = url (navigate directly)
+  -> User completes payment on Stripe
+  -> Stripe redirects to /payment-success?session_id=xxx&type=bb
+  -> verify-bb-purchase credits the BB (auth fallback already deployed)
 ```
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `src/components/AddFundsModal.tsx` | Replace `window.location.href` with iframe-aware redirect (try `window.open`, fallback to clickable link); add loading and fallback states |
 
