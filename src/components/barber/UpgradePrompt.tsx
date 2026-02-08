@@ -114,21 +114,21 @@ export const UpgradePrompt = ({
               <CardContent className="p-3 text-center">
                 <Star className="w-5 h-5 text-orange-500 mx-auto mb-1" />
                 <p className="text-xs font-semibold text-foreground">Bronze</p>
-                <p className="text-xs text-muted-foreground">3 battles/mo</p>
+                <p className="text-xs text-muted-foreground">50 BB/mo</p>
               </CardContent>
             </Card>
             <Card className="border-slate-400/30 bg-slate-400/5">
               <CardContent className="p-3 text-center">
                 <Sparkles className="w-5 h-5 text-slate-400 mx-auto mb-1" />
                 <p className="text-xs font-semibold text-foreground">Silver</p>
-                <p className="text-xs text-muted-foreground">10 battles/mo</p>
+                <p className="text-xs text-muted-foreground">125 BB/mo</p>
               </CardContent>
             </Card>
             <Card className="border-yellow-500/30 bg-yellow-500/5">
               <CardContent className="p-3 text-center">
                 <Crown className="w-5 h-5 text-yellow-500 mx-auto mb-1" />
                 <p className="text-xs font-semibold text-foreground">Gold</p>
-                <p className="text-xs text-muted-foreground">Unlimited</p>
+                <p className="text-xs text-muted-foreground">250 BB/mo</p>
               </CardContent>
             </Card>
           </div>
