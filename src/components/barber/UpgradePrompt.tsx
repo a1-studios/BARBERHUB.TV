@@ -48,6 +48,7 @@ export const UpgradePrompt = ({
   description: customDescription
 }: UpgradePromptProps) => {
   const [showTiers, setShowTiers] = useState(false);
+  const [pausedForFunds, setPausedForFunds] = useState(false);
   
   const config = REASON_CONFIG[reason];
   const Icon = config.icon;
@@ -57,7 +58,7 @@ export const UpgradePrompt = ({
 
   if (showTiers) {
     return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
+      <Dialog open={isOpen && !pausedForFunds} onOpenChange={onClose}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Choose Your Plan</DialogTitle>
@@ -65,7 +66,7 @@ export const UpgradePrompt = ({
               Select the subscription tier that fits your needs
             </DialogDescription>
           </DialogHeader>
-          <BarberSubscriptionTiers />
+          <BarberSubscriptionTiers onFundsModalStateChange={setPausedForFunds} />
         </DialogContent>
       </Dialog>
     );

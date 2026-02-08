@@ -31,13 +31,23 @@ const tierColors = {
   gold: "text-yellow-500",
 };
 
-export const BarberSubscriptionTiers = () => {
+interface BarberSubscriptionTiersProps {
+  onFundsModalStateChange?: (isOpen: boolean) => void;
+}
+
+export const BarberSubscriptionTiers = ({ onFundsModalStateChange }: BarberSubscriptionTiersProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { barberBucks, isLoading: bbLoading } = useBarberBucks();
   const [processingTier, setProcessingTier] = useState<string | null>(null);
   const [confirmingTier, setConfirmingTier] = useState<{ id: string; name: string; displayName: string; bbPrice: number } | null>(null);
   const [showAddFunds, setShowAddFunds] = useState(false);
+
+  // Notify parent when funds modal opens/closes so it can pause its Dialog
+  const handleShowAddFunds = (open: boolean) => {
+    setShowAddFunds(open);
+    onFundsModalStateChange?.(open);
+  };
 
   const { data: tiers, isLoading: loadingTiers } = useQuery({
     queryKey: ['subscription-tiers'],
@@ -83,7 +93,7 @@ export const BarberSubscriptionTiers = () => {
     } else {
       const shortfall = bbPrice - barberBucks;
       toast.info(`You need ${shortfall} more BB to subscribe to ${displayName}`);
-      setShowAddFunds(true);
+      handleShowAddFunds(true);
     }
   };
 
@@ -103,7 +113,7 @@ export const BarberSubscriptionTiers = () => {
       if (data?.error === 'insufficient_funds') {
         const shortfall = (data.required || 0) - (data.balance || 0);
         toast.info(`You need ${shortfall} more BB. Top up to subscribe!`);
-        setShowAddFunds(true);
+        handleShowAddFunds(true);
         return;
       }
 
@@ -273,7 +283,7 @@ export const BarberSubscriptionTiers = () => {
 
 
       {/* Add Funds Modal */}
-      <AddFundsModal isOpen={showAddFunds} onClose={() => setShowAddFunds(false)} />
+      <AddFundsModal isOpen={showAddFunds} onClose={() => handleShowAddFunds(false)} />
     </div>
   );
 };
