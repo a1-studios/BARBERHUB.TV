@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Megaphone, ChevronRight } from 'lucide-react';
+import { Trophy, Megaphone } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 interface SponsorSlide {
@@ -118,70 +118,69 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
 
   return (
     <div
-      className="relative bg-black/40 backdrop-blur-sm border border-cyan/20 rounded-lg overflow-hidden cursor-pointer select-none mb-6"
+      className="relative bg-black/40 backdrop-blur-sm border border-cyan/20 rounded-lg overflow-hidden cursor-pointer select-none mb-3"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onClick={handleClick}
       role="marquee"
       aria-live="polite"
     >
-      {/* Progress bar */}
+      {/* Progress bar — 50% thicker */}
       <motion.div
         key={activeIndex}
-        className="absolute top-0 left-0 h-1 bg-gradient-to-r from-cyan/60 via-cyan to-primary/60 rounded-full origin-left"
+        className="absolute top-0 left-0 h-1.5 bg-gradient-to-r from-cyan/60 via-cyan to-primary/60 rounded-full origin-left"
         initial={{ scaleX: 0 }}
         animate={{ scaleX: 1 }}
         transition={{ duration: INTERVAL_MS / 1000, ease: 'linear' }}
       />
 
-      {/* Content */}
-      <div className="flex items-center justify-between px-3 sm:px-4 py-3 min-h-[48px]">
-        <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
-          <AnimatePresence mode="wait">
-            {currentSlide.type === 'prize-pool' ? (
-              <motion.div
-                key={currentSlide.id}
-                initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -10, scale: 0.98 }}
-                transition={{ duration: 0.3 }}
-                className="flex items-center gap-2 min-w-0"
+      {/* Content — 50% bigger, centered */}
+      <div className="flex items-center justify-center px-4 sm:px-6 py-5 min-h-[72px]">
+        <AnimatePresence mode="wait">
+          {currentSlide.type === 'prize-pool' ? (
+            <motion.div
+              key={currentSlide.id}
+              initial={{ opacity: 0, scale: 0.8, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 1.1, y: -15 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              className="flex items-center justify-center gap-3"
+            >
+              <Trophy className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 text-cyan drop-shadow-[0_0_8px_hsl(var(--cyan))]" />
+              <motion.span
+                animate={{ scale: [1, 1.03, 1] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                className="text-xl sm:text-2xl lg:text-3xl font-black bg-gradient-to-r from-cyan via-foreground to-primary bg-clip-text text-transparent"
               >
-                <Trophy className="w-5 h-5 shrink-0 text-cyan drop-shadow-[0_0_6px_hsl(var(--cyan))]" />
-                <span className="text-base sm:text-lg lg:text-xl font-extrabold bg-gradient-to-r from-cyan via-foreground to-primary bg-clip-text text-transparent truncate">
-                  {formatCurrency(displayValue)}+
-                </span>
-                <span className="text-[10px] sm:text-xs uppercase tracking-widest text-cyan/70 font-semibold shrink-0">
-                  In Prizes
-                </span>
-              </motion.div>
-            ) : (
-              <motion.div
-                key={currentSlide.id}
-                initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -10, scale: 0.98 }}
-                transition={{ duration: 0.3 }}
-                className="flex items-center gap-2 min-w-0"
-              >
-                <currentSlide.icon className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
-                <span className="text-xs sm:text-sm font-semibold text-foreground truncate">
-                  {currentSlide.message}
-                </span>
-                <span className="text-[9px] uppercase tracking-wider text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded shrink-0">
-                  Sponsored
-                </span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Right arrow */}
-        <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0 ml-2" />
+                {formatCurrency(displayValue)}+
+              </motion.span>
+              <span className="text-xs sm:text-sm uppercase tracking-widest text-cyan/70 font-bold shrink-0">
+                In Prizes
+              </span>
+            </motion.div>
+          ) : (
+            <motion.div
+              key={currentSlide.id}
+              initial={{ opacity: 0, x: 30, scale: 0.95 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 1.1, y: -15 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              className="flex items-center justify-center gap-3"
+            >
+              <currentSlide.icon className="w-5 h-5 shrink-0 text-muted-foreground" />
+              <span className="text-sm sm:text-base lg:text-lg font-bold text-foreground text-center">
+                {currentSlide.message}
+              </span>
+              <span className="text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded shrink-0">
+                Sponsored
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      {/* Dot indicators */}
-      <div className="flex items-center justify-center gap-1 pb-1.5">
+      {/* Dot indicators — larger */}
+      <div className="flex items-center justify-center gap-1 pb-2">
         {displaySlides.map((slide, i) => (
           <button
             key={slide.id}
@@ -189,11 +188,11 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
               e.stopPropagation();
               setActiveIndex(i);
             }}
-            className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+            className={`w-2 h-2 rounded-full transition-all duration-300 ${
               i === activeIndex
                 ? slide.type === 'prize-pool'
-                  ? 'bg-cyan w-4'
-                  : 'bg-muted-foreground w-4'
+                  ? 'bg-cyan w-5'
+                  : 'bg-muted-foreground w-5'
                 : slide.type === 'prize-pool'
                   ? 'bg-cyan/30'
                   : 'bg-muted-foreground/30'
