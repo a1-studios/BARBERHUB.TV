@@ -1,12 +1,16 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Megaphone } from 'lucide-react';
+import { Trophy, Sparkles } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import ScratchReveal from './ScratchReveal';
+import ColorfulText from './ColorfulText';
+import SponsoredBadge from './SponsoredBadge';
 
 interface SponsorSlide {
   id: string;
   name: string;
   message: string;
+  highlightEnd: number; // char index where bold portion ends
   icon: LucideIcon;
   link?: string;
 }
@@ -25,16 +29,16 @@ interface ArenaTickerProps {
 
 type DisplaySlide =
   | { type: 'prize-pool'; id: string }
-  | { type: 'sponsor'; id: string; name: string; message: string; icon: LucideIcon; link?: string };
+  | { type: 'sponsor'; id: string; name: string; message: string; highlightEnd: number; icon: LucideIcon; link?: string };
 
 const INTERVAL_MS = 5000;
 const COUNTER_DURATION_MS = 1500;
 
 const SPONSORS: SponsorSlide[] = [
-  { id: 'wahl', name: 'Wahl Pro', message: 'Powered by Wahl Pro — Official Clippers of the Arena', icon: Megaphone },
-  { id: 'andis', name: 'Andis', message: 'Andis — Precision Tools for Champions', icon: Megaphone },
-  { id: 'babyliss', name: 'BabylissPRO', message: 'BabylissPRO — Power Behind the Fade', icon: Megaphone },
-  { id: 'barberstrong', name: 'Barber Strong', message: 'Barber Strong — Built for the Arena', icon: Megaphone },
+  { id: 'slot1', name: 'Premium', message: 'YOUR BRAND HERE — Premium Sponsor Slot', highlightEnd: 15, icon: Sparkles },
+  { id: 'slot2', name: 'Spotlight', message: 'SPONSOR SPOTLIGHT — Be the Face of the Arena', highlightEnd: 17, icon: Sparkles },
+  { id: 'slot3', name: 'Partner', message: 'FEATURED PARTNER — Reach Thousands of Barbers', highlightEnd: 16, icon: Sparkles },
+  { id: 'slot4', name: 'Available', message: 'AD SPACE AVAILABLE — Join the Movement', highlightEnd: 18, icon: Sparkles },
 ];
 
 const formatCurrency = (cents: number) =>
@@ -56,7 +60,6 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
     [prizePools],
   );
 
-  // Build interleaved sequence: [prize, sponsor1, prize, sponsor2, ...]
   const displaySlides = useMemo<DisplaySlide[]>(
     () =>
       SPONSORS.flatMap((sponsor) => [
@@ -69,32 +72,23 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
   // Animated counter on first prize-pool appearance
   useEffect(() => {
     if (hasAnimated.current || totalPool === 0) return;
-
     const current = displaySlides[activeIndex];
     if (current.type !== 'prize-pool') return;
 
     hasAnimated.current = true;
     const startTime = Date.now();
-
     const animate = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / COUNTER_DURATION_MS, 1);
       const easeOut = 1 - Math.pow(1 - progress, 3);
       setDisplayValue(Math.round(totalPool * easeOut));
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      }
+      if (progress < 1) requestAnimationFrame(animate);
     };
-
     requestAnimationFrame(animate);
   }, [activeIndex, totalPool, displaySlides]);
 
-  // Keep displayValue in sync after initial animation
   useEffect(() => {
-    if (hasAnimated.current) {
-      setDisplayValue(totalPool);
-    }
+    if (hasAnimated.current) setDisplayValue(totalPool);
   }, [totalPool]);
 
   // Auto-rotate
@@ -118,69 +112,81 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
 
   return (
     <div
-      className="relative bg-black/40 backdrop-blur-sm border border-cyan/20 rounded-lg overflow-hidden cursor-pointer select-none mb-3"
+      className="relative overflow-hidden cursor-pointer select-none mb-3"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onClick={handleClick}
       role="marquee"
       aria-live="polite"
     >
-      {/* Progress bar — 50% thicker */}
-      <motion.div
-        key={activeIndex}
-        className="absolute top-0 left-0 h-1.5 bg-gradient-to-r from-cyan/60 via-cyan to-primary/60 rounded-full origin-left"
-        initial={{ scaleX: 0 }}
-        animate={{ scaleX: 1 }}
-        transition={{ duration: INTERVAL_MS / 1000, ease: 'linear' }}
+      {/* Scratch-off overlay */}
+      <ScratchReveal
+        activeIndex={activeIndex}
+        variant={currentSlide.type === 'prize-pool' ? 'gold' : 'silver'}
       />
 
-      {/* Content — 50% bigger, centered */}
+      {/* Content */}
       <div className="flex items-center justify-center px-4 sm:px-6 py-5 min-h-[72px]">
         <AnimatePresence mode="wait">
           {currentSlide.type === 'prize-pool' ? (
             <motion.div
               key={currentSlide.id}
-              initial={{ opacity: 0, scale: 0.8, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
+              initial={{ opacity: 0, filter: 'blur(8px)', y: 10 }}
+              animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
               exit={{ opacity: 0, scale: 1.1, y: -15 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+              transition={{ duration: 0.5, delay: 0.25 }}
               className="flex items-center justify-center gap-3"
             >
-              <Trophy className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 text-cyan drop-shadow-[0_0_8px_hsl(var(--cyan))]" />
+              <motion.div
+                key={`trophy-${activeIndex}`}
+                animate={{ rotate: [0, 360] }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
+              >
+                <Trophy className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 text-primary drop-shadow-[0_0_10px_hsl(var(--primary))]" />
+              </motion.div>
               <motion.span
                 animate={{ scale: [1, 1.03, 1] }}
                 transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                className="text-xl sm:text-2xl lg:text-3xl font-black bg-gradient-to-r from-cyan via-foreground to-primary bg-clip-text text-transparent"
+                className="text-xl sm:text-2xl lg:text-3xl font-black bg-gradient-to-r from-primary via-foreground to-cyan bg-clip-text text-transparent"
               >
                 {formatCurrency(displayValue)}+
               </motion.span>
-              <span className="text-xs sm:text-sm uppercase tracking-widest text-cyan/70 font-bold shrink-0">
+              <span className="text-xs sm:text-sm uppercase tracking-widest text-primary/70 font-bold shrink-0">
                 In Prizes
               </span>
             </motion.div>
           ) : (
             <motion.div
               key={currentSlide.id}
-              initial={{ opacity: 0, x: 30, scale: 0.95 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
+              initial={{ opacity: 0, filter: 'blur(8px)', y: 10 }}
+              animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
               exit={{ opacity: 0, scale: 1.1, y: -15 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-              className="flex items-center justify-center gap-3"
+              transition={{ duration: 0.5, delay: 0.25 }}
+              className="flex items-center justify-center gap-3 flex-wrap"
             >
-              <currentSlide.icon className="w-5 h-5 shrink-0 text-muted-foreground" />
-              <span className="text-sm sm:text-base lg:text-lg font-bold text-foreground text-center">
-                {currentSlide.message}
-              </span>
-              <span className="text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded shrink-0">
-                Sponsored
-              </span>
+              <Sparkles className="w-5 h-5 shrink-0 text-primary drop-shadow-[0_0_6px_hsl(var(--primary))]" />
+              <ColorfulText
+                text={currentSlide.message}
+                highlightEnd={currentSlide.highlightEnd}
+                className="text-sm sm:text-base lg:text-lg"
+              />
+              <SponsoredBadge />
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Dot indicators — larger */}
-      <div className="flex items-center justify-center gap-1 pb-2">
+      {/* Bottom progress shimmer */}
+      <motion.div
+        key={`progress-${activeIndex}`}
+        className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-cyan/40 via-primary/60 to-cyan/40 origin-left"
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ duration: INTERVAL_MS / 1000, ease: 'linear' }}
+      />
+
+      {/* Dot indicators */}
+      <div className="flex items-center justify-center gap-1 pb-1">
         {displaySlides.map((slide, i) => (
           <button
             key={slide.id}
@@ -191,11 +197,11 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
             className={`w-2 h-2 rounded-full transition-all duration-300 ${
               i === activeIndex
                 ? slide.type === 'prize-pool'
-                  ? 'bg-cyan w-5'
-                  : 'bg-muted-foreground w-5'
+                  ? 'bg-primary w-5'
+                  : 'bg-cyan w-5'
                 : slide.type === 'prize-pool'
-                  ? 'bg-cyan/30'
-                  : 'bg-muted-foreground/30'
+                  ? 'bg-primary/30'
+                  : 'bg-cyan/30'
             }`}
             aria-label={`Go to slide ${i + 1}`}
           />
