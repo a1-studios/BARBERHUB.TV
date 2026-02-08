@@ -1,109 +1,98 @@
 
 
-# Redesign Faction Banners as Universal Highlight Showcase
+# Dynamic Rotating Ticker Bar for Faction Banners
 
 ## Overview
 
-Transform the faction banners area into a universal highlight section visible to **all users** (fans, guests, barbers). Instead of hiding categories from non-barbers or showing a stripped-down version, all users see the same **3 featured banners** as an engaging showcase -- similar to social media story highlights or feature cards. Barbers additionally see the full 5-banner row with join buttons above it.
+Replace the static "Top Arenas / See who's dominating right now" header (lines 175-201 in `ImmersiveFactionBanners.tsx`) with a sleek, auto-rotating ticker bar that cycles through platform messages and sponsor ads every 5 seconds. Think of a sports broadcast ticker or social media "Stories" progress bar -- it keeps the section feeling alive and gives you a monetizable ad placement.
 
-## Current Issues
+## What Gets Built
 
-- Non-barbers see 3 banners that still look like "tournament registration cards" with entry fees, barber counts, and prize pools -- data that doesn't engage fans
-- The "Featured Categories" header is generic and doesn't draw users in
-- The banners display identical content regardless of audience, missing an opportunity to hook fans into the platform's competitive culture
-- The layout feels like a barber-only feature that fans stumbled into
+A new `ArenaTicker` component rendered in place of the current static header. It auto-rotates through an array of "slides" every 5 seconds, with smooth crossfade/slide-up transitions. Each slide can be one of three types:
 
-## What Changes
+| Slide Type | Example Content | Visual Style |
+|---|---|---|
+| **Platform Message** | "Battle Sunday is LIVE -- 45 barbers competing now" | Cyan glow text with pulse icon |
+| **Stat Highlight** | "Prize pools hit $2,400 across 5 arenas" | Animated counter with fire icon |
+| **Sponsor Ad** | "Powered by Wahl Pro -- Official Clippers of the Arena" | Sponsor logo + subtle "Sponsored" label |
 
-### 1. Universal 3-Banner Showcase (All Users)
+### Visual Design
 
-Replace the current non-barber view with an engaging social-media-style highlight row that all users see. The 3 banners shift focus from "join the tournament" to "explore the action":
+```text
++--------------------------------------------------------------+
+| [===----] progress bar (thin, cyan, resets each 5s)          |
+| [icon]  "Battle Sunday is LIVE -- 45 barbers competing"  [->]|
++--------------------------------------------------------------+
+```
 
-**Content per banner (non-barber view):**
-- Category icon + name (keep)
-- Top barber avatar with crown (keep -- this is the social hook)
-- Replace "prize pool" emphasis with the **top barber's name** prominently displayed (like a social media featured creator card)
-- Replace "X barbers" count with a social-style label: "Trending" / "Hot" / "Live" badge
-- Replace "$50 Entry" with a contextual action label: "Watch Now" or "Explore" as a small pill at the bottom
-- On tap, navigate to `/portal?category={id}` (keep existing behavior)
+- **Height**: ~40px, compact single-line bar
+- **Background**: Semi-transparent dark with subtle cyan border (matches platform aesthetic)
+- **Progress indicator**: A thin animated bar at the top that fills over 5 seconds, then resets on slide change
+- **Transition**: Slide-up + fade between messages using Framer Motion's `AnimatePresence`
+- **Interactive**: Users can tap the bar to pause rotation; a small right arrow navigates to `/portal` or sponsor link
+- **"See All" link**: Moves into the ticker as a periodic slide or remains as the arrow on the right side
 
-**Content per banner (barber view):**
-- Keep the full current display with prize pools, participant counts, entry fees
-- Keep the Join button above each banner
-- Show all 5 categories
+### Slide Data
 
-### 2. Section Header Redesign (All Users)
+Slides are defined in a config array inside the component (easily swappable for a database/CMS source later). Initial set:
 
-Replace the plain "Featured Categories" text with a more engaging, social-media-style header:
-- Title: **"Top Arenas"** -- short, punchy, uppercase with cyan glow
-- Subtitle: **"See who's dominating right now"** -- creates curiosity and FOMO
-- A small "See All" link-button on the right side that navigates to `/portal` (only for non-barbers, since barbers already see all 5)
-
-### 3. Layout Adjustments
-
-- Non-barber 3-banner row: slightly larger banners since there are only 3 (increase max width usage and allow each banner to breathe)
-- Add a subtle stagger animation where the center banner is slightly taller/elevated than the two flanking banners, creating a "podium" effect that naturally draws the eye
-- Keep the existing background glow, hover particles, and electric arc effects -- they create the premium feel
+1. **"Top Arenas -- See who's dominating right now"** (retains the original message)
+2. **"Battle Sunday is coming -- Register your faction now"**
+3. **"$2,400+ in prize pools across 5 categories"** (can pull live data from `prizePools`)
+4. **"Powered by [Sponsor Name] -- Official partner of the Arena"** (sponsor slot)
+5. **"New: Creative Color category is trending with 12 barbers"** (dynamic stat)
 
 ## Technical Details
 
-### File: `src/components/factions/ImmersiveFactionBanners.tsx`
+### New File: `src/components/factions/ArenaTicker.tsx`
 
-Changes:
-- Update the section header to show for **all users** (remove the `!isBarber` condition), with updated copy
-- Add a "See All" button next to the header for non-barbers that navigates to `/portal`
-- Keep the `displayCategories` logic (3 for non-barbers, 5 for barbers)
-- Pass a new `viewMode` prop to `ImmersiveBannerCard`: `'showcase'` for non-barbers, `'compete'` for barbers
-- Adjust the non-barber container to use `max-w-2xl lg:max-w-3xl` and slightly larger `gap-4 sm:gap-5`
+A self-contained component with:
 
-### File: `src/components/factions/ImmersiveBannerCard.tsx`
+- **Props**: `prizePools` data (to show live stats), `isBarber` flag, `onNavigate` callback
+- **State**: `activeIndex` (current slide), `isPaused` (hover/tap pause)
+- **Timer**: `useEffect` with `setInterval(5000)` that increments `activeIndex`, wrapping around. Clears on unmount and pauses on hover
+- **Slides array**: Mix of static messages and dynamic ones built from props (e.g., total prize pool sum)
+- **Sponsor slides**: Marked with `type: 'sponsor'` to render a small "Ad" or "Sponsored" badge
+- **Framer Motion**: `AnimatePresence` with `mode="wait"` for smooth crossfade between slides. Each slide uses `initial={{ opacity: 0, y: 8 }}`, `animate={{ opacity: 1, y: 0 }}`, `exit={{ opacity: 0, y: -8 }}`
+- **Progress bar**: A `motion.div` with `animate={{ scaleX: [0, 1] }}` over 5s duration, keyed to `activeIndex` so it resets each cycle
+- **Click handler**: Tapping the bar navigates based on slide type (portal for platform messages, sponsor link for ads)
+- **Dot indicators**: Tiny dots below the text showing which slide is active (like Instagram Stories)
 
-Changes to the props interface:
-- Add `viewMode?: 'showcase' | 'compete'` prop (defaults to `'compete'` for backward compatibility)
+### Modified File: `src/components/factions/ImmersiveFactionBanners.tsx`
 
-Changes to rendering based on `viewMode`:
-- When `viewMode === 'showcase'`:
-  - Show the top barber name below their avatar (truncated, `text-xs font-semibold`)
-  - Replace the large prize pool amount with a smaller, secondary display
-  - Replace the participant count with a "Trending" badge (using a `TrendingUp` icon from lucide)
-  - Replace "$50 Entry" text with an "Explore" pill button styled with cyan outline
-  - Hide the Join button (already gated by `isBarber`, but also skip for clarity)
-  - Make the center banner (index 1) slightly taller: add 20px extra height via conditional class
+- **Import** the new `ArenaTicker` component
+- **Replace** the `motion.div` header block (lines 175-201) with `<ArenaTicker>`
+- **Pass props**: `prizePools`, `isBarber`, and a navigation handler
+- The "See All" functionality is absorbed into the ticker (one of the rotating slides or the persistent arrow)
 
-- When `viewMode === 'compete'` (barber view):
-  - Everything stays exactly as it is now -- prize pools, barber counts, entry fees, join buttons
+### Styling Details
 
-### Visual Layout
+- Container: `bg-black/40 backdrop-blur-sm border border-cyan/20 rounded-lg px-4 py-2`
+- Text: `text-xs sm:text-sm font-semibold text-foreground` with an icon on the left
+- Progress bar: `h-0.5 bg-cyan/60 rounded-full` at the top of the container
+- Sponsor badge: `text-[9px] uppercase tracking-wider text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded`
+- Icons per slide type: `Flame` for stats, `Trophy` for prizes, `Megaphone` for announcements, sponsor logo placeholder for ads
 
-For non-barbers (showcase mode):
-```text
-         Top Arenas                    [See All ->]
-    See who's dominating right now
+### Slide Interface
 
-   [Banner]      [Banner]      [Banner]
-   (shorter)     (tallest)     (shorter)
-    
-   Avatar         Avatar        Avatar
-   "DJ Cuts"     "FadeKing"    "BladeArt"
-   Signature     Creative      Beard &
-    Style         Color        Scissor
-   Trending      Trending      Trending
-   [Explore]     [Explore]     [Explore]
+```typescript
+interface TickerSlide {
+  id: string;
+  type: 'message' | 'stat' | 'sponsor';
+  text: string;
+  icon: LucideIcon;
+  link?: string;        // optional navigation target
+  sponsorName?: string;  // only for sponsor type
+  sponsorLogo?: string;  // optional logo URL
+}
 ```
 
-For barbers (compete mode -- unchanged):
-```text
-  [Join] [Join] [Join] [Join] [Join]
-  [Ban1] [Ban2] [Ban3] [Ban4] [Ban5]
-   ...full prize pools, counts, fees...
-```
+## Files to Create/Modify
 
-## Files to Modify
+| File | Action | Change |
+|------|--------|--------|
+| `src/components/factions/ArenaTicker.tsx` | **Create** | New rotating ticker component with 5s interval, progress bar, transitions |
+| `src/components/factions/ImmersiveFactionBanners.tsx` | **Modify** | Replace static header (lines 175-201) with `<ArenaTicker>` component |
 
-| File | Change |
-|------|--------|
-| `src/components/factions/ImmersiveFactionBanners.tsx` | Universal header, "See All" link, pass `viewMode` prop, layout tweaks |
-| `src/components/factions/ImmersiveBannerCard.tsx` | Add `viewMode` prop, conditional content rendering for showcase vs compete modes |
-
-No new files. No database changes. No edge function changes.
+No database changes. No edge function changes. No new dependencies (uses existing Framer Motion and Lucide icons).
 
