@@ -213,28 +213,6 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
         transition={{ duration: INTERVAL_MS / 1000, ease: 'linear' }}
       />
 
-      {/* Dot indicators */}
-      <div className="flex items-center justify-center gap-1 pb-1">
-        {displaySlides.map((slide, i) => (
-          <button
-            key={slide.id}
-            onClick={(e) => {
-              e.stopPropagation();
-              setActiveIndex(i);
-            }}
-            className={`w-2 h-2 rounded-full transition-all duration-300 ${
-              i === activeIndex
-                ? slide.type === 'prize-pool'
-                  ? 'bg-primary w-5'
-                  : 'bg-cyan w-5'
-                : slide.type === 'prize-pool'
-                  ? 'bg-primary/30'
-                  : 'bg-cyan/30'
-            }`}
-            aria-label={`Go to slide ${i + 1}`}
-          />
-        ))}
-      </div>
     </div>
   );
 };
