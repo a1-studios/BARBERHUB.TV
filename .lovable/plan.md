@@ -1,46 +1,34 @@
 
 
-## Fix: Remove Subscribers Stat and Verify Social Icons Flow
+## Move Profile Button to BB Dropdown and Add Transaction History to Profile Page
 
-### Issue 1: "Subscribers" stat still showing
-
-The "Subscribers" stat block (showing "4 Subscribers") is still in the `BarberProfileHeader` component at lines 168-171, despite the agreement to remove the social "Subscribe" feature. The public profile page (`BarberPublicProfile.tsx`) already had this removed correctly -- it only shows Followers, Likes, and Donated. The private profile header was missed.
-
-### Issue 2: Social icons not appearing
-
-After checking the database, **all social media columns are null** for every barber profile. The code is actually working correctly -- it hides icons when no links are saved. Once a barber goes to Settings, Professional tab, fills in Instagram/Twitter/YouTube/Facebook, and clicks Save, the icons will appear on the profile card.
-
-No code change is needed for the social icons -- the save and display logic is already wired up correctly from the previous implementation.
+### What This Does
+1. Replaces the "Transaction History" button in the header's BB coin dropdown with a "Profile" button that navigates to `/profile`
+2. Removes the "Profile" entry from the Quick Actions menu (barber pole icon) since it now lives in the BB dropdown
+3. Adds a Transaction History section to the Profile page itself, so users can view their transactions without leaving their profile
 
 ### Changes
 
-#### File: `src/components/barber/BarberProfileHeader.tsx`
+#### 1. Header BB Dropdown (`src/components/Header.tsx`)
 
-Remove the "Subscribers" stat block entirely (lines 168-171):
+**Replace** the "Transaction History" button with a "Profile" button:
+- Keep "Add Funds" as the first action
+- Replace "Transaction History" with a "Profile" button that navigates to `/profile`
+- Use the `User` icon (already imported) instead of the `History` icon
 
-```
-// REMOVE this block:
-<div className="text-center">
-  <div className="text-xl md:text-3xl font-bold text-white">{stats.subscription_count}</div>
-  <div className="text-xs md:text-sm text-muted-foreground">Subscribers</div>
-</div>
-```
+**Remove** the "Profile" entry from the `quickActions` array (lines 91-96) since it's now accessible from the BB dropdown. The `History` icon import can also be removed.
 
-Also remove `subscription_count` from the `stats` interface (line 20) since it is no longer used anywhere in this component.
+#### 2. Profile Page (`src/pages/Profile.tsx`)
 
-#### File: `src/pages/Profile.tsx`
+**Add** the `TransactionHistory` component below the BB Wallet Widget for fans, and below the barber profile header for barbers. This gives all users easy access to their transaction history directly on their profile page.
 
-Remove the `subscription_count` line from the stats prop passed to `BarberProfileHeader` (line 255):
-
-```
-// REMOVE this line:
-subscription_count: barberStats.subscription_count || 0,
-```
+- Import `TransactionHistory` from `@/components/analytics/TransactionHistory`
+- Render it after the existing wallet/profile sections for both fan and barber views
 
 ### Files Modified
 
 | File | Change |
 |------|--------|
-| `src/components/barber/BarberProfileHeader.tsx` | Remove Subscribers stat block and `subscription_count` from stats interface |
-| `src/pages/Profile.tsx` | Remove `subscription_count` from stats prop |
+| `src/components/Header.tsx` | Replace "Transaction History" with "Profile" in BB dropdown; remove Profile from Quick Actions |
+| `src/pages/Profile.tsx` | Add TransactionHistory component to the profile page |
 
