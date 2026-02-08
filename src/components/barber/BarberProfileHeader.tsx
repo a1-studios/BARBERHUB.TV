@@ -18,7 +18,6 @@ interface BarberProfileHeaderProps {
   stats: {
     follower_count: number;
     like_count: number;
-    subscription_count: number;
     total_donations_cents: number;
   };
   barber_id?: string;
@@ -164,10 +163,6 @@ export function BarberProfileHeader({
               <div className="text-center">
                 <div className="text-xl md:text-3xl font-bold text-white">{stats.like_count}</div>
                 <div className="text-xs md:text-sm text-muted-foreground">Likes</div>
-              </div>
-              <div className="text-center">
-                <div className="text-xl md:text-3xl font-bold text-white">{stats.subscription_count}</div>
-                <div className="text-xs md:text-sm text-muted-foreground">Subscribers</div>
               </div>
               <div className="text-center">
                 <div className="text-xl md:text-3xl font-bold text-primary">${totalDonations}</div>
