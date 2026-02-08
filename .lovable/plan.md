@@ -1,66 +1,68 @@
 
 
-## Smart Search Bar with Location and Autocomplete
+## Pay for Subscriptions with Barber Bucks
 
 ### What Changes
-The search bar on the main dashboard will become much smarter. When a user taps on it, two things will happen:
 
-1. **Location detection** -- The app will ask permission to access your location, then automatically suggest barbers nearby (matching by city/country).
-2. **Autocomplete dropdown** -- As you type, a dropdown will appear showing matching barber names, locations, specialties, and countries already in the database, so you can quickly pick what you're looking for.
+The subscription tier cards will show prices in Barber Bucks (BB) instead of raw USD, and clicking "Subscribe Now" will attempt to pay directly from the user's BB wallet. If the user doesn't have enough BB, the Add Funds modal (BB Store) will pop up so they can top up first.
 
-### How It Will Work
+### Pricing Conversion ($1 = 5 BB)
 
-1. User taps the search bar
-2. A small location button (pin icon) appears -- tapping it triggers the browser's "Allow location access?" prompt
-3. If allowed, the user's country/area is detected and the search pre-fills with their location (e.g., "new york" or "US")
-4. As the user types, a dropdown appears below the search bar showing:
-   - **Barbers** matching the name (with their avatar and location)
-   - **Locations** matching the text (cities/countries from the database)
-   - **Specialties** matching the text (e.g., "beard", "texture", "fades")
-5. Clicking a suggestion navigates directly to the barbers directory with that filter pre-applied
-6. Pressing Enter still works as before, navigating to `/barbers?search=...`
+| Tier | USD/month | BB/month |
+|------|-----------|----------|
+| Bronze | $10 | 50 BB |
+| Silver | $25 | 125 BB |
+| Gold | $50 | 250 BB |
+
+Each card will show the BB price prominently (e.g. "50 BB") with a small "~$10/mo" subtitle for reference.
+
+### New Subscribe Flow
+
+1. User clicks "Subscribe Now" on a tier
+2. System checks their BB balance
+3. **Enough BB** -- A confirmation dialog appears: "Pay 50 BB for Bronze Creator? Your balance: 320 BB" with Confirm/Cancel buttons
+4. On confirm, an edge function deducts the BB and activates the subscription in the database
+5. **Not enough BB** -- A prompt appears showing the shortfall (e.g. "You need 125 BB but only have 40 BB") with a button to open the BB Store (AddFundsModal)
 
 ---
 
 ### Technical Details
 
-#### 1. New Component: `BarberSearchAutocomplete.tsx`
+#### 1. New Edge Function: `subscribe-with-bb`
 
-A new component replacing the current inline search bar in `GlobalLeagueDashboard.tsx`.
+Creates `supabase/functions/subscribe-with-bb/index.ts` that:
+- Authenticates the user
+- Verifies they are a barber
+- Looks up the tier and its BB cost (`price_monthly_cents / 100 * 5`)
+- Checks the user's `barber_bucks` balance
+- If sufficient: deducts BB, records a `barber_bucks_transactions` entry (type: subscription), creates/updates a row in `barber_subscriptions` with status `active`, sets `current_period_start` to now and `current_period_end` to 30 days from now
+- If insufficient: returns an error with the required amount and current balance
+- All done atomically using the service role key
 
-- **State**: `searchQuery`, `isOpen` (dropdown visible), `userLocation` (detected coords/country), `isLocating` (loading state)
-- **Geolocation**: Uses `navigator.geolocation.getCurrentPosition()` to get lat/lng, then reverse-geocodes to a country code using a simple lookup or the Intl API (`Intl.DisplayNames`)
-- **Data query**: Uses the existing `public_barber_profiles` view to build suggestion lists:
-  - Distinct barber names (matching typed text)
-  - Distinct locations (matching typed text)
-  - Distinct specialties (matching typed text)
-  - Distinct country codes (matching typed text)
-- **Dropdown UI**: Built with the existing `Command` (cmdk) component for accessible, keyboard-navigable autocomplete with grouped sections (Barbers, Locations, Specialties)
-- **Navigation**: Selecting a suggestion navigates to `/barbers?search=<value>` or `/barbers?country=<code>`
+#### 2. Modify `BarberSubscriptionTiers.tsx`
 
-#### 2. Modify `GlobalLeagueDashboard.tsx`
+- Import `useBarberBucks` hook to get current balance and `setShowAddFundsModal`
+- Import `AddFundsModal` component
+- Convert displayed price from cents to BB: `const bbPrice = (tier.price_monthly_cents / 100) * 5`
+- Replace the USD price display with BB price + small USD reference text
+- Replace `handleSubscribe` logic:
+  - Instead of calling `create-barber-subscription` (Stripe), show an inline confirmation step
+  - Add state: `confirmingTier` (which tier is being confirmed), `showAddFunds` (boolean)
+  - If balance >= bbPrice: show confirmation dialog
+  - If balance < bbPrice: show insufficient funds message with "Add Funds" button
+  - On confirm: call the new `subscribe-with-bb` edge function
+  - On success: invalidate queries, show success toast, close modal
+- Add a "Your Balance: X BB" indicator at the top of the tiers section
+- Render `AddFundsModal` with the `pausedForFunds` pattern (same as DonationModal) so it layers properly
 
-- Remove the current inline search input/button
-- Import and render the new `BarberSearchAutocomplete` component in its place
-- Keep the same pill-shaped, minimal styling
+#### 3. Modify `UpgradePrompt.tsx`
 
-#### 3. Modify `BarbersDirectory.tsx`
-
-- Read `?search=` and `?country=` URL params on mount to pre-populate filters
-- This ensures suggestions from the dashboard carry through correctly
-
-#### 4. Location Flow
-
-- On first focus of the search bar, a small MapPin button pulses to invite the user to share location
-- On click, calls `navigator.geolocation.getCurrentPosition()`
-- Success: determines country from coordinates (using a lightweight reverse-geocode approach via timezone/locale or a free API)
-- The detected location auto-fills the search, showing nearby barbers first
-- If denied: no error shown, the user just types manually
+- Update the quick-preview cards in the grid to show BB prices instead of battle counts (e.g. "50 BB/mo" instead of "3 battles/mo") for consistency
 
 #### Files Created
-- `src/components/BarberSearchAutocomplete.tsx` -- new autocomplete search component
+- `supabase/functions/subscribe-with-bb/index.ts`
 
 #### Files Modified
-- `src/components/GlobalLeagueDashboard.tsx` -- swap inline search for the new component
-- `src/pages/BarbersDirectory.tsx` -- read URL params to pre-apply filters from search suggestions
+- `src/components/barber/BarberSubscriptionTiers.tsx` -- BB pricing display, confirmation flow, insufficient funds prompt, AddFundsModal integration
+- `src/components/barber/UpgradePrompt.tsx` -- Update quick preview cards to show BB prices
 
