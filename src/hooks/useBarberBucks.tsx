@@ -83,7 +83,8 @@ export const useBarberBucks = () => {
     }
   });
 
-  // Purchase barber bucks via Stripe
+  // Purchase barber bucks via Stripe — returns { url, session_id, bb_amount }
+  // Caller is responsible for navigation (window.location.href)
   const purchaseBucks = useMutation({
     mutationFn: async (packageAmount: number) => {
       if (!user) throw new Error("Not authenticated");
@@ -96,17 +97,6 @@ export const useBarberBucks = () => {
       if (!data?.url) throw new Error("No checkout URL returned");
 
       return data;
-    },
-    onSuccess: (data) => {
-      toast.message("Redirecting to Stripe checkout...");
-      
-      // Try opening in new tab with actual URL
-      const popup = window.open(data.url, "_blank", "noopener,noreferrer");
-      
-      if (!popup || popup.closed) {
-        // If popup blocked, redirect current window
-        window.location.href = data.url;
-      }
     },
     onError: (error: any) => {
       toast.error(error.message || "Failed to initiate purchase");
