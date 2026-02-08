@@ -8,6 +8,7 @@ import { useCategoryTopBarbers } from '@/hooks/useCategoryTopBarbers';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useAuth } from '@/hooks/useAuth';
 import { ImmersiveBannerCard } from './ImmersiveBannerCard';
+import { ArenaTicker } from './ArenaTicker';
 import { AddFundsModal } from '@/components/AddFundsModal';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -172,33 +173,11 @@ export const ImmersiveFactionBanners = () => {
       
       <div className="container mx-auto px-4 relative z-10">
         {/* Section header — universal */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="flex items-center justify-between mb-6"
-        >
-          <div>
-            <h3
-              className="text-sm sm:text-base font-black uppercase tracking-widest text-cyan"
-              style={{ textShadow: '0 0 12px hsl(187 100% 50% / 0.4)' }}
-            >
-              Top Arenas
-            </h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              See who's dominating right now
-            </p>
-          </div>
-          {!isBarber && (
-            <button
-              onClick={() => navigate('/portal')}
-              className="text-xs font-semibold text-cyan hover:text-cyan/80 transition-colors flex items-center gap-1"
-            >
-              See All
-              <span aria-hidden>→</span>
-            </button>
-          )}
-        </motion.div>
+        <ArenaTicker
+          prizePools={prizePools}
+          isBarber={isBarber}
+          onNavigate={(path) => navigate(path)}
+        />
 
         {/* Banners Row */}
         <motion.div
