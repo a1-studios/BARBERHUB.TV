@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { BarberSubscriptionTiers } from './BarberSubscriptionTiers';
+import { AddFundsModal } from '@/components/AddFundsModal';
 import { useState } from 'react';
 
 const TIER_LIMITS = {
@@ -23,6 +24,7 @@ export const SubscriptionStatusCard = () => {
   const { user } = useAuth();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [pausedForFunds, setPausedForFunds] = useState(false);
+  const [showAddFunds, setShowAddFunds] = useState(false);
 
   const { data: subscription } = useQuery({
     queryKey: ['barberSubscription', user?.id],
@@ -70,6 +72,16 @@ export const SubscriptionStatusCard = () => {
   const battlesRemaining = Math.max(0, battlesLimit - battlesUsed);
   const usagePercentage = Math.min(100, (battlesUsed / battlesLimit) * 100);
   const isUnlimited = battlesLimit >= 9999;
+
+  const handleShowAddFunds = () => {
+    setPausedForFunds(true);
+    setShowAddFunds(true);
+  };
+
+  const handleCloseAddFunds = () => {
+    setShowAddFunds(false);
+    setPausedForFunds(false);
+  };
 
   return (
     <>
@@ -170,9 +182,11 @@ export const SubscriptionStatusCard = () => {
           <DialogHeader>
             <DialogTitle>Upgrade Your Subscription</DialogTitle>
           </DialogHeader>
-          <BarberSubscriptionTiers onFundsModalStateChange={setPausedForFunds} />
+          <BarberSubscriptionTiers onShowAddFunds={handleShowAddFunds} />
         </DialogContent>
       </Dialog>
+
+      <AddFundsModal isOpen={showAddFunds} onClose={handleCloseAddFunds} />
     </>
   );
 };

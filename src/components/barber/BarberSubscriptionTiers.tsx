@@ -7,7 +7,6 @@ import { Check, Loader2, Crown, Star, Sparkles, Coins } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useBarberBucks } from "@/hooks/useBarberBucks";
-import { AddFundsModal } from "@/components/AddFundsModal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,22 +31,15 @@ const tierColors = {
 };
 
 interface BarberSubscriptionTiersProps {
-  onFundsModalStateChange?: (isOpen: boolean) => void;
+  onShowAddFunds?: () => void;
 }
 
-export const BarberSubscriptionTiers = ({ onFundsModalStateChange }: BarberSubscriptionTiersProps) => {
+export const BarberSubscriptionTiers = ({ onShowAddFunds }: BarberSubscriptionTiersProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { barberBucks, isLoading: bbLoading } = useBarberBucks();
   const [processingTier, setProcessingTier] = useState<string | null>(null);
   const [confirmingTier, setConfirmingTier] = useState<{ id: string; name: string; displayName: string; bbPrice: number } | null>(null);
-  const [showAddFunds, setShowAddFunds] = useState(false);
-
-  // Notify parent when funds modal opens/closes so it can pause its Dialog
-  const handleShowAddFunds = (open: boolean) => {
-    setShowAddFunds(open);
-    onFundsModalStateChange?.(open);
-  };
 
   const { data: tiers, isLoading: loadingTiers } = useQuery({
     queryKey: ['subscription-tiers'],
@@ -93,7 +85,7 @@ export const BarberSubscriptionTiers = ({ onFundsModalStateChange }: BarberSubsc
     } else {
       const shortfall = bbPrice - barberBucks;
       toast.info(`You need ${shortfall} more BB to subscribe to ${displayName}`);
-      handleShowAddFunds(true);
+      onShowAddFunds?.();
     }
   };
 
@@ -113,7 +105,7 @@ export const BarberSubscriptionTiers = ({ onFundsModalStateChange }: BarberSubsc
       if (data?.error === 'insufficient_funds') {
         const shortfall = (data.required || 0) - (data.balance || 0);
         toast.info(`You need ${shortfall} more BB. Top up to subscribe!`);
-        handleShowAddFunds(true);
+        onShowAddFunds?.();
         return;
       }
 
@@ -278,12 +270,6 @@ export const BarberSubscriptionTiers = ({ onFundsModalStateChange }: BarberSubsc
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-
-
-
-      {/* Add Funds Modal */}
-      <AddFundsModal isOpen={showAddFunds} onClose={() => handleShowAddFunds(false)} />
     </div>
   );
 };

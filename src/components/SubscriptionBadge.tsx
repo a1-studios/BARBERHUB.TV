@@ -4,6 +4,7 @@ import { Crown, Sparkles, Star, Shield, ArrowUpCircle } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { BarberSubscriptionTiers } from '@/components/barber/BarberSubscriptionTiers';
+import { AddFundsModal } from '@/components/AddFundsModal';
 
 interface SubscriptionBadgeProps {
   tier: string | null | undefined;
@@ -46,6 +47,7 @@ const TIER_CONFIG = {
 export const SubscriptionBadge = ({ tier, size = 'md', showTooltip = true, interactive = false }: SubscriptionBadgeProps) => {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [pausedForFunds, setPausedForFunds] = useState(false);
+  const [showAddFunds, setShowAddFunds] = useState(false);
   
   const tierKey = (tier?.toLowerCase() || 'free') as keyof typeof TIER_CONFIG;
   const config = TIER_CONFIG[tierKey] || TIER_CONFIG.free;
@@ -67,6 +69,16 @@ export const SubscriptionBadge = ({ tier, size = 'md', showTooltip = true, inter
     if (interactive && config.canUpgrade) {
       setShowUpgradeModal(true);
     }
+  };
+
+  const handleShowAddFunds = () => {
+    setPausedForFunds(true);
+    setShowAddFunds(true);
+  };
+
+  const handleCloseAddFunds = () => {
+    setShowAddFunds(false);
+    setPausedForFunds(false);
   };
 
   const badge = (
@@ -111,14 +123,18 @@ export const SubscriptionBadge = ({ tier, size = 'md', showTooltip = true, inter
       ) : badge}
 
       {interactive && (
-        <Dialog open={showUpgradeModal && !pausedForFunds} onOpenChange={setShowUpgradeModal}>
-          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Upgrade Your Subscription</DialogTitle>
-            </DialogHeader>
-            <BarberSubscriptionTiers onFundsModalStateChange={setPausedForFunds} />
-          </DialogContent>
-        </Dialog>
+        <>
+          <Dialog open={showUpgradeModal && !pausedForFunds} onOpenChange={setShowUpgradeModal}>
+            <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Upgrade Your Subscription</DialogTitle>
+              </DialogHeader>
+              <BarberSubscriptionTiers onShowAddFunds={handleShowAddFunds} />
+            </DialogContent>
+          </Dialog>
+
+          <AddFundsModal isOpen={showAddFunds} onClose={handleCloseAddFunds} />
+        </>
       )}
     </>
   );
