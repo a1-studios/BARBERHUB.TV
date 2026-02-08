@@ -124,3 +124,6 @@ verify_jwt = false
 
 [functions.sovereign-system-control]
 verify_jwt = false
+
+[functions.subscribe-with-bb]
+verify_jwt = false

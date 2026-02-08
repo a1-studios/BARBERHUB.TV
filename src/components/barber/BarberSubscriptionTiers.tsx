@@ -1,11 +1,23 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Loader2, Crown, Star, Sparkles } from "lucide-react";
+import { Check, Loader2, Crown, Star, Sparkles, Coins, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { useBarberBucks } from "@/hooks/useBarberBucks";
+import { AddFundsModal } from "@/components/AddFundsModal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const tierIcons = {
   bronze: Star,
@@ -21,7 +33,12 @@ const tierColors = {
 
 export const BarberSubscriptionTiers = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { barberBucks, isLoading: bbLoading } = useBarberBucks();
   const [processingTier, setProcessingTier] = useState<string | null>(null);
+  const [confirmingTier, setConfirmingTier] = useState<{ id: string; name: string; displayName: string; bbPrice: number } | null>(null);
+  const [showAddFunds, setShowAddFunds] = useState(false);
+  const [insufficientInfo, setInsufficientInfo] = useState<{ required: number; balance: number } | null>(null);
 
   const { data: tiers, isLoading: loadingTiers } = useQuery({
     queryKey: ['subscription-tiers'],
@@ -54,27 +71,51 @@ export const BarberSubscriptionTiers = () => {
     enabled: !!user
   });
 
-  const handleSubscribe = async (tierId: string, tierName: string) => {
+  const handleSubscribeClick = (tierId: string, tierName: string, displayName: string, priceCents: number) => {
     if (!user) {
       toast.error("Please sign in to subscribe");
       return;
     }
 
-    setProcessingTier(tierName);
-    
+    const bbPrice = Math.round((priceCents / 100) * 5);
+
+    if (barberBucks >= bbPrice) {
+      // Show confirmation dialog
+      setConfirmingTier({ id: tierId, name: tierName, displayName, bbPrice });
+    } else {
+      // Show insufficient funds
+      setInsufficientInfo({ required: bbPrice, balance: barberBucks });
+    }
+  };
+
+  const handleConfirmSubscribe = async () => {
+    if (!confirmingTier || !user) return;
+
+    setProcessingTier(confirmingTier.name);
+    setConfirmingTier(null);
+
     try {
-      const { data, error } = await supabase.functions.invoke('create-barber-subscription', {
-        body: { tier_id: tierId }
+      const { data, error } = await supabase.functions.invoke('subscribe-with-bb', {
+        body: { tier_id: confirmingTier.id }
       });
 
       if (error) throw error;
 
-      if (data.url) {
-        window.location.href = data.url;
+      if (data?.error === 'insufficient_funds') {
+        setInsufficientInfo({ required: data.required, balance: data.balance });
+        return;
       }
+
+      if (data?.error) throw new Error(data.error);
+
+      toast.success(`🎉 Subscribed to ${data.display_name}! ${data.bb_spent} BB deducted.`);
+      queryClient.invalidateQueries({ queryKey: ['current-subscription'] });
+      queryClient.invalidateQueries({ queryKey: ['barber_bucks'] });
+      queryClient.invalidateQueries({ queryKey: ['subscription-tiers'] });
     } catch (error: any) {
       console.error('Subscription error:', error);
-      toast.error(error.message || "Failed to create subscription");
+      toast.error(error.message || "Failed to subscribe");
+    } finally {
       setProcessingTier(null);
     }
   };
@@ -115,12 +156,25 @@ export const BarberSubscriptionTiers = () => {
         </p>
       </div>
 
+      {/* Balance indicator */}
+      <div className="flex items-center justify-center gap-2 py-2 px-4 bg-muted/30 rounded-lg border border-border/30 mx-auto w-fit">
+        <Coins className="h-4 w-4 text-primary" />
+        <span className="text-sm font-medium">
+          Your Balance:{" "}
+          <span className="text-primary font-bold">
+            {bbLoading ? "..." : `${barberBucks} BB`}
+          </span>
+        </span>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {tiers?.map((tier) => {
           const Icon = tierIcons[tier.tier_name.toLowerCase() as keyof typeof tierIcons];
           const colorClass = tierColors[tier.tier_name.toLowerCase() as keyof typeof tierColors];
           const isCurrentTier = currentSubscription?.tier_id === tier.id;
           const features = tier.features as any[];
+          const bbPrice = Math.round((tier.price_monthly_cents / 100) * 5);
+          const usdPrice = (tier.price_monthly_cents / 100).toFixed(0);
 
           return (
             <Card 
@@ -131,10 +185,10 @@ export const BarberSubscriptionTiers = () => {
                 <Icon className={`h-12 w-12 mx-auto ${colorClass}`} />
                 <h3 className="text-2xl font-bold">{tier.display_name}</h3>
                 <div className="space-y-1">
-                  <p className="text-4xl font-bold">
-                    ${(tier.price_monthly_cents / 100).toFixed(2)}
+                  <p className="text-4xl font-bold text-primary">
+                    {bbPrice} <span className="text-xl">BB</span>
                   </p>
-                  <p className="text-sm text-muted-foreground">per month</p>
+                  <p className="text-sm text-muted-foreground">~${usdPrice}/month</p>
                 </div>
               </div>
 
@@ -157,7 +211,7 @@ export const BarberSubscriptionTiers = () => {
                 </Button>
               ) : (
                 <Button
-                  onClick={() => handleSubscribe(tier.id, tier.tier_name)}
+                  onClick={() => handleSubscribeClick(tier.id, tier.tier_name, tier.display_name, tier.price_monthly_cents)}
                   disabled={processingTier === tier.tier_name}
                   className="w-full"
                 >
@@ -167,7 +221,7 @@ export const BarberSubscriptionTiers = () => {
                       Processing...
                     </>
                   ) : (
-                    'Subscribe Now'
+                    `Subscribe for ${bbPrice} BB`
                   )}
                 </Button>
               )}
@@ -184,6 +238,67 @@ export const BarberSubscriptionTiers = () => {
           )}
         </div>
       )}
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={!!confirmingTier} onOpenChange={() => setConfirmingTier(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Subscription</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  Pay <span className="font-bold text-primary">{confirmingTier?.bbPrice} BB</span> for{" "}
+                  <span className="font-semibold">{confirmingTier?.displayName}</span>?
+                </p>
+                <p>
+                  Your balance: <span className="font-bold text-primary">{barberBucks} BB</span>
+                  {confirmingTier && (
+                    <> → <span className="font-bold">{barberBucks - confirmingTier.bbPrice} BB</span> after</>
+                  )}
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmSubscribe}>
+              Confirm Payment
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Insufficient Funds Dialog */}
+      <AlertDialog open={!!insufficientInfo} onOpenChange={() => setInsufficientInfo(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Insufficient Barber Bucks
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  You need <span className="font-bold text-primary">{insufficientInfo?.required} BB</span> but only have{" "}
+                  <span className="font-bold">{insufficientInfo?.balance} BB</span>.
+                </p>
+                <p>
+                  Top up <span className="font-bold text-primary">{(insufficientInfo?.required ?? 0) - (insufficientInfo?.balance ?? 0)} BB</span> more to subscribe.
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { setInsufficientInfo(null); setShowAddFunds(true); }}>
+              Add Funds
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Add Funds Modal */}
+      <AddFundsModal isOpen={showAddFunds} onClose={() => setShowAddFunds(false)} />
     </div>
   );
 };
