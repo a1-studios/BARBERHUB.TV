@@ -28,6 +28,7 @@ import BarberDashboard from '@/components/barber/BarberDashboard';
 import { BarberSettings } from '@/components/profiles/BarberSettings';
 import { AvatarUpload } from '@/components/profiles/AvatarUpload';
 import { BarberProfileHeader } from '@/components/barber/BarberProfileHeader';
+import { TransactionHistory } from '@/components/analytics/TransactionHistory';
 const Profile = () => {
   const {
     user
@@ -293,8 +294,14 @@ const Profile = () => {
                           disabled={!isEditing} 
                           className="w-full" 
                         />
-                      </div>
-                      
+            </div>
+
+            {/* Transaction History for barbers */}
+            {isBarber && (
+              <div className="mb-6">
+                <TransactionHistory />
+              </div>
+            )}
                       <div className="space-y-2">
                         <Label htmlFor="username">Username</Label>
                         <Input 
@@ -364,7 +371,11 @@ const Profile = () => {
                 </CardContent>
               </Card>
             )}
-            
+
+            {/* Transaction History for fans */}
+            {!isBarber && (
+              <TransactionHistory />
+            )}
             {/* BB Wallet Widget - For fans only (barbers have it in header) */}
             {!isBarber && (
               <BBWalletWidget
