@@ -204,15 +204,6 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
         </AnimatePresence>
       </div>
 
-      {/* Bottom progress shimmer */}
-      <motion.div
-        key={`progress-${activeIndex}`}
-        className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-cyan/40 via-primary/60 to-cyan/40 origin-left"
-        initial={{ scaleX: 0 }}
-        animate={{ scaleX: 1 }}
-        transition={{ duration: INTERVAL_MS / 1000, ease: 'linear' }}
-      />
-
     </div>
   );
 };
