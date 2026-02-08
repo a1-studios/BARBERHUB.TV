@@ -1,90 +1,76 @@
 
 
-## Full Audit and Fix: BB Store Freezing and Purchase Flow
+## Allow Profile Editing While Keeping Country Locked
 
-### Root Cause Found
+### What This Does
+Makes all profile fields (display name, username, bio, avatar) editable for both barbers and fans, while ensuring the country/flag can never be changed after sign-up. This enforces the platform rule that nationality is permanent for tournament integrity.
 
-The BB Store (AddFundsModal) freezes because it is rendered **inside** `BarberSubscriptionTiers`, which itself lives **inside** a Radix UI Dialog. When the "pausedForFunds" pattern closes the parent Dialog to release its pointer-event lock, Radix unmounts the Dialog's content -- including `BarberSubscriptionTiers` and its child `AddFundsModal`. The modal briefly appears on screen via portal, then immediately unmounts or becomes part of a dead React tree, making it completely unclickable.
+### Current Issues Found
 
-Compare with `DonationModal`, which works correctly: it renders `AddFundsModal` as a **sibling outside** the Dialog, so when the Dialog pauses, the AddFundsModal survives.
+1. **Fan profile page**: The country selector becomes editable when the user clicks "Edit Profile" -- it should always be locked
+2. **Fan profile page**: The save mutation sends `country_code` to the database, so even though the UI locks it, the data payload could overwrite it
+3. **Barber settings page**: The country selector is visually locked (good), but both mutations still include `country_code` in the update payload -- a safety hole
+4. **Fan profile page**: The duplicate username error is already handled with a toast, but the error message from the screenshot ("duplicate key value violates unique constraint") suggests the specific handler might not be catching all cases
 
-### Stripe Edge Function Status
+### Changes
 
-The `purchase-barber-bucks` edge function is healthy and working. Logs show successful Stripe checkout session creation. The CORS headers were already fixed. The `STRIPE_SECRET_KEY` secret is configured. The problem is purely on the frontend -- clicks never reach the edge function because the modal is frozen.
+#### 1. Fan Profile Page (`src/pages/Profile.tsx`)
 
-### The Fix (3 parts)
+- Lock the country selector permanently (always `disabled={true}`, regardless of edit mode)
+- Add the "Locked" badge and helper text matching the barber settings style
+- Remove `country_code` from the mutation payload so it is never sent to the database on save
+- Improve the duplicate username error handler to also catch the raw constraint message
 
-#### Part 1: Harden AddFundsModal itself
+#### 2. Barber Settings (`src/components/profiles/BarberSettings.tsx`)
 
-Add `pointer-events: auto` as an inline style on the AddFundsModal's portal container div. This overrides any `pointer-events: none` that Radix Dialog sets on `document.body`, providing a safety net even if the pausedForFunds pattern has timing issues.
+- **Profile mutation**: Instead of sending the full `data` object (which includes `country_code`), explicitly send only `display_name`, `username`, `bio`, and `avatar_url` -- exclude `country_code`
+- **Barber mutation**: Remove `country_code` from the barber data payload so it cannot be overwritten
+- Remove the secondary barber_profiles country sync logic (no longer needed since country never changes)
+- Add duplicate username error handling (same pattern as the fan profile)
 
-**File: `src/components/AddFundsModal.tsx`**
-- Add `style={{ pointerEvents: 'auto' }}` to the outermost `<div>` inside the portal (the fixed overlay)
+### Technical Details
 
-#### Part 2: Move AddFundsModal out of BarberSubscriptionTiers
+**Profile.tsx mutation change:**
+```
+// Before (sends country_code)
+.update({ display_name, bio, username, country_code })
 
-The core fix. `BarberSubscriptionTiers` should NOT render `AddFundsModal` itself, because it lives inside a Dialog that can unmount it. Instead, it signals to its parent that it needs funds.
-
-**File: `src/components/barber/BarberSubscriptionTiers.tsx`**
-- Remove the `<AddFundsModal>` render at line 286
-- Remove the `AddFundsModal` import
-- Rename the `onFundsModalStateChange` prop to `onShowAddFunds` (clearer intent) -- a callback the parent uses to show its own AddFundsModal
-- When insufficient funds are detected (in `handleSubscribeClick` or `handleConfirmSubscribe`), call `onShowAddFunds?.()` instead of `setShowAddFunds(true)`
-- Remove the local `showAddFunds` state and `handleShowAddFunds` helper entirely
-
-#### Part 3: Update all 3 parent components
-
-Each parent component that wraps `BarberSubscriptionTiers` in a Dialog needs to:
-1. Add its own `showAddFunds` state
-2. Render its own `AddFundsModal` **outside** the Dialog (as a sibling)
-3. When AddFundsModal opens, pause the Dialog (same pattern as DonationModal)
-4. When AddFundsModal closes, resume the Dialog
-
-**File: `src/components/SubscriptionBadge.tsx`**
-- Add `showAddFunds` state
-- Import and render `AddFundsModal` outside the Dialog
-- Set Dialog `open={showUpgradeModal && !pausedForFunds}`
-- Pass `onShowAddFunds` callback to `BarberSubscriptionTiers` that sets `showAddFunds = true` and `pausedForFunds = true`
-- On AddFundsModal close, set both back to false
-
-**File: `src/components/barber/SubscriptionStatusCard.tsx`**
-- Same pattern as above
-
-**File: `src/components/barber/UpgradePrompt.tsx`**
-- Same pattern as above
-
-### Why This Works
-
-This mirrors the proven `DonationModal` pattern:
-```text
-DonationModal (working):
-  <>
-    <Dialog open={isOpen && !pausedForFunds}>  // pauses when funds modal opens
-      ...dialog content...
-    </Dialog>
-    <AddFundsModal />  // lives OUTSIDE the Dialog, survives unmount
-  </>
-
-SubscriptionBadge (after fix):
-  <>
-    <Dialog open={showUpgradeModal && !pausedForFunds}>
-      <BarberSubscriptionTiers onShowAddFunds={...} />
-    </Dialog>
-    <AddFundsModal />  // lives OUTSIDE the Dialog, survives unmount
-  </>
+// After (excludes country_code)
+.update({ display_name, bio, username })
 ```
 
-### Files Modified (4 total)
+**Profile.tsx country field change:**
+```
+// Before (editable in edit mode)
+<CountrySelector disabled={!isEditing} onChange={...} />
+
+// After (always locked)
+<Label>Country <Badge>Locked</Badge></Label>
+<CountrySelector disabled={true} onChange={() => {}} />
+<p>Nationality is permanently set during sign-up</p>
+```
+
+**BarberSettings.tsx profile mutation change:**
+```
+// Before (sends everything including country_code)
+.update(data)
+
+// After (explicit fields, no country_code)  
+.update({ display_name: data.display_name, username: data.username, bio: data.bio, avatar_url: data.avatar_url })
+```
+
+**BarberSettings.tsx barber mutation change:**
+```
+// Before
+country_code: data.country_code  // included in barberData
+
+// After
+// country_code line removed from barberData object
+```
+
+### Files Modified
 
 | File | Change |
 |------|--------|
-| `src/components/AddFundsModal.tsx` | Add `pointer-events: auto` safety net |
-| `src/components/barber/BarberSubscriptionTiers.tsx` | Remove AddFundsModal, change prop to `onShowAddFunds` callback |
-| `src/components/SubscriptionBadge.tsx` | Add own AddFundsModal outside Dialog, wire pausedForFunds |
-| `src/components/barber/SubscriptionStatusCard.tsx` | Same pattern |
-| `src/components/barber/UpgradePrompt.tsx` | Same pattern |
-
-### Edge Function: No changes needed
-
-The `purchase-barber-bucks` edge function is confirmed working (CORS fixed, Stripe session creation successful, secrets configured). Once the frontend modal is interactive, the full purchase flow will work: click package -> edge function creates Stripe checkout -> user redirected to Stripe -> payment processed -> BB credited via webhook.
-
+| `src/pages/Profile.tsx` | Lock country field, remove country_code from mutation, improve error handling |
+| `src/components/profiles/BarberSettings.tsx` | Remove country_code from both mutation payloads, add username error handling |
