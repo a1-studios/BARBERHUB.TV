@@ -1,29 +1,20 @@
 
 
-## Fix: Add Small Gap to Prevent Header-Video Overlap
+## Fix: Increase Header-Video Spacing One More Step
 
 ### Problem
 
-The header uses `mt-2` (8px margin-top) and a 2px border, making its total height ~76px on mobile and ~88px on desktop. The current spacer (`h-16 sm:h-20` = 64px / 80px) doesn't fully clear the header, causing the battle arena to overlap slightly.
+The current spacer (`h-20 sm:h-24`) still doesn't provide enough clearance between the header and the battle arena video.
 
 ### Solution
 
-Bump the spacer height up by one Tailwind step:
+Bump the spacer up by the same increment as last time (one Tailwind step = +16px):
 
-- Change `h-16 sm:h-20` to `h-20 sm:h-24` (80px / 96px)
-
-This adds just enough clearance (~4-8px gap) without reintroducing the large gap from before.
+- Change `h-20 sm:h-24` to `h-24 sm:h-28` (96px / 112px)
 
 ### Changes
 
 | File | Change |
 |------|--------|
-| `src/pages/Index.tsx` | Change header spacer from `h-16 sm:h-20` to `h-20 sm:h-24` |
-
-### Visual Result
-
-```text
-Before (overlapping): Header (76px) vs Spacer (64px) = -12px overlap
-After:                 Header (76px) vs Spacer (80px) =  +4px gap
-```
+| `src/pages/Index.tsx` | Change header spacer from `h-20 sm:h-24` to `h-24 sm:h-28` |
 
