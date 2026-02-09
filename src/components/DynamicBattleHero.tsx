@@ -312,14 +312,6 @@ export const DynamicBattleHero = () => {
           {/* VS - Floating centered with rotating frame and lightning flash every 3s */}
           {!(isMobile && isActiveBattle && !isCurrentUserInBattle) && <>
               {/* LIVE Badge - absolute positioned */}
-              {isActiveBattle && <motion.div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-red-500/90" animate={{
-            scale: [1, 1.05, 1]
-          }} transition={{
-            duration: 0.8,
-            repeat: Infinity
-          }}>
-                  <div className="w-1.5 h-1.5 bg-white rounded-full" />
-                </motion.div>}
               
               {/* VS Container - absolute centered between videos */}
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center justify-center">
