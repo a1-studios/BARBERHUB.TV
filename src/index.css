@@ -80,6 +80,8 @@
     @apply bg-background text-foreground font-['Poppins',sans-serif];
     background-image: var(--gradient-primary);
     min-height: 100vh;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
   }
 
   h1, h2, h3, h4, h5, h6 {

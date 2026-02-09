@@ -196,10 +196,10 @@ export const DynamicBattleHero = () => {
             toast.success(`Vote for ${barberName} recorded!`);
           }
         } else {
-          toast.success(`Vote for ${barberName} recorded!`);
+          toast.info("No submission found for this barber yet");
         }
       } catch {
-        toast.success(`Vote for ${barberName} recorded!`);
+        toast.error("Failed to submit vote");
       }
     }
   };
@@ -242,8 +242,6 @@ export const DynamicBattleHero = () => {
   const isVotingPhase = battle?.status === 'voting';
   const isActiveBattle = isLiveBattle || isVotingPhase;
   
-  // Demo mode when no real voting battle exists - allows users to see the UI
-  const showDemoMode = !battle || (!isVotingPhase && displayBarbers.length >= 2);
   
   const isBarber1CurrentUser = currentUserBarberPosition === 1;
   const isBarber2CurrentUser = currentUserBarberPosition === 2;
@@ -300,7 +298,7 @@ export const DynamicBattleHero = () => {
                   <ArenaActionBar
                     barber={barber1}
                     variant="primary"
-                    showVote={(isVotingPhase || showDemoMode) && !isCurrentUserInBattle}
+                    showVote={isVotingPhase && !isCurrentUserInBattle}
                     onVote={() => { setVoted1(true); handleVote(1); }}
                     hasVoted={voted1}
                   />
@@ -405,7 +403,7 @@ export const DynamicBattleHero = () => {
                   <ArenaActionBar
                     barber={barber2}
                     variant="cyan"
-                    showVote={(isVotingPhase || showDemoMode) && !isCurrentUserInBattle}
+                    showVote={isVotingPhase && !isCurrentUserInBattle}
                     onVote={() => { setVoted2(true); handleVote(2); }}
                     hasVoted={voted2}
                   />
@@ -416,8 +414,8 @@ export const DynamicBattleHero = () => {
         </div>
 
 
-        {/* Thin Progress Bar at Bottom - show in demo mode too */}
-        {(isActiveBattle || showDemoMode) && <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50 flex">
+        {/* Thin Progress Bar at Bottom - only during active/voting battles */}
+        {isActiveBattle && <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/50 flex">
             <div className="h-full bg-gradient-to-r from-orange-500 to-primary transition-all duration-500" style={{
           width: `${barber1Percent}%`
         }} />

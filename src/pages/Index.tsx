@@ -10,14 +10,12 @@ import { GlobalLeagueDashboard } from "@/components/GlobalLeagueDashboard";
 
 import { LiveBarberStreams } from "@/components/battles/LiveBarberStreams";
 import { useAuth } from "@/hooks/useAuth";
-import { useUserRole } from "@/hooks/useUserRole";
 import { FEATURES } from "@/config/features";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { ImmersiveFactionBanners } from "@/components/factions/ImmersiveFactionBanners";
 
 const Index = () => {
   const { user, loading } = useAuth();
-  const { isBarber } = useUserRole();
 
   if (loading) {
     return (
