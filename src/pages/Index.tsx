@@ -32,7 +32,7 @@ const Index = () => {
       <Header />
       
       {/* Spacer for fixed header */}
-      <div className="h-20 sm:h-24" />
+      <div className="h-24 sm:h-28" />
       
       {/* Content gated behind authentication */}
       {user ? (
