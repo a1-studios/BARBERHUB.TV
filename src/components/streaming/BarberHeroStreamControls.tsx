@@ -115,10 +115,6 @@ export const BarberHeroStreamControls = ({
           </Button>
         </div>
         
-        {/* Your side indicator */}
-        <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[8px] font-bold px-1.5 py-0.5 rounded-full">
-          YOUR SIDE
-        </div>
       </div>
     );
   }
