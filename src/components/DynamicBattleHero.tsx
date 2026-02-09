@@ -213,7 +213,7 @@ export const DynamicBattleHero = () => {
 
   // Loading state
   if (battleLoading || barbersLoading) {
-    return <div className="pt-8 sm:pt-12 pb-8 px-4 max-w-7xl mx-auto">
+  return <div className="pt-1 sm:pt-2 pb-8 px-4 max-w-7xl mx-auto">
         <Skeleton className="aspect-video w-full rounded-2xl" />
       </div>;
   }
@@ -228,7 +228,7 @@ export const DynamicBattleHero = () => {
 
   // If no barbers at all
   if (displayBarbers.length < 2) {
-    return <div className="pt-8 sm:pt-12 pb-8 px-4 max-w-7xl mx-auto">
+    return <div className="pt-1 sm:pt-2 pb-8 px-4 max-w-7xl mx-auto">
         <div className="aspect-video bg-card rounded-2xl shadow-2xl border-2 border-primary/50 flex items-center justify-center">
           <p className="text-muted-foreground">No barbers to showcase yet</p>
         </div>
@@ -252,7 +252,7 @@ export const DynamicBattleHero = () => {
   // Calculate vote percentages for progress bar
   const totalVotes = (viewerData.barber1 || 0) + (viewerData.barber2 || 0);
   const barber1Percent = totalVotes > 0 ? (viewerData.barber1 || 0) / totalVotes * 100 : 50;
-  return <div className="pt-8 sm:pt-12 pb-0 px-0 sm:px-4 max-w-[100vw] sm:max-w-5xl lg:max-w-6xl mx-auto">
+  return <div className="pt-1 sm:pt-2 pb-0 px-0 sm:px-4 max-w-[100vw] sm:max-w-5xl lg:max-w-6xl mx-auto">
       {/* Full viewport height on mobile, fixed aspect ratio on larger screens */}
       <div className="w-full h-[calc(100vh-5rem)] sm:h-auto sm:aspect-[2/1] lg:aspect-[21/9] bg-card sm:rounded-xl shadow-2xl border-0 sm:border border-cyan/20 overflow-hidden relative">
         
