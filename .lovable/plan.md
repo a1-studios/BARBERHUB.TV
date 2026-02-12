@@ -1,100 +1,85 @@
 
 
-## Transform VS into Pulsing Swords Battle Gateway for Barbers
+## Horizontal Lightning Crack on Mobile
 
-### Concept
+### Problem
 
-The VS divider already pulses with a lightning flash every 3 seconds. For barbers, we replace that cycle: the VS text cross-fades to a **pulsing Swords icon** for 3 seconds, then back to VS, repeating. No cursor change -- the Swords pulse itself is the visual cue. When a barber taps it, a bottom Drawer opens with battle options. Fans see the original VS animation unchanged.
+The split-screen layout stacks **vertically** on mobile (`flex-col`) -- Barber 1 on top, Barber 2 on bottom. The VS divider sits at the horizontal seam between them. A vertical lightning bolt would look wrong here; the crack needs to run **horizontally** across the screen to match the natural split direction.
 
-### Animation Cycle (Barbers Only)
-
-```text
-0s-5s:    "VS" text (normal lightning flash animation)
-5s-8s:    Swords icon fades in, pulses with glow, "ENTER" label appears
-8s:       Cross-fade back to "VS"
-          (repeat)
-
-On tap during either state --> opens Arena Drawer
-```
+On desktop, the layout is side-by-side (`flex-row`), so the crack should remain **vertical**.
 
 ### Changes
 
 #### File: `src/components/DynamicBattleHero.tsx`
 
-**New imports:**
-- `useUserRole` hook
-- `Swords`, `Flame`, `Target`, `ChevronRight` from lucide-react
-- `Drawer`, `DrawerContent`, `DrawerHeader`, `DrawerTitle` from vaul
-- `AnimatePresence` from framer-motion
+**Lightning bolt SVG -- responsive orientation:**
 
-**New state:**
-- `arenaDrawerOpen` (boolean) -- controls the Drawer
-- `showSwords` (boolean) -- toggles between VS and Swords display in a 8s cycle (5s VS, 3s Swords)
+- On **mobile**: The SVG lightning bolt path runs **left-to-right** (horizontal zigzag), wider than tall (~60px wide, ~4px tall). It creates the illusion that the screen is cracking apart horizontally between the two stacked videos.
+- On **desktop** (`sm:` and up): The bolt runs **top-to-bottom** (vertical zigzag), taller than wide (~4px wide, ~60px tall). It splits the two side-by-side videos.
 
-**New effect (barbers only):**
-- `useEffect` with `setInterval` that flips `showSwords` between false/true on a 5s/3s alternating schedule
+Implementation approach:
+- Use two SVG elements with Tailwind responsive visibility: one horizontal bolt with `block sm:hidden`, one vertical bolt with `hidden sm:block`
+- Or use a single SVG with a CSS `rotate-90` on mobile via `rotate-90 sm:rotate-0`
 
-**Modify VS container (lines 315-356):**
-- Wrap entire container in a `<button>` (no visual cursor change) with `onClick={() => setArenaDrawerOpen(true)}` -- only for barbers
-- Inside, use `AnimatePresence mode="wait"` to cross-fade between:
-  - **VS state**: The existing `motion.span` with "VS" text and lightning animation (unchanged)
-  - **Swords state**: A `motion.div` containing the Swords icon (w-6 h-6) with a pulsing scale+glow animation and a tiny "ENTER" label below it in cyan
-- The rotating rings remain unchanged and always visible
-- For fans (non-barbers), render the original VS only -- no button wrapper, no Swords cycle
+**Energy burst and horizontal crack lines -- responsive direction:**
 
-**Add Drawer (after the VS block):**
-- Renders only for barbers
-- Contains two rows:
-  1. **Battle** (Swords icon, orange accent) -- navigates to `/portal` which has the ChallengeFeed with open challenges to accept
-  2. **Issue Challenge** (Flame icon, red accent) -- navigates to `/portal` with the IssueChallenge form
+- On mobile: the radial burst stays the same (it's circular), but the "crack" lines extend **up and down** (vertical) from center instead of left/right
+- On desktop: crack lines extend **left and right** (horizontal) from center
 
-Each row: icon + title + short description + chevron, styled with dark card background matching existing theme.
+This is achieved with Tailwind responsive classes:
+- Crack lines: `h-5 w-[1px] sm:h-[1px] sm:w-5` -- vertical on mobile, horizontal on desktop
 
-**New query (barbers only):**
-- Fetch count of open challenges from `open_challenges` table with `status = 'open'` to show a badge count on the "Battle" row
+**Floating particles -- responsive direction:**
 
-### What the Barber Sees
+- On mobile: particles float upward and downward (along the vertical axis)
+- On desktop: particles float left and right (along the horizontal axis)
+- Use `translateY` on mobile, `translateX` on desktop via the `isMobile` hook already imported
+
+**VS text and Swords icon:**
+
+- No change needed -- they sit at the center regardless of orientation
+
+### Visual Result
 
 ```text
-Default (5 seconds):
-  [rotating dashed ring]
-     [inner glow ring]
-         VS            <-- normal lightning flash
-  
-Swords phase (3 seconds):
-  [rotating dashed ring]
-     [inner glow ring]
-      [Swords icon]    <-- pulsing scale 1.0-1.2, cyan glow
-       ENTER           <-- tiny label, fades in
+Mobile (top/bottom split):
 
-Tap anywhere on the circle:
-  +----------------------------------+
-  |  ENTER THE ARENA                 |
-  |                                  |
-  |  [Swords] Battle            (3)  |
-  |  Accept open challenges     -->  |
-  |                                  |
-  |  [Flame]  Issue Challenge        |
-  |  Challenge any barber       -->  |
-  +----------------------------------+
++------------------+
+|   Barber 1       |
+|   Video          |
++--~--V⚡S--~------+  <-- horizontal lightning crack
+|   Barber 2       |
+|   Video          |
++------------------+
+
+Desktop (side-by-side split):
+
++---------+|+---------+
+| Barber 1 || Barber 2 |
+|          VS          |
+| Video   |⚡| Video   |
+|         ||           |
++---------+|+---------+
+            ^
+     vertical lightning crack
 ```
 
-### Summary
+### Technical Details
 
-| Area | Change | Purpose |
-|------|--------|---------|
-| VS text (barbers) | 5s/3s cycle: VS cross-fades to pulsing Swords + "ENTER" | Visual battle gateway cue |
-| VS container (barbers) | Wrapped in tappable button (no cursor change) | Opens arena drawer |
-| New Drawer | 2 rows: Battle (challenges feed) + Issue Challenge | Express arena navigation |
-| Open challenges count | Badge on Battle row | Show available battles |
-| Fan experience | Completely unchanged | No regression |
+| Element | Mobile | Desktop |
+|---------|--------|---------|
+| Lightning bolt SVG | Horizontal zigzag (w-14 h-4) | Vertical zigzag (w-4 h-14) |
+| Crack lines | Extend up/down (h-5 w-px) | Extend left/right (w-5 h-px) |
+| Particles | Float along Y axis | Float along X axis |
+| Radial burst | Same (circular) | Same (circular) |
+| VS text | Unchanged | Unchanged |
+| Swords cycle | Unchanged | Unchanged |
 
 ### What Is NOT Changing
 
-- VS design for fans -- identical to current
-- Rotating ring animations -- preserved
-- Lightning flash timing -- preserved during VS phase
-- MobileVoteCenter replacement during active battles -- untouched
-- DynamicBattleHero layout, video sections, action bars -- untouched
-- No new files created -- all changes in DynamicBattleHero.tsx
+- The VS/Swords animation cycle and 5s/3s timing
+- Arena Drawer contents and navigation
+- Ring removal and text shrinking (from the approved plan)
+- MobileVoteCenter replacement during active battles
+- Video layout, action bars, name overlays
 
