@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import Header from "@/components/Header";
 import LandingHero from "@/components/LandingHero";
 import CommunitySection from "@/components/CommunitySection";
@@ -13,9 +14,52 @@ import { useAuth } from "@/hooks/useAuth";
 import { FEATURES } from "@/config/features";
 import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { ImmersiveFactionBanners } from "@/components/factions/ImmersiveFactionBanners";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const queryClient = useQueryClient();
+  const recoveryAttempted = useRef(false);
+
+  // Recover any pending BB purchase that wasn't verified (e.g. user closed Stripe success tab)
+  useEffect(() => {
+    if (!user || loading || recoveryAttempted.current) return;
+    recoveryAttempted.current = true;
+
+    try {
+      const raw = localStorage.getItem('pending_bb_purchase');
+      if (!raw) return;
+
+      const pending = JSON.parse(raw);
+      const ageMs = Date.now() - (pending.timestamp || 0);
+
+      // Expire after 24 hours
+      if (ageMs > 24 * 60 * 60 * 1000) {
+        localStorage.removeItem('pending_bb_purchase');
+        return;
+      }
+
+      // Attempt verification
+      supabase.functions.invoke('verify-bb-purchase', {
+        body: { session_id: pending.session_id }
+      }).then(({ data, error }) => {
+        if (!error && data?.success) {
+          localStorage.removeItem('pending_bb_purchase');
+          queryClient.invalidateQueries({ queryKey: ['barber_bucks'] });
+          queryClient.invalidateQueries({ queryKey: ['barber_bucks_transactions'] });
+          toast.success(`+${data.bb_credited} BB credited to your account!`);
+        } else if (error || !data?.success) {
+          // If payment wasn't actually completed on Stripe, just clear silently
+          console.log('[BB Recovery] Verification unsuccessful, clearing pending:', data?.error || error);
+          localStorage.removeItem('pending_bb_purchase');
+        }
+      });
+    } catch {
+      localStorage.removeItem('pending_bb_purchase');
+    }
+  }, [user, loading]);
 
   if (loading) {
     return (

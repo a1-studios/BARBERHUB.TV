@@ -42,7 +42,7 @@ const PaymentSuccess = () => {
     }
   }, [sessionId, paymentType, authLoading, user]);
 
-  const verifyBbPurchase = async () => {
+  const verifyBbPurchase = async (retryCount = 0) => {
     setBbVerifying(true);
     setBbError(null);
 
@@ -56,6 +56,9 @@ const PaymentSuccess = () => {
 
       setBbResult({ bb_credited: data.bb_credited, new_balance: data.new_balance });
 
+      // Clear pending purchase from localStorage
+      try { localStorage.removeItem('pending_bb_purchase'); } catch {}
+
       // Refresh BB balance everywhere
       queryClient.invalidateQueries({ queryKey: ['barber_bucks'] });
       queryClient.invalidateQueries({ queryKey: ['barber-bucks'] });
@@ -67,6 +70,12 @@ const PaymentSuccess = () => {
       });
     } catch (err: any) {
       console.error("BB verification error:", err);
+      // Retry up to 3 times with 2s delay (auth session may not be ready in new tab)
+      if (retryCount < 3) {
+        console.log(`[verify-bb] Retrying in 2s (attempt ${retryCount + 1}/3)...`);
+        await new Promise(r => setTimeout(r, 2000));
+        return verifyBbPurchase(retryCount + 1);
+      }
       setBbError(err.message || "Verification failed. Your balance may update shortly.");
     } finally {
       setBbVerifying(false);
@@ -166,7 +175,7 @@ const PaymentSuccess = () => {
                       <p className="text-muted-foreground">
                         Your payment was received. If your balance doesn't update within a few minutes, please contact support.
                       </p>
-                      <Button onClick={verifyBbPurchase} variant="outline">
+                      <Button onClick={() => verifyBbPurchase()} variant="outline">
                         Retry Verification
                       </Button>
                     </div>
