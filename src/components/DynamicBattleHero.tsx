@@ -372,6 +372,60 @@ export const DynamicBattleHero = () => {
           {!(isMobile && isActiveBattle && !isCurrentUserInBattle) && <>
               {/* VS Container - absolute centered between videos */}
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center justify-center">
+                
+                {/* Horizontal lightning crack - mobile only */}
+                <div className="block sm:hidden absolute pointer-events-none" style={{ width: '100vw', height: '6px' }}>
+                  {/* Main bolt SVG */}
+                  <svg viewBox="0 0 200 12" className="w-full h-full" preserveAspectRatio="none">
+                    <motion.path
+                      d="M0,6 L30,4 L40,8 L55,3 L65,9 L80,5 L90,7 L100,2 L110,10 L125,4 L135,8 L150,3 L160,9 L175,5 L185,7 L200,6"
+                      fill="none"
+                      stroke="hsl(var(--primary))"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      initial={{ pathLength: 0, opacity: 0 }}
+                      animate={{ 
+                        pathLength: [0, 1, 1, 0],
+                        opacity: [0, 1, 0.8, 0],
+                      }}
+                      transition={{
+                        duration: 3,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                        times: [0, 0.3, 0.7, 1],
+                      }}
+                    />
+                    <motion.path
+                      d="M0,6 L30,4 L40,8 L55,3 L65,9 L80,5 L90,7 L100,2 L110,10 L125,4 L135,8 L150,3 L160,9 L175,5 L185,7 L200,6"
+                      fill="none"
+                      stroke="hsl(187 100% 50%)"
+                      strokeWidth="0.8"
+                      strokeLinecap="round"
+                      initial={{ pathLength: 0, opacity: 0 }}
+                      animate={{ 
+                        pathLength: [0, 1, 1, 0],
+                        opacity: [0, 0.6, 0.4, 0],
+                      }}
+                      transition={{
+                        duration: 3,
+                        repeat: Infinity,
+                        ease: "easeInOut",
+                        times: [0, 0.25, 0.65, 1],
+                        delay: 0.1,
+                      }}
+                    />
+                  </svg>
+                  {/* Glow behind the bolt */}
+                  <motion.div
+                    className="absolute inset-0"
+                    style={{
+                      background: 'linear-gradient(90deg, transparent 0%, hsl(24 100% 52% / 0.15) 30%, hsl(187 100% 50% / 0.1) 50%, hsl(24 100% 52% / 0.15) 70%, transparent 100%)',
+                      filter: 'blur(4px)',
+                    }}
+                    animate={{ opacity: [0, 0.8, 0.4, 0] }}
+                    transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                  />
+                </div>
                 {/* Rotating ring frame */}
                 <motion.div 
                   className="absolute w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-primary/60"
