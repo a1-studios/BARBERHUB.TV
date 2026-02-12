@@ -336,98 +336,40 @@ export const DynamicBattleHero = () => {
             </div>
           </div>
 
-          {/* VS - Lightning crack split with energy burst */}
+          {/* VS - Floating centered with rotating frame and lightning flash every 3s */}
           {!(isMobile && isActiveBattle && !isCurrentUserInBattle) && <>
               {/* VS Container - absolute centered between videos */}
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center justify-center">
-                
-                {/* Horizontal lightning bolt - mobile only */}
-                <svg className="absolute block sm:hidden" width="60" height="16" viewBox="0 0 60 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <motion.path
-                    d="M0 8 L8 3 L16 10 L24 2 L30 8 L36 14 L44 6 L52 13 L60 8"
-                    stroke="hsl(187 100% 50%)"
-                    strokeWidth="1.5"
-                    fill="none"
-                    animate={{
-                      filter: [
-                        "drop-shadow(0 0 2px hsl(187 100% 50% / 0.4))",
-                        "drop-shadow(0 0 2px hsl(187 100% 50% / 0.4))",
-                        "drop-shadow(0 0 12px hsl(187 100% 50%)) drop-shadow(0 0 24px hsl(24 100% 52%))",
-                        "drop-shadow(0 0 4px hsl(187 100% 50% / 0.6))",
-                        "drop-shadow(0 0 2px hsl(187 100% 50% / 0.4))",
-                      ],
-                      opacity: [0.6, 0.6, 1, 0.8, 0.6],
-                    }}
-                    transition={{ duration: 3, repeat: Infinity, times: [0, 0.78, 0.85, 0.92, 1], ease: "easeInOut" }}
-                  />
-                </svg>
-
-                {/* Vertical lightning bolt - desktop only */}
-                <svg className="absolute hidden sm:block" width="16" height="60" viewBox="0 0 16 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <motion.path
-                    d="M8 0 L3 8 L10 16 L2 24 L8 30 L14 36 L6 44 L13 52 L8 60"
-                    stroke="hsl(187 100% 50%)"
-                    strokeWidth="1.5"
-                    fill="none"
-                    animate={{
-                      filter: [
-                        "drop-shadow(0 0 2px hsl(187 100% 50% / 0.4))",
-                        "drop-shadow(0 0 2px hsl(187 100% 50% / 0.4))",
-                        "drop-shadow(0 0 12px hsl(187 100% 50%)) drop-shadow(0 0 24px hsl(24 100% 52%))",
-                        "drop-shadow(0 0 4px hsl(187 100% 50% / 0.6))",
-                        "drop-shadow(0 0 2px hsl(187 100% 50% / 0.4))",
-                      ],
-                      opacity: [0.6, 0.6, 1, 0.8, 0.6],
-                    }}
-                    transition={{ duration: 3, repeat: Infinity, times: [0, 0.78, 0.85, 0.92, 1], ease: "easeInOut" }}
-                  />
-                </svg>
-
-                {/* Radial energy burst */}
-                <motion.div
-                  className="absolute w-16 h-16 rounded-full"
+                {/* Rotating ring frame */}
+                <motion.div 
+                  className="absolute w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 border-primary/60"
                   style={{
-                    background: "radial-gradient(circle, hsl(24 100% 52% / 0.4) 0%, hsl(187 100% 50% / 0.15) 40%, transparent 70%)",
+                    borderStyle: 'dashed',
+                    borderSpacing: '4px',
                   }}
-                  animate={{ opacity: [0.3, 0.3, 0.8, 0.5, 0.3], scale: [1, 1, 1.15, 1.05, 1] }}
-                  transition={{ duration: 3, repeat: Infinity, times: [0, 0.78, 0.85, 0.92, 1], ease: "easeInOut" }}
+                  animate={{ rotate: 360 }}
+                  transition={{
+                    duration: 8,
+                    repeat: Infinity,
+                    ease: "linear"
+                  }}
                 />
-
-                {/* Crack lines - vertical on mobile, horizontal on desktop */}
-                <motion.div
-                  className="absolute h-5 w-[1px] sm:h-[1px] sm:w-5 -top-5 sm:top-auto sm:-left-5 left-1/2 sm:left-auto sm:top-1/2 -translate-x-1/2 sm:translate-x-0 sm:-translate-y-1/2"
-                  style={{ background: "linear-gradient(to bottom, transparent, hsl(24 100% 52% / 0.6))" }}
-                  animate={{ opacity: [0.3, 0.3, 0.9, 0.5, 0.3] }}
-                  transition={{ duration: 3, repeat: Infinity, times: [0, 0.78, 0.85, 0.92, 1] }}
+                {/* Inner glow ring */}
+                <motion.div 
+                  className="absolute w-14 h-14 sm:w-16 sm:h-16 rounded-full border border-cyan/40"
+                  animate={{ rotate: -360 }}
+                  transition={{
+                    duration: 12,
+                    repeat: Infinity,
+                    ease: "linear"
+                  }}
                 />
-                <motion.div
-                  className="absolute h-5 w-[1px] sm:h-[1px] sm:w-5 -bottom-5 sm:bottom-auto sm:-right-5 left-1/2 sm:left-auto sm:top-1/2 -translate-x-1/2 sm:translate-x-0 sm:-translate-y-1/2"
-                  style={{ background: "linear-gradient(to top, transparent, hsl(24 100% 52% / 0.6))" }}
-                  animate={{ opacity: [0.3, 0.3, 0.9, 0.5, 0.3] }}
-                  transition={{ duration: 3, repeat: Infinity, times: [0, 0.78, 0.85, 0.92, 1] }}
-                />
-
-                {/* Energy particles */}
-                {[...Array(6)].map((_, i) => {
-                  const angle = (i / 6) * Math.PI * 2;
-                  const mobileAnim = { y: [0, Math.sin(angle) * 14, 0], opacity: [0, 0.8, 0] };
-                  const desktopAnim = { x: [0, Math.cos(angle) * 14, 0], opacity: [0, 0.8, 0] };
-                  return (
-                    <motion.div
-                      key={i}
-                      className="absolute w-[2px] h-[2px] rounded-full"
-                      style={{ background: i % 2 === 0 ? "hsl(24 100% 52%)" : "hsl(187 100% 50%)" }}
-                      animate={isMobile ? mobileAnim : desktopAnim}
-                      transition={{ duration: 2 + i * 0.3, repeat: Infinity, delay: i * 0.4, ease: "easeInOut" }}
-                    />
-                  );
-                })}
 
                 {/* Barber: tappable with swords cycle */}
                 {isBarber ? (
                   <button
                     onClick={() => setArenaDrawerOpen(true)}
-                    className="relative flex flex-col items-center justify-center cursor-default z-10"
+                    className="relative flex flex-col items-center justify-center cursor-default"
                     aria-label="Enter the Arena"
                   >
                     <AnimatePresence mode="wait">
@@ -440,8 +382,8 @@ export const DynamicBattleHero = () => {
                           transition={{ duration: 0.4, scale: { duration: 1.5, repeat: Infinity, ease: "easeInOut" } }}
                           className="flex flex-col items-center gap-0.5"
                         >
-                          <Swords className="w-5 h-5 text-cyan" />
-                          <span className="text-[7px] font-bold tracking-widest text-cyan uppercase">Enter</span>
+                          <Swords className="w-6 h-6 text-cyan" />
+                          <span className="text-[8px] font-bold tracking-widest text-cyan uppercase">Enter</span>
                         </motion.div>
                       ) : (
                         <motion.span 
@@ -457,7 +399,7 @@ export const DynamicBattleHero = () => {
                             duration: 0.4,
                             textShadow: { duration: 3, repeat: Infinity, times: [0, 0.8, 0.88, 0.94, 1], ease: "easeInOut" }
                           }}
-                          className="text-xs sm:text-sm font-extrabold tracking-[0.3em] italic bg-gradient-to-r from-primary via-cyan to-primary bg-clip-text text-transparent drop-shadow-lg"
+                          className="text-lg sm:text-xl font-bold tracking-[0.3em] italic bg-gradient-to-r from-primary via-cyan to-primary bg-clip-text text-transparent drop-shadow-lg"
                         >
                           VS
                         </motion.span>
@@ -467,7 +409,7 @@ export const DynamicBattleHero = () => {
                 ) : (
                   /* Fan: original VS only */
                   <motion.span 
-                    className="text-xs sm:text-sm font-extrabold tracking-[0.3em] italic bg-gradient-to-r from-primary via-cyan to-primary bg-clip-text text-transparent drop-shadow-lg z-10"
+                    className="text-lg sm:text-xl font-bold tracking-[0.3em] italic bg-gradient-to-r from-primary via-cyan to-primary bg-clip-text text-transparent drop-shadow-lg"
                     animate={{
                       textShadow: ["0 0 0px transparent", "0 0 0px transparent", "0 0 30px hsl(187 100% 50%), 0 0 60px hsl(var(--primary))", "0 0 5px hsl(187 100% 50%)", "0 0 0px transparent"],
                       scale: [1, 1, 1.15, 1.05, 1],
