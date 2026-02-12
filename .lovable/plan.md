@@ -1,65 +1,100 @@
 
 
-## Fix Two-Barber Simultaneous Connection
+## Transform VS into Pulsing Swords Battle Gateway for Barbers
 
-### Root Causes Found
+### Concept
 
-Three bugs prevent both barbers from connecting simultaneously:
+The VS divider already pulses with a lightning flash every 3 seconds. For barbers, we replace that cycle: the VS text cross-fades to a **pulsing Swords icon** for 3 seconds, then back to VS, repeating. No cursor change -- the Swords pulse itself is the visual cue. When a barber taps it, a bottom Drawer opens with battle options. Fans see the original VS animation unchanged.
 
-**Bug 1: Wrong column name in edge function**
-In `generate-battle-token/index.ts` line 223, the code uses:
+### Animation Cycle (Barbers Only)
+
+```text
+0s-5s:    "VS" text (normal lightning flash animation)
+5s-8s:    Swords icon fades in, pulses with glow, "ENTER" label appears
+8s:       Cross-fade back to "VS"
+          (repeat)
+
+On tap during either state --> opens Arena Drawer
 ```
-[`barber${barberPosition}_streaming`]: true
+
+### Changes
+
+#### File: `src/components/DynamicBattleHero.tsx`
+
+**New imports:**
+- `useUserRole` hook
+- `Swords`, `Flame`, `Target`, `ChevronRight` from lucide-react
+- `Drawer`, `DrawerContent`, `DrawerHeader`, `DrawerTitle` from vaul
+- `AnimatePresence` from framer-motion
+
+**New state:**
+- `arenaDrawerOpen` (boolean) -- controls the Drawer
+- `showSwords` (boolean) -- toggles between VS and Swords display in a 8s cycle (5s VS, 3s Swords)
+
+**New effect (barbers only):**
+- `useEffect` with `setInterval` that flips `showSwords` between false/true on a 5s/3s alternating schedule
+
+**Modify VS container (lines 315-356):**
+- Wrap entire container in a `<button>` (no visual cursor change) with `onClick={() => setArenaDrawerOpen(true)}` -- only for barbers
+- Inside, use `AnimatePresence mode="wait"` to cross-fade between:
+  - **VS state**: The existing `motion.span` with "VS" text and lightning animation (unchanged)
+  - **Swords state**: A `motion.div` containing the Swords icon (w-6 h-6) with a pulsing scale+glow animation and a tiny "ENTER" label below it in cyan
+- The rotating rings remain unchanged and always visible
+- For fans (non-barbers), render the original VS only -- no button wrapper, no Swords cycle
+
+**Add Drawer (after the VS block):**
+- Renders only for barbers
+- Contains two rows:
+  1. **Battle** (Swords icon, orange accent) -- navigates to `/portal` which has the ChallengeFeed with open challenges to accept
+  2. **Issue Challenge** (Flame icon, red accent) -- navigates to `/portal` with the IssueChallenge form
+
+Each row: icon + title + short description + chevron, styled with dark card background matching existing theme.
+
+**New query (barbers only):**
+- Fetch count of open challenges from `open_challenges` table with `status = 'open'` to show a badge count on the "Battle" row
+
+### What the Barber Sees
+
+```text
+Default (5 seconds):
+  [rotating dashed ring]
+     [inner glow ring]
+         VS            <-- normal lightning flash
+  
+Swords phase (3 seconds):
+  [rotating dashed ring]
+     [inner glow ring]
+      [Swords icon]    <-- pulsing scale 1.0-1.2, cyan glow
+       ENTER           <-- tiny label, fades in
+
+Tap anywhere on the circle:
+  +----------------------------------+
+  |  ENTER THE ARENA                 |
+  |                                  |
+  |  [Swords] Battle            (3)  |
+  |  Accept open challenges     -->  |
+  |                                  |
+  |  [Flame]  Issue Challenge        |
+  |  Challenge any barber       -->  |
+  +----------------------------------+
 ```
-But the actual database column is `barber1_is_streaming` / `barber2_is_streaming` (missing `_is_`). This means the streaming flag never gets set, so the system can't track who's connected.
 
-**Bug 2: Status gate too narrow**
-The edge function only updates battle status to "live" when status is `upcoming` or `scheduled` (line 218). But the battle is currently in `active` status. This means neither barber's streaming flag gets set and the battle never transitions to `live`.
+### Summary
 
-**Bug 3: Twilio room not pre-created**
-The `generate-battle-token` function only generates a JWT token -- it never creates the Twilio room. `Video.connect()` on the client relies on Twilio's "Ad-Hoc Room Creation" setting. If that's disabled in the Twilio console, the second barber can't join because the room doesn't exist. The `create-twilio-room` edge function exists but is never called in the current flow. The fix should ensure the room exists before returning the token.
-
-**Bug 4 (minor): Duplicate stream sessions pile up**
-Every connect attempt inserts a new `stream_sessions` row without cleaning up old ones for the same battle+barber. There are already 10+ stale "connecting" sessions for this one battle.
-
----
-
-### Fix Plan
-
-#### File: `supabase/functions/generate-battle-token/index.ts`
-
-1. **Fix column name** (line 223): Change `barber${barberPosition}_streaming` to `barber${barberPosition}_is_streaming`
-
-2. **Expand status gate** (line 218): Also update when status is `active` or `check_in`, not just `upcoming`/`scheduled`
-
-3. **Create Twilio room if needed**: Before returning the token, call the Twilio REST API to create the room (or fetch it if it already exists). This ensures both barbers always have a valid room to join. Use the same `group` room type with 45-minute max duration.
-
-4. **Upsert stream sessions**: Instead of blind insert, use upsert on `(battle_id, barber_id)` or delete old "connecting" sessions first to prevent stale records piling up.
-
-#### File: `src/hooks/useBattleVideoRoom.tsx`
-
-5. **Add retry on room-not-found**: If `Video.connect` fails with a "room not found" error, wait 2 seconds and retry once (covers the race where both barbers call generate-token simultaneously and the room creation hasn't propagated yet).
-
-6. **Update battle streaming flag on successful connect**: After `Video.connect` succeeds, call `update-stream-status` to set the barber's `is_streaming` flag to true, providing a client-side fallback if the edge function update failed.
-
----
-
-### Summary of Changes
-
-| File | Change | Purpose |
+| Area | Change | Purpose |
 |------|--------|---------|
-| `supabase/functions/generate-battle-token/index.ts` | Fix column name `_is_streaming` | Streaming flags actually get set |
-| `supabase/functions/generate-battle-token/index.ts` | Expand status gate to include `active` | Battle transitions to `live` properly |
-| `supabase/functions/generate-battle-token/index.ts` | Create Twilio room via REST API | Room guaranteed to exist for both barbers |
-| `supabase/functions/generate-battle-token/index.ts` | Upsert/cleanup stream sessions | No more stale session records |
-| `src/hooks/useBattleVideoRoom.tsx` | Retry on room-not-found | Handle race condition gracefully |
-| `src/hooks/useBattleVideoRoom.tsx` | Update streaming flag on connect | Client-side fallback for status tracking |
+| VS text (barbers) | 5s/3s cycle: VS cross-fades to pulsing Swords + "ENTER" | Visual battle gateway cue |
+| VS container (barbers) | Wrapped in tappable button (no cursor change) | Opens arena drawer |
+| New Drawer | 2 rows: Battle (challenges feed) + Issue Challenge | Express arena navigation |
+| Open challenges count | Badge on Battle row | Show available battles |
+| Fan experience | Completely unchanged | No regression |
 
 ### What Is NOT Changing
 
-- ContenderTheater page layout and phase system -- untouched
-- Presence/readiness system (useContenderReadiness) -- untouched
-- BattleVideoContainer rendering -- untouched
-- Twilio token generation (JWT creation) -- untouched
-- All other edge functions -- untouched
+- VS design for fans -- identical to current
+- Rotating ring animations -- preserved
+- Lightning flash timing -- preserved during VS phase
+- MobileVoteCenter replacement during active battles -- untouched
+- DynamicBattleHero layout, video sections, action bars -- untouched
+- No new files created -- all changes in DynamicBattleHero.tsx
 
