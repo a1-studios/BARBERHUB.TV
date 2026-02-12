@@ -1,59 +1,65 @@
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { IssueChallenge } from './IssueChallenge';
 import { ChallengeFeed } from './ChallengeFeed';
-import { Flame } from 'lucide-react';
+import { Flame, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@/components/ui/drawer';
 
 export const OpenChallengeQueue = () => {
   const { user } = useAuth();
   const { isBarber } = useUserRole();
 
-  // Only show to barbers
   if (!user || !isBarber) return null;
 
   return (
-    <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-background via-muted/30 to-background relative overflow-hidden">
-      <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(white,transparent_85%)]" />
-      
-      <div className="container mx-auto max-w-7xl relative z-10">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-red-500/20 to-orange-500/20 backdrop-blur-sm rounded-full border border-red-500/30 mb-6">
-            <Flame className="w-6 h-6 text-red-500 animate-pulse" />
-            <span className="text-sm font-bold text-foreground uppercase tracking-wider">
-              Personal Challenge Arena
+    <section className="py-8 px-4 sm:px-6 lg:px-8">
+      <div className="container mx-auto max-w-7xl">
+        {/* Compact header row */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <Flame className="w-5 h-5 text-red-500" />
+            <span className="text-lg font-bold text-foreground tracking-wide">
+              Personal Challenges
+            </span>
+            <span className="text-xs text-yellow-500/70 hidden sm:inline">
+              Unofficial — no ranking impact
             </span>
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
-            Challenge Any Barber
-          </h2>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Stake Barber Bucks and challenge opponents to video-submission battles. Winner takes the pot!
-          </p>
-          <p className="text-sm text-yellow-500/80 mt-2">
-            These are unofficial battles — they do not count toward global rankings.
-          </p>
+
+          <Drawer>
+            <DrawerTrigger asChild>
+              <Button
+                size="icon"
+                variant="outline"
+                className="border-red-500/30 hover:border-red-500/60 hover:bg-red-500/10"
+              >
+                <Plus className="w-5 h-5 text-red-500" />
+              </Button>
+            </DrawerTrigger>
+            <DrawerContent className="max-h-[85vh]">
+              <DrawerHeader>
+                <DrawerTitle className="flex items-center gap-2">
+                  <Flame className="w-5 h-5 text-red-500" />
+                  Issue a Challenge
+                </DrawerTitle>
+              </DrawerHeader>
+              <div className="px-4 pb-6 overflow-y-auto">
+                <IssueChallenge />
+              </div>
+            </DrawerContent>
+          </Drawer>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-          {/* Issue Challenge Section */}
-          <div className="lg:col-span-1">
-            <IssueChallenge />
-          </div>
-
-          {/* Challenge Feed */}
-          <div className="lg:col-span-2">
-            <div className="mb-6">
-              <h3 className="text-2xl font-bold text-foreground mb-2">
-                🔴 Active Challenges
-              </h3>
-              <p className="text-muted-foreground">
-                Open challenges waiting for opponents to match the stake
-              </p>
-            </div>
-            <ChallengeFeed />
-          </div>
-        </div>
+        {/* Compact challenge feed */}
+        <ChallengeFeed />
       </div>
     </section>
   );

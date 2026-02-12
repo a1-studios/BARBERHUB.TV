@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { FeaturedCreatorCard } from '@/components/FeaturedCreatorCard';
 import { BarberProfileHeader } from '@/components/barber/BarberProfileHeader';
 import { toast } from 'sonner';
+import { SponsorDealBoard } from '@/components/creator/SponsorDealBoard';
 import { 
   Crown,
   Scissors,
@@ -233,6 +234,11 @@ export default function CreatorHub() {
                 showActions={true}
               />
             </div>
+          )}
+
+          {/* Sponsor Deal Board */}
+          {isBarber && (
+            <SponsorDealBoard />
           )}
 
           {/* Fan Experience - Featured Creator */}
