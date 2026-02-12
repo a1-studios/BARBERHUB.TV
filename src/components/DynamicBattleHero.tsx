@@ -11,7 +11,7 @@ import { Eye, Swords, Flame, ChevronRight } from "lucide-react";
 import { MobileVoteCenter } from "@/components/battles/MobileVoteCenter";
 import { ArenaActionBar } from "@/components/battles/ArenaActionBar";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -237,6 +237,38 @@ export const DynamicBattleHero = () => {
   const viewerData = useRealtimeBattleViewers(battle?.id || '');
   const isMobile = useIsMobile();
 
+  // Pre-calculate particle data for explosion/implosion effect
+  const particleData = useMemo(() => {
+    const ORANGE = 'hsl(24 100% 52%)';
+    const CYAN = 'hsl(187 100% 50%)';
+    return Array.from({ length: 20 }).map((_, i) => {
+      const angle = (i * (360 / 20) + (Math.random() * 10 - 5)) * (Math.PI / 180);
+      const distance = 20 + Math.random() * 30;
+      return {
+        x: Math.cos(angle) * distance,
+        y: Math.sin(angle) * distance,
+        color: i % 2 === 0 ? ORANGE : CYAN,
+        size: Math.random() > 0.5 ? 4 : 3,
+      };
+    });
+  }, []);
+
+  // Subtle floating particles for fan VS
+  const fanParticleData = useMemo(() => {
+    const ORANGE = 'hsl(24 100% 52%)';
+    const CYAN = 'hsl(187 100% 50%)';
+    return Array.from({ length: 5 }).map((_, i) => {
+      const angle = (i * (360 / 5)) * (Math.PI / 180);
+      const dist = 14 + Math.random() * 8;
+      return {
+        x: Math.cos(angle) * dist,
+        y: Math.sin(angle) * dist,
+        color: i % 2 === 0 ? ORANGE : CYAN,
+        size: 3,
+      };
+    });
+  }, []);
+
   // Check if current battle is active
   const isStreamableBattle = battle?.status === 'active' || battle?.status === 'voting' || battle?.status === 'upcoming';
 
@@ -365,7 +397,7 @@ export const DynamicBattleHero = () => {
                   }}
                 />
 
-                {/* Barber: tappable with swords cycle */}
+                {/* Barber: tappable with swords cycle + particle explosion */}
                 {isBarber ? (
                   <button
                     onClick={() => setArenaDrawerOpen(true)}
@@ -376,53 +408,152 @@ export const DynamicBattleHero = () => {
                       {showSwords ? (
                         <motion.div
                           key="swords"
-                          initial={{ opacity: 0, scale: 0.7 }}
-                          animate={{ opacity: 1, scale: [1, 1.2, 1], filter: ["drop-shadow(0 0 0px transparent)", "drop-shadow(0 0 12px hsl(187 100% 50%))", "drop-shadow(0 0 4px hsl(187 100% 50%))"] }}
-                          exit={{ opacity: 0, scale: 0.7 }}
-                          transition={{ duration: 0.4, scale: { duration: 1.5, repeat: Infinity, ease: "easeInOut" } }}
-                          className="flex flex-col items-center gap-0.5"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          exit={{ scale: 0 }}
+                          transition={{ duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
+                          className="flex flex-col items-center gap-0.5 relative"
                         >
-                          <Swords className="w-6 h-6 text-cyan" />
-                          <span className="text-[8px] font-bold tracking-widest text-cyan uppercase">Enter</span>
+                          {/* Implosion particles on enter */}
+                          {particleData.map((p, i) => (
+                            <motion.div
+                              key={`enter-p-${i}`}
+                              className="absolute rounded-full"
+                              style={{
+                                width: p.size,
+                                height: p.size,
+                                backgroundColor: p.color,
+                                boxShadow: `0 0 4px ${p.color}`,
+                              }}
+                              initial={{ x: p.x, y: p.y, opacity: 1, scale: 1 }}
+                              animate={{ x: 0, y: 0, opacity: 0, scale: 0 }}
+                              transition={{ duration: 0.4, delay: i * 0.02, ease: "easeIn" }}
+                            />
+                          ))}
+                          <motion.div
+                            animate={{ scale: [1, 1.2, 1], filter: ["drop-shadow(0 0 0px transparent)", "drop-shadow(0 0 12px hsl(187 100% 50%))", "drop-shadow(0 0 4px hsl(187 100% 50%))"] }}
+                            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                            className="flex flex-col items-center gap-0.5"
+                          >
+                            <Swords className="w-6 h-6 text-cyan" />
+                            <span className="text-[8px] font-bold tracking-widest text-cyan uppercase">Enter</span>
+                          </motion.div>
+                          {/* Explosion particles on exit */}
+                          {particleData.map((p, i) => (
+                            <motion.div
+                              key={`exit-p-${i}`}
+                              className="absolute rounded-full pointer-events-none"
+                              style={{
+                                width: p.size,
+                                height: p.size,
+                                backgroundColor: p.color,
+                                boxShadow: `0 0 4px ${p.color}`,
+                              }}
+                              initial={{ x: 0, y: 0, opacity: 0, scale: 0 }}
+                              animate={{ x: 0, y: 0, opacity: 0, scale: 0 }}
+                              exit={{ x: p.x, y: p.y, opacity: [1, 0], scale: [1, 0] }}
+                              transition={{ duration: 0.4, delay: i * 0.02, ease: "easeOut" }}
+                            />
+                          ))}
                         </motion.div>
                       ) : (
-                        <motion.span 
+                        <motion.div
                           key="vs"
-                          initial={{ opacity: 0, scale: 0.8 }}
-                          animate={{
-                            opacity: 1,
-                            scale: 1,
-                            textShadow: ["0 0 0px transparent", "0 0 0px transparent", "0 0 30px hsl(187 100% 50%), 0 0 60px hsl(var(--primary))", "0 0 5px hsl(187 100% 50%)", "0 0 0px transparent"],
-                          }}
-                          exit={{ opacity: 0, scale: 0.8 }}
-                          transition={{
-                            duration: 0.4,
-                            textShadow: { duration: 3, repeat: Infinity, times: [0, 0.8, 0.88, 0.94, 1], ease: "easeInOut" }
-                          }}
-                          className="text-lg sm:text-xl font-bold tracking-[0.3em] italic bg-gradient-to-r from-primary via-cyan to-primary bg-clip-text text-transparent drop-shadow-lg"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          exit={{ scale: 0 }}
+                          transition={{ duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
+                          className="relative flex items-center justify-center"
                         >
-                          VS
-                        </motion.span>
+                          {/* Implosion particles on enter */}
+                          {particleData.map((p, i) => (
+                            <motion.div
+                              key={`enter-p-${i}`}
+                              className="absolute rounded-full"
+                              style={{
+                                width: p.size,
+                                height: p.size,
+                                backgroundColor: p.color,
+                                boxShadow: `0 0 4px ${p.color}`,
+                              }}
+                              initial={{ x: p.x, y: p.y, opacity: 1, scale: 1 }}
+                              animate={{ x: 0, y: 0, opacity: 0, scale: 0 }}
+                              transition={{ duration: 0.4, delay: i * 0.02, ease: "easeIn" }}
+                            />
+                          ))}
+                          <motion.span
+                            animate={{
+                              textShadow: ["0 0 0px transparent", "0 0 0px transparent", "0 0 30px hsl(187 100% 50%), 0 0 60px hsl(var(--primary))", "0 0 5px hsl(187 100% 50%)", "0 0 0px transparent"],
+                            }}
+                            transition={{
+                              duration: 3, repeat: Infinity, times: [0, 0.8, 0.88, 0.94, 1], ease: "easeInOut"
+                            }}
+                            className="text-base sm:text-lg font-extrabold tracking-[0.35em] italic bg-[linear-gradient(to_right,hsl(var(--primary)),hsl(187_100%_50%),hsl(var(--primary)))] bg-clip-text text-transparent drop-shadow-[0_0_6px_hsl(var(--primary)/0.5)]"
+                          >
+                            VS
+                          </motion.span>
+                          {/* Explosion particles on exit */}
+                          {particleData.map((p, i) => (
+                            <motion.div
+                              key={`exit-p-${i}`}
+                              className="absolute rounded-full pointer-events-none"
+                              style={{
+                                width: p.size,
+                                height: p.size,
+                                backgroundColor: p.color,
+                                boxShadow: `0 0 4px ${p.color}`,
+                              }}
+                              initial={{ x: 0, y: 0, opacity: 0, scale: 0 }}
+                              animate={{ x: 0, y: 0, opacity: 0, scale: 0 }}
+                              exit={{ x: p.x, y: p.y, opacity: [1, 0], scale: [1, 0] }}
+                              transition={{ duration: 0.4, delay: i * 0.02, ease: "easeOut" }}
+                            />
+                          ))}
+                        </motion.div>
                       )}
                     </AnimatePresence>
                   </button>
                 ) : (
-                  /* Fan: original VS only */
-                  <motion.span 
-                    className="text-lg sm:text-xl font-bold tracking-[0.3em] italic bg-gradient-to-r from-primary via-cyan to-primary bg-clip-text text-transparent drop-shadow-lg"
-                    animate={{
-                      textShadow: ["0 0 0px transparent", "0 0 0px transparent", "0 0 30px hsl(187 100% 50%), 0 0 60px hsl(var(--primary))", "0 0 5px hsl(187 100% 50%)", "0 0 0px transparent"],
-                      scale: [1, 1, 1.15, 1.05, 1],
-                    }} 
-                    transition={{
-                      duration: 3,
-                      repeat: Infinity,
-                      times: [0, 0.8, 0.88, 0.94, 1],
-                      ease: "easeInOut"
-                    }}
-                  >
-                    VS
-                  </motion.span>
+                  /* Fan: VS with subtle floating orbit particles */
+                  <div className="relative flex items-center justify-center">
+                    {fanParticleData.map((p, i) => (
+                      <motion.div
+                        key={`fan-p-${i}`}
+                        className="absolute rounded-full pointer-events-none"
+                        style={{
+                          width: p.size,
+                          height: p.size,
+                          backgroundColor: p.color,
+                          boxShadow: `0 0 4px ${p.color}`,
+                        }}
+                        animate={{
+                          x: [p.x, -p.y, -p.x, p.y, p.x],
+                          y: [p.y, p.x, -p.y, -p.x, p.y],
+                          opacity: [0.6, 1, 0.6, 1, 0.6],
+                        }}
+                        transition={{
+                          duration: 4 + i * 0.5,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                        }}
+                      />
+                    ))}
+                    <motion.span 
+                      className="text-base sm:text-lg font-extrabold tracking-[0.35em] italic bg-[linear-gradient(to_right,hsl(var(--primary)),hsl(187_100%_50%),hsl(var(--primary)))] bg-clip-text text-transparent drop-shadow-[0_0_6px_hsl(var(--primary)/0.5)]"
+                      animate={{
+                        textShadow: ["0 0 0px transparent", "0 0 0px transparent", "0 0 30px hsl(187 100% 50%), 0 0 60px hsl(var(--primary))", "0 0 5px hsl(187 100% 50%)", "0 0 0px transparent"],
+                        scale: [1, 1, 1.15, 1.05, 1],
+                      }} 
+                      transition={{
+                        duration: 3,
+                        repeat: Infinity,
+                        times: [0, 0.8, 0.88, 0.94, 1],
+                        ease: "easeInOut"
+                      }}
+                    >
+                      VS
+                    </motion.span>
+                  </div>
                 )}
               </div>
             </>}
