@@ -1,100 +1,119 @@
 
 
-## Transform VS into Pulsing Swords Battle Gateway for Barbers
+## Particle Explosion Animation for VS/ENTER Cycle
 
 ### Concept
 
-The VS divider already pulses with a lightning flash every 3 seconds. For barbers, we replace that cycle: the VS text cross-fades to a **pulsing Swords icon** for 3 seconds, then back to VS, repeating. No cursor change -- the Swords pulse itself is the visual cue. When a barber taps it, a bottom Drawer opens with battle options. Fans see the original VS animation unchanged.
+Replace the current simple cross-fade between "VS" and "ENTER" (Swords) with a **particle explosion effect**. Every 3 seconds when the text transitions:
 
-### Animation Cycle (Barbers Only)
+1. The current text ("VS" or "ENTER") **explodes outward** into ~20 particles (tiny orange and cyan dots) that scatter in all directions
+2. The particles dissipate over ~400ms
+3. The new text ("ENTER" or "VS") **implodes inward** -- particles rush from the edges to the center and coalesce into the new text
+
+This creates a dramatic energy-burst feel where the text appears to shatter and reform.
+
+### Animation Sequence
 
 ```text
-0s-5s:    "VS" text (normal lightning flash animation)
-5s-8s:    Swords icon fades in, pulses with glow, "ENTER" label appears
-8s:       Cross-fade back to "VS"
-          (repeat)
-
-On tap during either state --> opens Arena Drawer
+[VS visible for 5s with subtle idle glow pulse]
+         |
+   VS EXPLODES --> 20 particles scatter outward (400ms)
+         |
+   Particles converge inward --> ENTER forms (400ms)
+         |
+[ENTER visible for 3s with Swords icon pulse]
+         |
+   ENTER EXPLODES --> 20 particles scatter outward (400ms)
+         |
+   Particles converge inward --> VS reforms (400ms)
+         |
+   (repeat)
 ```
 
 ### Changes
 
 #### File: `src/components/DynamicBattleHero.tsx`
 
-**New imports:**
-- `useUserRole` hook
-- `Swords`, `Flame`, `Target`, `ChevronRight` from lucide-react
-- `Drawer`, `DrawerContent`, `DrawerHeader`, `DrawerTitle` from vaul
-- `AnimatePresence` from framer-motion
+**Modify the AnimatePresence transitions (lines 375-426):**
 
-**New state:**
-- `arenaDrawerOpen` (boolean) -- controls the Drawer
-- `showSwords` (boolean) -- toggles between VS and Swords display in a 8s cycle (5s VS, 3s Swords)
+Replace the current simple opacity/scale fade with particle explosion animations:
 
-**New effect (barbers only):**
-- `useEffect` with `setInterval` that flips `showSwords` between false/true on a 5s/3s alternating schedule
+- **Exit animation** (`exit` prop): The text scales down to 0 while spawning ~20 absolutely-positioned particle dots around it. Each particle flies outward in a random direction (random angle, random distance 20-50px) and fades to 0. Particles alternate between orange (`hsl(var(--primary))`) and cyan (`hsl(187 100% 50%)`) colors with matching glow shadows.
 
-**Modify VS container (lines 315-356):**
-- Wrap entire container in a `<button>` (no visual cursor change) with `onClick={() => setArenaDrawerOpen(true)}` -- only for barbers
-- Inside, use `AnimatePresence mode="wait"` to cross-fade between:
-  - **VS state**: The existing `motion.span` with "VS" text and lightning animation (unchanged)
-  - **Swords state**: A `motion.div` containing the Swords icon (w-6 h-6) with a pulsing scale+glow animation and a tiny "ENTER" label below it in cyan
-- The rotating rings remain unchanged and always visible
-- For fans (non-barbers), render the original VS only -- no button wrapper, no Swords cycle
+- **Enter animation** (`initial` + `animate`): The text starts at scale 0 with particles positioned at random outer positions. Particles animate inward to center (0,0) and fade, while the text scales from 0 to 1 with a slight overshoot (scale to 1.1 then settle to 1).
 
-**Add Drawer (after the VS block):**
-- Renders only for barbers
-- Contains two rows:
-  1. **Battle** (Swords icon, orange accent) -- navigates to `/portal` which has the ChallengeFeed with open challenges to accept
-  2. **Issue Challenge** (Flame icon, red accent) -- navigates to `/portal` with the IssueChallenge form
+**Implementation approach -- inline particle generation:**
 
-Each row: icon + title + short description + chevron, styled with dark card background matching existing theme.
-
-**New query (barbers only):**
-- Fetch count of open challenges from `open_challenges` table with `status = 'open'` to show a badge count on the "Battle" row
-
-### What the Barber Sees
+Rather than a separate component, generate particles directly in the motion variants using an array of `motion.div` elements rendered alongside the text inside each AnimatePresence child:
 
 ```text
-Default (5 seconds):
-  [rotating dashed ring]
-     [inner glow ring]
-         VS            <-- normal lightning flash
-  
-Swords phase (3 seconds):
-  [rotating dashed ring]
-     [inner glow ring]
-      [Swords icon]    <-- pulsing scale 1.0-1.2, cyan glow
-       ENTER           <-- tiny label, fades in
-
-Tap anywhere on the circle:
-  +----------------------------------+
-  |  ENTER THE ARENA                 |
-  |                                  |
-  |  [Swords] Battle            (3)  |
-  |  Accept open challenges     -->  |
-  |                                  |
-  |  [Flame]  Issue Challenge        |
-  |  Challenge any barber       -->  |
-  +----------------------------------+
+<motion.div key="vs" ...>
+  {/* Particle array */}
+  {Array.from({ length: 20 }).map((_, i) => (
+    <motion.div
+      key={i}
+      className="absolute w-1 h-1 rounded-full"
+      style={{ backgroundColor: i % 2 === 0 ? orange : cyan }}
+      initial={{ x: 0, y: 0, opacity: 1 }}
+      animate={{ x: 0, y: 0, opacity: 0 }}  // idle: invisible
+      exit={{
+        x: Math.cos(angle) * distance,
+        y: Math.sin(angle) * distance,
+        opacity: [1, 0],
+        scale: [1, 0]
+      }}
+    />
+  ))}
+  {/* VS text */}
+  <span>VS</span>
+</motion.div>
 ```
 
-### Summary
+Each particle gets a pre-calculated random angle (evenly distributed around 360 degrees) and random distance (20-50px), with a staggered delay for a natural burst feel.
 
-| Area | Change | Purpose |
-|------|--------|---------|
-| VS text (barbers) | 5s/3s cycle: VS cross-fades to pulsing Swords + "ENTER" | Visual battle gateway cue |
-| VS container (barbers) | Wrapped in tappable button (no cursor change) | Opens arena drawer |
-| New Drawer | 2 rows: Battle (challenges feed) + Issue Challenge | Express arena navigation |
-| Open challenges count | Badge on Battle row | Show available battles |
-| Fan experience | Completely unchanged | No regression |
+**Apply to both barber and fan VS elements:**
+
+- **Barber VS** (lines 389-406): Add particles to the VS motion.span and the Swords motion.div
+- **Fan VS** (lines 411-425): For fans, since there is no cycle, add a subtle idle particle effect -- 4-6 particles that slowly orbit or float around the VS text on a loop, giving a constant "energy radiating" feel without the explosion
+
+**Cycle timing unchanged:**
+- The existing `useEffect` at lines 166-173 stays as-is (5s VS, 3s Swords for barbers)
+- The explosion/implosion animation takes ~400ms for exit + ~400ms for enter, fitting within the transition window
+
+**Rings unchanged:**
+- The rotating dashed ring and inner cyan ring remain as they are (lines 344-366)
+
+### Particle Specs
+
+| Property | Value |
+|----------|-------|
+| Count per explosion | 20 particles |
+| Size | 1-2px (w-1 h-1 or w-0.5 h-0.5) |
+| Colors | Alternating orange (primary) and cyan |
+| Scatter distance | 20-50px random per particle |
+| Scatter direction | Evenly distributed angles (360/20 = 18 degree increments + slight random offset) |
+| Glow | box-shadow matching particle color, 4px blur |
+| Exit duration | 400ms ease-out |
+| Enter duration | 400ms ease-out with overshoot |
+| Stagger | 20ms between particles for natural burst feel |
+
+### What Changes
+
+| Element | Before | After |
+|---------|--------|-------|
+| VS to ENTER transition | Simple opacity/scale fade | Particle explosion outward, then implosion inward |
+| ENTER to VS transition | Simple opacity/scale fade | Same particle explosion/implosion |
+| Fan VS | Static with glow pulse | Static with 4-6 subtle floating particles |
+| Rings | Unchanged | Unchanged |
+| Drawer | Unchanged | Unchanged |
+| Cycle timing | Unchanged (5s/3s) | Unchanged |
 
 ### What Is NOT Changing
 
-- VS design for fans -- identical to current
-- Rotating ring animations -- preserved
-- Lightning flash timing -- preserved during VS phase
-- MobileVoteCenter replacement during active battles -- untouched
-- DynamicBattleHero layout, video sections, action bars -- untouched
-- No new files created -- all changes in DynamicBattleHero.tsx
+- The 5s VS / 3s Swords timing cycle
+- Arena Drawer contents and navigation
+- Rotating ring animations
+- MobileVoteCenter replacement during active battles
+- Video layout, action bars, name overlays
+- Open challenges badge count query
 
