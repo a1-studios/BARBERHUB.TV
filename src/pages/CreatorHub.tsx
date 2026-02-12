@@ -1,6 +1,7 @@
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useProfileValidator } from '@/hooks/useProfileValidator';
+import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { AuthDialog } from '@/components/auth/AuthDialog';
@@ -14,6 +15,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { FeaturedCreatorCard } from '@/components/FeaturedCreatorCard';
 import { BarberProfileHeader } from '@/components/barber/BarberProfileHeader';
+import { AddFundsModal } from '@/components/AddFundsModal';
 import { toast } from 'sonner';
 import { SponsorDealBoard } from '@/components/creator/SponsorDealBoard';
 import { 
@@ -28,6 +30,7 @@ export default function CreatorHub() {
   const { hasProfile, needsSetup, isLoading: validationLoading, profileType } = useProfileValidator();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
 
   // Fetch user profile
   const { data: profile } = useQuery({
@@ -231,10 +234,24 @@ export default function CreatorHub() {
                 }}
                 barber_id={barberProfile.id}
                 onSettingsClick={() => navigate('/profile')}
+                onAddFundsClick={() => setShowAddFundsModal(true)}
+                barberBucks={barberBucks}
                 showActions={true}
+                socialLinks={{
+                  instagram: barberProfile.instagram_handle,
+                  facebook: barberProfile.facebook_handle,
+                  twitter: barberProfile.twitter_handle,
+                  youtube: barberProfile.youtube_handle,
+                }}
               />
             </div>
           )}
+
+          {/* Add Funds Modal */}
+          <AddFundsModal 
+            isOpen={showAddFundsModal} 
+            onClose={() => setShowAddFundsModal(false)} 
+          />
 
           {/* Sponsor Deal Board */}
           {isBarber && (
