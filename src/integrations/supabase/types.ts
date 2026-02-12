@@ -1496,6 +1496,55 @@ export type Database = {
           },
         ]
       }
+      gig_applications: {
+        Row: {
+          barber_id: string
+          created_at: string
+          gig_id: string
+          id: string
+          message: string | null
+          status: string
+        }
+        Insert: {
+          barber_id: string
+          created_at?: string
+          gig_id: string
+          id?: string
+          message?: string | null
+          status?: string
+        }
+        Update: {
+          barber_id?: string
+          created_at?: string
+          gig_id?: string
+          id?: string
+          message?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gig_applications_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "gig_applications_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "public_user_profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "gig_applications_gig_id_fkey"
+            columns: ["gig_id"]
+            isOneToOne: false
+            referencedRelation: "sponsor_gigs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       match_results: {
         Row: {
           barber1_id: string | null
@@ -2209,6 +2258,69 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      sponsor_gigs: {
+        Row: {
+          applications_count: number
+          budget_bb: number
+          charity_percent: number
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          location: string | null
+          slots: number
+          sponsor_id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          applications_count?: number
+          budget_bb?: number
+          charity_percent?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          slots?: number
+          sponsor_id: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          applications_count?: number
+          budget_bb?: number
+          charity_percent?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          location?: string | null
+          slots?: number
+          sponsor_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsor_gigs_sponsor_id_fkey"
+            columns: ["sponsor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "sponsor_gigs_sponsor_id_fkey"
+            columns: ["sponsor_id"]
+            isOneToOne: false
+            referencedRelation: "public_user_profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       stream_sessions: {
         Row: {
