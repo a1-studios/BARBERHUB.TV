@@ -12,13 +12,11 @@ interface TokenRequest {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Get Twilio credentials
     const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
     const apiKey = Deno.env.get("TWILIO_API_KEY");
     const apiSecret = Deno.env.get("TWILIO_API_SECRET");
@@ -31,11 +29,10 @@ serve(async (req) => {
       );
     }
 
-    // Get Supabase credentials
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Authenticate user (use Authorization header; do NOT rely on session storage in Edge runtime)
+    // Authenticate user
     const authHeader = req.headers.get("Authorization") ?? req.headers.get("authorization");
     if (!authHeader?.toLowerCase().startsWith("bearer ")) {
       return new Response(
@@ -44,41 +41,25 @@ serve(async (req) => {
       );
     }
 
-    // Extract the raw JWT token from the Authorization header
     const token = authHeader.replace(/^Bearer\s+/i, "").trim();
-    
-    // Validate token format (JWT has 3 dot-separated parts)
     if (!token || token.split(".").length !== 3) {
-      console.error("Auth error: Invalid token format. Token length:", token?.length, "Parts:", token?.split(".").length);
       return new Response(
         JSON.stringify({ error: "Invalid token format. Please sign in again." }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Token received - length:", token.length, "first 10 chars:", token.substring(0, 10));
-
-    // Validate JWT via server-side getUser(token) — passes JWT explicitly for verification
     const supabaseAuth = createClient(
       supabaseUrl,
       Deno.env.get("SUPABASE_ANON_KEY")!,
-      {
-        auth: { persistSession: false, autoRefreshToken: false },
-      }
+      { auth: { persistSession: false, autoRefreshToken: false } }
     );
-
-    console.log("AUTH_STRATEGY=GET_USER_WITH_TOKEN");
 
     const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser(token);
     const userId = authUser?.id;
 
     if (authError || !userId) {
-      console.error(
-        "Auth error:",
-        authError?.message,
-        "Status:",
-        (authError as any)?.status
-      );
+      console.error("Auth error:", authError?.message);
       return new Response(
         JSON.stringify({ error: "Invalid authentication. Please sign in again." }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -87,12 +68,10 @@ serve(async (req) => {
 
     console.log(`Authenticated user: ${userId}`);
 
-    // Create service role client for database operations
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    // Parse request body
     const { battleId }: TokenRequest = await req.json();
 
     if (!battleId) {
@@ -122,7 +101,6 @@ serve(async (req) => {
     // Get battle and verify participation
     const { data: battle, error: battleError } = await supabaseAdmin
       .from("battles")
-      // NOTE: keep this select aligned with actual DB columns
       .select("id, title, barber1_id, barber2_id, status")
       .eq("id", battleId)
       .single();
@@ -140,14 +118,13 @@ serve(async (req) => {
     const isBarber2 = battle.barber2_id === barberProfile.id;
 
     if (!isBarber1 && !isBarber2) {
-      console.error(`Barber ${barberProfile.id} is not a participant in battle ${battleId}`);
       return new Response(
         JSON.stringify({ error: "You are not a participant in this battle" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Check battle status - allow joining for upcoming, check_in, active, or live battles
+    // Check battle status
     const allowedStatuses = ["upcoming", "check_in", "live", "scheduled", "active"];
     if (!allowedStatuses.includes(battle.status)) {
       return new Response(
@@ -156,35 +133,84 @@ serve(async (req) => {
       );
     }
 
-    // Generate room name
     const roomName = `battle-${battleId}`;
     const barberPosition = isBarber1 ? 1 : 2;
 
-    // Create Twilio Access Token using official SDK
+    // --- Bug 3 Fix: Create Twilio room via REST API if it doesn't exist ---
+    const twilioClient = twilio(accountSid, apiKey, { accountSid, apiSecret: undefined });
+    // Use basic auth with API Key SID + API Secret for room creation
+    const roomApiUrl = `https://video.twilio.com/v1/Rooms`;
+    try {
+      const authString = btoa(`${apiKey}:${apiSecret}`);
+      // Try to fetch existing room first
+      const fetchRoomRes = await fetch(`${roomApiUrl}/${encodeURIComponent(roomName)}`, {
+        method: "GET",
+        headers: { "Authorization": `Basic ${authString}` },
+      });
+
+      if (fetchRoomRes.status === 404) {
+        // Room doesn't exist, create it
+        console.log(`Creating Twilio room: ${roomName}`);
+        const createRes = await fetch(roomApiUrl, {
+          method: "POST",
+          headers: {
+            "Authorization": `Basic ${authString}`,
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({
+            UniqueName: roomName,
+            Type: "group",
+            MaxParticipants: "2",
+            MaxParticipantDuration: "2700",
+            StatusCallback: `${supabaseUrl}/functions/v1/twilio-webhook`,
+          }).toString(),
+        });
+        const createBody = await createRes.text();
+        if (!createRes.ok) {
+          console.error("Failed to create Twilio room:", createRes.status, createBody);
+          // If room already exists (race condition), that's fine
+          if (!createBody.includes("53113")) {
+            console.warn("Room creation failed but continuing - may work with ad-hoc rooms");
+          }
+        } else {
+          console.log("Twilio room created successfully");
+        }
+      } else if (fetchRoomRes.ok) {
+        const roomData = await fetchRoomRes.json();
+        console.log(`Twilio room already exists: ${roomName}, status: ${roomData.status}`);
+        // If room is completed, we need a new one — but Twilio won't allow same name
+        if (roomData.status === "completed") {
+          console.warn("Room is completed, clients will need ad-hoc room creation");
+        }
+      } else {
+        const body = await fetchRoomRes.text();
+        console.warn("Unexpected room fetch status:", fetchRoomRes.status, body);
+      }
+    } catch (roomErr: any) {
+      // Don't block token generation if room creation fails
+      console.error("Room creation/check error (non-blocking):", roomErr.message);
+    }
+
+    // Generate Twilio Access Token
     const AccessToken = twilio.jwt.AccessToken;
     const VideoGrant = AccessToken.VideoGrant;
 
-    // Create video grant for the specific room
-    const videoGrant = new VideoGrant({
-      room: roomName,
-    });
+    const videoGrant = new VideoGrant({ room: roomName });
 
-    // Generate token with 45-minute TTL (battle duration)
     const accessToken = new AccessToken(
       accountSid,
       apiKey,
       apiSecret,
       {
-        identity: barberProfile.id, // Use barber profile ID for point system tracking
-        ttl: 2700, // 45 minutes in seconds
+        identity: barberProfile.id,
+        ttl: 2700,
       }
     );
 
     accessToken.addGrant(videoGrant);
-
     const jwtToken = accessToken.toJwt();
 
-    // Get user display name for room identity
+    // Get display name
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("display_name")
@@ -193,10 +219,16 @@ serve(async (req) => {
 
     const displayName = profile?.display_name || barberProfile.name || "Barber";
 
-    // Log token generation for analytics
     console.log(`Token generated for barber ${barberProfile.id} (${displayName}) in battle ${battleId}`);
 
-    // Create stream session (use insert, ignore if exists)
+    // --- Bug 4 Fix: Upsert stream sessions (cleanup stale ones first) ---
+    await supabaseAdmin
+      .from("stream_sessions")
+      .delete()
+      .eq("battle_id", battleId)
+      .eq("barber_id", barberProfile.id)
+      .in("status", ["connecting", "disconnected", "failed"]);
+
     const { error: sessionError } = await supabaseAdmin
       .from("stream_sessions")
       .insert({
@@ -210,19 +242,37 @@ serve(async (req) => {
       });
 
     if (sessionError) {
-      // Log but don't block - session may already exist
       console.log("Stream session insert (may already exist):", sessionError.message);
     }
 
-    // Update battle status to live if both barbers are joining
-    if (battle.status === "upcoming" || battle.status === "scheduled") {
-      await supabaseAdmin
+    // --- Bug 1 & 2 Fix: Correct column name and expanded status gate ---
+    const transitionStatuses = ["upcoming", "scheduled", "active", "check_in"];
+    if (transitionStatuses.includes(battle.status)) {
+      const updateData: Record<string, any> = {
+        status: "live",
+        [`barber${barberPosition}_is_streaming`]: true,
+      };
+
+      const { error: updateError } = await supabaseAdmin
         .from("battles")
-        .update({ 
-          status: "live",
-          [`barber${barberPosition}_streaming`]: true,
-        })
+        .update(updateData)
         .eq("id", battleId);
+
+      if (updateError) {
+        console.error("Battle status update error:", updateError.message);
+      } else {
+        console.log(`Battle ${battleId} transitioned to live, barber${barberPosition}_is_streaming = true`);
+      }
+    } else if (battle.status === "live") {
+      // Battle already live, just set this barber's streaming flag
+      const { error: flagError } = await supabaseAdmin
+        .from("battles")
+        .update({ [`barber${barberPosition}_is_streaming`]: true })
+        .eq("id", battleId);
+
+      if (flagError) {
+        console.error("Streaming flag update error:", flagError.message);
+      }
     }
 
     return new Response(
@@ -235,12 +285,9 @@ serve(async (req) => {
         displayName: displayName,
         country: barberProfile.country_code || null,
         battleTitle: battle.title,
-        expiresIn: 2700, // 45 minutes
+        expiresIn: 2700,
       }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      }
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
   } catch (error: any) {
