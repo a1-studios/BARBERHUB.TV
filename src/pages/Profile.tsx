@@ -11,7 +11,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { BackButton } from '@/components/ui/BackButton';
+
 import { RoleBadge } from '@/components/RoleBadge';
 import { EmptyState } from '@/components/EmptyState';
 import { Scissors, Users, Trophy, Plus, User, Loader2, Globe, Edit3, X, Settings, Heart, DollarSign, Lock } from 'lucide-react';
@@ -166,7 +166,7 @@ const Profile = () => {
   if (isLoading || profileLoading) {
     return <div className="min-h-screen">
         <Header />
-        <div className="pt-20 flex items-center justify-center min-h-[50vh]">
+        <div className="pt-16 flex items-center justify-center min-h-[50vh]">
           <Loader2 className="h-8 w-8 animate-spin" />
         </div>
       </div>;
@@ -176,9 +176,8 @@ const Profile = () => {
   if (needsProfileSetup && !showProfileSetup) {
     return <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5">
         <Header />
-        <main className="pt-24 pb-12 px-4">
-          <div className="container mx-auto max-w-2xl">
-            <BackButton className="mb-6" />
+        <main className="pt-16 sm:pt-20 pb-12 px-2 sm:px-4">
+          <div className="container mx-auto max-w-none sm:max-w-2xl">
             <Card>
               <CardHeader className="text-center">
                 <CardTitle className="text-2xl">Complete Your Profile</CardTitle>
@@ -199,9 +198,8 @@ const Profile = () => {
   if (showProfileSetup) {
     return <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5">
         <Header />
-        <main className="pt-24 pb-12 px-4">
-          <div className="container mx-auto max-w-2xl">
-            <BackButton className="mb-6" />
+        <main className="pt-16 sm:pt-20 pb-12 px-2 sm:px-4">
+          <div className="container mx-auto max-w-none sm:max-w-2xl">
             <Button variant="ghost" onClick={() => setShowProfileSetup(false)} className="mb-4">
               ← Back to Profile
             </Button>
@@ -222,8 +220,8 @@ const Profile = () => {
   if (showBarberSettings && isBarber) {
     return <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5">
         <Header />
-        <main className="pt-24 pb-12 px-4">
-          <div className="container mx-auto max-w-6xl">
+        <main className="pt-16 sm:pt-20 pb-12 px-2 sm:px-4">
+          <div className="container mx-auto max-w-none sm:max-w-6xl">
             <BarberSettings onBack={() => setShowBarberSettings(false)} />
           </div>
         </main>
@@ -235,13 +233,12 @@ const Profile = () => {
 
   return <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5">
       <Header />
-      <main className="pt-20 sm:pt-24 pb-12 px-4">
-        <div className="container mx-auto max-w-4xl">
-          <BackButton className="mb-4 sm:mb-6" />
+      <main className="pt-16 sm:pt-20 pb-12 px-2 sm:px-4">
+        <div className="container mx-auto max-w-none sm:max-w-4xl">
           
           {/* Barber Profile Header - First Section */}
           {isBarber && barberProfile && barberStats && (
-            <div className="mb-6">
+            <div className="mb-3">
               <BarberProfileHeader
                 avatar_url={profile?.avatar_url}
                 display_name={profile?.display_name || barberProfile.name || 'Unknown'}
@@ -269,7 +266,7 @@ const Profile = () => {
             </div>
           )}
           
-          <div className="space-y-4 sm:space-y-6">
+          <div className="space-y-3 sm:space-y-6">
             {/* Personal Information Card - For fans only (barbers use header) */}
             {!isBarber && (
               <Card>

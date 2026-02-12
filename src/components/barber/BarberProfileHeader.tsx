@@ -95,16 +95,16 @@ export function BarberProfileHeader({
         </div>
       )}
       
-      <CardContent className="relative p-6 md:p-8 z-10">
-        <div className="flex flex-col md:flex-row gap-6 items-start">
-          <Avatar className="w-24 h-24 md:w-32 md:h-32 border-4 border-primary/30">
+      <CardContent className="relative p-4 md:p-8 z-10">
+        <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start">
+          <Avatar className="w-20 h-20 md:w-32 md:h-32 border-4 border-primary/30">
             <AvatarImage src={avatar_url || undefined} />
             <AvatarFallback className="bg-primary/20 text-primary text-3xl md:text-4xl font-bold">
               {(display_name || 'B').charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
 
-          <div className="flex-1 space-y-4 w-full">
+          <div className="flex-1 space-y-3 w-full">
             <div>
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl md:text-4xl font-bold text-white">{display_name}</h1>
@@ -157,22 +157,22 @@ export function BarberProfileHeader({
             {/* Stats Row */}
             <div className="flex gap-4 md:gap-6 flex-wrap">
               <div className="text-center">
-                <div className="text-xl md:text-3xl font-bold text-white">{stats.follower_count}</div>
+                <div className="text-lg md:text-3xl font-bold text-white">{stats.follower_count}</div>
                 <div className="text-xs md:text-sm text-muted-foreground">Followers</div>
               </div>
               <div className="text-center">
-                <div className="text-xl md:text-3xl font-bold text-white">{stats.like_count}</div>
+                <div className="text-lg md:text-3xl font-bold text-white">{stats.like_count}</div>
                 <div className="text-xs md:text-sm text-muted-foreground">Likes</div>
               </div>
               <div className="text-center">
-                <div className="text-xl md:text-3xl font-bold text-primary">${totalDonations}</div>
+                <div className="text-lg md:text-3xl font-bold text-primary">${totalDonations}</div>
                 <div className="text-xs md:text-sm text-muted-foreground">Donated</div>
               </div>
             </div>
 
             {/* Action Buttons */}
             {showActions && (
-              <div className="flex gap-3 flex-wrap pt-2">
+              <div className="flex gap-3 flex-wrap pt-1">
                 {barber_id && (
                   <Link to={`/barbers/${barber_id}`}>
                     <Button variant="outline" size="sm">
