@@ -24,7 +24,8 @@ export const useBarberBucks = () => {
       if (error) throw error;
       return data.barber_bucks || 0;
     },
-    enabled: !!user
+    enabled: !!user,
+    refetchOnWindowFocus: true
   });
 
   // Get transaction history

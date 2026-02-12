@@ -131,6 +131,17 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
     setPendingCheckoutUrl(null);
     purchaseBucks.mutate(usdAmount, {
       onSuccess: (data) => {
+        // Store pending purchase in localStorage for recovery
+        try {
+          localStorage.setItem('pending_bb_purchase', JSON.stringify({
+            session_id: data.session_id,
+            bb_amount: data.bb_amount,
+            timestamp: Date.now()
+          }));
+        } catch (e) {
+          console.warn('Failed to store pending purchase:', e);
+        }
+
         if (isInIframe()) {
           const win = window.open(data.url, '_blank');
           if (win) {
