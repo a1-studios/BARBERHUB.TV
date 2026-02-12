@@ -1,99 +1,117 @@
 
 
-## Ensure BB Purchases Are Immediately Reflected and Usable
+## Refine Challenge Mode + Creator Hub Revenue Enhancement
 
-### Problem
+### Overview
 
-When a user completes a Stripe checkout (especially in new-tab flows used in iframe/preview environments), there is no guarantee the BB gets credited because:
+This plan adds three focused features while preserving the existing minimalist dark/orange/cyan design language:
 
-1. The Stripe success page opens in a **new tab** where the auth session may not be ready yet
-2. If the user **closes that tab** before verification completes, the BB is never credited
-3. There is **no recovery mechanism** — if verification fails once, the purchase is lost forever
-4. The Stripe webhook path in `purchase-barber-bucks` may not be configured, so there is no server-side fallback
+1. A simplified Challenge icon button (replacing the verbose form)
+2. A Sponsor Deal Board in the Creator Hub for revenue generation
+3. Minor Creator Hub layout refinements for the new gig economy section
 
-### Fix Plan
+All existing components, routes, and functionality remain intact.
 
-#### Step 1: Manually Credit User "cj" (Database)
+---
 
-Insert the missing 25 BB for the $5 purchase directly into the database:
+### 1. Simplify Challenge Mode Button
 
-- INSERT a transaction record into `barber_bucks_transactions` for user `09acf09b-298b-49a3-a91f-038ba4314c93` with amount 25, type "purchase"
-- UPDATE `profiles` to set `barber_bucks = 25` for that user
+**Current state:** The `OpenChallengeQueue` component renders a full-page section with a large header, description text, and the `IssueChallenge` form always visible in a 3-column grid alongside `ChallengeFeed`.
 
-#### Step 2: Store Pending Purchase in localStorage (AddFundsModal)
+**Change:** Replace the verbose layout with a minimalist approach:
 
-**File: `src/components/AddFundsModal.tsx`**
+- Add a single icon button (Flame icon) in the Portal page's barber section that expands the challenge form in a sheet/drawer when tapped
+- The `IssueChallenge` and `ChallengeFeed` components remain completely unchanged internally
+- Only the wrapper `OpenChallengeQueue` component gets restructured to be compact
 
-When the Stripe checkout URL is opened (in new tab or same window), save the session info to localStorage so the app can recover it later:
+**File: `src/components/battles/OpenChallengeQueue.tsx`**
+- Replace the large section layout with a compact card containing:
+  - A row with the Flame icon, "Personal Challenges" label, active challenge count badge, and a "Issue Challenge" icon button (Plus icon)
+  - Clicking the button opens a Sheet (bottom drawer on mobile) containing the existing `IssueChallenge` form
+  - Below the header row, show the `ChallengeFeed` in a more compact grid
+- This reduces vertical footprint by ~60% while keeping all functionality
+
+---
+
+### 2. Sponsor Deal Board (Creator Hub Revenue)
+
+**New component: `src/components/creator/SponsorDealBoard.tsx`**
+
+A "Gig Board" section within the Creator Hub that displays sponsor opportunities for verified barbers to earn revenue. This creates a marketplace where sponsors post gigs and barbers can apply.
+
+Design:
+- Section header: Briefcase icon + "DEAL BOARD" in the established orange/white split text style
+- Grid of gig cards, each showing:
+  - Sponsor logo/name
+  - Gig title and brief description
+  - Budget (in BB)
+  - Location tag
+  - "5% to Minutes for Men" badge (mandatory donation)
+  - "Apply" button (orange primary)
+- Empty state with a Sparkles icon and "No gigs available yet" message
+- Data source: New `sponsor_gigs` table (reads only -- creation is admin/sponsor-side)
+
+**Database: `sponsor_gigs` table**
+- `id` (UUID, PK)
+- `sponsor_id` (UUID, FK to profiles)
+- `title` (text)
+- `description` (text)
+- `budget_bb` (integer)
+- `location` (text, nullable)
+- `charity_percent` (integer, default 5)
+- `slots` (integer, default 1)
+- `applications_count` (integer, default 0)
+- `status` (text: 'open', 'filled', 'closed')
+- `is_active` (boolean, default true)
+- `created_at`, `updated_at`
+- RLS: All authenticated users can SELECT active gigs; only the sponsor who created it can UPDATE/DELETE
+
+**New component: `src/components/creator/GigApplicationModal.tsx`**
+- Simple dialog: shows gig details, a short message textarea, and "Submit Application" button
+- Inserts into a `gig_applications` table (barber_id, gig_id, message, status)
+
+**Database: `gig_applications` table**
+- `id`, `gig_id` (FK), `barber_id` (FK to profiles user_id), `message` (text), `status` (text: 'pending', 'accepted', 'rejected'), `created_at`
+- RLS: Barbers can INSERT their own applications and SELECT their own; sponsors can SELECT applications for their gigs
+
+---
+
+### 3. Creator Hub Layout Update
+
+**File: `src/pages/CreatorHub.tsx`**
+
+Add the SponsorDealBoard as a new section between the BarberProfileHeader and the existing CreatorDashboard/EarningSystem grid:
 
 ```
-localStorage.setItem('pending_bb_purchase', JSON.stringify({
-  session_id: data.session_id,
-  bb_amount: data.bb_amount,
-  timestamp: Date.now()
-}));
+[BarberProfileHeader]        -- existing, unchanged
+[SponsorDealBoard]           -- NEW: full-width gig board
+[CreatorDashboard + Earning] -- existing 2/3 + 1/3 grid
+[ReferralProgram]            -- existing sidebar
 ```
 
-This happens in the `handleAddFunds` function, right before opening the URL.
+Single import addition and one JSX block inserted. No existing components modified.
 
-#### Step 3: Add Retry Logic to PaymentSuccess
+---
 
-**File: `src/pages/PaymentSuccess.tsx`**
-
-- Add a retry with delay if the first verification attempt fails (auth session race condition in new tabs)
-- On success, clear the `pending_bb_purchase` localStorage key
-- Maximum 3 retries with 2-second delays between attempts
-
-#### Step 4: Add Purchase Recovery on App Load
-
-**File: `src/pages/Index.tsx`**
-
-Add a `useEffect` that runs on mount to check for any pending BB purchase in localStorage:
-
-- If `pending_bb_purchase` exists and is less than 24 hours old, call `verify-bb-purchase` with the stored session ID
-- On success: clear localStorage, show a toast with the credited amount, and invalidate BB query cache
-- On failure or if older than 24 hours: clear the key silently
-- This catches the case where the user closed the Stripe success tab before verification completed
-
-#### Step 5: Ensure Query Cache Updates Propagate Everywhere
-
-**File: `src/hooks/useBarberBucks.tsx`**
-
-- Add `refetchOnWindowFocus: true` to the barber bucks balance query so when users switch back from a Stripe tab, their balance auto-refreshes
-- This is a simple one-line addition that handles the most common case naturally
-
-### Summary of Changes
+### Summary of All Changes
 
 | File | Action | Purpose |
 |------|--------|---------|
-| Database | INSERT + UPDATE | Credit 25 BB to user "cj" for missed $5 purchase |
-| `src/components/AddFundsModal.tsx` | Edit | Store pending purchase in localStorage before Stripe redirect |
-| `src/pages/PaymentSuccess.tsx` | Edit | Add retry logic + clear localStorage on success |
-| `src/pages/Index.tsx` | Edit | Add pending purchase recovery check on page load |
-| `src/hooks/useBarberBucks.tsx` | Edit | Add `refetchOnWindowFocus: true` for auto-refresh on tab switch |
+| `src/components/battles/OpenChallengeQueue.tsx` | Edit | Compact layout with icon button + Sheet drawer for IssueChallenge |
+| `src/components/creator/SponsorDealBoard.tsx` | Create | Gig board displaying sponsor opportunities |
+| `src/components/creator/GigApplicationModal.tsx` | Create | Application dialog for barbers to apply to gigs |
+| `src/pages/CreatorHub.tsx` | Edit | Add SponsorDealBoard section |
+| Database migration | Create | `sponsor_gigs` and `gig_applications` tables with RLS |
 
-### How It Works End-to-End
+### What Is NOT Changing
 
-```text
-User clicks "Add Funds" ($5)
-    |
-    v
-AddFundsModal saves {session_id, bb_amount, timestamp} to localStorage
-    |
-    v
-Stripe checkout opens (new tab or redirect)
-    |
-    v
-User pays --> Stripe redirects to /payment-success?session_id=...&type=bb
-    |
-    +---> SUCCESS PATH: verify-bb-purchase credits BB, clears localStorage, shows balance
-    |
-    +---> FAIL PATH (tab closed early):
-              User returns to app --> Index.tsx detects pending purchase in localStorage
-              --> Calls verify-bb-purchase --> Credits BB --> Clears localStorage --> Toast
-    |
-    +---> NATURAL PATH (tab switch back):
-              useBarberBucks refetches on window focus --> Balance updates automatically
-```
+- Header component -- stays fixed with BB wallet
+- DynamicBattleHero -- 50/50 split preserved
+- IssueChallenge form internals -- untouched
+- ChallengeFeed internals -- untouched  
+- ImmersiveFactionBanners -- untouched
+- ArenaTicker sponsor rotation -- untouched
+- All routing in App.tsx -- untouched
+- Color scheme (deep black, neon orange, cyan blue) -- strictly maintained
+- All existing battle flow logic -- untouched
 
-This ensures that no matter what happens after payment, the user will see their BB balance update.
