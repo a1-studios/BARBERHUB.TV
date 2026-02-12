@@ -74,19 +74,16 @@ export const useBattleVideoRoom = ({
     }
   }, []);
 
-  // Handle participant connected
   const handleParticipantConnected = useCallback((participant: RemoteParticipant) => {
     console.log(`Opponent connected: ${participant.identity}`);
     setState(prev => ({ ...prev, opponentIdentity: participant.identity }));
     
-    // Subscribe to existing tracks
     participant.tracks.forEach((publication: RemoteTrackPublication) => {
       if (publication.isSubscribed && publication.track) {
         handleTrackSubscribed(publication.track);
       }
     });
 
-    // Listen for new tracks
     participant.on('trackSubscribed', handleTrackSubscribed);
     participant.on('trackUnsubscribed', handleTrackUnsubscribed);
 
@@ -94,7 +91,6 @@ export const useBattleVideoRoom = ({
     toast.success('🥊 Opponent has entered the battle!');
   }, [handleTrackSubscribed, handleTrackUnsubscribed, onOpponentJoin]);
 
-  // Handle participant disconnected
   const handleParticipantDisconnected = useCallback((participant: RemoteParticipant) => {
     console.log(`Opponent disconnected: ${participant.identity}`);
     setState(prev => ({
@@ -107,15 +103,12 @@ export const useBattleVideoRoom = ({
     toast.info('Opponent has left the battle');
   }, [onOpponentLeave]);
 
-  // Connect to the battle room
   // Helper to get a fresh access token
   const getFreshToken = useCallback(async (): Promise<string> => {
-    // First try refreshing the session to ensure a valid token
     const { data: refreshData } = await supabase.auth.refreshSession();
     if (refreshData?.session?.access_token) {
       return refreshData.session.access_token;
     }
-    // Fallback to current session
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !sessionData.session?.access_token) {
       throw new Error('Please sign in again to join the battle');
@@ -123,8 +116,42 @@ export const useBattleVideoRoom = ({
     return sessionData.session.access_token;
   }, []);
 
+  // Connect to Twilio room with retry logic for room-not-found
+  const connectToRoom = useCallback(async (
+    twilioToken: string,
+    roomName: string,
+    retriesLeft: number = 1
+  ): Promise<Room> => {
+    try {
+      const room = await Video.connect(twilioToken, {
+        name: roomName,
+        video: { 
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 },
+          frameRate: { ideal: 30, max: 30 }
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        },
+        dominantSpeaker: true,
+        networkQuality: { local: 1, remote: 1 },
+        preferredVideoCodecs: [{ codec: 'VP8', simulcast: false }],
+      });
+      return room;
+    } catch (error: any) {
+      // Retry once on room-not-found (code 53113) with a delay
+      if (retriesLeft > 0 && (error.code === 53113 || error.code === 53118 || error.message?.includes('Room not found'))) {
+        console.log(`Room not found, retrying in 2s... (${retriesLeft} retries left)`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return connectToRoom(twilioToken, roomName, retriesLeft - 1);
+      }
+      throw error;
+    }
+  }, []);
+
   const connect = useCallback(async () => {
-    // Prevent duplicate concurrent connect calls
     if (connectingRef.current) {
       console.log('Connect already in progress, skipping duplicate call');
       return;
@@ -137,12 +164,9 @@ export const useBattleVideoRoom = ({
       const accessToken = await getFreshToken();
       console.log('Calling generate-battle-token with fresh auth token');
 
-      // Get token from edge function with explicit Authorization header
       const { data: tokenData, error: tokenError } = await supabase.functions.invoke('generate-battle-token', {
         body: { battleId },
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
 
       if (tokenError || !tokenData?.token) {
@@ -151,46 +175,23 @@ export const useBattleVideoRoom = ({
 
       console.log(`Connecting to room: ${tokenData.roomName}`);
 
-      // Connect to Twilio Video room with P2P optimized settings
-      const room = await Video.connect(tokenData.token, {
-        name: tokenData.roomName,
-        video: { 
-          width: { ideal: 1280, max: 1920 },
-          height: { ideal: 720, max: 1080 },
-          frameRate: { ideal: 30, max: 30 }
-        },
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        },
-        dominantSpeaker: true,
-        networkQuality: {
-          local: 1,
-          remote: 1
-        },
-        // P2P is default for 2 participants
-        preferredVideoCodecs: [{ codec: 'VP8', simulcast: false }],
-      });
+      // Connect with retry logic
+      const room = await connectToRoom(tokenData.token, tokenData.roomName);
 
       roomRef.current = room;
 
-      // Get local tracks
       const localVideoTrack = Array.from(room.localParticipant.videoTracks.values())[0]?.track as LocalVideoTrack || null;
       const localAudioTrack = Array.from(room.localParticipant.audioTracks.values())[0]?.track as LocalAudioTrack || null;
 
-      // Check for existing participants (opponent may have joined first)
+      // Check for existing participants
       room.participants.forEach(handleParticipantConnected);
 
-      // Listen for new participants
       room.on('participantConnected', handleParticipantConnected);
       room.on('participantDisconnected', handleParticipantDisconnected);
 
-      // Handle room disconnection
       room.on('disconnected', (room, error) => {
         console.log('Disconnected from room', error?.message);
         
-        // Cleanup tracks
         room.localParticipant.tracks.forEach((publication: LocalTrackPublication) => {
           if (publication.track.kind === 'video' || publication.track.kind === 'audio') {
             publication.track.stop();
@@ -235,6 +236,16 @@ export const useBattleVideoRoom = ({
         localAudioTrack,
       }));
 
+      // Client-side fallback: update streaming flag via update-stream-status
+      try {
+        await supabase.functions.invoke('update-stream-status', {
+          body: { battleId, isStreaming: true },
+          headers: { Authorization: `Bearer ${accessToken}` }
+        });
+      } catch (flagErr) {
+        console.warn('Streaming flag fallback failed (non-critical):', flagErr);
+      }
+
       toast.success('🔴 You are LIVE in the battle!');
 
       return { room, token: tokenData.token, roomName: tokenData.roomName };
@@ -257,7 +268,7 @@ export const useBattleVideoRoom = ({
     } finally {
       connectingRef.current = false;
     }
-  }, [battleId, getFreshToken, handleParticipantConnected, handleParticipantDisconnected, onDisconnect]);
+  }, [battleId, getFreshToken, connectToRoom, handleParticipantConnected, handleParticipantDisconnected, onDisconnect]);
 
   // Disconnect from the room
   const disconnect = useCallback(() => {
@@ -285,7 +296,6 @@ export const useBattleVideoRoom = ({
     toast.success('Stream ended');
   }, []);
 
-  // Toggle local video
   const toggleVideo = useCallback(() => {
     if (state.localVideoTrack) {
       if (state.localVideoTrack.isEnabled) {
@@ -293,12 +303,10 @@ export const useBattleVideoRoom = ({
       } else {
         state.localVideoTrack.enable();
       }
-      // Force re-render
       setState(prev => ({ ...prev }));
     }
   }, [state.localVideoTrack]);
 
-  // Toggle local audio
   const toggleAudio = useCallback(() => {
     if (state.localAudioTrack) {
       if (state.localAudioTrack.isEnabled) {
@@ -306,12 +314,10 @@ export const useBattleVideoRoom = ({
       } else {
         state.localAudioTrack.enable();
       }
-      // Force re-render
       setState(prev => ({ ...prev }));
     }
   }, [state.localAudioTrack]);
 
-  // Format duration as MM:SS or HH:MM:SS
   const formattedDuration = useCallback(() => {
     const hours = Math.floor(state.duration / 3600);
     const minutes = Math.floor((state.duration % 3600) / 60);
