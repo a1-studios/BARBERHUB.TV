@@ -6,13 +6,15 @@ import { BarberVideoSection } from "@/components/barber/BarberVideoSection";
 import { BarberHeroStreamControls } from "@/components/streaming/BarberHeroStreamControls";
 import { useRealtimeBattleViewers } from "@/hooks/useRealtimeBattleViewers";
 import { useAuth } from "@/hooks/useAuth";
-import { Eye } from "lucide-react";
+import { useUserRole } from "@/hooks/useUserRole";
+import { Eye, Swords, Flame, ChevronRight } from "lucide-react";
 import { MobileVoteCenter } from "@/components/battles/MobileVoteCenter";
 import { ArenaActionBar } from "@/components/battles/ArenaActionBar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 
 const getCountryFlag = (countryCode?: string) => {
   if (!countryCode) return '';
@@ -44,10 +46,13 @@ interface BarberProfile {
 export const DynamicBattleHero = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isBarber } = useUserRole();
   const [rotationIndex, setRotationIndex] = useState(0);
   const [currentUserBarberPosition, setCurrentUserBarberPosition] = useState<1 | 2 | null>(null);
   const [voted1, setVoted1] = useState(false);
   const [voted2, setVoted2] = useState(false);
+  const [arenaDrawerOpen, setArenaDrawerOpen] = useState(false);
+  const [showSwords, setShowSwords] = useState(false);
 
   // Fetch active battle (active, voting or upcoming)
   const {
@@ -157,6 +162,30 @@ export const DynamicBattleHero = () => {
       setCurrentUserBarberPosition(null);
     }
   }, [user, barbers, battle]);
+
+  // Swords/VS cycle for barbers (5s VS, 3s Swords)
+  useEffect(() => {
+    if (!isBarber) return;
+    const timeout = setTimeout(() => {
+      setShowSwords(prev => !prev);
+    }, showSwords ? 3000 : 5000);
+    return () => clearTimeout(timeout);
+  }, [isBarber, showSwords]);
+
+  // Fetch open challenges count for barbers
+  const { data: openChallengeCount } = useQuery({
+    queryKey: ['openChallengesCount'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('open_challenges')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'open');
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: isBarber
+  });
+
   const getFlagImageUrl = (countryCode?: string) => {
     if (!countryCode) return "";
     return `https://flagcdn.com/w1600/${countryCode.toLowerCase()}.jpg`;
@@ -309,8 +338,6 @@ export const DynamicBattleHero = () => {
 
           {/* VS - Floating centered with rotating frame and lightning flash every 3s */}
           {!(isMobile && isActiveBattle && !isCurrentUserInBattle) && <>
-              {/* LIVE Badge - absolute positioned */}
-              
               {/* VS Container - absolute centered between videos */}
               <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 flex items-center justify-center">
                 {/* Rotating ring frame */}
@@ -337,24 +364,119 @@ export const DynamicBattleHero = () => {
                     ease: "linear"
                   }}
                 />
-                {/* VS Text */}
-                <motion.span 
-                  className="text-lg sm:text-xl font-bold tracking-[0.3em] italic bg-gradient-to-r from-primary via-cyan to-primary bg-clip-text text-transparent drop-shadow-lg"
-                  animate={{
-                    textShadow: ["0 0 0px transparent", "0 0 0px transparent", "0 0 30px hsl(187 100% 50%), 0 0 60px hsl(var(--primary))", "0 0 5px hsl(187 100% 50%)", "0 0 0px transparent"],
-                    scale: [1, 1, 1.15, 1.05, 1],
-                  }} 
-                  transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                    times: [0, 0.8, 0.88, 0.94, 1],
-                    ease: "easeInOut"
-                  }}
-                >
-                  VS
-                </motion.span>
+
+                {/* Barber: tappable with swords cycle */}
+                {isBarber ? (
+                  <button
+                    onClick={() => setArenaDrawerOpen(true)}
+                    className="relative flex flex-col items-center justify-center cursor-default"
+                    aria-label="Enter the Arena"
+                  >
+                    <AnimatePresence mode="wait">
+                      {showSwords ? (
+                        <motion.div
+                          key="swords"
+                          initial={{ opacity: 0, scale: 0.7 }}
+                          animate={{ opacity: 1, scale: [1, 1.2, 1], filter: ["drop-shadow(0 0 0px transparent)", "drop-shadow(0 0 12px hsl(187 100% 50%))", "drop-shadow(0 0 4px hsl(187 100% 50%))"] }}
+                          exit={{ opacity: 0, scale: 0.7 }}
+                          transition={{ duration: 0.4, scale: { duration: 1.5, repeat: Infinity, ease: "easeInOut" } }}
+                          className="flex flex-col items-center gap-0.5"
+                        >
+                          <Swords className="w-6 h-6 text-cyan" />
+                          <span className="text-[8px] font-bold tracking-widest text-cyan uppercase">Enter</span>
+                        </motion.div>
+                      ) : (
+                        <motion.span 
+                          key="vs"
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{
+                            opacity: 1,
+                            scale: 1,
+                            textShadow: ["0 0 0px transparent", "0 0 0px transparent", "0 0 30px hsl(187 100% 50%), 0 0 60px hsl(var(--primary))", "0 0 5px hsl(187 100% 50%)", "0 0 0px transparent"],
+                          }}
+                          exit={{ opacity: 0, scale: 0.8 }}
+                          transition={{
+                            duration: 0.4,
+                            textShadow: { duration: 3, repeat: Infinity, times: [0, 0.8, 0.88, 0.94, 1], ease: "easeInOut" }
+                          }}
+                          className="text-lg sm:text-xl font-bold tracking-[0.3em] italic bg-gradient-to-r from-primary via-cyan to-primary bg-clip-text text-transparent drop-shadow-lg"
+                        >
+                          VS
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </button>
+                ) : (
+                  /* Fan: original VS only */
+                  <motion.span 
+                    className="text-lg sm:text-xl font-bold tracking-[0.3em] italic bg-gradient-to-r from-primary via-cyan to-primary bg-clip-text text-transparent drop-shadow-lg"
+                    animate={{
+                      textShadow: ["0 0 0px transparent", "0 0 0px transparent", "0 0 30px hsl(187 100% 50%), 0 0 60px hsl(var(--primary))", "0 0 5px hsl(187 100% 50%)", "0 0 0px transparent"],
+                      scale: [1, 1, 1.15, 1.05, 1],
+                    }} 
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      times: [0, 0.8, 0.88, 0.94, 1],
+                      ease: "easeInOut"
+                    }}
+                  >
+                    VS
+                  </motion.span>
+                )}
               </div>
             </>}
+
+          {/* Arena Drawer for barbers */}
+          {isBarber && (
+            <Drawer open={arenaDrawerOpen} onOpenChange={setArenaDrawerOpen}>
+              <DrawerContent className="bg-card border-t border-cyan/20">
+                <DrawerHeader className="pb-2">
+                  <DrawerTitle className="text-lg font-bold tracking-wider text-foreground">
+                    ENTER THE ARENA
+                  </DrawerTitle>
+                </DrawerHeader>
+                <div className="px-4 pb-6 space-y-3">
+                  {/* Battle row */}
+                  <button
+                    onClick={() => { setArenaDrawerOpen(false); navigate('/portal'); }}
+                    className="w-full flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-left"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                      <Swords className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-foreground">Battle</span>
+                        {(openChallengeCount ?? 0) > 0 && (
+                          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-destructive text-destructive-foreground">
+                            {openChallengeCount}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground">Accept open challenges</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  </button>
+
+                  {/* Issue Challenge row */}
+                  <button
+                    onClick={() => { setArenaDrawerOpen(false); navigate('/portal'); }}
+                    className="w-full flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-left"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center flex-shrink-0">
+                      <Flame className="w-5 h-5 text-destructive" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="font-semibold text-foreground block">Issue Challenge</span>
+                      <span className="text-xs text-muted-foreground">Challenge any barber</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  </button>
+                </div>
+              </DrawerContent>
+            </Drawer>
+          )}
 
           {/* Mobile Vote Center - Replaces VS divider on mobile during active battles */}
           {isMobile && isActiveBattle && !isCurrentUserInBattle && <div className="py-2 px-2 flex-shrink-0">
