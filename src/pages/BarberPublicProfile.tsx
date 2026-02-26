@@ -14,6 +14,7 @@ import { BarberActionButtons } from '@/components/barber/BarberActionButtons';
 import { SubscriptionBadge } from '@/components/SubscriptionBadge';
 import { useState } from 'react';
 import { DonationModal } from '@/components/DonationModal';
+import { BookingConsole } from '@/components/booking/BookingConsole';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
@@ -22,6 +23,7 @@ export default function BarberPublicProfile() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
+  const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   
   const isOwner = user?.id === userId;
@@ -362,12 +364,12 @@ export default function BarberPublicProfile() {
                       onDonateClick={() => setIsDonationModalOpen(true)}
                     />
                     
-                    {/* Book Button - Placeholder for future booking system */}
+                    {/* Book Appointment */}
                     <Button 
                       variant="default" 
                       size="default"
                       className="bg-cyan-500 hover:bg-cyan-600 text-black font-semibold"
-                      onClick={() => toast.info("Booking system coming soon!")}
+                      onClick={() => setIsBookingOpen(true)}
                     >
                       <Calendar className="w-4 h-4 mr-2" />
                       Book Appointment
@@ -657,6 +659,16 @@ export default function BarberPublicProfile() {
         onClose={() => setIsDonationModalOpen(false)}
         creatorId={userId || ''}
         creatorName={displayName || 'Barber'}
+      />
+
+      <BookingConsole
+        open={isBookingOpen}
+        onOpenChange={setIsBookingOpen}
+        barberId={barberData.barber_id}
+        barberUserId={userId!}
+        barberName={displayName || 'Barber'}
+        barberAvatar={barberData.avatar_url || undefined}
+        barberTier={subscriptionData?.active_subscription_tier}
       />
     </div>
   );

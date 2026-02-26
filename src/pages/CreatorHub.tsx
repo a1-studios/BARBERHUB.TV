@@ -18,6 +18,7 @@ import { BarberProfileHeader } from '@/components/barber/BarberProfileHeader';
 import { AddFundsModal } from '@/components/AddFundsModal';
 import { toast } from 'sonner';
 import { SponsorDealBoard } from '@/components/creator/SponsorDealBoard';
+import { BarberAppointmentManager } from '@/components/booking/BarberAppointmentManager';
 import { 
   Crown,
   Scissors,
@@ -281,6 +282,14 @@ export default function CreatorHub() {
                 isFavorite={featuredCreator.isFavorite}
                 onSetFavorite={(creatorId) => setFavoriteMutation.mutate(creatorId)}
               />
+            </div>
+          )}
+
+          {/* Appointment Manager */}
+          {isBarber && (
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold">📅 Appointments</h2>
+              <BarberAppointmentManager />
             </div>
           )}
 

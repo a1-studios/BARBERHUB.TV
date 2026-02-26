@@ -44,6 +44,267 @@ export type Database = {
         }
         Relationships: []
       }
+      appointments: {
+        Row: {
+          appointment_type: Database["public"]["Enums"]["appointment_type"]
+          barber_id: string
+          barber_user_id: string
+          client_id: string
+          client_lat: number | null
+          client_lng: number | null
+          client_location_text: string | null
+          created_at: string
+          denial_reason: string | null
+          duration_minutes: number
+          escrow_amount_bb: number
+          id: string
+          notes: string | null
+          platform_fee_bb: number
+          scheduled_at: string
+          service_id: string | null
+          sos_multiplier: number
+          status: Database["public"]["Enums"]["appointment_status"]
+          updated_at: string
+        }
+        Insert: {
+          appointment_type?: Database["public"]["Enums"]["appointment_type"]
+          barber_id: string
+          barber_user_id: string
+          client_id: string
+          client_lat?: number | null
+          client_lng?: number | null
+          client_location_text?: string | null
+          created_at?: string
+          denial_reason?: string | null
+          duration_minutes?: number
+          escrow_amount_bb?: number
+          id?: string
+          notes?: string | null
+          platform_fee_bb?: number
+          scheduled_at: string
+          service_id?: string | null
+          sos_multiplier?: number
+          status?: Database["public"]["Enums"]["appointment_status"]
+          updated_at?: string
+        }
+        Update: {
+          appointment_type?: Database["public"]["Enums"]["appointment_type"]
+          barber_id?: string
+          barber_user_id?: string
+          client_id?: string
+          client_lat?: number | null
+          client_lng?: number | null
+          client_location_text?: string | null
+          created_at?: string
+          denial_reason?: string | null
+          duration_minutes?: number
+          escrow_amount_bb?: number
+          id?: string
+          notes?: string | null
+          platform_fee_bb?: number
+          scheduled_at?: string
+          service_id?: string | null
+          sos_multiplier?: number
+          status?: Database["public"]["Enums"]["appointment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barber_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barber_stats"
+            referencedColumns: ["barber_id"]
+          },
+          {
+            foreignKeyName: "appointments_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "public_barber_profiles"
+            referencedColumns: ["barber_id"]
+          },
+          {
+            foreignKeyName: "appointments_barber_user_id_fkey"
+            columns: ["barber_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "appointments_barber_user_id_fkey"
+            columns: ["barber_user_id"]
+            isOneToOne: false
+            referencedRelation: "public_user_profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "appointments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "appointments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_user_profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "appointments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "barber_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      barber_availability: {
+        Row: {
+          barber_id: string
+          barber_user_id: string
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          is_available: boolean
+          slot_duration_minutes: number
+          start_time: string
+        }
+        Insert: {
+          barber_id: string
+          barber_user_id: string
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_available?: boolean
+          slot_duration_minutes?: number
+          start_time: string
+        }
+        Update: {
+          barber_id?: string
+          barber_user_id?: string
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_available?: boolean
+          slot_duration_minutes?: number
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "barber_availability_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barber_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "barber_availability_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barber_stats"
+            referencedColumns: ["barber_id"]
+          },
+          {
+            foreignKeyName: "barber_availability_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "public_barber_profiles"
+            referencedColumns: ["barber_id"]
+          },
+          {
+            foreignKeyName: "barber_availability_barber_user_id_fkey"
+            columns: ["barber_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "barber_availability_barber_user_id_fkey"
+            columns: ["barber_user_id"]
+            isOneToOne: false
+            referencedRelation: "public_user_profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      barber_blocked_slots: {
+        Row: {
+          barber_id: string
+          barber_user_id: string
+          blocked_end: string
+          blocked_start: string
+          created_at: string
+          id: string
+          reason: string | null
+        }
+        Insert: {
+          barber_id: string
+          barber_user_id: string
+          blocked_end: string
+          blocked_start: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+        }
+        Update: {
+          barber_id?: string
+          barber_user_id?: string
+          blocked_end?: string
+          blocked_start?: string
+          created_at?: string
+          id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "barber_blocked_slots_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barber_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "barber_blocked_slots_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barber_stats"
+            referencedColumns: ["barber_id"]
+          },
+          {
+            foreignKeyName: "barber_blocked_slots_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "public_barber_profiles"
+            referencedColumns: ["barber_id"]
+          },
+          {
+            foreignKeyName: "barber_blocked_slots_barber_user_id_fkey"
+            columns: ["barber_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "barber_blocked_slots_barber_user_id_fkey"
+            columns: ["barber_user_id"]
+            isOneToOne: false
+            referencedRelation: "public_user_profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       barber_bucks_transactions: {
         Row: {
           amount: number
@@ -189,6 +450,84 @@ export type Database = {
             foreignKeyName: "barber_profiles_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "public_user_profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      barber_services: {
+        Row: {
+          allows_house_call: boolean
+          allows_sos: boolean
+          barber_id: string
+          barber_user_id: string
+          created_at: string
+          duration_minutes: number
+          id: string
+          is_active: boolean
+          price_bb: number
+          service_name: string
+          updated_at: string
+        }
+        Insert: {
+          allows_house_call?: boolean
+          allows_sos?: boolean
+          barber_id: string
+          barber_user_id: string
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          price_bb?: number
+          service_name: string
+          updated_at?: string
+        }
+        Update: {
+          allows_house_call?: boolean
+          allows_sos?: boolean
+          barber_id?: string
+          barber_user_id?: string
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          price_bb?: number
+          service_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "barber_services_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barber_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "barber_services_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "barber_stats"
+            referencedColumns: ["barber_id"]
+          },
+          {
+            foreignKeyName: "barber_services_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "public_barber_profiles"
+            referencedColumns: ["barber_id"]
+          },
+          {
+            foreignKeyName: "barber_services_barber_user_id_fkey"
+            columns: ["barber_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "barber_services_barber_user_id_fkey"
+            columns: ["barber_user_id"]
+            isOneToOne: false
             referencedRelation: "public_user_profiles"
             referencedColumns: ["user_id"]
           },
@@ -3102,6 +3441,16 @@ export type Database = {
     }
     Enums: {
       app_role: "barber" | "fan" | "admin" | "sovereign"
+      appointment_status:
+        | "pending"
+        | "escrow_locked"
+        | "confirmed"
+        | "in_transit"
+        | "completed"
+        | "cancelled"
+        | "no_show"
+        | "denied"
+      appointment_type: "standard" | "house_call" | "sos"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3230,6 +3579,17 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["barber", "fan", "admin", "sovereign"],
+      appointment_status: [
+        "pending",
+        "escrow_locked",
+        "confirmed",
+        "in_transit",
+        "completed",
+        "cancelled",
+        "no_show",
+        "denied",
+      ],
+      appointment_type: ["standard", "house_call", "sos"],
     },
   },
 } as const
