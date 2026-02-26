@@ -121,7 +121,7 @@ export function BookingConsole({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto border-primary/30 p-0">
+        <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden border-primary/30 p-0">
           {/* Barber Header */}
           <div className="p-4 pb-3 border-b border-border">
             <div className="flex items-center gap-3">

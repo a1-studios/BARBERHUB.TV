@@ -37,30 +37,30 @@ export function DateSlotPicker({ getAvailableSlots, selectedSlot, onSelectSlot }
     a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 min-w-0 w-full">
       {/* Date Scroller */}
-      <div className="space-y-1">
+      <div className="space-y-1 min-w-0">
         <Label className="text-sm text-muted-foreground">Date</Label>
-        <ScrollArea className="w-full">
-          <div className="flex gap-1.5 pb-2">
+        <div className="overflow-x-auto w-full -mx-1 px-1">
+          <div className="flex gap-1 pb-1" style={{ width: 'max-content' }}>
             {dates.map((d, i) => (
               <Button
                 key={i}
                 type="button"
                 variant={isSameDay(d, selectedDate) ? 'default' : 'outline'}
+                size="sm"
                 className={cn(
-                  'flex-shrink-0 flex flex-col items-center h-10 w-10 p-0.5',
+                  'flex-shrink-0 flex flex-col items-center justify-center h-10 w-9 p-0 rounded-md',
                   isSameDay(d, selectedDate) && 'bg-primary text-primary-foreground'
                 )}
                 onClick={() => setSelectedDate(d)}
               >
-                <span className="text-[9px] uppercase leading-none">{formatDay(d)}</span>
-                <span className="text-sm font-bold leading-tight">{formatDate(d)}</span>
+                <span className="text-[8px] uppercase leading-none">{formatDay(d)}</span>
+                <span className="text-xs font-bold leading-tight">{formatDate(d)}</span>
               </Button>
             ))}
           </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
+        </div>
       </div>
 
       {/* Time Slots */}
