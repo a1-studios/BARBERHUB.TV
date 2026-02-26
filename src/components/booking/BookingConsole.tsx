@@ -153,16 +153,16 @@ export function BookingConsole({
           </div>
 
           {/* Tri-State Toggle */}
-          <div className="px-4 pt-3">
-            <div className="grid grid-cols-3 gap-1.5">
-              {tabs.map(({ type, label, icon }) => (
+          <div className="px-4 pt-2">
+            <div className="grid grid-cols-3 gap-1">
+              {tabs.map(({ type, label }) => (
                 <Button
                   key={type}
                   type="button"
                   variant={bookingType === type ? 'default' : 'outline'}
                   size="sm"
                   className={cn(
-                    'relative flex items-center gap-1 h-9 text-[11px] font-bold px-2',
+                    'h-8 text-[11px] font-bold px-1',
                     bookingType === type && type === 'standard' && 'bg-primary text-primary-foreground',
                     bookingType === type && type === 'sos' && 'bg-destructive text-destructive-foreground animate-pulse',
                     bookingType === type && type === 'house_call' && 'bg-accent text-accent-foreground',
@@ -170,7 +170,6 @@ export function BookingConsole({
                   )}
                   onClick={() => setBookingType(type)}
                 >
-                  {icon}
                   {label}
                 </Button>
               ))}
