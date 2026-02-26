@@ -177,7 +177,7 @@ export function BookingConsole({
           </div>
 
           {/* Content */}
-          <div className="px-4 pb-4 space-y-4">
+          <div className="px-4 pb-3 space-y-3">
             {/* Tier Lock Message */}
             {isPremiumLocked && (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-muted-foreground/20">
