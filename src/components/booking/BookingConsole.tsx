@@ -14,7 +14,7 @@ import { useBarberAvailability } from '@/hooks/useBarberAvailability';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { useBookAppointment } from '@/hooks/useBookAppointment';
 import { cn } from '@/lib/utils';
-import { Calendar, Zap, Home, Lock } from 'lucide-react';
+import { Calendar, Zap, Home, Lock, Wallet } from 'lucide-react';
 
 type BookingType = 'standard' | 'sos' | 'house_call';
 
@@ -112,20 +112,20 @@ export function BookingConsole({
     );
   };
 
-  const tabs: { type: BookingType; label: string; icon: React.ReactNode; color: string }[] = [
-    { type: 'standard', label: 'Standard', icon: <Calendar className="h-4 w-4" />, color: 'bg-primary' },
-    { type: 'sos', label: 'Emergency', icon: <Zap className="h-4 w-4" />, color: 'bg-destructive' },
-    { type: 'house_call', label: 'House Call', icon: <Home className="h-4 w-4" />, color: 'bg-amber-500' },
+  const tabs: { type: BookingType; label: string; icon: React.ReactNode }[] = [
+    { type: 'standard', label: 'Standard', icon: <Calendar className="h-4 w-4" /> },
+    { type: 'sos', label: 'SOS', icon: <Zap className="h-4 w-4" /> },
+    { type: 'house_call', label: 'House Call', icon: <Home className="h-4 w-4" /> },
   ];
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto border-primary/30 p-0">
-          {/* Header */}
-          <div className="p-6 pb-4 border-b border-border">
+        <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto border-primary/30 p-0">
+          {/* Barber Header */}
+          <div className="p-4 pb-3 border-b border-border">
             <div className="flex items-center gap-3">
-              <Avatar className="h-12 w-12 border-2 border-primary/30">
+              <Avatar className="h-10 w-10 border-2 border-primary/30">
                 <AvatarImage src={barberAvatar} />
                 <AvatarFallback className="bg-primary/20 text-primary font-bold">
                   {barberName.charAt(0).toUpperCase()}
@@ -133,29 +133,39 @@ export function BookingConsole({
               </Avatar>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-lg">{barberName}</h3>
+                  <h3 className="font-bold text-base">{barberName}</h3>
                   {barberTier && <SubscriptionBadge tier={barberTier} size="sm" />}
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  Your Balance: <span className="text-primary font-bold">{barberBucks.toLocaleString()} BB</span>
-                </p>
+                <p className="text-xs text-muted-foreground">Booking appointment</p>
               </div>
             </div>
           </div>
 
+          {/* Client Wallet */}
+          <div className="px-4 pt-3">
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/50 border border-border">
+              <div className="flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground font-medium">Your Wallet</span>
+              </div>
+              <span className="text-sm font-black text-primary">{barberBucks.toLocaleString()} BB</span>
+            </div>
+          </div>
+
           {/* Tri-State Toggle */}
-          <div className="px-6 pt-4">
-            <div className="grid grid-cols-3 gap-2">
-              {tabs.map(({ type, label, icon, color }) => (
+          <div className="px-4 pt-3">
+            <div className="grid grid-cols-3 gap-1.5">
+              {tabs.map(({ type, label, icon }) => (
                 <Button
                   key={type}
                   type="button"
                   variant={bookingType === type ? 'default' : 'outline'}
+                  size="sm"
                   className={cn(
-                    'relative flex items-center gap-1.5 h-11 text-xs font-bold',
+                    'relative flex items-center gap-1 h-9 text-[11px] font-bold px-2',
                     bookingType === type && type === 'standard' && 'bg-primary text-primary-foreground',
                     bookingType === type && type === 'sos' && 'bg-destructive text-destructive-foreground animate-pulse',
-                    bookingType === type && type === 'house_call' && 'bg-amber-500 text-black',
+                    bookingType === type && type === 'house_call' && 'bg-accent text-accent-foreground',
                     bookingType !== type && 'border-muted-foreground/30'
                   )}
                   onClick={() => setBookingType(type)}
@@ -168,7 +178,7 @@ export function BookingConsole({
           </div>
 
           {/* Content */}
-          <div className="px-6 pb-6 space-y-4">
+          <div className="px-4 pb-4 space-y-4">
             {/* Tier Lock Message */}
             {isPremiumLocked && (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-muted-foreground/20">
@@ -239,7 +249,7 @@ export function BookingConsole({
                     placeholder="Enter your address..."
                     value={locationText}
                     onChange={(e) => setLocationText(e.target.value)}
-                    className="border-amber-500/30 focus:border-amber-500"
+                    className="border-accent/30 focus:border-accent"
                   />
                 </div>
                 <DateSlotPicker
