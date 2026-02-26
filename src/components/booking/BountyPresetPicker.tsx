@@ -30,10 +30,10 @@ export function BountyPresetPicker({ value, onChange, minAmount = 500 }: BountyP
             type="button"
             variant={value === preset.value && !customMode ? 'default' : 'outline'}
             className={cn(
-              'font-bold text-sm h-12',
+              'font-bold text-xs h-9',
               value === preset.value && !customMode 
-                ? 'bg-amber-500 hover:bg-amber-600 text-black border-amber-500' 
-                : 'border-amber-500/30 hover:border-amber-500/60 hover:bg-amber-500/10'
+                ? 'bg-accent hover:bg-accent/90 text-accent-foreground border-accent' 
+                : 'border-accent/30 hover:border-accent/60 hover:bg-accent/10'
             )}
             onClick={() => {
               setCustomMode(false);
