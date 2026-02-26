@@ -142,13 +142,13 @@ export function BookingConsole({
           </div>
 
           {/* Client Wallet */}
-          <div className="px-4 pt-3">
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/50 border border-border">
+          <div className="px-4 pt-2">
+            <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border border-border">
               <div className="flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground font-medium">Your Wallet</span>
+                <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-[11px] text-muted-foreground font-medium">Your Wallet</span>
               </div>
-              <span className="text-sm font-black text-primary">{barberBucks.toLocaleString()} BB</span>
+              <span className="text-xs font-black text-primary">{barberBucks.toLocaleString()} BB</span>
             </div>
           </div>
 
