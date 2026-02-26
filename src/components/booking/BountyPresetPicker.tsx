@@ -50,7 +50,7 @@ export function BountyPresetPicker({ value, onChange, minAmount = 500 }: BountyP
           type="button"
           variant="ghost"
           size="sm"
-          className="text-xs text-muted-foreground hover:text-amber-400"
+          className="text-xs text-muted-foreground hover:text-accent"
           onClick={() => setCustomMode(true)}
         >
           Or enter custom amount
