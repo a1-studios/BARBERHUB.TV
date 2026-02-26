@@ -249,7 +249,7 @@ export function BookingConsole({
                     placeholder="Enter your address..."
                     value={locationText}
                     onChange={(e) => setLocationText(e.target.value)}
-                    className="border-amber-500/30 focus:border-amber-500"
+                    className="border-accent/30 focus:border-accent"
                   />
                 </div>
                 <DateSlotPicker
