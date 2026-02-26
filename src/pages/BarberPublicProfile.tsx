@@ -14,6 +14,7 @@ import { BarberActionButtons } from '@/components/barber/BarberActionButtons';
 import { SubscriptionBadge } from '@/components/SubscriptionBadge';
 import { useState } from 'react';
 import { DonationModal } from '@/components/DonationModal';
+import { BookingConsole } from '@/components/booking/BookingConsole';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
