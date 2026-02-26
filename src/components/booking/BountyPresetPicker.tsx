@@ -30,10 +30,10 @@ export function BountyPresetPicker({ value, onChange, minAmount = 500 }: BountyP
             type="button"
             variant={value === preset.value && !customMode ? 'default' : 'outline'}
             className={cn(
-              'font-bold text-sm h-12',
+              'font-bold text-xs h-9',
               value === preset.value && !customMode 
-                ? 'bg-amber-500 hover:bg-amber-600 text-black border-amber-500' 
-                : 'border-amber-500/30 hover:border-amber-500/60 hover:bg-amber-500/10'
+                ? 'bg-accent hover:bg-accent/90 text-accent-foreground border-accent' 
+                : 'border-accent/30 hover:border-accent/60 hover:bg-accent/10'
             )}
             onClick={() => {
               setCustomMode(false);
@@ -50,7 +50,7 @@ export function BountyPresetPicker({ value, onChange, minAmount = 500 }: BountyP
           type="button"
           variant="ghost"
           size="sm"
-          className="text-xs text-muted-foreground hover:text-amber-400"
+          className="text-xs text-muted-foreground hover:text-accent"
           onClick={() => setCustomMode(true)}
         >
           Or enter custom amount
@@ -67,7 +67,7 @@ export function BountyPresetPicker({ value, onChange, minAmount = 500 }: BountyP
                 onChange(Math.max(val, 0));
               }}
               placeholder={`Min ${minAmount} BB`}
-              className="pr-12 border-amber-500/30 focus:border-amber-500"
+              className="pr-12 border-accent/30 focus:border-accent"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-medium">BB</span>
           </div>

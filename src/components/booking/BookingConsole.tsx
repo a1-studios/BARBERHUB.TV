@@ -142,27 +142,27 @@ export function BookingConsole({
           </div>
 
           {/* Client Wallet */}
-          <div className="px-4 pt-3">
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/50 border border-border">
+          <div className="px-4 pt-2">
+            <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50 border border-border">
               <div className="flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground font-medium">Your Wallet</span>
+                <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-[11px] text-muted-foreground font-medium">Your Wallet</span>
               </div>
-              <span className="text-sm font-black text-primary">{barberBucks.toLocaleString()} BB</span>
+              <span className="text-xs font-black text-primary">{barberBucks.toLocaleString()} BB</span>
             </div>
           </div>
 
           {/* Tri-State Toggle */}
-          <div className="px-4 pt-3">
-            <div className="grid grid-cols-3 gap-1.5">
-              {tabs.map(({ type, label, icon }) => (
+          <div className="px-4 pt-2">
+            <div className="grid grid-cols-3 gap-1">
+              {tabs.map(({ type, label }) => (
                 <Button
                   key={type}
                   type="button"
                   variant={bookingType === type ? 'default' : 'outline'}
                   size="sm"
                   className={cn(
-                    'relative flex items-center gap-1 h-9 text-[11px] font-bold px-2',
+                    'h-8 text-[11px] font-bold px-1',
                     bookingType === type && type === 'standard' && 'bg-primary text-primary-foreground',
                     bookingType === type && type === 'sos' && 'bg-destructive text-destructive-foreground animate-pulse',
                     bookingType === type && type === 'house_call' && 'bg-accent text-accent-foreground',
@@ -170,7 +170,6 @@ export function BookingConsole({
                   )}
                   onClick={() => setBookingType(type)}
                 >
-                  {icon}
                   {label}
                 </Button>
               ))}
@@ -178,7 +177,7 @@ export function BookingConsole({
           </div>
 
           {/* Content */}
-          <div className="px-4 pb-4 space-y-4">
+          <div className="px-4 pb-3 space-y-3">
             {/* Tier Lock Message */}
             {isPremiumLocked && (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-muted-foreground/20">
@@ -275,10 +274,10 @@ export function BookingConsole({
             <div className="pt-2 border-t border-border space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Total</span>
-                <span className="text-xl font-black text-primary">{getPrice().toLocaleString()} BB</span>
+                <span className="text-lg font-black text-primary">{getPrice().toLocaleString()} BB</span>
               </div>
               <Button
-                className="w-full h-12 font-black text-base bg-primary hover:bg-primary/90"
+                className="w-full h-10 font-black text-sm bg-primary hover:bg-primary/90"
                 disabled={
                   isPremiumLocked ||
                   getPrice() <= 0 ||

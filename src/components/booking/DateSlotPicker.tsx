@@ -42,21 +42,21 @@ export function DateSlotPicker({ getAvailableSlots, selectedSlot, onSelectSlot }
       <div className="space-y-1">
         <Label className="text-sm text-muted-foreground">Date</Label>
         <ScrollArea className="w-full">
-          <div className="flex gap-2 pb-2">
+          <div className="flex gap-1.5 pb-2">
             {dates.map((d, i) => (
               <Button
                 key={i}
                 type="button"
                 variant={isSameDay(d, selectedDate) ? 'default' : 'outline'}
                 className={cn(
-                  'flex-shrink-0 flex flex-col items-center h-16 w-14 p-1',
+                  'flex-shrink-0 flex flex-col items-center h-12 w-11 p-0.5',
                   isSameDay(d, selectedDate) && 'bg-primary text-primary-foreground'
                 )}
                 onClick={() => setSelectedDate(d)}
               >
-                <span className="text-[10px] uppercase">{formatDay(d)}</span>
-                <span className="text-lg font-bold leading-tight">{formatDate(d)}</span>
-                <span className="text-[10px]">{formatMonth(d)}</span>
+                <span className="text-[9px] uppercase">{formatDay(d)}</span>
+                <span className="text-base font-bold leading-tight">{formatDate(d)}</span>
+                <span className="text-[9px]">{formatMonth(d)}</span>
               </Button>
             ))}
           </div>
