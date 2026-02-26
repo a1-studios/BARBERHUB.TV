@@ -660,6 +660,16 @@ export default function BarberPublicProfile() {
         creatorId={userId || ''}
         creatorName={displayName || 'Barber'}
       />
+
+      <BookingConsole
+        open={isBookingOpen}
+        onOpenChange={setIsBookingOpen}
+        barberId={barberData.barber_id}
+        barberUserId={userId!}
+        barberName={displayName || 'Barber'}
+        barberAvatar={barberData.avatar_url || undefined}
+        barberTier={subscriptionData?.active_subscription_tier}
+      />
     </div>
   );
 }
