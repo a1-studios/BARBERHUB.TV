@@ -1,119 +1,107 @@
 
 
-## Particle Explosion Animation for VS/ENTER Cycle
+## Booking System: House Call Bounty Presets, SOS Cuts & Barber Management
 
-### Concept
+### Phase 1: Database Migration
 
-Replace the current simple cross-fade between "VS" and "ENTER" (Swords) with a **particle explosion effect**. Every 3 seconds when the text transitions:
+Create 4 new tables:
 
-1. The current text ("VS" or "ENTER") **explodes outward** into ~20 particles (tiny orange and cyan dots) that scatter in all directions
-2. The particles dissipate over ~400ms
-3. The new text ("ENTER" or "VS") **implodes inward** -- particles rush from the edges to the center and coalesce into the new text
+**`barber_services`** -- barber defines their service menu
+- `id`, `barber_id` (FK barber_profiles.id), `barber_user_id` (FK profiles.user_id), `service_name`, `price_bb` (int), `duration_minutes` (int, default 30), `allows_house_call` (bool default false), `allows_sos` (bool default false), `is_active` (bool default true), `created_at`, `updated_at`
 
-This creates a dramatic energy-burst feel where the text appears to shatter and reform.
+**`barber_availability`** -- weekly schedule
+- `id`, `barber_id`, `day_of_week` (0-6), `start_time` (TIME), `end_time` (TIME), `is_available` (bool default true), `slot_duration_minutes` (int default 30), `created_at`
 
-### Animation Sequence
+**`appointments`** -- core booking table
+- `id`, `client_id` (FK profiles.user_id), `barber_id` (FK barber_profiles.id), `barber_user_id` (FK profiles.user_id), `service_id` (FK barber_services), `appointment_type` (enum: `standard`, `house_call`, `sos`), `status` (enum: `pending`, `escrow_locked`, `confirmed`, `in_transit`, `completed`, `cancelled`, `no_show`, `denied`), `scheduled_at` (timestamptz), `duration_minutes` (int), `escrow_amount_bb` (int), `platform_fee_bb` (int default 0), `client_location_text` (text), `client_lat`/`client_lng` (numeric), `sos_multiplier` (numeric default 1.0), `notes` (text), `denial_reason` (text), `created_at`, `updated_at`
 
-```text
-[VS visible for 5s with subtle idle glow pulse]
-         |
-   VS EXPLODES --> 20 particles scatter outward (400ms)
-         |
-   Particles converge inward --> ENTER forms (400ms)
-         |
-[ENTER visible for 3s with Swords icon pulse]
-         |
-   ENTER EXPLODES --> 20 particles scatter outward (400ms)
-         |
-   Particles converge inward --> VS reforms (400ms)
-         |
-   (repeat)
-```
+**`barber_blocked_slots`** -- manual blocks + SOS auto-buffers
+- `id`, `barber_id`, `blocked_start` (timestamptz), `blocked_end` (timestamptz), `reason` (text), `created_at`
 
-### Changes
+RLS: clients see own appointments, barbers see appointments where they are barber, inserts require auth. Barbers manage own services/availability/blocked slots.
 
-#### File: `src/components/DynamicBattleHero.tsx`
+### Phase 2: Edge Functions
 
-**Modify the AnimatePresence transitions (lines 375-426):**
+**`book-appointment/index.ts`**
+1. Validate client BB balance >= amount
+2. Enforce minimum: house_call and sos types require >= 500 BB
+3. For SOS: multiply base price by 2.0x
+4. Deduct BB from client, record as `appointment_escrow` transaction
+5. Insert appointment with `status = 'pending'` (barber must accept/deny)
+6. For SOS: auto-insert 30-min buffer blocked slots before/after
+7. Tier gate: if barber's `active_subscription_tier` is null or 'bronze' (free/low), reject house_call and sos bookings at the edge function level -- return error with upgrade prompt message
 
-Replace the current simple opacity/scale fade with particle explosion animations:
+**`manage-appointment/index.ts`**
+- Barber accepts: status -> `escrow_locked` -> `confirmed`
+- Barber denies: status -> `denied`, refund full BB to client, store `denial_reason`
+- Barber completes: transfer `escrow - 5% fee` to barber BB, route fee 50/50 to prize pool and platform
+- Client cancels: >2hrs = full refund, <2hrs = 50% refund / 50% to barber
 
-- **Exit animation** (`exit` prop): The text scales down to 0 while spawning ~20 absolutely-positioned particle dots around it. Each particle flies outward in a random direction (random angle, random distance 20-50px) and fades to 0. Particles alternate between orange (`hsl(var(--primary))`) and cyan (`hsl(187 100% 50%)`) colors with matching glow shadows.
+### Phase 3: BookingConsole UI
 
-- **Enter animation** (`initial` + `animate`): The text starts at scale 0 with particles positioned at random outer positions. Particles animate inward to center (0,0) and fade, while the text scales from 0 to 1 with a slight overshoot (scale to 1.1 then settle to 1).
+**New file: `src/components/booking/BookingConsole.tsx`**
+- Full-screen dialog opened from "Book Appointment" on BarberPublicProfile
+- Shows barber avatar, name, tier badge, and client's BB balance at top
+- Tri-state toggle: **Standard** | **Emergency SOS** (pulsing orange) | **House Call** (gold)
 
-**Implementation approach -- inline particle generation:**
+**Standard mode:**
+- Service dropdown from `barber_services`
+- Horizontal 14-day date scroller
+- Time slot grid (computed from availability minus blocks minus existing appointments)
+- Price in BB
 
-Rather than a separate component, generate particles directly in the motion variants using an array of `motion.div` elements rendered alongside the text inside each AnimatePresence child:
+**SOS mode:**
+- "Next Available" single slot display
+- Price = base * 2.0x, minimum 500 BB
+- Single-tap "Instant Book"
 
-```text
-<motion.div key="vs" ...>
-  {/* Particle array */}
-  {Array.from({ length: 20 }).map((_, i) => (
-    <motion.div
-      key={i}
-      className="absolute w-1 h-1 rounded-full"
-      style={{ backgroundColor: i % 2 === 0 ? orange : cyan }}
-      initial={{ x: 0, y: 0, opacity: 1 }}
-      animate={{ x: 0, y: 0, opacity: 0 }}  // idle: invisible
-      exit={{
-        x: Math.cos(angle) * distance,
-        y: Math.sin(angle) * distance,
-        opacity: [1, 0],
-        scale: [1, 0]
-      }}
-    />
-  ))}
-  {/* VS text */}
-  <span>VS</span>
-</motion.div>
-```
+**House Call mode:**
+- Three quick-pick bounty buttons: **750 BB** | **1,200 BB** | **2,000 BB**
+- Custom amount input below with "Min 500 BB" label and validation
+- Location text input for client address
+- Service selector
 
-Each particle gets a pre-calculated random angle (evenly distributed around 360 degrees) and random distance (20-50px), with a staggered delay for a natural burst feel.
+**Escrow confirm dialog** before final commit showing: service, amount, balance before/after
 
-**Apply to both barber and fan VS elements:**
+### Phase 4: Tier-Gating on Client Side
 
-- **Barber VS** (lines 389-406): Add particles to the VS motion.span and the Swords motion.div
-- **Fan VS** (lines 411-425): For fans, since there is no cycle, add a subtle idle particle effect -- 4-6 particles that slowly orbit or float around the VS text on a loop, giving a constant "energy radiating" feel without the explosion
+When client views a barber's profile and selects House Call or SOS:
+- If barber is **free or Bronze tier**: the bounty/SOS options are **visible but locked** with a message: "This barber needs to upgrade to Silver+ to accept House Calls / SOS cuts"
+- If barber is **Silver or Gold**: full access to house call and SOS booking
 
-**Cycle timing unchanged:**
-- The existing `useEffect` at lines 166-173 stays as-is (5s VS, 3s Swords for barbers)
-- The explosion/implosion animation takes ~400ms for exit + ~400ms for enter, fitting within the transition window
+When a **low-tier barber** sees incoming bounties in their dashboard, they see the bounty list but clicking "Accept" triggers the `UpgradePrompt` modal with `reason: 'premium_feature'`.
 
-**Rings unchanged:**
-- The rotating dashed ring and inner cyan ring remain as they are (lines 344-366)
+### Phase 5: Barber Appointment Manager
 
-### Particle Specs
+**New file: `src/components/booking/BarberAppointmentManager.tsx`**
+- New tab in CreatorHub / barber dashboard
+- **Services tab**: CRUD for services with BB prices, toggle house_call/sos eligibility
+- **Schedule tab**: Set weekly availability per day
+- **Appointments tab**: List of pending/confirmed/completed appointments
+  - Accept/Deny buttons on pending appointments (deny requires reason)
+  - Mark complete button on confirmed appointments
+  - SOS appointments highlighted with pulsing orange indicator
 
-| Property | Value |
-|----------|-------|
-| Count per explosion | 20 particles |
-| Size | 1-2px (w-1 h-1 or w-0.5 h-0.5) |
-| Colors | Alternating orange (primary) and cyan |
-| Scatter distance | 20-50px random per particle |
-| Scatter direction | Evenly distributed angles (360/20 = 18 degree increments + slight random offset) |
-| Glow | box-shadow matching particle color, 4px blur |
-| Exit duration | 400ms ease-out |
-| Enter duration | 400ms ease-out with overshoot |
-| Stagger | 20ms between particles for natural burst feel |
+### Phase 6: Wire Up
 
-### What Changes
+- Replace placeholder toast in `BarberPublicProfile.tsx` line 370 with `BookingConsole` dialog
+- Add appointment manager tab to CreatorHub
 
-| Element | Before | After |
-|---------|--------|-------|
-| VS to ENTER transition | Simple opacity/scale fade | Particle explosion outward, then implosion inward |
-| ENTER to VS transition | Simple opacity/scale fade | Same particle explosion/implosion |
-| Fan VS | Static with glow pulse | Static with 4-6 subtle floating particles |
-| Rings | Unchanged | Unchanged |
-| Drawer | Unchanged | Unchanged |
-| Cycle timing | Unchanged (5s/3s) | Unchanged |
+### Files Summary
 
-### What Is NOT Changing
-
-- The 5s VS / 3s Swords timing cycle
-- Arena Drawer contents and navigation
-- Rotating ring animations
-- MobileVoteCenter replacement during active battles
-- Video layout, action bars, name overlays
-- Open challenges badge count query
+| Action | File |
+|--------|------|
+| Migration | 4 tables + enums + RLS + indexes |
+| New edge fn | `supabase/functions/book-appointment/index.ts` |
+| New edge fn | `supabase/functions/manage-appointment/index.ts` |
+| New component | `src/components/booking/BookingConsole.tsx` |
+| New component | `src/components/booking/DateSlotPicker.tsx` |
+| New component | `src/components/booking/ServiceSelector.tsx` |
+| New component | `src/components/booking/BountyPresetPicker.tsx` |
+| New component | `src/components/booking/EscrowConfirmDialog.tsx` |
+| New component | `src/components/booking/BarberAppointmentManager.tsx` |
+| New hook | `src/hooks/useBarberAvailability.tsx` |
+| New hook | `src/hooks/useBookAppointment.tsx` |
+| Edit | `src/pages/BarberPublicProfile.tsx` -- replace toast with dialog |
+| Edit | `src/components/creator/CreatorHub.tsx` -- add appointments tab |
 
