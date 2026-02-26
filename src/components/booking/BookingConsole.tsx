@@ -14,7 +14,7 @@ import { useBarberAvailability } from '@/hooks/useBarberAvailability';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { useBookAppointment } from '@/hooks/useBookAppointment';
 import { cn } from '@/lib/utils';
-import { Calendar, Zap, Home, Lock } from 'lucide-react';
+import { Calendar, Zap, Home, Lock, Wallet } from 'lucide-react';
 
 type BookingType = 'standard' | 'sos' | 'house_call';
 
