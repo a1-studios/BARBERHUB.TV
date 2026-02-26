@@ -154,7 +154,7 @@ export function BookingConsole({
 
           {/* Tri-State Toggle */}
           <div className="px-4 pt-2">
-            <div className="grid grid-cols-3 gap-1">
+            <div className="flex flex-col gap-1">
               {tabs.map(({ type, label }) => (
                 <Button
                   key={type}
