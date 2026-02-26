@@ -18,6 +18,7 @@ import { BarberProfileHeader } from '@/components/barber/BarberProfileHeader';
 import { AddFundsModal } from '@/components/AddFundsModal';
 import { toast } from 'sonner';
 import { SponsorDealBoard } from '@/components/creator/SponsorDealBoard';
+import { BarberAppointmentManager } from '@/components/booking/BarberAppointmentManager';
 import { 
   Crown,
   Scissors,
