@@ -67,7 +67,7 @@ export function BountyPresetPicker({ value, onChange, minAmount = 500 }: BountyP
                 onChange(Math.max(val, 0));
               }}
               placeholder={`Min ${minAmount} BB`}
-              className="pr-12 border-amber-500/30 focus:border-amber-500"
+              className="pr-12 border-accent/30 focus:border-accent"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-medium">BB</span>
           </div>

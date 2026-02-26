@@ -274,10 +274,10 @@ export function BookingConsole({
             <div className="pt-2 border-t border-border space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-sm font-medium">Total</span>
-                <span className="text-xl font-black text-primary">{getPrice().toLocaleString()} BB</span>
+                <span className="text-lg font-black text-primary">{getPrice().toLocaleString()} BB</span>
               </div>
               <Button
-                className="w-full h-12 font-black text-base bg-primary hover:bg-primary/90"
+                className="w-full h-10 font-black text-sm bg-primary hover:bg-primary/90"
                 disabled={
                   isPremiumLocked ||
                   getPrice() <= 0 ||
