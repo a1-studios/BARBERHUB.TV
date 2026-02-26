@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 interface DateSlotPickerProps {
@@ -10,9 +11,8 @@ interface DateSlotPickerProps {
 }
 
 export function DateSlotPicker({ getAvailableSlots, selectedSlot, onSelectSlot }: DateSlotPickerProps) {
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDateIndex, setSelectedDateIndex] = useState<string>('0');
 
-  // Generate next 14 days
   const dates = useMemo(() => {
     const result: Date[] = [];
     const today = new Date();
@@ -25,41 +25,34 @@ export function DateSlotPicker({ getAvailableSlots, selectedSlot, onSelectSlot }
     return result;
   }, []);
 
+  const selectedDate = dates[parseInt(selectedDateIndex)] || dates[0];
   const slots = useMemo(() => getAvailableSlots(selectedDate), [selectedDate, getAvailableSlots]);
 
-  const formatDay = (d: Date) => d.toLocaleDateString('en-US', { weekday: 'short' });
-  const formatDate = (d: Date) => d.getDate().toString();
-  const formatMonth = (d: Date) => d.toLocaleDateString('en-US', { month: 'short' });
-  const formatTime = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const formatDateOption = (d: Date, i: number) => {
+    const label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+    return i === 0 ? `Today — ${label}` : label;
+  };
 
-  const isSameDay = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  const formatTime = (iso: string) =>
+    new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
   return (
-    <div className="space-y-3 min-w-0 w-full">
-      {/* Date Scroller */}
-      <div className="space-y-1 min-w-0">
+    <div className="space-y-3 w-full">
+      {/* Date Dropdown */}
+      <div className="space-y-1">
         <Label className="text-sm text-muted-foreground">Date</Label>
-        <div className="overflow-x-auto w-full -mx-1 px-1">
-          <div className="flex gap-1 pb-1" style={{ width: 'max-content' }}>
+        <Select value={selectedDateIndex} onValueChange={setSelectedDateIndex}>
+          <SelectTrigger className="w-full h-10">
+            <SelectValue placeholder="Select date" />
+          </SelectTrigger>
+          <SelectContent>
             {dates.map((d, i) => (
-              <Button
-                key={i}
-                type="button"
-                variant={isSameDay(d, selectedDate) ? 'default' : 'outline'}
-                size="sm"
-                className={cn(
-                  'flex-shrink-0 flex flex-col items-center justify-center h-10 w-9 p-0 rounded-md',
-                  isSameDay(d, selectedDate) && 'bg-primary text-primary-foreground'
-                )}
-                onClick={() => setSelectedDate(d)}
-              >
-                <span className="text-[8px] uppercase leading-none">{formatDay(d)}</span>
-                <span className="text-xs font-bold leading-tight">{formatDate(d)}</span>
-              </Button>
+              <SelectItem key={i} value={String(i)}>
+                {formatDateOption(d, i)}
+              </SelectItem>
             ))}
-          </div>
-        </div>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Time Slots */}
@@ -72,7 +65,7 @@ export function DateSlotPicker({ getAvailableSlots, selectedSlot, onSelectSlot }
             No available slots for this day
           </p>
         ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-48 overflow-y-auto">
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-36 overflow-y-auto">
             {slots.map((slot) => (
               <Button
                 key={slot}
