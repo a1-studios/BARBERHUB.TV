@@ -364,12 +364,12 @@ export default function BarberPublicProfile() {
                       onDonateClick={() => setIsDonationModalOpen(true)}
                     />
                     
-                    {/* Book Button - Placeholder for future booking system */}
+                    {/* Book Appointment */}
                     <Button 
                       variant="default" 
                       size="default"
                       className="bg-cyan-500 hover:bg-cyan-600 text-black font-semibold"
-                      onClick={() => toast.info("Booking system coming soon!")}
+                      onClick={() => setIsBookingOpen(true)}
                     >
                       <Calendar className="w-4 h-4 mr-2" />
                       Book Appointment
