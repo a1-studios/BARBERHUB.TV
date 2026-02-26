@@ -49,14 +49,13 @@ export function DateSlotPicker({ getAvailableSlots, selectedSlot, onSelectSlot }
                 type="button"
                 variant={isSameDay(d, selectedDate) ? 'default' : 'outline'}
                 className={cn(
-                  'flex-shrink-0 flex flex-col items-center h-12 w-11 p-0.5',
+                  'flex-shrink-0 flex flex-col items-center h-10 w-10 p-0.5',
                   isSameDay(d, selectedDate) && 'bg-primary text-primary-foreground'
                 )}
                 onClick={() => setSelectedDate(d)}
               >
-                <span className="text-[9px] uppercase">{formatDay(d)}</span>
-                <span className="text-base font-bold leading-tight">{formatDate(d)}</span>
-                <span className="text-[9px]">{formatMonth(d)}</span>
+                <span className="text-[9px] uppercase leading-none">{formatDay(d)}</span>
+                <span className="text-sm font-bold leading-tight">{formatDate(d)}</span>
               </Button>
             ))}
           </div>
