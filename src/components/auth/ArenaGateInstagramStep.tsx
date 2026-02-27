@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Instagram, ExternalLink, Loader2, Trophy } from 'lucide-react';
+import { Instagram, ExternalLink } from 'lucide-react';
 
 interface ArenaGateInstagramStepProps {
   onVerified: () => void;
