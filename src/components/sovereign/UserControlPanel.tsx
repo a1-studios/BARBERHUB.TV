@@ -73,7 +73,24 @@ const UserControlPanel = ({ stats, onRefresh }: UserControlPanelProps) => {
     }
   };
 
-  const openProfile = async (userId: string) => {
+  const loadDirectory = async () => {
+    setLoading(true);
+    try {
+      const response = await supabase.functions.invoke('sovereign-user-control', {
+        body: { action: 'list_all_users' }
+      });
+      if (response.error) throw response.error;
+      setAllBarbers(response.data.barbers || []);
+      setAllFans(response.data.fans || []);
+      setDirectoryOpen(true);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to load directory');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
     setLoading(true);
     try {
       const response = await supabase.functions.invoke('sovereign-user-control', {
