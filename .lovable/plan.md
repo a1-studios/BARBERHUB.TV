@@ -1,119 +1,47 @@
 
 
-## Particle Explosion Animation for VS/ENTER Cycle
+## Fan Profile Redesign: Full-Page Hero + Sponsor Board Access
 
-### Concept
-
-Replace the current simple cross-fade between "VS" and "ENTER" (Swords) with a **particle explosion effect**. Every 3 seconds when the text transitions:
-
-1. The current text ("VS" or "ENTER") **explodes outward** into ~20 particles (tiny orange and cyan dots) that scatter in all directions
-2. The particles dissipate over ~400ms
-3. The new text ("ENTER" or "VS") **implodes inward** -- particles rush from the edges to the center and coalesce into the new text
-
-This creates a dramatic energy-burst feel where the text appears to shatter and reform.
-
-### Animation Sequence
-
-```text
-[VS visible for 5s with subtle idle glow pulse]
-         |
-   VS EXPLODES --> 20 particles scatter outward (400ms)
-         |
-   Particles converge inward --> ENTER forms (400ms)
-         |
-[ENTER visible for 3s with Swords icon pulse]
-         |
-   ENTER EXPLODES --> 20 particles scatter outward (400ms)
-         |
-   Particles converge inward --> VS reforms (400ms)
-         |
-   (repeat)
-```
+### What We're Building
+1. **Fan Profile Header** — a new `FanProfileHeader` component mirroring the barber header style: country flag emoji, avatar, display name, BB wallet inline, stats (votes cast, voting power), and edit button
+2. **Reorder Profile.tsx** — for fans, show the new header at the top (replacing the separate Personal Info card + BB Wallet), with transaction history below
+3. **"Become Official Sponsor" button** — a small minimalistic icon/badge in the fan header that opens a modal to purchase sponsor board time with BB
+4. **Sponsor board purchase flow** — a new `SponsorBoardPurchaseModal` component where fans pick a duration (e.g., 1 day = 50 BB, 3 days = 120 BB, 7 days = 250 BB), pay with BB, and get auto-inserted into the `sponsor_ads` table with their profile info
 
 ### Changes
 
-#### File: `src/components/DynamicBattleHero.tsx`
+#### 1. New component `FanProfileHeader.tsx`
+- Similar structure to `BarberProfileHeader` — Card with gradient overlay, country flag background
+- Shows: avatar, display_name, country flag, "Fan" role badge, SubCategoryBadge (if official_sponsor)
+- Inline BB wallet display (top-right, same as barber header) with Add Funds button
+- Stats row: Votes Cast, Voting Power
+- Small "Become Sponsor" icon button (Award icon, gold accent) — only shows if user is NOT already an official_sponsor
+- Edit Profile button that toggles inline editing of display_name, username, bio
+- Country shown but locked (same locked badge pattern)
 
-**Modify the AnimatePresence transitions (lines 375-426):**
+#### 2. New component `SponsorBoardPurchaseModal.tsx`
+- Dialog with 3 tier options: 1-day, 3-day, 7-day sponsor board slots priced in BB
+- Each option shows: duration, BB cost, what they get (logo on sponsor ticker, "Official Sponsor" sub-category badge)
+- On purchase: deducts BB via edge function, inserts into `sponsor_ads` with `highlight_end` set to now + duration, sets user's `sub_category` to `official_sponsor`
+- Minimalist dark theme with neon orange/zion blue accents
 
-Replace the current simple opacity/scale fade with particle explosion animations:
+#### 3. New edge function `purchase-sponsor-slot`
+- Accepts `user_id`, `duration_days`, `bb_cost`, `name`, `message`, `logo_url`, `link`
+- Validates BB balance, deducts BB, creates `barber_bucks_transactions` record
+- Inserts into `sponsor_ads` with calculated `highlight_end`
+- Updates `profiles.sub_category` to `official_sponsor`
+- Returns success
 
-- **Exit animation** (`exit` prop): The text scales down to 0 while spawning ~20 absolutely-positioned particle dots around it. Each particle flies outward in a random direction (random angle, random distance 20-50px) and fades to 0. Particles alternate between orange (`hsl(var(--primary))`) and cyan (`hsl(187 100% 50%)`) colors with matching glow shadows.
+#### 4. Update `Profile.tsx` — fan layout
+- Remove the separate Personal Info Card and BB Wallet Widget for fans
+- Replace with `FanProfileHeader` at the top (same position as barber header)
+- Keep TransactionHistory below
+- Full-page feel: remove max-w-4xl constraint, use edge-to-edge on mobile
 
-- **Enter animation** (`initial` + `animate`): The text starts at scale 0 with particles positioned at random outer positions. Particles animate inward to center (0,0) and fade, while the text scales from 0 to 1 with a slight overshoot (scale to 1.1 then settle to 1).
-
-**Implementation approach -- inline particle generation:**
-
-Rather than a separate component, generate particles directly in the motion variants using an array of `motion.div` elements rendered alongside the text inside each AnimatePresence child:
-
-```text
-<motion.div key="vs" ...>
-  {/* Particle array */}
-  {Array.from({ length: 20 }).map((_, i) => (
-    <motion.div
-      key={i}
-      className="absolute w-1 h-1 rounded-full"
-      style={{ backgroundColor: i % 2 === 0 ? orange : cyan }}
-      initial={{ x: 0, y: 0, opacity: 1 }}
-      animate={{ x: 0, y: 0, opacity: 0 }}  // idle: invisible
-      exit={{
-        x: Math.cos(angle) * distance,
-        y: Math.sin(angle) * distance,
-        opacity: [1, 0],
-        scale: [1, 0]
-      }}
-    />
-  ))}
-  {/* VS text */}
-  <span>VS</span>
-</motion.div>
-```
-
-Each particle gets a pre-calculated random angle (evenly distributed around 360 degrees) and random distance (20-50px), with a staggered delay for a natural burst feel.
-
-**Apply to both barber and fan VS elements:**
-
-- **Barber VS** (lines 389-406): Add particles to the VS motion.span and the Swords motion.div
-- **Fan VS** (lines 411-425): For fans, since there is no cycle, add a subtle idle particle effect -- 4-6 particles that slowly orbit or float around the VS text on a loop, giving a constant "energy radiating" feel without the explosion
-
-**Cycle timing unchanged:**
-- The existing `useEffect` at lines 166-173 stays as-is (5s VS, 3s Swords for barbers)
-- The explosion/implosion animation takes ~400ms for exit + ~400ms for enter, fitting within the transition window
-
-**Rings unchanged:**
-- The rotating dashed ring and inner cyan ring remain as they are (lines 344-366)
-
-### Particle Specs
-
-| Property | Value |
-|----------|-------|
-| Count per explosion | 20 particles |
-| Size | 1-2px (w-1 h-1 or w-0.5 h-0.5) |
-| Colors | Alternating orange (primary) and cyan |
-| Scatter distance | 20-50px random per particle |
-| Scatter direction | Evenly distributed angles (360/20 = 18 degree increments + slight random offset) |
-| Glow | box-shadow matching particle color, 4px blur |
-| Exit duration | 400ms ease-out |
-| Enter duration | 400ms ease-out with overshoot |
-| Stagger | 20ms between particles for natural burst feel |
-
-### What Changes
-
-| Element | Before | After |
-|---------|--------|-------|
-| VS to ENTER transition | Simple opacity/scale fade | Particle explosion outward, then implosion inward |
-| ENTER to VS transition | Simple opacity/scale fade | Same particle explosion/implosion |
-| Fan VS | Static with glow pulse | Static with 4-6 subtle floating particles |
-| Rings | Unchanged | Unchanged |
-| Drawer | Unchanged | Unchanged |
-| Cycle timing | Unchanged (5s/3s) | Unchanged |
-
-### What Is NOT Changing
-
-- The 5s VS / 3s Swords timing cycle
-- Arena Drawer contents and navigation
-- Rotating ring animations
-- MobileVoteCenter replacement during active battles
-- Video layout, action bars, name overlays
-- Open challenges badge count query
+### Technical Details
+- `FanProfileHeader` reuses `RotatingBBCoin`, `SubCategoryBadge`, `RoleBadge` components
+- Country flag uses same `getCountryFlag()` helper as barber header
+- The sponsor purchase modal is triggered from a small Award icon in the header
+- Edge function uses service role for cross-table updates (profiles + sponsor_ads + transactions)
+- No new DB tables needed — reuses `sponsor_ads` and `profiles.sub_category`
 
