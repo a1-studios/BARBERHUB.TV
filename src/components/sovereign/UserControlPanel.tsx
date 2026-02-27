@@ -40,11 +40,14 @@ interface UserControlPanelProps {
 
 const UserControlPanel = ({ stats, onRefresh }: UserControlPanelProps) => {
   const [searchOpen, setSearchOpen] = useState(false);
+  const [directoryOpen, setDirectoryOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [allBarbers, setAllBarbers] = useState<any[]>([]);
+  const [allFans, setAllFans] = useState<any[]>([]);
   
   // Profile inspector state
   const [userDetails, setUserDetails] = useState<any>(null);
