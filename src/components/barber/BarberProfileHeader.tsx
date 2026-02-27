@@ -24,6 +24,7 @@ interface BarberProfileHeaderProps {
   onSettingsClick?: () => void;
   onAddFundsClick?: () => void;
   onSignOutClick?: () => void;
+  onDeleteAccountClick?: () => void;
   barberBucks?: number;
   showActions?: boolean;
   socialLinks?: {
