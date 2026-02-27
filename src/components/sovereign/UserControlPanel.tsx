@@ -284,6 +284,64 @@ const UserControlPanel = ({ stats, onRefresh }: UserControlPanelProps) => {
         </DialogContent>
       </Dialog>
 
+      {/* Directory Modal */}
+      <Dialog open={directoryOpen} onOpenChange={() => setDirectoryOpen(false)}>
+        <DialogContent className="bg-[#1a1a2e] border-purple-900/50 max-w-2xl max-h-[80vh] p-0">
+          <DialogHeader className="px-6 pt-6 pb-2">
+            <DialogTitle className="text-purple-400 flex items-center gap-2">
+              <BookOpen className="h-5 w-5" /> User Directory
+            </DialogTitle>
+            <DialogDescription className="text-gray-500 text-xs">
+              {allBarbers.length + allFans.length} users total — click to inspect
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="px-6 pb-6 max-h-[60vh]">
+            {/* BARBERS Section */}
+            <div className="mb-4">
+              <h4 className="text-xs font-bold text-orange-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                ✂️ BARBERS ({allBarbers.length})
+              </h4>
+              <div className="space-y-1">
+                {allBarbers.map((u: any) => (
+                  <div
+                    key={u.user_id}
+                    className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#0f0f1a] border border-gray-800 cursor-pointer hover:border-orange-600/50 transition-colors"
+                    onClick={() => { setDirectoryOpen(false); openProfile(u.user_id); }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-white text-sm font-medium">{u.display_name || u.username || 'Unknown'}</span>
+                      <SubCategoryBadge subCategory={u.sub_category} size="sm" />
+                    </div>
+                    <span className="text-xs text-yellow-400 font-mono">{u.barber_bucks || 0} BB</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* FANS Section */}
+            <div>
+              <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                👥 FANS ({allFans.length})
+              </h4>
+              <div className="space-y-1">
+                {allFans.map((u: any) => (
+                  <div
+                    key={u.user_id}
+                    className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#0f0f1a] border border-gray-800 cursor-pointer hover:border-cyan-600/50 transition-colors"
+                    onClick={() => { setDirectoryOpen(false); openProfile(u.user_id); }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-white text-sm font-medium">{u.display_name || u.username || 'Unknown'}</span>
+                      <SubCategoryBadge subCategory={u.sub_category} size="sm" />
+                    </div>
+                    <span className="text-xs text-yellow-400 font-mono">{u.barber_bucks || 0} BB</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
       {/* Profile Inspector Modal */}
       <Dialog open={profileOpen} onOpenChange={() => setProfileOpen(false)}>
         <DialogContent className="bg-[#1a1a2e] border-purple-900/50 max-w-3xl max-h-[90vh] p-0">
