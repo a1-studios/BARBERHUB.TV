@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Crown, Users, Trophy, Swords } from 'lucide-react';
+import { Crown, Users, Trophy } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 
