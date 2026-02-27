@@ -337,6 +337,20 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
                     isLoading={loading}
                   />
                 )}
+
+                {step === 'choose-tier' && (
+                  <ArenaGateChooseTierStep
+                    onNext={() => setStep('choose-categories')}
+                    onBack={() => {}}
+                  />
+                )}
+
+                {step === 'choose-categories' && (
+                  <ArenaGateChooseCategoriesStep
+                    onComplete={handleFlowComplete}
+                    onBack={() => setStep('choose-tier')}
+                  />
+                )}
               </AnimatePresence>
             </div>
           </div>
