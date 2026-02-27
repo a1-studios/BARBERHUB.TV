@@ -3,18 +3,10 @@ import { Globe, Trophy } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CountryLeaderCard } from './CountryLeaderCard';
 import { useCountryLeaders } from '@/hooks/useCountryLeaders';
-import { useToast } from '@/hooks/use-toast';
 
 export const CountryLeaderboard = () => {
   const { data: countries, isLoading } = useCountryLeaders(12);
-  const { toast } = useToast();
 
-  const handleChallenge = (countryName: string) => {
-    toast({
-      title: `Challenge ${countryName}`,
-      description: "Country matchmaking coming soon! Register for a category to get matched."
-    });
-  };
 
   if (isLoading) {
     return (
@@ -76,7 +68,6 @@ export const CountryLeaderboard = () => {
             leaders={country.leaders}
             totalPoints={country.total_points}
             barberCount={country.barber_count}
-            onChallenge={() => handleChallenge(country.country_name)}
             index={index}
           />
         ))}

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Crown, Users, Trophy, Swords } from 'lucide-react';
+import { Crown, Users, Trophy } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 
@@ -17,7 +17,6 @@ interface CountryLeaderCardProps {
   leaders: CountryLeader[];
   totalPoints: number;
   barberCount: number;
-  onChallenge?: () => void;
   index?: number;
 }
 
@@ -36,7 +35,6 @@ export const CountryLeaderCard = ({
   leaders,
   totalPoints,
   barberCount,
-  onChallenge,
   index = 0
 }: CountryLeaderCardProps) => {
   const topLeader = leaders[0];
@@ -167,18 +165,6 @@ export const CountryLeaderCard = ({
             </div>
           )}
 
-          {/* Challenge Button */}
-          {onChallenge && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full group/btn border-primary/30 hover:border-primary hover:bg-primary/10"
-              onClick={onChallenge}
-            >
-              <Swords className="w-4 h-4 mr-2 group-hover/btn:animate-pulse" />
-              <span className="text-xs">Challenge This Country</span>
-            </Button>
-          )}
         </div>
 
         {/* Shine Effect on Hover */}

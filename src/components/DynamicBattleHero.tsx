@@ -12,6 +12,7 @@ import { MobileVoteCenter } from "@/components/battles/MobileVoteCenter";
 import { ArenaActionBar } from "@/components/battles/ArenaActionBar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useEffect, useMemo } from "react";
+import { ChallengeModal } from "@/components/battles/ChallengeModal";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
@@ -53,6 +54,7 @@ export const DynamicBattleHero = () => {
   const [voted2, setVoted2] = useState(false);
   const [arenaDrawerOpen, setArenaDrawerOpen] = useState(false);
   const [showSwords, setShowSwords] = useState(false);
+  const [challengeModalOpen, setChallengeModalOpen] = useState(false);
 
   // Fetch active battle (active, voting or upcoming)
   const {
@@ -624,7 +626,7 @@ export const DynamicBattleHero = () => {
                 <div className="px-4 pb-6 space-y-3">
                   {/* Battle row */}
                   <button
-                    onClick={() => { setArenaDrawerOpen(false); navigate('/portal'); }}
+                    onClick={() => { setArenaDrawerOpen(false); setChallengeModalOpen(true); }}
                     className="w-full flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-left"
                   >
                     <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
@@ -646,7 +648,7 @@ export const DynamicBattleHero = () => {
 
                   {/* Issue Challenge row */}
                   <button
-                    onClick={() => { setArenaDrawerOpen(false); navigate('/portal'); }}
+                    onClick={() => { setArenaDrawerOpen(false); setChallengeModalOpen(true); }}
                     className="w-full flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-left"
                   >
                     <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center flex-shrink-0">
@@ -662,6 +664,9 @@ export const DynamicBattleHero = () => {
               </DrawerContent>
             </Drawer>
           )}
+
+          {/* Challenge Modal - rendered as sibling to avoid focus trap issues */}
+          <ChallengeModal open={challengeModalOpen} onClose={() => setChallengeModalOpen(false)} />
 
           {/* Mobile Vote Center - Replaces VS divider on mobile during active battles */}
           {isMobile && isActiveBattle && !isCurrentUserInBattle && <div className="py-2 px-2 flex-shrink-0">
