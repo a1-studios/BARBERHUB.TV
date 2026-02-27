@@ -203,22 +203,6 @@ const Profile = () => {
           {/* Transaction History */}
           <TransactionHistory />
 
-          {/* Account Actions */}
-          <Separator className="my-6" />
-          <div className="pb-4">
-            <Button
-              variant="outline"
-              className="w-full gap-2"
-              onClick={async () => {
-                await signOut();
-                navigate('/');
-              }}
-            >
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
-          </div>
-
           {/* Creation Upload Modal */}
           {showCreationUpload && isBarber && barberProfile && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">

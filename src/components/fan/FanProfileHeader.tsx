@@ -214,6 +214,12 @@ export function FanProfileHeader({
                       Become Sponsor
                     </Button>
                   )}
+                  {onSignOutClick && (
+                    <Button variant="ghost" size="sm" onClick={onSignOutClick} className="text-muted-foreground hover:text-destructive">
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sign Out
+                    </Button>
+                  )}
                 </>
               ) : (
                 <>
