@@ -8,7 +8,7 @@ const corsHeaders = {
 
 interface MatchRequest {
   challenge_id: string;
-  stream_url: string;
+  stream_url?: string;
 }
 
 serve(async (req) => {
@@ -37,6 +37,24 @@ serve(async (req) => {
 
     console.log(`Matching challenge stake: ${challenge_id} by ${user.id}`);
 
+    // Silver+ subscription check for acceptor
+    const { data: subscription, error: subError } = await supabase
+      .from('barber_subscriptions')
+      .select('id, tier:barber_subscription_tiers(tier_name)')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (subError) {
+      console.error('Subscription check error:', subError);
+      throw new Error('Could not verify subscription');
+    }
+
+    const tierName = (subscription?.tier as any)?.tier_name || 'free';
+    if (!['silver', 'gold', 'diamond'].includes(tierName)) {
+      throw new Error('Silver+ subscription required to accept challenges. Upgrade your tier to unlock challenges.');
+    }
+
     // Get challenge details
     const { data: challenge, error: challengeError } = await supabase
       .from('open_challenges')
@@ -48,8 +66,13 @@ serve(async (req) => {
       throw new Error('Challenge not found');
     }
 
-    if (challenge.status !== 'open') {
+    if (challenge.status !== 'waiting_for_opponent') {
       throw new Error('This challenge is no longer available');
+    }
+
+    // Check if challenge expired
+    if (challenge.expires_at && new Date(challenge.expires_at) < new Date()) {
+      throw new Error('This challenge has expired');
     }
 
     if (challenge.challenger_id === user.id) {
@@ -98,8 +121,30 @@ serve(async (req) => {
         reference_id: challenge_id
       });
 
+    // Calculate platform fee (5%) and add to jackpot pool
+    const totalPot = (challenge.pot_total || 0) + stakeToMatch;
+    const platformFee = Math.floor(totalPot * 0.05);
+
+    // Update challenge_prize_pool (jackpot)
+    const currentYear = new Date().getFullYear();
+    const { data: existingPool } = await supabase
+      .from('challenge_prize_pool')
+      .select('id, total_pool_bb, platform_fees_collected_bb')
+      .eq('pool_year', currentYear)
+      .maybeSingle();
+
+    if (existingPool) {
+      await supabase
+        .from('challenge_prize_pool')
+        .update({
+          total_pool_bb: (existingPool.total_pool_bb || 0) + platformFee,
+          platform_fees_collected_bb: (existingPool.platform_fees_collected_bb || 0) + platformFee,
+          last_updated: new Date().toISOString(),
+        })
+        .eq('id', existingPool.id);
+    }
+
     // Update challenge - mark as accepted
-    const newPotTotal = challenge.pot_total + stakeToMatch;
     const { error: updateError } = await supabase
       .from('open_challenges')
       .update({
@@ -108,7 +153,8 @@ serve(async (req) => {
         accepted_at: new Date().toISOString(),
         status: 'accepted',
         opponent_stake_matched: true,
-        pot_total: newPotTotal
+        pot_total: totalPot,
+        platform_fee_collected: platformFee,
       })
       .eq('id', challenge_id);
 
@@ -128,23 +174,23 @@ serve(async (req) => {
         user_id: challenge.challenger_id,
         type: 'challenge_accepted',
         title: '⚔️ Challenge Accepted!',
-        message: `${profile.display_name || 'A barber'} accepted your challenge "${challenge.title}"! Total pot: ${newPotTotal} BB`,
+        message: `${profile.display_name || 'A barber'} accepted your challenge "${challenge.title}"! Total pot: ${totalPot} BB`,
         data: {
           challenge_id,
           opponent_id: user.id,
-          pot_total: newPotTotal
+          pot_total: totalPot
         }
       });
 
-    console.log(`Challenge matched: ${challenge_id}, pot: ${newPotTotal} BB`);
+    console.log(`Challenge matched: ${challenge_id}, pot: ${totalPot} BB, fee: ${platformFee} BB`);
 
     return new Response(
       JSON.stringify({
         success: true,
         challenge_id,
-        pot_total: newPotTotal,
+        pot_total: totalPot,
         new_balance: newBalance,
-        message: `Challenge accepted! Total pot: ${newPotTotal} BB`
+        message: `Challenge accepted! Total pot: ${totalPot} BB`
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
