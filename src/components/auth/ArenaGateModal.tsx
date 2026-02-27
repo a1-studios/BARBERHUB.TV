@@ -130,12 +130,21 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
   }, []);
 
   const handleBack = () => {
-    const stepOrder: Step[] = ['select', 'verify', 'credentials', 'barber-info', 'instagram', 'success'];
+    const stepOrder: Step[] = ['select', 'verify', 'credentials', 'barber-info', 'instagram', 'success', 'choose-tier', 'choose-categories'];
     const currentIndex = stepOrder.indexOf(step);
     if (currentIndex > 0) {
       setStep(stepOrder[currentIndex - 1]);
     }
   };
+
+  const handleFlowComplete = useCallback(() => {
+    toast.success('Welcome to the Arena! Check your email to confirm your account.');
+    onComplete({
+      selectedCountry: selectedCountry || '',
+      verificationToken,
+      verified: true,
+    });
+  }, [selectedCountry, verificationToken, onComplete]);
 
   if (!isOpen) return null;
 
