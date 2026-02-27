@@ -9,6 +9,9 @@ import UserControlPanel from '@/components/sovereign/UserControlPanel';
 import AuditLogViewer from '@/components/sovereign/AuditLogViewer';
 import LivePulseMonitor from '@/components/sovereign/LivePulseMonitor';
 import SponsorControlPanel from '@/components/sovereign/SponsorControlPanel';
+import BattleDirectoryPanel from '@/components/sovereign/BattleDirectoryPanel';
+import TournamentQueuePanel from '@/components/sovereign/TournamentQueuePanel';
+import TournamentManagerPanel from '@/components/sovereign/TournamentManagerPanel';
 
 const SovereignHQ = () => {
   const { user } = useAuth();
