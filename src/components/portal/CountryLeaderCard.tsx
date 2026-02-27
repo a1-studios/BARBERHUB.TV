@@ -35,7 +35,6 @@ export const CountryLeaderCard = ({
   leaders,
   totalPoints,
   barberCount,
-  onChallenge,
   index = 0
 }: CountryLeaderCardProps) => {
   const topLeader = leaders[0];
