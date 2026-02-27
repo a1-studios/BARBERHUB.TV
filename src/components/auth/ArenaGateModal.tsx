@@ -217,6 +217,8 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
                 {step === 'barber-info' && 'Add your contact info'}
                 {step === 'instagram' && 'Join our community'}
                 {step === 'success' && 'Welcome to the Arena!'}
+                {step === 'choose-tier' && 'Power up your profile'}
+                {step === 'choose-categories' && 'Pick your battle categories'}
               </p>
             </div>
 
