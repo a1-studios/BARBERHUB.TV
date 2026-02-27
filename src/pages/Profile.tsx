@@ -195,6 +195,7 @@ const Profile = () => {
                 }}
                 onAddFundsClick={() => setShowAddFundsModal(true)}
                 onBecomeSponsorClick={() => setShowSponsorModal(true)}
+                onSignOutClick={async () => { await signOut(); navigate('/'); }}
               />
             </div>
           )}
