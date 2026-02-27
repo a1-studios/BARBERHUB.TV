@@ -1453,6 +1453,36 @@ export type Database = {
         }
         Relationships: []
       }
+      challenge_prize_pool: {
+        Row: {
+          created_at: string | null
+          id: string
+          last_updated: string | null
+          platform_fees_collected_bb: number
+          pool_year: number
+          total_challenges_completed: number
+          total_pool_bb: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          last_updated?: string | null
+          platform_fees_collected_bb?: number
+          pool_year?: number
+          total_challenges_completed?: number
+          total_pool_bb?: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          last_updated?: string | null
+          platform_fees_collected_bb?: number
+          pool_year?: number
+          total_challenges_completed?: number
+          total_pool_bb?: number
+        }
+        Relationships: []
+      }
       client_profiles: {
         Row: {
           avatar_url: string | null
@@ -2059,6 +2089,8 @@ export type Database = {
           challenger_youtube_video_id: string | null
           created_at: string | null
           donations_total: number | null
+          duration_minutes: number
+          expires_at: string | null
           id: string
           opponent_stake_matched: boolean | null
           platform_fee_collected: number | null
@@ -2082,6 +2114,8 @@ export type Database = {
           challenger_youtube_video_id?: string | null
           created_at?: string | null
           donations_total?: number | null
+          duration_minutes?: number
+          expires_at?: string | null
           id?: string
           opponent_stake_matched?: boolean | null
           platform_fee_collected?: number | null
@@ -2105,6 +2139,8 @@ export type Database = {
           challenger_youtube_video_id?: string | null
           created_at?: string | null
           donations_total?: number | null
+          duration_minutes?: number
+          expires_at?: string | null
           id?: string
           opponent_stake_matched?: boolean | null
           platform_fee_collected?: number | null
