@@ -133,3 +133,6 @@ verify_jwt = false
 
 [functions.purchase-sponsor-slot]
 verify_jwt = false
+
+[functions.delete-account]
+verify_jwt = false
