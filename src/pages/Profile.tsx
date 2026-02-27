@@ -24,7 +24,7 @@ import { TransactionHistory } from '@/components/analytics/TransactionHistory';
 import { toast } from 'sonner';
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { isBarber: isUserBarber } = useUserRole();
   const navigate = useNavigate();
   const queryClient = useQueryClient();

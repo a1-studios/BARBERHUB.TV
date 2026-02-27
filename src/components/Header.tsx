@@ -96,20 +96,7 @@ const Header = () => {
       requiresAuth: true,
       adminOnly: true
     },
-    {
-      id: 'sign-out',
-      label: 'Sign Out',
-      icon: <LogOut className="w-5 h-5 text-muted-foreground" />,
-      path: '/',
-      requiresAuth: true,
-      onClick: () => handleSignOut()
-    }
   ];
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
-  };
 
   const handleBrandClick = () => {
     navigate('/');
