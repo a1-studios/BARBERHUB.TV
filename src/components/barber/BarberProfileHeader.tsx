@@ -23,6 +23,7 @@ interface BarberProfileHeaderProps {
   barber_id?: string;
   onSettingsClick?: () => void;
   onAddFundsClick?: () => void;
+  onSignOutClick?: () => void;
   barberBucks?: number;
   showActions?: boolean;
   socialLinks?: {
