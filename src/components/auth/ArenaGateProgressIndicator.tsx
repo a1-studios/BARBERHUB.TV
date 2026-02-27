@@ -1,11 +1,11 @@
 import { cn } from '@/lib/utils';
 
 const STEPS = [
-  { key: 'select', icon: '🏳', label: 'Flag' },
   { key: 'verify', icon: '✂️', label: 'Verify' },
   { key: 'credentials', icon: '👤', label: 'Info' },
   { key: 'barber-info', icon: '📱', label: 'Phone' },
   { key: 'instagram', icon: '📸', label: 'Follow' },
+  { key: 'claim-flag', icon: '🏳', label: 'Flag' },
   { key: 'choose-tier', icon: '👑', label: 'Tier' },
   { key: 'choose-categories', icon: '⚔️', label: 'Battle' },
 ];

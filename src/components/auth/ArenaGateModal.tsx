@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Trophy } from 'lucide-react';
+import { X, Trophy, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { FlagCarousel, getCountryFlag, CAROUSEL_COUNTRIES } from './FlagCarousel';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CAROUSEL_COUNTRIES, getCountryFlag } from './FlagCarousel';
 import { ClipperSwipeVerifier } from './ClipperSwipeVerifier';
 import { FreshAnimation } from './FreshAnimation';
 import { ArenaGateProgressIndicator } from './ArenaGateProgressIndicator';
@@ -29,7 +30,7 @@ interface ArenaGateModalProps {
   onComplete: (result: ArenaGateResult) => void;
 }
 
-type Step = 'select' | 'verify' | 'credentials' | 'barber-info' | 'instagram' | 'success' | 'choose-tier' | 'choose-categories';
+type Step = 'verify' | 'credentials' | 'barber-info' | 'instagram' | 'claim-flag' | 'success' | 'choose-tier' | 'choose-categories';
 
 interface FormData {
   displayName: string;
@@ -39,7 +40,7 @@ interface FormData {
 }
 
 export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalProps) => {
-  const [step, setStep] = useState<Step>('select');
+  const [step, setStep] = useState<Step>('verify');
   const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
   const [showCelebration, setShowCelebration] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -54,26 +55,12 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
   
   const { generateVerificationToken } = useGestureVerification();
 
-  const handleCountrySelect = (code: string) => {
-    setSelectedCountry(code);
-    HapticFeedback.vote();
-  };
-
-  const handleProceedToVerify = () => {
-    if (selectedCountry) {
-      setStep('verify');
-      HapticFeedback.follow();
-    }
-  };
-
   const handleVerified = useCallback((metrics: SwipeMetrics) => {
-    if (!selectedCountry) return;
-    
-    const token = generateVerificationToken(selectedCountry, metrics);
+    const token = generateVerificationToken('pending', metrics);
     setVerificationToken(token);
     setStep('credentials');
     HapticFeedback.follow();
-  }, [selectedCountry, generateVerificationToken]);
+  }, [generateVerificationToken]);
 
   const handleSwipeFailed = (reason: string) => {
     console.log('Swipe failed:', reason);
@@ -107,11 +94,8 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
       if (error) throw error;
       
       if (data.user) {
-        // SUCCESS! Show celebration
         setStep('success');
         setShowCelebration(true);
-        
-        // Fire MASSIVE country celebration - the real reward!
         triggerCountryCelebration(selectedCountry);
       }
       
@@ -124,13 +108,12 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
   };
 
   const handleCelebrationComplete = useCallback(() => {
-    // Transition to upsell steps instead of closing
     setStep('choose-tier');
     setShowCelebration(false);
   }, []);
 
   const handleBack = () => {
-    const stepOrder: Step[] = ['select', 'verify', 'credentials', 'barber-info', 'instagram', 'success', 'choose-tier', 'choose-categories'];
+    const stepOrder: Step[] = ['verify', 'credentials', 'barber-info', 'instagram', 'claim-flag', 'success', 'choose-tier', 'choose-categories'];
     const currentIndex = stepOrder.indexOf(step);
     if (currentIndex > 0) {
       setStep(stepOrder[currentIndex - 1]);
@@ -148,11 +131,21 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
 
   if (!isOpen) return null;
 
-  // Get cultural data for display
   const culturalData = selectedCountry ? getCountryCulturalData(selectedCountry) : null;
   const countryName = selectedCountry 
     ? CAROUSEL_COUNTRIES.find(c => c.code === selectedCountry)?.name || selectedCountry 
     : '';
+
+  const stepSubtitles: Record<Step, string> = {
+    'verify': 'Confirm with the signature swipe',
+    'credentials': 'Create your battle account',
+    'barber-info': 'Add your contact info',
+    'instagram': 'Join our community',
+    'claim-flag': 'Represent your nation!',
+    'success': 'Welcome to the Arena!',
+    'choose-tier': 'Power up your profile',
+    'choose-categories': 'Pick your battle categories',
+  };
 
   return (
     <AnimatePresence>
@@ -162,13 +155,11 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
       >
-        {/* Backdrop */}
         <div 
           className="absolute inset-0 bg-black/90 backdrop-blur-sm"
           onClick={onClose}
         />
 
-        {/* Modal */}
         <motion.div
           initial={{ scale: 0.9, opacity: 0, y: 20 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -178,15 +169,12 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
             background: 'radial-gradient(ellipse at center, #1a1a2e 0%, #0f0f17 50%, #000 100%)',
           }}
         >
-          {/* Stadium light beams */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute -top-20 left-1/4 w-32 h-96 bg-gradient-to-b from-primary/10 to-transparent rotate-12 blur-xl" />
             <div className="absolute -top-20 right-1/4 w-32 h-96 bg-gradient-to-b from-cyan-500/10 to-transparent -rotate-12 blur-xl" />
           </div>
 
-          {/* Content */}
           <div className="relative z-10 p-6 flex flex-col" style={{ height: '650px', maxHeight: '85vh' }}>
-            {/* Header */}
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <Trophy className="w-6 h-6 text-primary" />
@@ -202,90 +190,19 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
               </Button>
             </div>
 
-            {/* Progress Indicator */}
             <ArenaGateProgressIndicator currentStep={step} />
 
-            {/* Title */}
             <div className="text-center mb-4">
               <h2 className="text-2xl font-black bg-gradient-to-r from-primary via-orange-400 to-cyan-400 bg-clip-text text-transparent mb-1">
                 WORLD CUP OF BARBERING
               </h2>
               <p className="text-muted-foreground text-sm">
-                {step === 'select' && 'Select your nation to represent'}
-                {step === 'verify' && 'Confirm with the signature swipe'}
-                {step === 'credentials' && 'Create your battle account'}
-                {step === 'barber-info' && 'Add your contact info'}
-                {step === 'instagram' && 'Join our community'}
-                {step === 'success' && 'Welcome to the Arena!'}
-                {step === 'choose-tier' && 'Power up your profile'}
-                {step === 'choose-categories' && 'Pick your battle categories'}
+                {stepSubtitles[step]}
               </p>
             </div>
 
-            {/* Steps */}
             <div className="flex-1 flex flex-col min-h-0">
               <AnimatePresence mode="wait">
-                {step === 'select' && (
-                  <motion.div
-                    key="select"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 20 }}
-                    className="flex-1 flex flex-col min-h-0"
-                  >
-                    <div className="flex-1 min-h-0">
-                      <FlagCarousel
-                        selectedCountry={selectedCountry}
-                        onSelect={handleCountrySelect}
-                      />
-                    </div>
-
-                    {/* Selected country display with cultural data */}
-                    {selectedCountry && culturalData && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="text-center mb-4 mt-2"
-                      >
-                        <div 
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-full border"
-                          style={{
-                            backgroundColor: `${culturalData.colors[0]}20`,
-                            borderColor: `${culturalData.colors[0]}50`,
-                          }}
-                        >
-                          <span className="text-xl">{getCountryFlag(selectedCountry)}</span>
-                          <span 
-                            className="font-bold"
-                            style={{ color: culturalData.colors[0] }}
-                          >
-                            Representing {countryName}
-                          </span>
-                          <span className="text-xl">{culturalData.celebrationEmoji}</span>
-                        </div>
-                        <motion.p
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ delay: 0.5 }}
-                          className="text-sm mt-2 font-semibold"
-                          style={{ color: culturalData.colors[0] }}
-                        >
-                          "{culturalData.hypePhrase}"
-                        </motion.p>
-                      </motion.div>
-                    )}
-
-                    <Button
-                      onClick={handleProceedToVerify}
-                      disabled={!selectedCountry}
-                      size="lg"
-                      className="w-full mt-2 bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90"
-                    >
-                      Continue to Verification
-                    </Button>
-                  </motion.div>
-                )}
-
                 {step === 'verify' && (
                   <motion.div
                     key="verify"
@@ -298,14 +215,6 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
                       onVerified={handleVerified}
                       onFailed={handleSwipeFailed}
                     />
-
-                    <Button
-                      variant="ghost"
-                      onClick={handleBack}
-                      className="mt-6"
-                    >
-                      ← Change Country
-                    </Button>
                   </motion.div>
                 )}
 
@@ -323,7 +232,7 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
                 {step === 'barber-info' && (
                   <ArenaGateBarberInfoStep
                     phoneNumber={formData.phoneNumber}
-                    countryCode={selectedCountry || 'US'}
+                    countryCode="US"
                     onChange={handleFormChange}
                     onNext={() => setStep('instagram')}
                     onBack={() => setStep('credentials')}
@@ -332,10 +241,99 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
 
                 {step === 'instagram' && (
                   <ArenaGateInstagramStep
-                    onVerified={handleAccountCreation}
+                    onVerified={() => setStep('claim-flag')}
                     onBack={() => setStep('barber-info')}
-                    isLoading={loading}
+                    isLoading={false}
                   />
+                )}
+
+                {step === 'claim-flag' && (
+                  <motion.div
+                    key="claim-flag"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    className="flex-1 flex flex-col"
+                  >
+                    <div className="text-center mb-4">
+                      <h3 className="text-xl font-bold text-foreground mb-1">🏆 Claim Your Flag</h3>
+                      <p className="text-sm text-muted-foreground">Choose the nation you'll represent in battle</p>
+                    </div>
+
+                    <div className="flex-1 flex flex-col items-center justify-center space-y-6">
+                      {/* Country selector */}
+                      <div className="w-full max-w-xs">
+                        <Select value={selectedCountry || ''} onValueChange={(val) => setSelectedCountry(val)}>
+                          <SelectTrigger className="bg-background/50 border-border/50 h-12 text-base">
+                            <SelectValue placeholder="🌍 Select your country" />
+                          </SelectTrigger>
+                          <SelectContent className="max-h-60">
+                            {CAROUSEL_COUNTRIES.map((country) => (
+                              <SelectItem key={country.code} value={country.code}>
+                                {getCountryFlag(country.code)} {country.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Animated flag display */}
+                      {selectedCountry && culturalData && (
+                        <motion.div
+                          initial={{ scale: 0, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+                          className="flex flex-col items-center gap-3"
+                        >
+                          <span className="text-7xl">{getCountryFlag(selectedCountry)}</span>
+                          <div 
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-full border"
+                            style={{
+                              backgroundColor: `${culturalData.colors[0]}20`,
+                              borderColor: `${culturalData.colors[0]}50`,
+                            }}
+                          >
+                            <span className="font-bold" style={{ color: culturalData.colors[0] }}>
+                              Representing {countryName}
+                            </span>
+                            <span className="text-xl">{culturalData.celebrationEmoji}</span>
+                          </div>
+                          <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.3 }}
+                            className="text-sm font-semibold"
+                            style={{ color: culturalData.colors[0] }}
+                          >
+                            "{culturalData.hypePhrase}"
+                          </motion.p>
+                        </motion.div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2 mt-4">
+                      <Button variant="ghost" onClick={() => setStep('instagram')} className="px-6" disabled={loading}>
+                        ← Back
+                      </Button>
+                      <Button
+                        onClick={handleAccountCreation}
+                        disabled={!selectedCountry || loading}
+                        className="flex-1 bg-gradient-to-r from-primary via-orange-500 to-cyan-500 hover:from-primary/90 hover:via-orange-500/90 hover:to-cyan-500/90 shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Creating Account...
+                          </>
+                        ) : (
+                          <>
+                            <Trophy className="w-4 h-4 mr-2" />
+                            CLAIM MY FLAG & CREATE ACCOUNT 🏆
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </motion.div>
                 )}
 
                 {step === 'choose-tier' && (
@@ -355,7 +353,6 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
             </div>
           </div>
 
-          {/* Celebration overlay */}
           <FreshAnimation
             show={showCelebration}
             countryCode={selectedCountry || 'US'}
