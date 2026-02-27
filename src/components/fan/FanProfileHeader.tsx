@@ -45,6 +45,7 @@ export function FanProfileHeader({
   onAddFundsClick,
   onBecomeSponsorClick,
   onSignOutClick,
+  onDeleteAccountClick,
 }: FanProfileHeaderProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
