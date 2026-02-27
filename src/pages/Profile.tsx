@@ -48,6 +48,23 @@ const Profile = () => {
     isClient
   } = useProfileSetup();
 
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.functions.invoke('delete-account');
+      if (error) throw error;
+      await signOut();
+      navigate('/');
+      toast.success('Your account has been permanently deleted.');
+    } catch (err) {
+      console.error('Delete account error:', err);
+      toast.error('Failed to delete account. Please try again.');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   // Fetch user profile
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile', user?.id],
