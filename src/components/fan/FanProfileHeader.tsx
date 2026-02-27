@@ -28,6 +28,7 @@ interface FanProfileHeaderProps {
   };
   onAddFundsClick: () => void;
   onBecomeSponsorClick: () => void;
+  onSignOutClick?: () => void;
 }
 
 export function FanProfileHeader({
