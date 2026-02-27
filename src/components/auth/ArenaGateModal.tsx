@@ -124,16 +124,10 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
   };
 
   const handleCelebrationComplete = useCallback(() => {
-    if (!selectedCountry) return;
-    
-    toast.success('Welcome to the Arena! Check your email to confirm your account.');
-    
-    onComplete({
-      selectedCountry,
-      verificationToken,
-      verified: true,
-    });
-  }, [selectedCountry, verificationToken, onComplete]);
+    // Transition to upsell steps instead of closing
+    setStep('choose-tier');
+    setShowCelebration(false);
+  }, []);
 
   const handleBack = () => {
     const stepOrder: Step[] = ['select', 'verify', 'credentials', 'barber-info', 'instagram', 'success'];
