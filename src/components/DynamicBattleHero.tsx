@@ -15,7 +15,7 @@ import { useState, useEffect, useMemo } from "react";
 import { ChallengeModal } from "@/components/battles/ChallengeModal";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { createPortal } from "react-dom";
 
 const getCountryFlag = (countryCode?: string) => {
   if (!countryCode) return '';
