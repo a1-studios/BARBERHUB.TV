@@ -9,6 +9,9 @@ import UserControlPanel from '@/components/sovereign/UserControlPanel';
 import AuditLogViewer from '@/components/sovereign/AuditLogViewer';
 import LivePulseMonitor from '@/components/sovereign/LivePulseMonitor';
 import SponsorControlPanel from '@/components/sovereign/SponsorControlPanel';
+import BattleDirectoryPanel from '@/components/sovereign/BattleDirectoryPanel';
+import TournamentQueuePanel from '@/components/sovereign/TournamentQueuePanel';
+import TournamentManagerPanel from '@/components/sovereign/TournamentManagerPanel';
 
 const SovereignHQ = () => {
   const { user } = useAuth();
@@ -97,6 +100,15 @@ const SovereignHQ = () => {
 
         {/* Sponsor Board Control */}
         <SponsorControlPanel onRefresh={refresh} />
+
+        {/* Battle Directory - Full CRUD */}
+        <BattleDirectoryPanel onRefresh={refresh} />
+
+        {/* Tournament Queue */}
+        <TournamentQueuePanel onRefresh={refresh} />
+
+        {/* Tournament Manager */}
+        <TournamentManagerPanel onRefresh={refresh} />
 
         {/* Audit Log */}
         <AuditLogViewer refreshTrigger={refreshTrigger} />

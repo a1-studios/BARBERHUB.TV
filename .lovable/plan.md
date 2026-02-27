@@ -1,80 +1,119 @@
 
 
-## Expand Sovereign HQ: Full Battle Manager + Tournament Queue Control
+## Particle Explosion Animation for VS/ENTER Cycle
 
-### Overview
-Three major additions to the Sovereign Command Center:
-1. **Battle Directory Panel** — browse, inspect, edit, and delete ALL battles inline (no more typing UUIDs)
-2. **Tournament Queue Manager** — view/manage the matchmaking queue, manually trigger matchmaker, force matches, remove entries
-3. **Tournament Manager** — CRUD tournaments, manage phases, view standings, trigger bracket generation
+### Concept
+
+Replace the current simple cross-fade between "VS" and "ENTER" (Swords) with a **particle explosion effect**. Every 3 seconds when the text transitions:
+
+1. The current text ("VS" or "ENTER") **explodes outward** into ~20 particles (tiny orange and cyan dots) that scatter in all directions
+2. The particles dissipate over ~400ms
+3. The new text ("ENTER" or "VS") **implodes inward** -- particles rush from the edges to the center and coalesce into the new text
+
+This creates a dramatic energy-burst feel where the text appears to shatter and reform.
+
+### Animation Sequence
+
+```text
+[VS visible for 5s with subtle idle glow pulse]
+         |
+   VS EXPLODES --> 20 particles scatter outward (400ms)
+         |
+   Particles converge inward --> ENTER forms (400ms)
+         |
+[ENTER visible for 3s with Swords icon pulse]
+         |
+   ENTER EXPLODES --> 20 particles scatter outward (400ms)
+         |
+   Particles converge inward --> VS reforms (400ms)
+         |
+   (repeat)
+```
 
 ### Changes
 
-#### 1. Expand `sovereign-battle-control` edge function
-Add new actions to the existing edge function:
-- `create_battle` — create a battle with all fields (title, category, barbers, dates, type, etc.)
-- `edit_battle` — update any field on a battle by ID
-- `delete_battle` — hard delete a battle and its votes/submissions/participants
-- `get_queue` — fetch tournament_queue entries with filters (status, category)
-- `manage_queue` — remove queue entries, change status, force-match two entries
-- `get_tournaments` — list all tournaments
-- `edit_tournament` — update tournament fields (status, dates, name)
-- `create_tournament` — insert a new tournament
-- `trigger_matchmaker` — invoke the matchmaker logic inline (same as tournament-matchmaker but on-demand from Sovereign)
+#### File: `src/components/DynamicBattleHero.tsx`
 
-#### 2. New component: `src/components/sovereign/BattleDirectoryPanel.tsx`
-Full-width section below the existing Battle Orchestration card:
-- **Filterable table** of all battles fetched via `get_battles` (status filter tabs: All/Upcoming/Live/Voting/Completed/Cancelled)
-- Each row shows: title, category, barber1 vs barber2 names, status badge, dates, battle_type
-- **Row actions**: Click to expand details, Edit button (opens pre-filled dialog to change any field), Delete button (with confirmation), all existing quick actions (force status, override winner, reset votes, forfeit) pre-filled with that battle's ID
-- **Create Battle button** at the top — opens dialog with full form (title, category, barber1_id, barber2_id, dates, battle_type, etc.)
+**Modify the AnimatePresence transitions (lines 375-426):**
 
-#### 3. New component: `src/components/sovereign/TournamentQueuePanel.tsx`
-Section showing the tournament matchmaking queue:
-- **Queue table**: user display_name, category, country_code, status (waiting/matched/expired), queue_timestamp, matched_battle_id
-- **Actions per entry**: Remove from queue, change status
-- **Manual match**: Select two waiting entries → force-create a battle between them
-- **Trigger Matchmaker** button: runs the matchmaker on-demand and shows results
-- **Stats header**: waiting count, matched count, per-category breakdown
+Replace the current simple opacity/scale fade with particle explosion animations:
 
-#### 4. New component: `src/components/sovereign/TournamentManagerPanel.tsx`
-Tournament lifecycle control:
-- **List all tournaments** with status, dates, participant count
-- **Create Tournament** form (name, season, dates, status)
-- **Edit Tournament** — change status, dates, etc.
-- **View phases** — list tournament_phases, create new phases
-- **View standings** — quick glance at tournament_standings for a selected tournament
-- **Generate bracket** — trigger the `generate_elimination_bracket` DB function
+- **Exit animation** (`exit` prop): The text scales down to 0 while spawning ~20 absolutely-positioned particle dots around it. Each particle flies outward in a random direction (random angle, random distance 20-50px) and fades to 0. Particles alternate between orange (`hsl(var(--primary))`) and cyan (`hsl(187 100% 50%)`) colors with matching glow shadows.
 
-#### 5. Update `src/pages/SovereignHQ.tsx`
-Add the three new panels after the existing control grid:
-```
-<BattleDirectoryPanel onRefresh={refresh} />
-<TournamentQueuePanel onRefresh={refresh} />
-<TournamentManagerPanel onRefresh={refresh} />
-```
+- **Enter animation** (`initial` + `animate`): The text starts at scale 0 with particles positioned at random outer positions. Particles animate inward to center (0,0) and fade, while the text scales from 0 to 1 with a slight overshoot (scale to 1.1 then settle to 1).
 
-#### 6. Update `BattleControlPanel.tsx`
-Keep existing quick-action buttons but enhance: when battles are loaded in BattleDirectoryPanel, the quick-action modals can auto-populate battle_id from a selected battle instead of requiring manual UUID entry.
+**Implementation approach -- inline particle generation:**
 
-### Architecture flow
+Rather than a separate component, generate particles directly in the motion variants using an array of `motion.div` elements rendered alongside the text inside each AnimatePresence child:
+
 ```text
-SovereignHQ
-├── KillSwitchPanel
-├── LivePulseMonitor
-├── [EconomyControl | BattleControl | UserControl] (grid)
-├── SponsorControlPanel
-├── BattleDirectoryPanel        ← NEW (full battle CRUD table)
-├── TournamentQueuePanel        ← NEW (queue + matchmaker)
-├── TournamentManagerPanel      ← NEW (tournament lifecycle)
-└── AuditLogViewer
+<motion.div key="vs" ...>
+  {/* Particle array */}
+  {Array.from({ length: 20 }).map((_, i) => (
+    <motion.div
+      key={i}
+      className="absolute w-1 h-1 rounded-full"
+      style={{ backgroundColor: i % 2 === 0 ? orange : cyan }}
+      initial={{ x: 0, y: 0, opacity: 1 }}
+      animate={{ x: 0, y: 0, opacity: 0 }}  // idle: invisible
+      exit={{
+        x: Math.cos(angle) * distance,
+        y: Math.sin(angle) * distance,
+        opacity: [1, 0],
+        scale: [1, 0]
+      }}
+    />
+  ))}
+  {/* VS text */}
+  <span>VS</span>
+</motion.div>
 ```
 
-All write actions flow through `sovereign-battle-control` edge function → audit logged → changes are immediately visible throughout the app since all other pages query the same `battles`, `tournament_queue`, and `tournaments` tables directly.
+Each particle gets a pre-calculated random angle (evenly distributed around 360 degrees) and random distance (20-50px), with a staggered delay for a natural burst feel.
 
-### Technical notes
-- No DB schema changes needed — all tables exist (`battles`, `tournament_queue`, `tournaments`, `tournament_phases`, `bracket_matches`, `tournament_standings`)
-- The edge function already has sovereign auth + audit logging; new actions follow the same pattern
-- All mutations go through the service role key in the edge function, bypassing RLS — this is the sovereign override pattern already established
-- The existing matchmaker logic in `tournament-matchmaker` will be invocable from the new panel via `supabase.functions.invoke('tournament-matchmaker')`
+**Apply to both barber and fan VS elements:**
+
+- **Barber VS** (lines 389-406): Add particles to the VS motion.span and the Swords motion.div
+- **Fan VS** (lines 411-425): For fans, since there is no cycle, add a subtle idle particle effect -- 4-6 particles that slowly orbit or float around the VS text on a loop, giving a constant "energy radiating" feel without the explosion
+
+**Cycle timing unchanged:**
+- The existing `useEffect` at lines 166-173 stays as-is (5s VS, 3s Swords for barbers)
+- The explosion/implosion animation takes ~400ms for exit + ~400ms for enter, fitting within the transition window
+
+**Rings unchanged:**
+- The rotating dashed ring and inner cyan ring remain as they are (lines 344-366)
+
+### Particle Specs
+
+| Property | Value |
+|----------|-------|
+| Count per explosion | 20 particles |
+| Size | 1-2px (w-1 h-1 or w-0.5 h-0.5) |
+| Colors | Alternating orange (primary) and cyan |
+| Scatter distance | 20-50px random per particle |
+| Scatter direction | Evenly distributed angles (360/20 = 18 degree increments + slight random offset) |
+| Glow | box-shadow matching particle color, 4px blur |
+| Exit duration | 400ms ease-out |
+| Enter duration | 400ms ease-out with overshoot |
+| Stagger | 20ms between particles for natural burst feel |
+
+### What Changes
+
+| Element | Before | After |
+|---------|--------|-------|
+| VS to ENTER transition | Simple opacity/scale fade | Particle explosion outward, then implosion inward |
+| ENTER to VS transition | Simple opacity/scale fade | Same particle explosion/implosion |
+| Fan VS | Static with glow pulse | Static with 4-6 subtle floating particles |
+| Rings | Unchanged | Unchanged |
+| Drawer | Unchanged | Unchanged |
+| Cycle timing | Unchanged (5s/3s) | Unchanged |
+
+### What Is NOT Changing
+
+- The 5s VS / 3s Swords timing cycle
+- Arena Drawer contents and navigation
+- Rotating ring animations
+- MobileVoteCenter replacement during active battles
+- Video layout, action bars, name overlays
+- Open challenges badge count query
 
