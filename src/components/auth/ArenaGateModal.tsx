@@ -9,6 +9,8 @@ import { ArenaGateProgressIndicator } from './ArenaGateProgressIndicator';
 import { ArenaGateCredentialsStep } from './ArenaGateCredentialsStep';
 import { ArenaGateBarberInfoStep } from './ArenaGateBarberInfoStep';
 import { ArenaGateInstagramStep } from './ArenaGateInstagramStep';
+import { ArenaGateChooseTierStep } from './ArenaGateChooseTierStep';
+import { ArenaGateChooseCategoriesStep } from './ArenaGateChooseCategoriesStep';
 import { SwipeMetrics, useGestureVerification } from '@/hooks/useGestureVerification';
 import { HapticFeedback } from '@/utils/hapticFeedback';
 import { getCountryCulturalData, triggerCountryCelebration } from '@/utils/countryCelebration';

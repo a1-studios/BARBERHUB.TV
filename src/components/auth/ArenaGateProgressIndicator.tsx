@@ -6,7 +6,8 @@ const STEPS = [
   { key: 'credentials', icon: '👤', label: 'Info' },
   { key: 'barber-info', icon: '📱', label: 'Phone' },
   { key: 'instagram', icon: '📸', label: 'Follow' },
-  { key: 'success', icon: '🎉', label: 'Done!' },
+  { key: 'choose-tier', icon: '👑', label: 'Tier' },
+  { key: 'choose-categories', icon: '⚔️', label: 'Battle' },
 ];
 
 interface ArenaGateProgressIndicatorProps {
