@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
 import { RoleBadge } from '@/components/RoleBadge';
 import { SubCategoryBadge } from '@/components/SubCategoryBadge';
-import { Plus, Edit3, Check, X, Award, Lock, Users, Vote } from 'lucide-react';
+import { Plus, Edit3, Check, X, Award, Lock, Users, Vote, LogOut } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
