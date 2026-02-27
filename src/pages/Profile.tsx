@@ -165,6 +165,7 @@ const Profile = () => {
                 barberBucks={barberBucks}
                 onSettingsClick={() => setShowBarberSettings(true)}
                 onAddFundsClick={() => setShowAddFundsModal(true)}
+                onSignOutClick={async () => { await signOut(); navigate('/'); }}
                 showActions={true}
                 socialLinks={{
                   instagram: (barberProfile as any).instagram_handle,
