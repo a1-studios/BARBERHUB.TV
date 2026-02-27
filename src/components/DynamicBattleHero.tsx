@@ -626,7 +626,7 @@ export const DynamicBattleHero = () => {
                 <div className="px-4 pb-6 space-y-3">
                   {/* Battle row */}
                   <button
-                    onClick={() => { setArenaDrawerOpen(false); navigate('/portal'); }}
+                    onClick={() => { setArenaDrawerOpen(false); setChallengeModalOpen(true); }}
                     className="w-full flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-left"
                   >
                     <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
