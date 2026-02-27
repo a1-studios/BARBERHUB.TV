@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfileSetup } from '@/hooks/useProfileSetup';
@@ -31,6 +32,8 @@ const Profile = () => {
   const [showCreationUpload, setShowCreationUpload] = useState(false);
   const [showBarberSettings, setShowBarberSettings] = useState(false);
   const [showSponsorModal, setShowSponsorModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
 
@@ -44,6 +47,23 @@ const Profile = () => {
     isBarber,
     isClient
   } = useProfileSetup();
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.functions.invoke('delete-account');
+      if (error) throw error;
+      await signOut();
+      navigate('/');
+      toast.success('Your account has been permanently deleted.');
+    } catch (err) {
+      console.error('Delete account error:', err);
+      toast.error('Failed to delete account. Please try again.');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
 
   // Fetch user profile
   const { data: profile, isLoading } = useQuery({
@@ -166,6 +186,7 @@ const Profile = () => {
                 onSettingsClick={() => setShowBarberSettings(true)}
                 onAddFundsClick={() => setShowAddFundsModal(true)}
                 onSignOutClick={async () => { await signOut(); navigate('/'); }}
+                onDeleteAccountClick={() => setShowDeleteConfirm(true)}
                 showActions={true}
                 socialLinks={{
                   instagram: (barberProfile as any).instagram_handle,
@@ -196,6 +217,7 @@ const Profile = () => {
                 onAddFundsClick={() => setShowAddFundsModal(true)}
                 onBecomeSponsorClick={() => setShowSponsorModal(true)}
                 onSignOutClick={async () => { await signOut(); navigate('/'); }}
+                onDeleteAccountClick={() => setShowDeleteConfirm(true)}
               />
             </div>
           )}
@@ -237,6 +259,27 @@ const Profile = () => {
           displayName={profile?.display_name || undefined}
         />
       )}
+      {/* Delete Account Confirmation */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Account Permanently?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action is permanent and cannot be undone. All your data, battles, votes, and credits will be permanently deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAccount}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Yes, Delete My Account'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

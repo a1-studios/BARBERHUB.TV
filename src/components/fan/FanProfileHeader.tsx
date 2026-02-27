@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
 import { RoleBadge } from '@/components/RoleBadge';
 import { SubCategoryBadge } from '@/components/SubCategoryBadge';
-import { Plus, Edit3, Check, X, Award, Lock, Users, Vote, LogOut } from 'lucide-react';
+import { Plus, Edit3, Check, X, Award, Lock, Users, Vote, LogOut, Trash2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -29,6 +29,7 @@ interface FanProfileHeaderProps {
   onAddFundsClick: () => void;
   onBecomeSponsorClick: () => void;
   onSignOutClick?: () => void;
+  onDeleteAccountClick?: () => void;
 }
 
 export function FanProfileHeader({
@@ -44,6 +45,7 @@ export function FanProfileHeader({
   onAddFundsClick,
   onBecomeSponsorClick,
   onSignOutClick,
+  onDeleteAccountClick,
 }: FanProfileHeaderProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({
@@ -219,6 +221,12 @@ export function FanProfileHeader({
                     <Button variant="ghost" size="sm" onClick={onSignOutClick} className="text-muted-foreground hover:text-destructive">
                       <LogOut className="w-4 h-4 mr-2" />
                       Sign Out
+                    </Button>
+                  )}
+                  {onDeleteAccountClick && (
+                    <Button variant="ghost" size="sm" onClick={onDeleteAccountClick} className="text-muted-foreground hover:text-destructive">
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete Account
                     </Button>
                   )}
                 </>
