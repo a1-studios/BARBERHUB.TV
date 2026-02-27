@@ -90,7 +90,7 @@ const UserControlPanel = ({ stats, onRefresh }: UserControlPanelProps) => {
     }
   };
 
-
+  const openProfile = async (userId: string) => {
     setLoading(true);
     try {
       const response = await supabase.functions.invoke('sovereign-user-control', {
