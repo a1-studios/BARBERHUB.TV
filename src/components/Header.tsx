@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Plus, User, LogOut, Zap, Scissors, Swords, Crown } from 'lucide-react';
+import { Plus, User, Zap, Scissors, Swords, Crown } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import barberPole from '@/assets/barber-pole.png';
 import { cn } from '@/lib/utils';
@@ -24,7 +24,7 @@ interface QuickAction {
 }
 
 const Header = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { isBarber, isAdmin } = useUserRole();
   
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
@@ -96,20 +96,7 @@ const Header = () => {
       requiresAuth: true,
       adminOnly: true
     },
-    {
-      id: 'sign-out',
-      label: 'Sign Out',
-      icon: <LogOut className="w-5 h-5 text-muted-foreground" />,
-      path: '/',
-      requiresAuth: true,
-      onClick: () => handleSignOut()
-    }
   ];
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/');
-  };
 
   const handleBrandClick = () => {
     navigate('/');
