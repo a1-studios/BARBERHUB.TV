@@ -7,8 +7,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-import { Scissors, Loader2, X, LogOut } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
+import { Scissors, Loader2, X } from 'lucide-react';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { AddFundsModal } from '@/components/AddFundsModal';
 import { useNavigate } from 'react-router-dom';
@@ -166,6 +165,7 @@ const Profile = () => {
                 barberBucks={barberBucks}
                 onSettingsClick={() => setShowBarberSettings(true)}
                 onAddFundsClick={() => setShowAddFundsModal(true)}
+                onSignOutClick={async () => { await signOut(); navigate('/'); }}
                 showActions={true}
                 socialLinks={{
                   instagram: (barberProfile as any).instagram_handle,
@@ -195,28 +195,13 @@ const Profile = () => {
                 }}
                 onAddFundsClick={() => setShowAddFundsModal(true)}
                 onBecomeSponsorClick={() => setShowSponsorModal(true)}
+                onSignOutClick={async () => { await signOut(); navigate('/'); }}
               />
             </div>
           )}
 
           {/* Transaction History */}
           <TransactionHistory />
-
-          {/* Account Actions */}
-          <Separator className="my-6" />
-          <div className="pb-4">
-            <Button
-              variant="outline"
-              className="w-full gap-2"
-              onClick={async () => {
-                await signOut();
-                navigate('/');
-              }}
-            >
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
-          </div>
 
           {/* Creation Upload Modal */}
           {showCreationUpload && isBarber && barberProfile && (

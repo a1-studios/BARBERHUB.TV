@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { SubscriptionBadge } from '@/components/SubscriptionBadge';
 import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
 import { Link } from 'react-router-dom';
-import { ExternalLink, Settings, Plus, ArrowDownToLine, Instagram, Twitter, Youtube, Facebook } from 'lucide-react';
+import { ExternalLink, Settings, Plus, ArrowDownToLine, Instagram, Twitter, Youtube, Facebook, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface BarberProfileHeaderProps {
@@ -23,6 +23,7 @@ interface BarberProfileHeaderProps {
   barber_id?: string;
   onSettingsClick?: () => void;
   onAddFundsClick?: () => void;
+  onSignOutClick?: () => void;
   barberBucks?: number;
   showActions?: boolean;
   socialLinks?: {
@@ -44,6 +45,7 @@ export function BarberProfileHeader({
   barber_id,
   onSettingsClick,
   onAddFundsClick,
+  onSignOutClick,
   barberBucks,
   showActions = true,
   socialLinks
@@ -185,6 +187,12 @@ export function BarberProfileHeader({
                   <Button variant="outline" size="sm" onClick={onSettingsClick}>
                     <Settings className="w-4 h-4 mr-2" />
                     Settings
+                  </Button>
+                )}
+                {onSignOutClick && (
+                  <Button variant="ghost" size="sm" onClick={onSignOutClick} className="text-muted-foreground hover:text-destructive">
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
                   </Button>
                 )}
               </div>
