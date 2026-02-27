@@ -213,14 +213,25 @@ const UserControlPanel = ({ stats, onRefresh }: UserControlPanelProps) => {
           </div>
         </div>
 
-        <Button
-          className="w-full bg-indigo-950/30 border border-indigo-700 text-indigo-400 hover:bg-indigo-900/50"
-          variant="outline"
-          onClick={() => setSearchOpen(true)}
-        >
-          <Search className="h-4 w-4 mr-2" />
-          Search & Inspect Users
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            className="flex-1 bg-indigo-950/30 border border-indigo-700 text-indigo-400 hover:bg-indigo-900/50"
+            variant="outline"
+            onClick={() => setSearchOpen(true)}
+          >
+            <Search className="h-4 w-4 mr-2" />
+            Search Users
+          </Button>
+          <Button
+            className="flex-1 bg-purple-950/30 border border-purple-700 text-purple-400 hover:bg-purple-900/50"
+            variant="outline"
+            onClick={loadDirectory}
+            disabled={loading}
+          >
+            <BookOpen className="h-4 w-4 mr-2" />
+            Browse All Users
+          </Button>
+        </div>
       </div>
 
       {/* Search Modal */}
