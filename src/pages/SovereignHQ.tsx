@@ -8,6 +8,7 @@ import BattleControlPanel from '@/components/sovereign/BattleControlPanel';
 import UserControlPanel from '@/components/sovereign/UserControlPanel';
 import AuditLogViewer from '@/components/sovereign/AuditLogViewer';
 import LivePulseMonitor from '@/components/sovereign/LivePulseMonitor';
+import SponsorControlPanel from '@/components/sovereign/SponsorControlPanel';
 
 const SovereignHQ = () => {
   const { user } = useAuth();
@@ -93,6 +94,9 @@ const SovereignHQ = () => {
           <BattleControlPanel stats={battleStats} onRefresh={refresh} />
           <UserControlPanel stats={userStats} onRefresh={refresh} />
         </div>
+
+        {/* Sponsor Board Control */}
+        <SponsorControlPanel onRefresh={refresh} />
 
         {/* Audit Log */}
         <AuditLogViewer refreshTrigger={refreshTrigger} />
