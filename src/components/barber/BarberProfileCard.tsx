@@ -190,9 +190,10 @@ export const BarberProfileCard = ({
                 <CardTitle className="text-lg text-white">
                   {displayName}
                 </CardTitle>
-                {subscriptionData?.active_subscription_tier && (
-                  <SubscriptionBadge tier={subscriptionData.active_subscription_tier} size="sm" />
+                {extraProfileData?.active_subscription_tier && (
+                  <SubscriptionBadge tier={extraProfileData.active_subscription_tier} size="sm" />
                 )}
+                <SubCategoryBadge subCategory={extraProfileData?.sub_category} size="sm" />
                 {barberProfile.country_code && (
                   <span className="text-lg" title={`Country: ${barberProfile.country_code}`}>
                     {getCountryFlag(barberProfile.country_code)}

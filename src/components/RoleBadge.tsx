@@ -38,13 +38,16 @@ export const RoleBadge = ({ size = 'md', className, subCategory }: RoleBadgeProp
 
   if (isBarber) {
     return (
-      <Badge 
-        variant="default" 
-        className={`bg-gradient-to-r from-primary to-orange-500 text-white ${sizeClasses[size]} ${className}`}
-      >
-        <Scissors className={`${iconSize[size]} mr-1`} />
-        Barber
-      </Badge>
+      <div className="flex items-center gap-1.5">
+        <Badge 
+          variant="default" 
+          className={`bg-gradient-to-r from-primary to-orange-500 text-white ${sizeClasses[size]} ${className}`}
+        >
+          <Scissors className={`${iconSize[size]} mr-1`} />
+          Barber
+        </Badge>
+        <SubCategoryBadge subCategory={subCategory} size={size === 'lg' ? 'md' : 'sm'} />
+      </div>
     );
   }
 
