@@ -665,6 +665,9 @@ export const DynamicBattleHero = () => {
             </Drawer>
           )}
 
+          {/* Challenge Modal - rendered as sibling to avoid focus trap issues */}
+          <ChallengeModal open={challengeModalOpen} onClose={() => setChallengeModalOpen(false)} />
+
           {/* Mobile Vote Center - Replaces VS divider on mobile during active battles */}
           {isMobile && isActiveBattle && !isCurrentUserInBattle && <div className="py-2 px-2 flex-shrink-0">
               <MobileVoteCenter barber1Name={barber1.display_name || barber1.name} barber2Name={barber2.display_name || barber2.name} onVote={handleVote} isLive={isActiveBattle} />
