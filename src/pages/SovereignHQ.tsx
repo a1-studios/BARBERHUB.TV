@@ -95,6 +95,9 @@ const SovereignHQ = () => {
           <UserControlPanel stats={userStats} onRefresh={refresh} />
         </div>
 
+        {/* Sponsor Board Control */}
+        <SponsorControlPanel onRefresh={refresh} />
+
         {/* Audit Log */}
         <AuditLogViewer refreshTrigger={refreshTrigger} />
       </main>
