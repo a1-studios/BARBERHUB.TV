@@ -6,7 +6,6 @@ import { useCountryLeaders } from '@/hooks/useCountryLeaders';
 
 export const CountryLeaderboard = () => {
   const { data: countries, isLoading } = useCountryLeaders(12);
-  const { toast } = useToast();
 
 
   if (isLoading) {
