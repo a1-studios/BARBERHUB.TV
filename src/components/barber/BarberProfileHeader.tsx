@@ -45,6 +45,7 @@ export function BarberProfileHeader({
   barber_id,
   onSettingsClick,
   onAddFundsClick,
+  onSignOutClick,
   barberBucks,
   showActions = true,
   socialLinks
