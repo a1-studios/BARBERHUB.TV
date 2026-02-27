@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { SubscriptionBadge } from '@/components/SubscriptionBadge';
 import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
 import { Link } from 'react-router-dom';
-import { ExternalLink, Settings, Plus, ArrowDownToLine, Instagram, Twitter, Youtube, Facebook, LogOut } from 'lucide-react';
+import { ExternalLink, Settings, Plus, ArrowDownToLine, Instagram, Twitter, Youtube, Facebook, LogOut, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface BarberProfileHeaderProps {
