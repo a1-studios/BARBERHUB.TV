@@ -12,6 +12,7 @@ import { MobileVoteCenter } from "@/components/battles/MobileVoteCenter";
 import { ArenaActionBar } from "@/components/battles/ArenaActionBar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState, useEffect, useMemo } from "react";
+import { ChallengeModal } from "@/components/battles/ChallengeModal";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
