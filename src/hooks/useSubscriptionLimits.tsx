@@ -3,6 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 
+// TODO: Set to false before going live
+const DEV_MODE = true;
+
 const TIER_LIMITS = {
   'free': 2,
   'bronze': 4,
@@ -32,7 +35,7 @@ export const useSubscriptionLimits = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id
+    enabled: !!user?.id && !DEV_MODE
   });
 
   const { data: barberProfile } = useQuery({
@@ -49,8 +52,22 @@ export const useSubscriptionLimits = () => {
       if (error) throw error;
       return data;
     },
-    enabled: !!user?.id
+    enabled: !!user?.id && !DEV_MODE
   });
+
+  if (DEV_MODE) {
+    return {
+      tierName: 'diamond',
+      monthlyLimit: 9999,
+      battlesUsed: 0,
+      battlesRemaining: 9999,
+      canCreateBattle: true,
+      isUnlimited: true,
+      checkLimit: () => true,
+      subscription: null,
+      hasActiveSubscription: true
+    };
+  }
 
   const tierName = subscription?.tier?.tier_name || 'free';
   const monthlyLimit = TIER_LIMITS[tierName as keyof typeof TIER_LIMITS] || TIER_LIMITS.free;
