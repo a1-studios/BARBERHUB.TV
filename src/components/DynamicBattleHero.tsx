@@ -453,7 +453,7 @@ export const DynamicBattleHero = () => {
                   }}
                 />
 
-                {/* Barber: tappable with swords cycle + particle explosion */}
+                {/* All users: tappable VS with particle effects */}
                 {isBarber ? (
                   <button
                     onClick={() => setArenaDrawerOpen(true)}
@@ -470,17 +470,11 @@ export const DynamicBattleHero = () => {
                           transition={{ duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
                           className="flex flex-col items-center gap-0.5 relative"
                         >
-                          {/* Implosion particles on enter */}
                           {particleData.map((p, i) => (
                             <motion.div
                               key={`enter-p-${i}`}
                               className="absolute rounded-full"
-                              style={{
-                                width: p.size,
-                                height: p.size,
-                                backgroundColor: p.color,
-                                boxShadow: `0 0 4px ${p.color}`,
-                              }}
+                              style={{ width: p.size, height: p.size, backgroundColor: p.color, boxShadow: `0 0 4px ${p.color}` }}
                               initial={{ x: p.x, y: p.y, opacity: 1, scale: 1 }}
                               animate={{ x: 0, y: 0, opacity: 0, scale: 0 }}
                               transition={{ duration: 0.4, delay: i * 0.02, ease: "easeIn" }}
@@ -494,17 +488,11 @@ export const DynamicBattleHero = () => {
                             <Swords className="w-6 h-6 text-cyan" />
                             <span className="text-[8px] font-bold tracking-widest text-cyan uppercase">Enter</span>
                           </motion.div>
-                          {/* Explosion particles on exit */}
                           {particleData.map((p, i) => (
                             <motion.div
                               key={`exit-p-${i}`}
                               className="absolute rounded-full pointer-events-none"
-                              style={{
-                                width: p.size,
-                                height: p.size,
-                                backgroundColor: p.color,
-                                boxShadow: `0 0 4px ${p.color}`,
-                              }}
+                              style={{ width: p.size, height: p.size, backgroundColor: p.color, boxShadow: `0 0 4px ${p.color}` }}
                               initial={{ x: 0, y: 0, opacity: 0, scale: 0 }}
                               animate={{ x: 0, y: 0, opacity: 0, scale: 0 }}
                               exit={{ x: p.x, y: p.y, opacity: [1, 0], scale: [1, 0] }}
@@ -521,44 +509,28 @@ export const DynamicBattleHero = () => {
                           transition={{ duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
                           className="relative flex items-center justify-center"
                         >
-                          {/* Implosion particles on enter */}
                           {particleData.map((p, i) => (
                             <motion.div
                               key={`enter-p-${i}`}
                               className="absolute rounded-full"
-                              style={{
-                                width: p.size,
-                                height: p.size,
-                                backgroundColor: p.color,
-                                boxShadow: `0 0 4px ${p.color}`,
-                              }}
+                              style={{ width: p.size, height: p.size, backgroundColor: p.color, boxShadow: `0 0 4px ${p.color}` }}
                               initial={{ x: p.x, y: p.y, opacity: 1, scale: 1 }}
                               animate={{ x: 0, y: 0, opacity: 0, scale: 0 }}
                               transition={{ duration: 0.4, delay: i * 0.02, ease: "easeIn" }}
                             />
                           ))}
                           <motion.span
-                            animate={{
-                              textShadow: ["0 0 0px transparent", "0 0 0px transparent", "0 0 30px hsl(187 100% 50%), 0 0 60px hsl(var(--primary))", "0 0 5px hsl(187 100% 50%)", "0 0 0px transparent"],
-                            }}
-                            transition={{
-                              duration: 3, repeat: Infinity, times: [0, 0.8, 0.88, 0.94, 1], ease: "easeInOut"
-                            }}
+                            animate={{ textShadow: ["0 0 0px transparent", "0 0 0px transparent", "0 0 30px hsl(187 100% 50%), 0 0 60px hsl(var(--primary))", "0 0 5px hsl(187 100% 50%)", "0 0 0px transparent"] }}
+                            transition={{ duration: 3, repeat: Infinity, times: [0, 0.8, 0.88, 0.94, 1], ease: "easeInOut" }}
                             className="text-base sm:text-lg font-extrabold tracking-[0.35em] italic bg-[linear-gradient(to_right,hsl(var(--primary)),hsl(187_100%_50%),hsl(var(--primary)))] bg-clip-text text-transparent drop-shadow-[0_0_6px_hsl(var(--primary)/0.5)]"
                           >
                             VS
                           </motion.span>
-                          {/* Explosion particles on exit */}
                           {particleData.map((p, i) => (
                             <motion.div
                               key={`exit-p-${i}`}
                               className="absolute rounded-full pointer-events-none"
-                              style={{
-                                width: p.size,
-                                height: p.size,
-                                backgroundColor: p.color,
-                                boxShadow: `0 0 4px ${p.color}`,
-                              }}
+                              style={{ width: p.size, height: p.size, backgroundColor: p.color, boxShadow: `0 0 4px ${p.color}` }}
                               initial={{ x: 0, y: 0, opacity: 0, scale: 0 }}
                               animate={{ x: 0, y: 0, opacity: 0, scale: 0 }}
                               exit={{ x: p.x, y: p.y, opacity: [1, 0], scale: [1, 0] }}
@@ -570,28 +542,23 @@ export const DynamicBattleHero = () => {
                     </AnimatePresence>
                   </button>
                 ) : (
-                  /* Fan: VS with subtle floating orbit particles */
-                  <div className="relative flex items-center justify-center">
+                  /* Fan: tappable VS with floating orbit particles */
+                  <button
+                    onClick={() => setArenaDrawerOpen(true)}
+                    className="relative flex items-center justify-center"
+                    aria-label="Enter the Arena"
+                  >
                     {fanParticleData.map((p, i) => (
                       <motion.div
                         key={`fan-p-${i}`}
                         className="absolute rounded-full pointer-events-none"
-                        style={{
-                          width: p.size,
-                          height: p.size,
-                          backgroundColor: p.color,
-                          boxShadow: `0 0 4px ${p.color}`,
-                        }}
+                        style={{ width: p.size, height: p.size, backgroundColor: p.color, boxShadow: `0 0 4px ${p.color}` }}
                         animate={{
                           x: [p.x, -p.y, -p.x, p.y, p.x],
                           y: [p.y, p.x, -p.y, -p.x, p.y],
                           opacity: [0.6, 1, 0.6, 1, 0.6],
                         }}
-                        transition={{
-                          duration: 4 + i * 0.5,
-                          repeat: Infinity,
-                          ease: "easeInOut",
-                        }}
+                        transition={{ duration: 4 + i * 0.5, repeat: Infinity, ease: "easeInOut" }}
                       />
                     ))}
                     <motion.span 
@@ -600,16 +567,11 @@ export const DynamicBattleHero = () => {
                         textShadow: ["0 0 0px transparent", "0 0 0px transparent", "0 0 30px hsl(187 100% 50%), 0 0 60px hsl(var(--primary))", "0 0 5px hsl(187 100% 50%)", "0 0 0px transparent"],
                         scale: [1, 1, 1.15, 1.05, 1],
                       }} 
-                      transition={{
-                        duration: 3,
-                        repeat: Infinity,
-                        times: [0, 0.8, 0.88, 0.94, 1],
-                        ease: "easeInOut"
-                      }}
+                      transition={{ duration: 3, repeat: Infinity, times: [0, 0.8, 0.88, 0.94, 1], ease: "easeInOut" }}
                     >
                       VS
                     </motion.span>
-                  </div>
+                  </button>
                 )}
               </div>
             </>}
