@@ -120,6 +120,7 @@ const AppContent = () => {
                 </AuthGuard>
               } 
             />
+          <Route path="/watch" element={<WatchFeed />} />
           <Route path="/tournaments" element={<Tournaments />} />
           <Route path="/tournaments/:tournamentId" element={<TournamentDetails />} />
             <Route path="/barber/:userId" element={<BarberPublicProfile />} />
