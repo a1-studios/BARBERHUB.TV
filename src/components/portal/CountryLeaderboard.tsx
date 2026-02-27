@@ -9,12 +9,6 @@ export const CountryLeaderboard = () => {
   const { data: countries, isLoading } = useCountryLeaders(12);
   const { toast } = useToast();
 
-  const handleChallenge = (countryName: string) => {
-    toast({
-      title: `Challenge ${countryName}`,
-      description: "Country matchmaking coming soon! Register for a category to get matched."
-    });
-  };
 
   if (isLoading) {
     return (
