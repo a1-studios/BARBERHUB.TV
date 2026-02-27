@@ -54,6 +54,7 @@ export const DynamicBattleHero = () => {
   const [voted2, setVoted2] = useState(false);
   const [arenaDrawerOpen, setArenaDrawerOpen] = useState(false);
   const [showSwords, setShowSwords] = useState(false);
+  const [challengeModalOpen, setChallengeModalOpen] = useState(false);
 
   // Fetch active battle (active, voting or upcoming)
   const {
