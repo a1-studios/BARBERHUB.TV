@@ -1,60 +1,119 @@
 
 
-## Add User Directory Dropdown + Sub-Category System to Sovereign HQ
+## Particle Explosion Animation for VS/ENTER Cycle
 
-### What We're Building
-1. **Full user directory dropdown** in Sovereign HQ — all users listed alphabetically, grouped by primary role (BARBER / FAN), selectable to open the profile inspector
-2. **Sub-category system** — barbers can be tagged as "Educator", fans can be tagged as "Official Sponsor"
-3. **Sub-category badge** on profile cards (similar to SubscriptionBadge) visible across the app
+### Concept
 
-### Database Changes
+Replace the current simple cross-fade between "VS" and "ENTER" (Swords) with a **particle explosion effect**. Every 3 seconds when the text transitions:
 
-**New column on `profiles` table:**
-```sql
-ALTER TABLE profiles ADD COLUMN sub_category TEXT DEFAULT NULL;
+1. The current text ("VS" or "ENTER") **explodes outward** into ~20 particles (tiny orange and cyan dots) that scatter in all directions
+2. The particles dissipate over ~400ms
+3. The new text ("ENTER" or "VS") **implodes inward** -- particles rush from the edges to the center and coalesce into the new text
+
+This creates a dramatic energy-burst feel where the text appears to shatter and reform.
+
+### Animation Sequence
+
+```text
+[VS visible for 5s with subtle idle glow pulse]
+         |
+   VS EXPLODES --> 20 particles scatter outward (400ms)
+         |
+   Particles converge inward --> ENTER forms (400ms)
+         |
+[ENTER visible for 3s with Swords icon pulse]
+         |
+   ENTER EXPLODES --> 20 particles scatter outward (400ms)
+         |
+   Particles converge inward --> VS reforms (400ms)
+         |
+   (repeat)
 ```
-No new enum needed — we'll use text values: `educator`, `official_sponsor` (null = none). This keeps it extensible for future sub-categories.
-
-**Add `sub_category` to allowed fields** in the sovereign edge function's whitelist so it can be set from god mode.
 
 ### Changes
 
-#### 1. Edge function `sovereign-user-control` — add `list_all_users` action + whitelist `sub_category`
-- New action `list_all_users`: fetches ALL profiles with their roles, ordered alphabetically by `display_name`
-- Groups them by primary role (barber vs fan) in the response
-- Add `sub_category` to `allowedProfileFields` whitelist so the profile inspector can set it
+#### File: `src/components/DynamicBattleHero.tsx`
 
-#### 2. `UserControlPanel.tsx` — add user directory dropdown
-- Replace the "Search & Inspect Users" button with a split: keep search button + add a new "Browse All Users" dropdown button
-- On click, fetch `list_all_users` and populate a dropdown/select grouped into two sections:
-  - **BARBERS** — all barber-role users alphabetically
-  - **FANS** — all fan-role users alphabetically
-- Each entry shows: name, sub-category badge (if any), BB balance
-- Clicking any user opens the existing profile inspector
-- In the profile inspector, add a **Sub-Category** select field under the Identity section:
-  - For barbers: options are `None`, `Educator`
-  - For fans: options are `None`, `Official Sponsor`
-  - The select auto-filters options based on the user's primary role
+**Modify the AnimatePresence transitions (lines 375-426):**
 
-#### 3. New component `SubCategoryBadge.tsx`
-- Small badge component similar to `SubscriptionBadge` but for sub-categories
-- `educator` → green gradient badge with a graduation cap icon, label "Educator"
-- `official_sponsor` → gold gradient badge with a handshake/award icon, label "Official Sponsor"
-- Props: `subCategory: string | null`, `size: 'sm' | 'md'`
-- Returns null if no sub-category
+Replace the current simple opacity/scale fade with particle explosion animations:
 
-#### 4. Display sub-category badge on `BarberProfileCard.tsx`
-- Fetch `sub_category` from the `profiles` table alongside existing queries
-- Render `<SubCategoryBadge>` next to the `SubscriptionBadge` in the card header
-- Small, non-intrusive — sits alongside existing badges
+- **Exit animation** (`exit` prop): The text scales down to 0 while spawning ~20 absolutely-positioned particle dots around it. Each particle flies outward in a random direction (random angle, random distance 20-50px) and fades to 0. Particles alternate between orange (`hsl(var(--primary))`) and cyan (`hsl(187 100% 50%)`) colors with matching glow shadows.
 
-#### 5. Display sub-category badge on `RoleBadge.tsx`
-- Accept optional `subCategory` prop
-- Render `<SubCategoryBadge>` alongside the role badge when present
+- **Enter animation** (`initial` + `animate`): The text starts at scale 0 with particles positioned at random outer positions. Particles animate inward to center (0,0) and fade, while the text scales from 0 to 1 with a slight overshoot (scale to 1.1 then settle to 1).
 
-### Technical Details
-- `list_all_users` uses service role so it sees all users regardless of RLS
-- Sub-category is stored on `profiles` (not `user_roles`) because it's metadata about the user, not an access-control role — no privilege escalation risk
-- The dropdown uses a `ScrollArea` with section headers for BARBER/FAN grouping
-- Future sub-categories can be added by extending the select options — no schema changes needed
+**Implementation approach -- inline particle generation:**
+
+Rather than a separate component, generate particles directly in the motion variants using an array of `motion.div` elements rendered alongside the text inside each AnimatePresence child:
+
+```text
+<motion.div key="vs" ...>
+  {/* Particle array */}
+  {Array.from({ length: 20 }).map((_, i) => (
+    <motion.div
+      key={i}
+      className="absolute w-1 h-1 rounded-full"
+      style={{ backgroundColor: i % 2 === 0 ? orange : cyan }}
+      initial={{ x: 0, y: 0, opacity: 1 }}
+      animate={{ x: 0, y: 0, opacity: 0 }}  // idle: invisible
+      exit={{
+        x: Math.cos(angle) * distance,
+        y: Math.sin(angle) * distance,
+        opacity: [1, 0],
+        scale: [1, 0]
+      }}
+    />
+  ))}
+  {/* VS text */}
+  <span>VS</span>
+</motion.div>
+```
+
+Each particle gets a pre-calculated random angle (evenly distributed around 360 degrees) and random distance (20-50px), with a staggered delay for a natural burst feel.
+
+**Apply to both barber and fan VS elements:**
+
+- **Barber VS** (lines 389-406): Add particles to the VS motion.span and the Swords motion.div
+- **Fan VS** (lines 411-425): For fans, since there is no cycle, add a subtle idle particle effect -- 4-6 particles that slowly orbit or float around the VS text on a loop, giving a constant "energy radiating" feel without the explosion
+
+**Cycle timing unchanged:**
+- The existing `useEffect` at lines 166-173 stays as-is (5s VS, 3s Swords for barbers)
+- The explosion/implosion animation takes ~400ms for exit + ~400ms for enter, fitting within the transition window
+
+**Rings unchanged:**
+- The rotating dashed ring and inner cyan ring remain as they are (lines 344-366)
+
+### Particle Specs
+
+| Property | Value |
+|----------|-------|
+| Count per explosion | 20 particles |
+| Size | 1-2px (w-1 h-1 or w-0.5 h-0.5) |
+| Colors | Alternating orange (primary) and cyan |
+| Scatter distance | 20-50px random per particle |
+| Scatter direction | Evenly distributed angles (360/20 = 18 degree increments + slight random offset) |
+| Glow | box-shadow matching particle color, 4px blur |
+| Exit duration | 400ms ease-out |
+| Enter duration | 400ms ease-out with overshoot |
+| Stagger | 20ms between particles for natural burst feel |
+
+### What Changes
+
+| Element | Before | After |
+|---------|--------|-------|
+| VS to ENTER transition | Simple opacity/scale fade | Particle explosion outward, then implosion inward |
+| ENTER to VS transition | Simple opacity/scale fade | Same particle explosion/implosion |
+| Fan VS | Static with glow pulse | Static with 4-6 subtle floating particles |
+| Rings | Unchanged | Unchanged |
+| Drawer | Unchanged | Unchanged |
+| Cycle timing | Unchanged (5s/3s) | Unchanged |
+
+### What Is NOT Changing
+
+- The 5s VS / 3s Swords timing cycle
+- Arena Drawer contents and navigation
+- Rotating ring animations
+- MobileVoteCenter replacement during active battles
+- Video layout, action bars, name overlays
+- Open challenges badge count query
 

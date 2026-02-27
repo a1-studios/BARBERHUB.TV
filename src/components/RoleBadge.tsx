@@ -1,13 +1,15 @@
 import { Badge } from '@/components/ui/badge';
 import { Scissors, Users, Shield } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
+import { SubCategoryBadge } from '@/components/SubCategoryBadge';
 
 interface RoleBadgeProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  subCategory?: string | null;
 }
 
-export const RoleBadge = ({ size = 'md', className }: RoleBadgeProps) => {
+export const RoleBadge = ({ size = 'md', className, subCategory }: RoleBadgeProps) => {
   const { isBarber, isFan, isAdmin } = useUserRole();
 
   const sizeClasses = {
@@ -36,25 +38,31 @@ export const RoleBadge = ({ size = 'md', className }: RoleBadgeProps) => {
 
   if (isBarber) {
     return (
-      <Badge 
-        variant="default" 
-        className={`bg-gradient-to-r from-primary to-orange-500 text-white ${sizeClasses[size]} ${className}`}
-      >
-        <Scissors className={`${iconSize[size]} mr-1`} />
-        Barber
-      </Badge>
+      <div className="flex items-center gap-1.5">
+        <Badge 
+          variant="default" 
+          className={`bg-gradient-to-r from-primary to-orange-500 text-white ${sizeClasses[size]} ${className}`}
+        >
+          <Scissors className={`${iconSize[size]} mr-1`} />
+          Barber
+        </Badge>
+        <SubCategoryBadge subCategory={subCategory} size={size === 'lg' ? 'md' : 'sm'} />
+      </div>
     );
   }
 
   if (isFan) {
     return (
-      <Badge 
-        variant="secondary" 
-        className={`bg-gradient-to-r from-cyan-500/20 to-cyan-400/10 text-cyan-400 border border-cyan-500/30 ${sizeClasses[size]} ${className}`}
-      >
-        <Users className={`${iconSize[size]} mr-1`} />
-        Fan
-      </Badge>
+      <div className="flex items-center gap-1.5">
+        <Badge 
+          variant="secondary" 
+          className={`bg-gradient-to-r from-cyan-500/20 to-cyan-400/10 text-cyan-400 border border-cyan-500/30 ${sizeClasses[size]} ${className}`}
+        >
+          <Users className={`${iconSize[size]} mr-1`} />
+          Fan
+        </Badge>
+        <SubCategoryBadge subCategory={subCategory} size={size === 'lg' ? 'md' : 'sm'} />
+      </div>
     );
   }
 

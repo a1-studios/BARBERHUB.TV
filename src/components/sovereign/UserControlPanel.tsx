@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Users, Shield, ShieldOff, UserX, UserCheck, BadgeCheck, Search, X, Save, Coins, Flame, Eye } from 'lucide-react';
+import { Users, Shield, ShieldOff, UserX, UserCheck, BadgeCheck, Search, X, Save, Coins, Flame, Eye, BookOpen, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { SubCategoryBadge } from '@/components/SubCategoryBadge';
 import {
   Dialog,
   DialogContent,
@@ -17,12 +18,16 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+
 
 interface UserControlPanelProps {
   stats: {
@@ -35,11 +40,14 @@ interface UserControlPanelProps {
 
 const UserControlPanel = ({ stats, onRefresh }: UserControlPanelProps) => {
   const [searchOpen, setSearchOpen] = useState(false);
+  const [directoryOpen, setDirectoryOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [allBarbers, setAllBarbers] = useState<any[]>([]);
+  const [allFans, setAllFans] = useState<any[]>([]);
   
   // Profile inspector state
   const [userDetails, setUserDetails] = useState<any>(null);
@@ -60,6 +68,23 @@ const UserControlPanel = ({ stats, onRefresh }: UserControlPanelProps) => {
       setSearchResults(response.data.users || []);
     } catch (error: any) {
       toast.error(error.message || 'Search failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadDirectory = async () => {
+    setLoading(true);
+    try {
+      const response = await supabase.functions.invoke('sovereign-user-control', {
+        body: { action: 'list_all_users' }
+      });
+      if (response.error) throw response.error;
+      setAllBarbers(response.data.barbers || []);
+      setAllFans(response.data.fans || []);
+      setDirectoryOpen(true);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to load directory');
     } finally {
       setLoading(false);
     }
@@ -188,14 +213,25 @@ const UserControlPanel = ({ stats, onRefresh }: UserControlPanelProps) => {
           </div>
         </div>
 
-        <Button
-          className="w-full bg-indigo-950/30 border border-indigo-700 text-indigo-400 hover:bg-indigo-900/50"
-          variant="outline"
-          onClick={() => setSearchOpen(true)}
-        >
-          <Search className="h-4 w-4 mr-2" />
-          Search & Inspect Users
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            className="flex-1 bg-indigo-950/30 border border-indigo-700 text-indigo-400 hover:bg-indigo-900/50"
+            variant="outline"
+            onClick={() => setSearchOpen(true)}
+          >
+            <Search className="h-4 w-4 mr-2" />
+            Search Users
+          </Button>
+          <Button
+            className="flex-1 bg-purple-950/30 border border-purple-700 text-purple-400 hover:bg-purple-900/50"
+            variant="outline"
+            onClick={loadDirectory}
+            disabled={loading}
+          >
+            <BookOpen className="h-4 w-4 mr-2" />
+            Browse All Users
+          </Button>
+        </div>
       </div>
 
       {/* Search Modal */}
@@ -245,6 +281,64 @@ const UserControlPanel = ({ stats, onRefresh }: UserControlPanelProps) => {
               )}
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Directory Modal */}
+      <Dialog open={directoryOpen} onOpenChange={() => setDirectoryOpen(false)}>
+        <DialogContent className="bg-[#1a1a2e] border-purple-900/50 max-w-2xl max-h-[80vh] p-0">
+          <DialogHeader className="px-6 pt-6 pb-2">
+            <DialogTitle className="text-purple-400 flex items-center gap-2">
+              <BookOpen className="h-5 w-5" /> User Directory
+            </DialogTitle>
+            <DialogDescription className="text-gray-500 text-xs">
+              {allBarbers.length + allFans.length} users total — click to inspect
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="px-6 pb-6 max-h-[60vh]">
+            {/* BARBERS Section */}
+            <div className="mb-4">
+              <h4 className="text-xs font-bold text-orange-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                ✂️ BARBERS ({allBarbers.length})
+              </h4>
+              <div className="space-y-1">
+                {allBarbers.map((u: any) => (
+                  <div
+                    key={u.user_id}
+                    className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#0f0f1a] border border-gray-800 cursor-pointer hover:border-orange-600/50 transition-colors"
+                    onClick={() => { setDirectoryOpen(false); openProfile(u.user_id); }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-white text-sm font-medium">{u.display_name || u.username || 'Unknown'}</span>
+                      <SubCategoryBadge subCategory={u.sub_category} size="sm" />
+                    </div>
+                    <span className="text-xs text-yellow-400 font-mono">{u.barber_bucks || 0} BB</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* FANS Section */}
+            <div>
+              <h4 className="text-xs font-bold text-cyan-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+                👥 FANS ({allFans.length})
+              </h4>
+              <div className="space-y-1">
+                {allFans.map((u: any) => (
+                  <div
+                    key={u.user_id}
+                    className="flex items-center justify-between px-3 py-2 rounded-lg bg-[#0f0f1a] border border-gray-800 cursor-pointer hover:border-cyan-600/50 transition-colors"
+                    onClick={() => { setDirectoryOpen(false); openProfile(u.user_id); }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-white text-sm font-medium">{u.display_name || u.username || 'Unknown'}</span>
+                      <SubCategoryBadge subCategory={u.sub_category} size="sm" />
+                    </div>
+                    <span className="text-xs text-yellow-400 font-mono">{u.barber_bucks || 0} BB</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 
@@ -328,6 +422,26 @@ const UserControlPanel = ({ stats, onRefresh }: UserControlPanelProps) => {
                       </Select>
                     </div>
                     {fieldInput('Country Code', 'country_code', profileEdits, setProfileEdits, getProfileVal)}
+                    <div className="space-y-1">
+                      <Label className="text-xs text-gray-400">Sub-Category</Label>
+                      <Select
+                        value={getProfileVal('sub_category') || 'none'}
+                        onValueChange={(v) => setProfileEdits({ ...profileEdits, sub_category: v === 'none' ? null : v })}
+                      >
+                        <SelectTrigger className="bg-[#0f0f1a] border-gray-700 text-white h-8 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#1a1a2e] border-gray-700">
+                          <SelectItem value="none">None</SelectItem>
+                          {(getProfileVal('user_type') === 'barber' || userDetails?.roles?.includes('barber')) && (
+                            <SelectItem value="educator">🎓 Educator</SelectItem>
+                          )}
+                          {(getProfileVal('user_type') === 'fan' || (!userDetails?.roles?.includes('barber'))) && (
+                            <SelectItem value="official_sponsor">🏆 Official Sponsor</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div className="mt-2">
                     <Label className="text-xs text-gray-400">Bio</Label>
