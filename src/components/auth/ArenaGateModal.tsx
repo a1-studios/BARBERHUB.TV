@@ -9,6 +9,8 @@ import { ArenaGateProgressIndicator } from './ArenaGateProgressIndicator';
 import { ArenaGateCredentialsStep } from './ArenaGateCredentialsStep';
 import { ArenaGateBarberInfoStep } from './ArenaGateBarberInfoStep';
 import { ArenaGateInstagramStep } from './ArenaGateInstagramStep';
+import { ArenaGateChooseTierStep } from './ArenaGateChooseTierStep';
+import { ArenaGateChooseCategoriesStep } from './ArenaGateChooseCategoriesStep';
 import { SwipeMetrics, useGestureVerification } from '@/hooks/useGestureVerification';
 import { HapticFeedback } from '@/utils/hapticFeedback';
 import { getCountryCulturalData, triggerCountryCelebration } from '@/utils/countryCelebration';
@@ -27,7 +29,7 @@ interface ArenaGateModalProps {
   onComplete: (result: ArenaGateResult) => void;
 }
 
-type Step = 'select' | 'verify' | 'credentials' | 'barber-info' | 'instagram' | 'success';
+type Step = 'select' | 'verify' | 'credentials' | 'barber-info' | 'instagram' | 'success' | 'choose-tier' | 'choose-categories';
 
 interface FormData {
   displayName: string;
@@ -122,24 +124,27 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
   };
 
   const handleCelebrationComplete = useCallback(() => {
-    if (!selectedCountry) return;
-    
-    toast.success('Welcome to the Arena! Check your email to confirm your account.');
-    
-    onComplete({
-      selectedCountry,
-      verificationToken,
-      verified: true,
-    });
-  }, [selectedCountry, verificationToken, onComplete]);
+    // Transition to upsell steps instead of closing
+    setStep('choose-tier');
+    setShowCelebration(false);
+  }, []);
 
   const handleBack = () => {
-    const stepOrder: Step[] = ['select', 'verify', 'credentials', 'barber-info', 'instagram', 'success'];
+    const stepOrder: Step[] = ['select', 'verify', 'credentials', 'barber-info', 'instagram', 'success', 'choose-tier', 'choose-categories'];
     const currentIndex = stepOrder.indexOf(step);
     if (currentIndex > 0) {
       setStep(stepOrder[currentIndex - 1]);
     }
   };
+
+  const handleFlowComplete = useCallback(() => {
+    toast.success('Welcome to the Arena! Check your email to confirm your account.');
+    onComplete({
+      selectedCountry: selectedCountry || '',
+      verificationToken,
+      verified: true,
+    });
+  }, [selectedCountry, verificationToken, onComplete]);
 
   if (!isOpen) return null;
 
@@ -212,6 +217,8 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
                 {step === 'barber-info' && 'Add your contact info'}
                 {step === 'instagram' && 'Join our community'}
                 {step === 'success' && 'Welcome to the Arena!'}
+                {step === 'choose-tier' && 'Power up your profile'}
+                {step === 'choose-categories' && 'Pick your battle categories'}
               </p>
             </div>
 
@@ -328,6 +335,20 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
                     onVerified={handleAccountCreation}
                     onBack={() => setStep('barber-info')}
                     isLoading={loading}
+                  />
+                )}
+
+                {step === 'choose-tier' && (
+                  <ArenaGateChooseTierStep
+                    onNext={() => setStep('choose-categories')}
+                    onBack={() => {}}
+                  />
+                )}
+
+                {step === 'choose-categories' && (
+                  <ArenaGateChooseCategoriesStep
+                    onComplete={handleFlowComplete}
+                    onBack={() => setStep('choose-tier')}
                   />
                 )}
               </AnimatePresence>

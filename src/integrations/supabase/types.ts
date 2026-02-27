@@ -347,6 +347,7 @@ export type Database = {
           battles_created_this_month: number
           bio: string | null
           can_stream: boolean | null
+          competition_categories: string[] | null
           country_code: string | null
           created_at: string
           facebook_handle: string | null
@@ -379,6 +380,7 @@ export type Database = {
           battles_created_this_month?: number
           bio?: string | null
           can_stream?: boolean | null
+          competition_categories?: string[] | null
           country_code?: string | null
           created_at?: string
           facebook_handle?: string | null
@@ -411,6 +413,7 @@ export type Database = {
           battles_created_this_month?: number
           bio?: string | null
           can_stream?: boolean | null
+          competition_categories?: string[] | null
           country_code?: string | null
           created_at?: string
           facebook_handle?: string | null

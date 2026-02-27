@@ -1,49 +1,119 @@
 
 
-## Add Post-Signup Upsell Steps to Arena Gate
+## Particle Explosion Animation for VS/ENTER Cycle
 
-After the barber's account is created and the celebration plays, add two new steps before closing the modal: a **subscription tier showcase** and a **battle category selection**. This turns the post-signup moment into a conversion opportunity.
+### Concept
 
-### New Flow
+Replace the current simple cross-fade between "VS" and "ENTER" (Swords) with a **particle explosion effect**. Every 3 seconds when the text transitions:
+
+1. The current text ("VS" or "ENTER") **explodes outward** into ~20 particles (tiny orange and cyan dots) that scatter in all directions
+2. The particles dissipate over ~400ms
+3. The new text ("ENTER" or "VS") **implodes inward** -- particles rush from the edges to the center and coalesce into the new text
+
+This creates a dramatic energy-burst feel where the text appears to shatter and reform.
+
+### Animation Sequence
+
 ```text
-select → verify → credentials → barber-info → instagram → success → choose-tier → choose-categories → done
+[VS visible for 5s with subtle idle glow pulse]
+         |
+   VS EXPLODES --> 20 particles scatter outward (400ms)
+         |
+   Particles converge inward --> ENTER forms (400ms)
+         |
+[ENTER visible for 3s with Swords icon pulse]
+         |
+   ENTER EXPLODES --> 20 particles scatter outward (400ms)
+         |
+   Particles converge inward --> VS reforms (400ms)
+         |
+   (repeat)
 ```
-
-The `success` celebration plays as before, but instead of closing the modal, it transitions to the upsell steps.
 
 ### Changes
 
-#### `src/components/auth/ArenaGateModal.tsx`
-- Add two new step types: `'choose-tier'` and `'choose-categories'`
-- After `handleCelebrationComplete`, transition to `'choose-tier'` instead of calling `onComplete`
-- Add rendering for both new steps
-- Add a "Skip for now" option on both upsell steps so it's not forced
-- `'choose-categories'` step calls `onComplete` when done or skipped
+#### File: `src/components/DynamicBattleHero.tsx`
 
-#### New: `src/components/auth/ArenaGateChooseTierStep.tsx`
-- Compact version of the subscription tiers (3 cards stacked vertically for mobile)
-- Each tier shows: icon, name, BB price, top 3 features
-- "Subscribe" button per tier (triggers the existing BB subscription flow)
-- "Skip — I'll decide later" ghost button at bottom → advances to categories step
-- Headline: "UNLOCK YOUR FULL POTENTIAL" with gradient text
+**Modify the AnimatePresence transitions (lines 375-426):**
 
-#### New: `src/components/auth/ArenaGateChooseCategoriesStep.tsx`
-- Shows the 5 tournament categories from `TOURNAMENT_CATEGORIES` config
-- Each category is a selectable card with icon, short name, vibe text, and category-themed border glow
-- Multi-select (max 2 per rules) with visual toggle
-- "Enter the Arena" CTA button that saves selected categories to `barber_profiles.competition_categories`
-- "Skip — explore first" ghost button → completes the flow
-- Headline: "CHOOSE YOUR BATTLEFIELD" with gradient text
+Replace the current simple opacity/scale fade with particle explosion animations:
 
-#### `src/components/auth/ArenaGateProgressIndicator.tsx`
-- Add two new steps to STEPS array:
-  - `{ key: 'choose-tier', icon: '👑', label: 'Tier' }`
-  - `{ key: 'choose-categories', icon: '⚔️', label: 'Battle' }`
-- Move `success`/`Done!` to the very end or remove from progress bar (celebration is a transition, not a tracked step)
-- New order: Flag → Verify → Info → Phone → Follow → Tier → Battle
+- **Exit animation** (`exit` prop): The text scales down to 0 while spawning ~20 absolutely-positioned particle dots around it. Each particle flies outward in a random direction (random angle, random distance 20-50px) and fades to 0. Particles alternate between orange (`hsl(var(--primary))`) and cyan (`hsl(187 100% 50%)`) colors with matching glow shadows.
 
-### Technical Details
-- The choose-tier step reuses the existing `subscribe-with-bb` edge function — no new backend needed
-- Category selection writes to `barber_profiles.competition_categories` (existing array column) via a simple Supabase update
-- Both steps are skippable — no blocking the user from entering the platform
+- **Enter animation** (`initial` + `animate`): The text starts at scale 0 with particles positioned at random outer positions. Particles animate inward to center (0,0) and fade, while the text scales from 0 to 1 with a slight overshoot (scale to 1.1 then settle to 1).
+
+**Implementation approach -- inline particle generation:**
+
+Rather than a separate component, generate particles directly in the motion variants using an array of `motion.div` elements rendered alongside the text inside each AnimatePresence child:
+
+```text
+<motion.div key="vs" ...>
+  {/* Particle array */}
+  {Array.from({ length: 20 }).map((_, i) => (
+    <motion.div
+      key={i}
+      className="absolute w-1 h-1 rounded-full"
+      style={{ backgroundColor: i % 2 === 0 ? orange : cyan }}
+      initial={{ x: 0, y: 0, opacity: 1 }}
+      animate={{ x: 0, y: 0, opacity: 0 }}  // idle: invisible
+      exit={{
+        x: Math.cos(angle) * distance,
+        y: Math.sin(angle) * distance,
+        opacity: [1, 0],
+        scale: [1, 0]
+      }}
+    />
+  ))}
+  {/* VS text */}
+  <span>VS</span>
+</motion.div>
+```
+
+Each particle gets a pre-calculated random angle (evenly distributed around 360 degrees) and random distance (20-50px), with a staggered delay for a natural burst feel.
+
+**Apply to both barber and fan VS elements:**
+
+- **Barber VS** (lines 389-406): Add particles to the VS motion.span and the Swords motion.div
+- **Fan VS** (lines 411-425): For fans, since there is no cycle, add a subtle idle particle effect -- 4-6 particles that slowly orbit or float around the VS text on a loop, giving a constant "energy radiating" feel without the explosion
+
+**Cycle timing unchanged:**
+- The existing `useEffect` at lines 166-173 stays as-is (5s VS, 3s Swords for barbers)
+- The explosion/implosion animation takes ~400ms for exit + ~400ms for enter, fitting within the transition window
+
+**Rings unchanged:**
+- The rotating dashed ring and inner cyan ring remain as they are (lines 344-366)
+
+### Particle Specs
+
+| Property | Value |
+|----------|-------|
+| Count per explosion | 20 particles |
+| Size | 1-2px (w-1 h-1 or w-0.5 h-0.5) |
+| Colors | Alternating orange (primary) and cyan |
+| Scatter distance | 20-50px random per particle |
+| Scatter direction | Evenly distributed angles (360/20 = 18 degree increments + slight random offset) |
+| Glow | box-shadow matching particle color, 4px blur |
+| Exit duration | 400ms ease-out |
+| Enter duration | 400ms ease-out with overshoot |
+| Stagger | 20ms between particles for natural burst feel |
+
+### What Changes
+
+| Element | Before | After |
+|---------|--------|-------|
+| VS to ENTER transition | Simple opacity/scale fade | Particle explosion outward, then implosion inward |
+| ENTER to VS transition | Simple opacity/scale fade | Same particle explosion/implosion |
+| Fan VS | Static with glow pulse | Static with 4-6 subtle floating particles |
+| Rings | Unchanged | Unchanged |
+| Drawer | Unchanged | Unchanged |
+| Cycle timing | Unchanged (5s/3s) | Unchanged |
+
+### What Is NOT Changing
+
+- The 5s VS / 3s Swords timing cycle
+- Arena Drawer contents and navigation
+- Rotating ring animations
+- MobileVoteCenter replacement during active battles
+- Video layout, action bars, name overlays
+- Open challenges badge count query
 
