@@ -1,119 +1,75 @@
 
 
-## Particle Explosion Animation for VS/ENTER Cycle
+## Revamp Challenge System: Open to All Silver+ Barbers, Time-Capped, Jackpot Prize Pool
 
-### Concept
+### Summary
+Challenges become open to any Silver+ subscriber barber. Add a 1-hour time cap, let challengers name it and set stake amount. Create a separate `challenge_prize_pool` table that accumulates platform fees from challenges (jackpot style, like `category_prize_pools` but independent).
 
-Replace the current simple cross-fade between "VS" and "ENTER" (Swords) with a **particle explosion effect**. Every 3 seconds when the text transitions:
+### Database Changes
 
-1. The current text ("VS" or "ENTER") **explodes outward** into ~20 particles (tiny orange and cyan dots) that scatter in all directions
-2. The particles dissipate over ~400ms
-3. The new text ("ENTER" or "VS") **implodes inward** -- particles rush from the edges to the center and coalesce into the new text
-
-This creates a dramatic energy-burst feel where the text appears to shatter and reform.
-
-### Animation Sequence
-
-```text
-[VS visible for 5s with subtle idle glow pulse]
-         |
-   VS EXPLODES --> 20 particles scatter outward (400ms)
-         |
-   Particles converge inward --> ENTER forms (400ms)
-         |
-[ENTER visible for 3s with Swords icon pulse]
-         |
-   ENTER EXPLODES --> 20 particles scatter outward (400ms)
-         |
-   Particles converge inward --> VS reforms (400ms)
-         |
-   (repeat)
+#### 1. New table: `challenge_prize_pool`
+```sql
+CREATE TABLE challenge_prize_pool (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  pool_year integer NOT NULL DEFAULT EXTRACT(year FROM now())::integer,
+  total_pool_bb integer NOT NULL DEFAULT 0,
+  total_challenges_completed integer NOT NULL DEFAULT 0,
+  platform_fees_collected_bb integer NOT NULL DEFAULT 0,
+  last_updated timestamptz DEFAULT now(),
+  created_at timestamptz DEFAULT now()
+);
+-- RLS: anyone can view, only system can modify
 ```
 
-### Changes
-
-#### File: `src/components/DynamicBattleHero.tsx`
-
-**Modify the AnimatePresence transitions (lines 375-426):**
-
-Replace the current simple opacity/scale fade with particle explosion animations:
-
-- **Exit animation** (`exit` prop): The text scales down to 0 while spawning ~20 absolutely-positioned particle dots around it. Each particle flies outward in a random direction (random angle, random distance 20-50px) and fades to 0. Particles alternate between orange (`hsl(var(--primary))`) and cyan (`hsl(187 100% 50%)`) colors with matching glow shadows.
-
-- **Enter animation** (`initial` + `animate`): The text starts at scale 0 with particles positioned at random outer positions. Particles animate inward to center (0,0) and fade, while the text scales from 0 to 1 with a slight overshoot (scale to 1.1 then settle to 1).
-
-**Implementation approach -- inline particle generation:**
-
-Rather than a separate component, generate particles directly in the motion variants using an array of `motion.div` elements rendered alongside the text inside each AnimatePresence child:
-
-```text
-<motion.div key="vs" ...>
-  {/* Particle array */}
-  {Array.from({ length: 20 }).map((_, i) => (
-    <motion.div
-      key={i}
-      className="absolute w-1 h-1 rounded-full"
-      style={{ backgroundColor: i % 2 === 0 ? orange : cyan }}
-      initial={{ x: 0, y: 0, opacity: 1 }}
-      animate={{ x: 0, y: 0, opacity: 0 }}  // idle: invisible
-      exit={{
-        x: Math.cos(angle) * distance,
-        y: Math.sin(angle) * distance,
-        opacity: [1, 0],
-        scale: [1, 0]
-      }}
-    />
-  ))}
-  {/* VS text */}
-  <span>VS</span>
-</motion.div>
+#### 2. Add columns to `open_challenges`
+```sql
+ALTER TABLE open_challenges
+  ADD COLUMN IF NOT EXISTS duration_minutes integer NOT NULL DEFAULT 60,
+  ADD COLUMN IF NOT EXISTS expires_at timestamptz;
 ```
 
-Each particle gets a pre-calculated random angle (evenly distributed around 360 degrees) and random distance (20-50px), with a staggered delay for a natural burst feel.
+### Edge Function Changes
 
-**Apply to both barber and fan VS elements:**
+#### `create-challenge-stake/index.ts`
+- Add Silver+ subscription check: query `barber_subscriptions` joined with `barber_subscription_tiers` to verify tier is `silver` or `gold`
+- Accept `duration_minutes` param (default 60, max 60)
+- Calculate `expires_at = now() + duration_minutes`
+- Store `duration_minutes` and `expires_at` in `open_challenges` insert
+- Remove `stream_url` as required field (set default 'pending')
 
-- **Barber VS** (lines 389-406): Add particles to the VS motion.span and the Swords motion.div
-- **Fan VS** (lines 411-425): For fans, since there is no cycle, add a subtle idle particle effect -- 4-6 particles that slowly orbit or float around the VS text on a loop, giving a constant "energy radiating" feel without the explosion
+#### `match-challenge-stake/index.ts`
+- Add Silver+ subscription check for the acceptor too
+- On successful match, contribute 5% platform fee to `challenge_prize_pool` (increment `platform_fees_collected_bb` and `total_pool_bb`)
 
-**Cycle timing unchanged:**
-- The existing `useEffect` at lines 166-173 stays as-is (5s VS, 3s Swords for barbers)
-- The explosion/implosion animation takes ~400ms for exit + ~400ms for enter, fitting within the transition window
+#### `complete-open-challenge/index.ts`
+- On challenge completion, increment `total_challenges_completed` in `challenge_prize_pool`
 
-**Rings unchanged:**
-- The rotating dashed ring and inner cyan ring remain as they are (lines 344-366)
+### Frontend Changes
 
-### Particle Specs
+#### `IssueChallenge.tsx`
+- Add Silver+ tier gate check using `useSubscriptionLimits` — show upgrade prompt if not Silver+
+- Remove stream_url requirement
+- Add duration display (fixed at 1 hour, shown as info badge)
+- Keep title and stake amount fields
 
-| Property | Value |
-|----------|-------|
-| Count per explosion | 20 particles |
-| Size | 1-2px (w-1 h-1 or w-0.5 h-0.5) |
-| Colors | Alternating orange (primary) and cyan |
-| Scatter distance | 20-50px random per particle |
-| Scatter direction | Evenly distributed angles (360/20 = 18 degree increments + slight random offset) |
-| Glow | box-shadow matching particle color, 4px blur |
-| Exit duration | 400ms ease-out |
-| Enter duration | 400ms ease-out with overshoot |
-| Stagger | 20ms between particles for natural burst feel |
+#### `ChallengeFeed.tsx`
+- Show challenges to ALL authenticated barbers (not just the issuer's view)
+- Change query filter from `status = 'open'` to `status = 'waiting_for_opponent'` to match DB
+- Add `expires_at` countdown display on each card
+- Filter out expired challenges client-side
+- Add Silver+ check on "Accept" button — show upgrade prompt if not Silver+
+- Show challenge jackpot pool total at the top of the feed
 
-### What Changes
+#### `AcceptChallengeModal.tsx`
+- Add Silver+ subscription check before allowing acceptance
+- Show duration/time remaining info
 
-| Element | Before | After |
-|---------|--------|-------|
-| VS to ENTER transition | Simple opacity/scale fade | Particle explosion outward, then implosion inward |
-| ENTER to VS transition | Simple opacity/scale fade | Same particle explosion/implosion |
-| Fan VS | Static with glow pulse | Static with 4-6 subtle floating particles |
-| Rings | Unchanged | Unchanged |
-| Drawer | Unchanged | Unchanged |
-| Cycle timing | Unchanged (5s/3s) | Unchanged |
+#### `OpenChallengeQueue.tsx`
+- Show section to ALL barbers (remove the Silver+ gate for viewing, only gate creating/accepting)
+- Add jackpot pool display card at top showing accumulated challenge pool
 
-### What Is NOT Changing
-
-- The 5s VS / 3s Swords timing cycle
-- Arena Drawer contents and navigation
-- Rotating ring animations
-- MobileVoteCenter replacement during active battles
-- Video layout, action bars, name overlays
-- Open challenges badge count query
+### Visibility
+- Challenges visible to all barbers in the Portal
+- Creating and accepting gated to Silver+ subscribers
+- Non-Silver barbers see challenges but get an upgrade prompt when trying to interact
 
