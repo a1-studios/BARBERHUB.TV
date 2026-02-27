@@ -29,7 +29,7 @@ interface ArenaGateModalProps {
   onComplete: (result: ArenaGateResult) => void;
 }
 
-type Step = 'select' | 'verify' | 'credentials' | 'barber-info' | 'instagram' | 'success';
+type Step = 'select' | 'verify' | 'credentials' | 'barber-info' | 'instagram' | 'success' | 'choose-tier' | 'choose-categories';
 
 interface FormData {
   displayName: string;
