@@ -186,6 +186,7 @@ const Profile = () => {
                 onSettingsClick={() => setShowBarberSettings(true)}
                 onAddFundsClick={() => setShowAddFundsModal(true)}
                 onSignOutClick={async () => { await signOut(); navigate('/'); }}
+                onDeleteAccountClick={() => setShowDeleteConfirm(true)}
                 showActions={true}
                 socialLinks={{
                   instagram: (barberProfile as any).instagram_handle,
