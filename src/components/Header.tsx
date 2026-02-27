@@ -24,7 +24,7 @@ interface QuickAction {
 }
 
 const Header = () => {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { isBarber, isAdmin } = useUserRole();
   
   const [quickActionsOpen, setQuickActionsOpen] = useState(false);
