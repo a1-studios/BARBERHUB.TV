@@ -576,58 +576,96 @@ export const DynamicBattleHero = () => {
               </div>
             </>}
 
-          {/* Arena Drawer for barbers */}
-          {isBarber && (
-            <Drawer open={arenaDrawerOpen} onOpenChange={setArenaDrawerOpen}>
-              <DrawerContent className="bg-card border-t border-cyan/20">
-                <DrawerHeader className="pb-2">
-                  <DrawerTitle className="text-lg font-bold tracking-wider text-foreground">
-                    ENTER THE ARENA
-                  </DrawerTitle>
-                </DrawerHeader>
-                <div className="px-4 pb-6 space-y-3">
-                  {/* Battle row */}
-                  <button
-                    onClick={() => { setArenaDrawerOpen(false); setChallengeModalOpen(true); }}
-                    className="w-full flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-left"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                      <Swords className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-foreground">Battle</span>
-                        {(openChallengeCount ?? 0) > 0 && (
-                          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-destructive text-destructive-foreground">
-                            {openChallengeCount}
-                          </span>
-                        )}
+          {/* Arena Popup - centered modal for all users */}
+          {arenaDrawerOpen && createPortal(
+            <AnimatePresence>
+              <div className="fixed inset-0 z-[9999] flex items-center justify-center" style={{ pointerEvents: 'auto' }}>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                  onClick={() => setArenaDrawerOpen(false)}
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.85, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.85, y: 20 }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                  className="relative w-[85%] sm:w-[50%] max-w-md rounded-2xl border border-cyan/20 bg-card shadow-2xl shadow-primary/10 p-6"
+                >
+                  <h2 className="text-center text-sm font-bold tracking-[0.3em] text-foreground uppercase mb-5">
+                    Enter The Arena
+                  </h2>
+                  <div className="space-y-3">
+                    {/* WATCH */}
+                    <button
+                      onClick={() => { setArenaDrawerOpen(false); navigate('/watch'); }}
+                      className="w-full flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-left"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-cyan/20 flex items-center justify-center flex-shrink-0">
+                        <Eye className="w-5 h-5 text-cyan" />
                       </div>
-                      <span className="text-xs text-muted-foreground">Accept open challenges</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  </button>
-
-                  {/* Issue Challenge row */}
-                  <button
-                    onClick={() => { setArenaDrawerOpen(false); setChallengeModalOpen(true); }}
-                    className="w-full flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-left"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center flex-shrink-0">
-                      <Flame className="w-5 h-5 text-destructive" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="font-semibold text-foreground block">Issue Challenge</span>
-                      <span className="text-xs text-muted-foreground">Challenge any barber</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  </button>
-                </div>
-              </DrawerContent>
-            </Drawer>
+                      <div className="flex-1">
+                        <span className="font-semibold text-foreground block">Watch</span>
+                        <span className="text-xs text-muted-foreground">Browse battles & highlights</span>
+                      </div>
+                    </button>
+                    {/* BATTLE */}
+                    <button
+                      onClick={() => {
+                        setArenaDrawerOpen(false);
+                        if (isBarber) {
+                          navigate('/creator-hub');
+                        } else {
+                          toast.info("Barbers only — switch to a barber account to battle");
+                        }
+                      }}
+                      className="w-full flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-left"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                        <Swords className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <span className="font-semibold text-foreground block">Battle</span>
+                        <span className="text-xs text-muted-foreground">{isBarber ? 'Enter battle categories' : 'Barbers only'}</span>
+                      </div>
+                    </button>
+                    {/* CHALLENGE */}
+                    <button
+                      onClick={() => {
+                        setArenaDrawerOpen(false);
+                        if (isBarber) {
+                          setChallengeModalOpen(true);
+                        } else {
+                          toast.info("Barbers only — switch to a barber account to challenge");
+                        }
+                      }}
+                      className="w-full flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-left"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center flex-shrink-0">
+                        <Flame className="w-5 h-5 text-destructive" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-foreground">Challenge</span>
+                          {isBarber && (openChallengeCount ?? 0) > 0 && (
+                            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-destructive text-destructive-foreground">
+                              {openChallengeCount}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground">{isBarber ? 'Issue or accept challenges' : 'Barbers only'}</span>
+                      </div>
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            </AnimatePresence>,
+            document.body
           )}
 
-          {/* Challenge Modal - rendered as sibling to avoid focus trap issues */}
+          {/* Challenge Modal */}
           <ChallengeModal open={challengeModalOpen} onClose={() => setChallengeModalOpen(false)} />
 
           {/* Mobile Vote Center - Replaces VS divider on mobile during active battles */}
