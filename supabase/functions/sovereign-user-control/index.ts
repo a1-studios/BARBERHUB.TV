@@ -118,7 +118,7 @@ serve(async (req) => {
         beforeState = { profile: beforeProfile, barber_profile: beforeBarber, client_profile: beforeClient };
 
         // Whitelist allowed profile fields
-        const allowedProfileFields = ['display_name', 'username', 'bio', 'avatar_url', 'barber_bucks', 'is_verified_by_competition', 'three_x_vote_expires_at', 'is_creator', 'creator_level', 'total_earnings', 'user_type', 'country_code'];
+        const allowedProfileFields = ['display_name', 'username', 'bio', 'avatar_url', 'barber_bucks', 'is_verified_by_competition', 'three_x_vote_expires_at', 'is_creator', 'creator_level', 'total_earnings', 'user_type', 'country_code', 'sub_category'];
         const allowedBarberFields = ['name', 'nickname', 'rating', 'specialty', 'location', 'years_experience', 'bio', 'can_stream', 'battles_created_this_month', 'active_subscription_tier'];
         const allowedClientFields = ['voting_power', 'total_votes_cast'];
 
