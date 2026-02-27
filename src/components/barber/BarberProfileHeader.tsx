@@ -197,6 +197,12 @@ export function BarberProfileHeader({
                     Sign Out
                   </Button>
                 )}
+                {onDeleteAccountClick && (
+                  <Button variant="ghost" size="sm" onClick={onDeleteAccountClick} className="text-muted-foreground hover:text-destructive">
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete Account
+                  </Button>
+                )}
               </div>
             )}
           </div>
