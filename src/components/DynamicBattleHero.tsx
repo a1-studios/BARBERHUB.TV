@@ -544,7 +544,7 @@ export const DynamicBattleHero = () => {
                 ) : (
                   /* Fan: tappable VS with floating orbit particles */
                   <button
-                    onClick={() => setArenaDrawerOpen(true)}
+                    onClick={() => navigate('/watch')}
                     className="relative flex items-center justify-center"
                     aria-label="Enter the Arena"
                   >
