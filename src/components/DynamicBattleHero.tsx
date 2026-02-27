@@ -15,7 +15,7 @@ import { useState, useEffect, useMemo } from "react";
 import { ChallengeModal } from "@/components/battles/ChallengeModal";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { createPortal } from "react-dom";
 
 const getCountryFlag = (countryCode?: string) => {
   if (!countryCode) return '';
@@ -453,7 +453,7 @@ export const DynamicBattleHero = () => {
                   }}
                 />
 
-                {/* Barber: tappable with swords cycle + particle explosion */}
+                {/* All users: tappable VS with particle effects */}
                 {isBarber ? (
                   <button
                     onClick={() => setArenaDrawerOpen(true)}
@@ -470,17 +470,11 @@ export const DynamicBattleHero = () => {
                           transition={{ duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
                           className="flex flex-col items-center gap-0.5 relative"
                         >
-                          {/* Implosion particles on enter */}
                           {particleData.map((p, i) => (
                             <motion.div
                               key={`enter-p-${i}`}
                               className="absolute rounded-full"
-                              style={{
-                                width: p.size,
-                                height: p.size,
-                                backgroundColor: p.color,
-                                boxShadow: `0 0 4px ${p.color}`,
-                              }}
+                              style={{ width: p.size, height: p.size, backgroundColor: p.color, boxShadow: `0 0 4px ${p.color}` }}
                               initial={{ x: p.x, y: p.y, opacity: 1, scale: 1 }}
                               animate={{ x: 0, y: 0, opacity: 0, scale: 0 }}
                               transition={{ duration: 0.4, delay: i * 0.02, ease: "easeIn" }}
@@ -494,17 +488,11 @@ export const DynamicBattleHero = () => {
                             <Swords className="w-6 h-6 text-cyan" />
                             <span className="text-[8px] font-bold tracking-widest text-cyan uppercase">Enter</span>
                           </motion.div>
-                          {/* Explosion particles on exit */}
                           {particleData.map((p, i) => (
                             <motion.div
                               key={`exit-p-${i}`}
                               className="absolute rounded-full pointer-events-none"
-                              style={{
-                                width: p.size,
-                                height: p.size,
-                                backgroundColor: p.color,
-                                boxShadow: `0 0 4px ${p.color}`,
-                              }}
+                              style={{ width: p.size, height: p.size, backgroundColor: p.color, boxShadow: `0 0 4px ${p.color}` }}
                               initial={{ x: 0, y: 0, opacity: 0, scale: 0 }}
                               animate={{ x: 0, y: 0, opacity: 0, scale: 0 }}
                               exit={{ x: p.x, y: p.y, opacity: [1, 0], scale: [1, 0] }}
@@ -521,44 +509,28 @@ export const DynamicBattleHero = () => {
                           transition={{ duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
                           className="relative flex items-center justify-center"
                         >
-                          {/* Implosion particles on enter */}
                           {particleData.map((p, i) => (
                             <motion.div
                               key={`enter-p-${i}`}
                               className="absolute rounded-full"
-                              style={{
-                                width: p.size,
-                                height: p.size,
-                                backgroundColor: p.color,
-                                boxShadow: `0 0 4px ${p.color}`,
-                              }}
+                              style={{ width: p.size, height: p.size, backgroundColor: p.color, boxShadow: `0 0 4px ${p.color}` }}
                               initial={{ x: p.x, y: p.y, opacity: 1, scale: 1 }}
                               animate={{ x: 0, y: 0, opacity: 0, scale: 0 }}
                               transition={{ duration: 0.4, delay: i * 0.02, ease: "easeIn" }}
                             />
                           ))}
                           <motion.span
-                            animate={{
-                              textShadow: ["0 0 0px transparent", "0 0 0px transparent", "0 0 30px hsl(187 100% 50%), 0 0 60px hsl(var(--primary))", "0 0 5px hsl(187 100% 50%)", "0 0 0px transparent"],
-                            }}
-                            transition={{
-                              duration: 3, repeat: Infinity, times: [0, 0.8, 0.88, 0.94, 1], ease: "easeInOut"
-                            }}
+                            animate={{ textShadow: ["0 0 0px transparent", "0 0 0px transparent", "0 0 30px hsl(187 100% 50%), 0 0 60px hsl(var(--primary))", "0 0 5px hsl(187 100% 50%)", "0 0 0px transparent"] }}
+                            transition={{ duration: 3, repeat: Infinity, times: [0, 0.8, 0.88, 0.94, 1], ease: "easeInOut" }}
                             className="text-base sm:text-lg font-extrabold tracking-[0.35em] italic bg-[linear-gradient(to_right,hsl(var(--primary)),hsl(187_100%_50%),hsl(var(--primary)))] bg-clip-text text-transparent drop-shadow-[0_0_6px_hsl(var(--primary)/0.5)]"
                           >
                             VS
                           </motion.span>
-                          {/* Explosion particles on exit */}
                           {particleData.map((p, i) => (
                             <motion.div
                               key={`exit-p-${i}`}
                               className="absolute rounded-full pointer-events-none"
-                              style={{
-                                width: p.size,
-                                height: p.size,
-                                backgroundColor: p.color,
-                                boxShadow: `0 0 4px ${p.color}`,
-                              }}
+                              style={{ width: p.size, height: p.size, backgroundColor: p.color, boxShadow: `0 0 4px ${p.color}` }}
                               initial={{ x: 0, y: 0, opacity: 0, scale: 0 }}
                               animate={{ x: 0, y: 0, opacity: 0, scale: 0 }}
                               exit={{ x: p.x, y: p.y, opacity: [1, 0], scale: [1, 0] }}
@@ -570,28 +542,23 @@ export const DynamicBattleHero = () => {
                     </AnimatePresence>
                   </button>
                 ) : (
-                  /* Fan: VS with subtle floating orbit particles */
-                  <div className="relative flex items-center justify-center">
+                  /* Fan: tappable VS with floating orbit particles */
+                  <button
+                    onClick={() => setArenaDrawerOpen(true)}
+                    className="relative flex items-center justify-center"
+                    aria-label="Enter the Arena"
+                  >
                     {fanParticleData.map((p, i) => (
                       <motion.div
                         key={`fan-p-${i}`}
                         className="absolute rounded-full pointer-events-none"
-                        style={{
-                          width: p.size,
-                          height: p.size,
-                          backgroundColor: p.color,
-                          boxShadow: `0 0 4px ${p.color}`,
-                        }}
+                        style={{ width: p.size, height: p.size, backgroundColor: p.color, boxShadow: `0 0 4px ${p.color}` }}
                         animate={{
                           x: [p.x, -p.y, -p.x, p.y, p.x],
                           y: [p.y, p.x, -p.y, -p.x, p.y],
                           opacity: [0.6, 1, 0.6, 1, 0.6],
                         }}
-                        transition={{
-                          duration: 4 + i * 0.5,
-                          repeat: Infinity,
-                          ease: "easeInOut",
-                        }}
+                        transition={{ duration: 4 + i * 0.5, repeat: Infinity, ease: "easeInOut" }}
                       />
                     ))}
                     <motion.span 
@@ -600,72 +567,105 @@ export const DynamicBattleHero = () => {
                         textShadow: ["0 0 0px transparent", "0 0 0px transparent", "0 0 30px hsl(187 100% 50%), 0 0 60px hsl(var(--primary))", "0 0 5px hsl(187 100% 50%)", "0 0 0px transparent"],
                         scale: [1, 1, 1.15, 1.05, 1],
                       }} 
-                      transition={{
-                        duration: 3,
-                        repeat: Infinity,
-                        times: [0, 0.8, 0.88, 0.94, 1],
-                        ease: "easeInOut"
-                      }}
+                      transition={{ duration: 3, repeat: Infinity, times: [0, 0.8, 0.88, 0.94, 1], ease: "easeInOut" }}
                     >
                       VS
                     </motion.span>
-                  </div>
+                  </button>
                 )}
               </div>
             </>}
 
-          {/* Arena Drawer for barbers */}
-          {isBarber && (
-            <Drawer open={arenaDrawerOpen} onOpenChange={setArenaDrawerOpen}>
-              <DrawerContent className="bg-card border-t border-cyan/20">
-                <DrawerHeader className="pb-2">
-                  <DrawerTitle className="text-lg font-bold tracking-wider text-foreground">
-                    ENTER THE ARENA
-                  </DrawerTitle>
-                </DrawerHeader>
-                <div className="px-4 pb-6 space-y-3">
-                  {/* Battle row */}
-                  <button
-                    onClick={() => { setArenaDrawerOpen(false); setChallengeModalOpen(true); }}
-                    className="w-full flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-left"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                      <Swords className="w-5 h-5 text-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-foreground">Battle</span>
-                        {(openChallengeCount ?? 0) > 0 && (
-                          <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-destructive text-destructive-foreground">
-                            {openChallengeCount}
-                          </span>
-                        )}
+          {/* Arena Popup - centered modal for all users */}
+          {arenaDrawerOpen && createPortal(
+            <AnimatePresence>
+              <div className="fixed inset-0 z-[9999] flex items-center justify-center" style={{ pointerEvents: 'auto' }}>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                  onClick={() => setArenaDrawerOpen(false)}
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.85, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.85, y: 20 }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                  className="relative w-[85%] sm:w-[50%] max-w-md rounded-2xl border border-cyan/20 bg-card shadow-2xl shadow-primary/10 p-6"
+                >
+                  <h2 className="text-center text-sm font-bold tracking-[0.3em] text-foreground uppercase mb-5">
+                    Enter The Arena
+                  </h2>
+                  <div className="space-y-3">
+                    {/* WATCH */}
+                    <button
+                      onClick={() => { setArenaDrawerOpen(false); navigate('/watch'); }}
+                      className="w-full flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-left"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-cyan/20 flex items-center justify-center flex-shrink-0">
+                        <Eye className="w-5 h-5 text-cyan" />
                       </div>
-                      <span className="text-xs text-muted-foreground">Accept open challenges</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  </button>
-
-                  {/* Issue Challenge row */}
-                  <button
-                    onClick={() => { setArenaDrawerOpen(false); setChallengeModalOpen(true); }}
-                    className="w-full flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-left"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center flex-shrink-0">
-                      <Flame className="w-5 h-5 text-destructive" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="font-semibold text-foreground block">Issue Challenge</span>
-                      <span className="text-xs text-muted-foreground">Challenge any barber</span>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                  </button>
-                </div>
-              </DrawerContent>
-            </Drawer>
+                      <div className="flex-1">
+                        <span className="font-semibold text-foreground block">Watch</span>
+                        <span className="text-xs text-muted-foreground">Browse battles & highlights</span>
+                      </div>
+                    </button>
+                    {/* BATTLE */}
+                    <button
+                      onClick={() => {
+                        setArenaDrawerOpen(false);
+                        if (isBarber) {
+                          navigate('/creator-hub');
+                        } else {
+                          toast.info("Barbers only — switch to a barber account to battle");
+                        }
+                      }}
+                      className="w-full flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-left"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                        <Swords className="w-5 h-5 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <span className="font-semibold text-foreground block">Battle</span>
+                        <span className="text-xs text-muted-foreground">{isBarber ? 'Enter battle categories' : 'Barbers only'}</span>
+                      </div>
+                    </button>
+                    {/* CHALLENGE */}
+                    <button
+                      onClick={() => {
+                        setArenaDrawerOpen(false);
+                        if (isBarber) {
+                          setChallengeModalOpen(true);
+                        } else {
+                          toast.info("Barbers only — switch to a barber account to challenge");
+                        }
+                      }}
+                      className="w-full flex items-center gap-4 p-4 rounded-xl bg-muted/50 hover:bg-muted transition-colors text-left"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center flex-shrink-0">
+                        <Flame className="w-5 h-5 text-destructive" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-foreground">Challenge</span>
+                          {isBarber && (openChallengeCount ?? 0) > 0 && (
+                            <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-destructive text-destructive-foreground">
+                              {openChallengeCount}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground">{isBarber ? 'Issue or accept challenges' : 'Barbers only'}</span>
+                      </div>
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
+            </AnimatePresence>,
+            document.body
           )}
 
-          {/* Challenge Modal - rendered as sibling to avoid focus trap issues */}
+          {/* Challenge Modal */}
           <ChallengeModal open={challengeModalOpen} onClose={() => setChallengeModalOpen(false)} />
 
           {/* Mobile Vote Center - Replaces VS divider on mobile during active battles */}

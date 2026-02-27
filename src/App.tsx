@@ -26,6 +26,7 @@ import CreatorHub from "./pages/CreatorHub";
 import Tournaments from "@/pages/Tournaments";
 import TournamentDetails from "@/pages/TournamentDetails";
 import NotFound from "./pages/NotFound";
+import WatchFeed from "./pages/WatchFeed";
 import BarberPublicProfile from "./pages/BarberPublicProfile";
 import BarbersDirectory from "./pages/BarbersDirectory";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -119,6 +120,7 @@ const AppContent = () => {
                 </AuthGuard>
               } 
             />
+          <Route path="/watch" element={<WatchFeed />} />
           <Route path="/tournaments" element={<Tournaments />} />
           <Route path="/tournaments/:tournamentId" element={<TournamentDetails />} />
             <Route path="/barber/:userId" element={<BarberPublicProfile />} />
