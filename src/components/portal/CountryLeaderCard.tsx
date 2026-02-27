@@ -17,7 +17,6 @@ interface CountryLeaderCardProps {
   leaders: CountryLeader[];
   totalPoints: number;
   barberCount: number;
-  onChallenge?: () => void;
   index?: number;
 }
 
