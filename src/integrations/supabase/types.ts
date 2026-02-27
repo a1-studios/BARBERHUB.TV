@@ -2426,6 +2426,7 @@ export type Database = {
           profile_id: string | null
           referral_code: string | null
           referred_by: string | null
+          sub_category: string | null
           three_x_vote_expires_at: string | null
           total_earnings: number | null
           updated_at: string
@@ -2448,6 +2449,7 @@ export type Database = {
           profile_id?: string | null
           referral_code?: string | null
           referred_by?: string | null
+          sub_category?: string | null
           three_x_vote_expires_at?: string | null
           total_earnings?: number | null
           updated_at?: string
@@ -2470,6 +2472,7 @@ export type Database = {
           profile_id?: string | null
           referral_code?: string | null
           referred_by?: string | null
+          sub_category?: string | null
           three_x_vote_expires_at?: string | null
           total_earnings?: number | null
           updated_at?: string

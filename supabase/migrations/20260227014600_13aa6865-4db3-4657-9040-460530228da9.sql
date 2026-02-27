@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN sub_category TEXT DEFAULT NULL;
