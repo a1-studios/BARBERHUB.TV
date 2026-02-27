@@ -86,7 +86,7 @@ export const ArenaGateChooseCategoriesStep = ({ onComplete, onBack }: ArenaGateC
                   ? `linear-gradient(135deg, ${cat.colorTheme.primary}15, transparent)`
                   : 'transparent',
                 boxShadow: isSelected ? `0 0 20px ${cat.colorTheme.glow}25` : 'none',
-                ringColor: isSelected ? cat.colorTheme.primary : undefined,
+                
               }}
             >
               <span className="text-2xl">{cat.icon}</span>
