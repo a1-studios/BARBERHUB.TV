@@ -217,6 +217,7 @@ const Profile = () => {
                 onAddFundsClick={() => setShowAddFundsModal(true)}
                 onBecomeSponsorClick={() => setShowSponsorModal(true)}
                 onSignOutClick={async () => { await signOut(); navigate('/'); }}
+                onDeleteAccountClick={() => setShowDeleteConfirm(true)}
               />
             </div>
           )}
