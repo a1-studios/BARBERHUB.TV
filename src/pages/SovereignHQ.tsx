@@ -8,6 +8,7 @@ import BattleControlPanel from '@/components/sovereign/BattleControlPanel';
 import UserControlPanel from '@/components/sovereign/UserControlPanel';
 import AuditLogViewer from '@/components/sovereign/AuditLogViewer';
 import LivePulseMonitor from '@/components/sovereign/LivePulseMonitor';
+import SponsorControlPanel from '@/components/sovereign/SponsorControlPanel';
 
 const SovereignHQ = () => {
   const { user } = useAuth();
