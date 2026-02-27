@@ -70,7 +70,6 @@ export const CountryLeaderboard = () => {
             leaders={country.leaders}
             totalPoints={country.total_points}
             barberCount={country.barber_count}
-            onChallenge={() => handleChallenge(country.country_name)}
             index={index}
           />
         ))}

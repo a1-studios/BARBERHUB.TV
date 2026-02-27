@@ -165,18 +165,6 @@ export const CountryLeaderCard = ({
             </div>
           )}
 
-          {/* Challenge Button */}
-          {onChallenge && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full group/btn border-primary/30 hover:border-primary hover:bg-primary/10"
-              onClick={onChallenge}
-            >
-              <Swords className="w-4 h-4 mr-2 group-hover/btn:animate-pulse" />
-              <span className="text-xs">Challenge This Country</span>
-            </Button>
-          )}
         </div>
 
         {/* Shine Effect on Hover */}
