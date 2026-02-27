@@ -7,11 +7,13 @@ const corsHeaders = {
 };
 
 const MIN_STAKE_BB = 100;
+const MAX_DURATION_MINUTES = 60;
 
 interface StakeRequest {
   title: string;
   stake_amount: number;
-  stream_url: string;
+  challenge_message?: string;
+  duration_minutes?: number;
 }
 
 serve(async (req) => {
@@ -36,7 +38,7 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { title, stake_amount, stream_url }: StakeRequest = await req.json();
+    const { title, stake_amount, challenge_message, duration_minutes }: StakeRequest = await req.json();
 
     console.log(`Creating challenge stake: ${stake_amount} BB from ${user.id}`);
 
@@ -45,8 +47,26 @@ serve(async (req) => {
       throw new Error(`Minimum stake is ${MIN_STAKE_BB} BB`);
     }
 
-    if (!title || !stream_url) {
-      throw new Error('Missing required fields: title, stream_url');
+    if (!title) {
+      throw new Error('Missing required field: title');
+    }
+
+    // Silver+ subscription check
+    const { data: subscription, error: subError } = await supabase
+      .from('barber_subscriptions')
+      .select('id, tier:barber_subscription_tiers(tier_name)')
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (subError) {
+      console.error('Subscription check error:', subError);
+      throw new Error('Could not verify subscription');
+    }
+
+    const tierName = (subscription?.tier as any)?.tier_name || 'free';
+    if (!['silver', 'gold', 'diamond'].includes(tierName)) {
+      throw new Error('Silver+ subscription required to issue challenges. Upgrade your tier to unlock challenges.');
     }
 
     // Get user profile
@@ -65,6 +85,10 @@ serve(async (req) => {
     if (currentBalance < stake_amount) {
       throw new Error(`Insufficient Barber Bucks. You need ${stake_amount} BB but have ${currentBalance} BB.`);
     }
+
+    // Calculate duration and expiration
+    const durationMins = Math.min(duration_minutes || MAX_DURATION_MINUTES, MAX_DURATION_MINUTES);
+    const expiresAt = new Date(Date.now() + durationMins * 60 * 1000).toISOString();
 
     // Deduct stake from challenger (escrow)
     const newBalance = currentBalance - stake_amount;
@@ -94,13 +118,16 @@ serve(async (req) => {
       .insert({
         challenger_id: user.id,
         challenger_username: profile.display_name || profile.username || 'Anonymous',
-        challenger_stream_url: stream_url,
+        challenger_stream_url: 'pending',
         title,
         stake_amount,
         pot_total: stake_amount,
         donations_total: 0,
-        status: 'open',
-        battle_type: 'challenge'
+        status: 'waiting_for_opponent',
+        battle_type: 'challenge',
+        bounty_description: challenge_message || null,
+        duration_minutes: durationMins,
+        expires_at: expiresAt,
       })
       .select()
       .single();
@@ -115,7 +142,7 @@ serve(async (req) => {
       throw new Error('Failed to create challenge');
     }
 
-    console.log(`Challenge created with ${stake_amount} BB stake: ${challenge.id}`);
+    console.log(`Challenge created with ${stake_amount} BB stake, expires at ${expiresAt}: ${challenge.id}`);
 
     return new Response(
       JSON.stringify({
@@ -123,7 +150,8 @@ serve(async (req) => {
         challenge,
         new_balance: newBalance,
         stake_amount,
-        message: `Challenge created with ${stake_amount} BB stake!`
+        expires_at: expiresAt,
+        message: `Challenge created with ${stake_amount} BB stake! Expires in ${durationMins} minutes.`
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

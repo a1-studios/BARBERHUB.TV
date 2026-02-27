@@ -1,18 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Swords, Coins, AlertCircle, Loader2 } from 'lucide-react';
+import { Swords, Coins, AlertCircle, Loader2, Clock, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
+import { useSubscriptionLimits } from '@/hooks/useSubscriptionLimits';
+import { differenceInSeconds } from 'date-fns';
 
 interface Challenge {
   id: string;
@@ -20,6 +16,7 @@ interface Challenge {
   title: string;
   stake_amount?: number | null;
   pot_total?: number | null;
+  expires_at?: string | null;
 }
 
 interface AcceptChallengeModalProps {
@@ -32,52 +29,37 @@ export const AcceptChallengeModal = ({ challenge, isOpen, onClose }: AcceptChall
   const navigate = useNavigate();
   const { toast } = useToast();
   const { barberBucks: balance } = useBarberBucks();
+  const { tierName } = useSubscriptionLimits();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const isSilverPlus = ['silver', 'gold', 'diamond'].includes(tierName);
   const stakeRequired = challenge.stake_amount || 100;
   const hasEnoughBalance = (balance || 0) >= stakeRequired;
+  const secondsLeft = challenge.expires_at ? Math.max(0, differenceInSeconds(new Date(challenge.expires_at), new Date())) : null;
+  const isExpired = secondsLeft !== null && secondsLeft <= 0;
 
   const handleAccept = async () => {
-    if (!hasEnoughBalance) {
-      toast({
-        title: "Insufficient Barber Bucks",
-        description: `You need ${stakeRequired} BB but have ${balance || 0} BB`,
-        variant: "destructive"
-      });
-      return;
-    }
+    if (!hasEnoughBalance || !isSilverPlus || isExpired) return;
 
     setIsSubmitting(true);
 
     try {
       const { data, error } = await supabase.functions.invoke('match-challenge-stake', {
-        body: {
-          challenge_id: challenge.id,
-        }
+        body: { challenge_id: challenge.id }
       });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      toast({
-        title: "Challenge Accepted! 🎉",
-        description: `You matched the ${stakeRequired} BB stake. The battle is on!`
-      });
+      toast({ title: "Challenge Accepted! 🎉", description: `You matched the ${stakeRequired} BB stake. The battle is on!` });
 
       if (data?.battle_id) {
-        setTimeout(() => {
-          navigate(`/battles/${data.battle_id}`);
-        }, 1000);
+        setTimeout(() => navigate(`/battles/${data.battle_id}`), 1000);
       }
-
       onClose();
     } catch (error: any) {
       console.error('Error accepting challenge:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to accept challenge",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: error.message || "Failed to accept challenge", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -97,9 +79,31 @@ export const AcceptChallengeModal = ({ challenge, isOpen, onClose }: AcceptChall
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <Badge variant="outline" className="text-xs border-yellow-500/50 text-yellow-500">
-            UNOFFICIAL — No Ranking Impact
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs border-yellow-500/50 text-yellow-500">
+              UNOFFICIAL — No Ranking Impact
+            </Badge>
+            {secondsLeft !== null && !isExpired && (
+              <Badge variant="outline" className={`text-xs ${secondsLeft < 300 ? 'border-destructive/50 text-destructive' : 'border-blue-500/50 text-blue-500'}`}>
+                <Clock className="w-3 h-3 mr-1" />
+                {Math.floor(secondsLeft / 60)}:{(secondsLeft % 60).toString().padStart(2, '0')} left
+              </Badge>
+            )}
+          </div>
+
+          {!isSilverPlus && (
+            <div className="flex items-center gap-2 text-muted-foreground text-sm bg-muted/30 p-3 rounded-lg">
+              <Lock className="w-4 h-4 flex-shrink-0" />
+              <span>Silver+ subscription required to accept challenges. Upgrade your tier.</span>
+            </div>
+          )}
+
+          {isExpired && (
+            <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 p-3 rounded-lg">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span>This challenge has expired.</span>
+            </div>
+          )}
 
           {/* Stake Info */}
           <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 rounded-lg p-4 space-y-3">
@@ -107,46 +111,39 @@ export const AcceptChallengeModal = ({ challenge, isOpen, onClose }: AcceptChall
               <Coins className="w-5 h-5" />
               <h4 className="font-semibold">Stake to Match</h4>
             </div>
-            
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Required Stake</span>
               <span className="font-bold text-lg text-foreground">{stakeRequired} BB</span>
             </div>
-
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Your Balance</span>
               <span className={`font-bold ${hasEnoughBalance ? 'text-green-500' : 'text-destructive'}`}>
                 {balance?.toLocaleString() || 0} BB
               </span>
             </div>
-
             <div className="flex items-center justify-between border-t border-yellow-500/20 pt-2">
               <span className="text-sm text-muted-foreground">Total Pot</span>
               <span className="font-bold text-yellow-500">{stakeRequired * 2} BB</span>
             </div>
-
             <p className="text-xs text-muted-foreground">
-              Winner takes the pot minus 5% platform fee. Your stake is held in escrow until the battle concludes.
+              Winner takes the pot minus 5% platform fee (goes to Challenge Jackpot). Your stake is held in escrow.
             </p>
           </div>
 
-          {!hasEnoughBalance && (
+          {!hasEnoughBalance && isSilverPlus && !isExpired && (
             <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 p-3 rounded-lg">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              <span>You need {stakeRequired - (balance || 0)} more BB. Purchase Barber Bucks to accept this challenge.</span>
+              <span>You need {stakeRequired - (balance || 0)} more BB. Purchase Barber Bucks to accept.</span>
             </div>
           )}
 
           <Button
             onClick={handleAccept}
-            disabled={isSubmitting || !hasEnoughBalance}
+            disabled={isSubmitting || !hasEnoughBalance || !isSilverPlus || isExpired}
             className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
           >
             {isSubmitting ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Matching Stake...
-              </>
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Matching Stake...</>
             ) : (
               `Match ${stakeRequired} BB & Accept Challenge`
             )}

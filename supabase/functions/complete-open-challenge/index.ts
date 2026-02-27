@@ -16,13 +16,11 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('No authorization header');
     }
 
-    // Get user from JWT
     const { data: { user }, error: authError } = await supabase.auth.getUser(
       authHeader.replace('Bearer ', '')
     );
@@ -31,7 +29,6 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    // Get request body
     const { challenge_id, accepter_stream_url, accepter_youtube_video_id } = await req.json();
 
     console.log('Processing challenge acceptance:', {
@@ -95,7 +92,7 @@ serve(async (req) => {
         barber_2_video_url: accepter_stream_url,
         barber2_youtube_video_id: accepter_youtube_video_id,
         status: 'voting',
-        voting_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
+        voting_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         starts_at: new Date().toISOString(),
         battle_type: 'challenge'
       })
@@ -124,6 +121,24 @@ serve(async (req) => {
 
     if (updateError) {
       console.error('Challenge update error:', updateError);
+    }
+
+    // Increment total_challenges_completed in challenge_prize_pool
+    const currentYear = new Date().getFullYear();
+    const { data: existingPool } = await supabase
+      .from('challenge_prize_pool')
+      .select('id, total_challenges_completed')
+      .eq('pool_year', currentYear)
+      .maybeSingle();
+
+    if (existingPool) {
+      await supabase
+        .from('challenge_prize_pool')
+        .update({
+          total_challenges_completed: (existingPool.total_challenges_completed || 0) + 1,
+          last_updated: new Date().toISOString(),
+        })
+        .eq('id', existingPool.id);
     }
 
     // Send notification to challenger
