@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Instagram, ExternalLink, Loader2, Trophy } from 'lucide-react';
+import { Instagram, ExternalLink } from 'lucide-react';
 
 interface ArenaGateInstagramStepProps {
   onVerified: () => void;
@@ -90,20 +90,10 @@ export const ArenaGateInstagramStep = ({
         </Button>
         <Button 
           onClick={onVerified} 
-          disabled={!confirmed || isLoading}
+          disabled={!confirmed}
           className="flex-1 bg-gradient-to-r from-primary via-orange-500 to-cyan-500 hover:from-primary/90 hover:via-orange-500/90 hover:to-cyan-500/90 shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
         >
-          {isLoading ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Creating Account...
-            </>
-          ) : (
-            <>
-              <Trophy className="w-4 h-4 mr-2" />
-              Claim My Flag! 🏆
-            </>
-          )}
+          Continue →
         </Button>
       </div>
     </motion.div>
