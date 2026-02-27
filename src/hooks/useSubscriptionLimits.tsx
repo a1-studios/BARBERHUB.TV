@@ -4,7 +4,7 @@ import { useAuth } from './useAuth';
 import { toast } from 'sonner';
 
 // TODO: Set to false before going live
-const DEV_MODE = true;
+export const DEV_MODE = true;
 
 const TIER_LIMITS = {
   'free': 2,
