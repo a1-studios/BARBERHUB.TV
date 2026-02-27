@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { DonationModal } from '../DonationModal';
 import { BarberVideoSection } from './BarberVideoSection';
+import { BarberActionButtons } from './BarberActionButtons';
 import { SubscriptionBadge } from '../SubscriptionBadge';
 import { SubCategoryBadge } from '../SubCategoryBadge';
 
