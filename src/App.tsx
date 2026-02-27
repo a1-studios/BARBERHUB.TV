@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { DEV_MODE } from "@/hooks/useSubscriptionLimits";
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { BarberGuard } from "@/components/auth/BarberGuard";
 import { AdminGuard } from "@/components/auth/AdminGuard";
