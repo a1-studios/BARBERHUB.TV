@@ -1,13 +1,15 @@
 import { Badge } from '@/components/ui/badge';
 import { Scissors, Users, Shield } from 'lucide-react';
 import { useUserRole } from '@/hooks/useUserRole';
+import { SubCategoryBadge } from '@/components/SubCategoryBadge';
 
 interface RoleBadgeProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  subCategory?: string | null;
 }
 
-export const RoleBadge = ({ size = 'md', className }: RoleBadgeProps) => {
+export const RoleBadge = ({ size = 'md', className, subCategory }: RoleBadgeProps) => {
   const { isBarber, isFan, isAdmin } = useUserRole();
 
   const sizeClasses = {
