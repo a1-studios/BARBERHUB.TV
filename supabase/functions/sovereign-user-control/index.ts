@@ -82,6 +82,20 @@ serve(async (req) => {
         break;
       }
 
+      case 'list_all_users': {
+        const { data: allUsers } = await supabase.from('profiles').select('user_id, display_name, username, barber_bucks, sub_category, user_type').order('display_name', { ascending: true });
+        const allUserIds = allUsers?.map((u: any) => u.user_id) || [];
+        const { data: allRoles } = await supabase.from('user_roles').select('user_id, role').in('user_id', allUserIds);
+        const usersWithAllRoles = allUsers?.map((u: any) => ({
+          ...u,
+          roles: allRoles?.filter((r: any) => r.user_id === u.user_id).map((r: any) => r.role) || []
+        })) || [];
+        const barbers = usersWithAllRoles.filter((u: any) => u.roles.includes('barber'));
+        const fans = usersWithAllRoles.filter((u: any) => !u.roles.includes('barber'));
+        result = { barbers, fans, total: allUsers?.length || 0 };
+        break;
+      }
+
       case 'get_user_details': {
         if (!user_id) throw new Error('User ID required');
         const { data: profile } = await supabase.from('profiles').select('*').eq('user_id', user_id).single();
