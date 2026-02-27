@@ -101,6 +101,15 @@ const SovereignHQ = () => {
         {/* Sponsor Board Control */}
         <SponsorControlPanel onRefresh={refresh} />
 
+        {/* Battle Directory - Full CRUD */}
+        <BattleDirectoryPanel onRefresh={refresh} />
+
+        {/* Tournament Queue */}
+        <TournamentQueuePanel onRefresh={refresh} />
+
+        {/* Tournament Manager */}
+        <TournamentManagerPanel onRefresh={refresh} />
+
         {/* Audit Log */}
         <AuditLogViewer refreshTrigger={refreshTrigger} />
       </main>
