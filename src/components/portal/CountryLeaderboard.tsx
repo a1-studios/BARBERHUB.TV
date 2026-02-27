@@ -3,7 +3,6 @@ import { Globe, Trophy } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CountryLeaderCard } from './CountryLeaderCard';
 import { useCountryLeaders } from '@/hooks/useCountryLeaders';
-import { useToast } from '@/hooks/use-toast';
 
 export const CountryLeaderboard = () => {
   const { data: countries, isLoading } = useCountryLeaders(12);
