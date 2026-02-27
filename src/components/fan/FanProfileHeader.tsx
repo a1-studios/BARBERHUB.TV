@@ -29,6 +29,7 @@ interface FanProfileHeaderProps {
   onAddFundsClick: () => void;
   onBecomeSponsorClick: () => void;
   onSignOutClick?: () => void;
+  onDeleteAccountClick?: () => void;
 }
 
 export function FanProfileHeader({
