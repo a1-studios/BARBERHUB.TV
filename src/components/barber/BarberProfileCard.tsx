@@ -51,18 +51,18 @@ export const BarberProfileCard = ({
     }
   });
 
-  // Fetch subscription tier separately
-  const { data: subscriptionData } = useQuery({
-    queryKey: ['barber-subscription', userId],
+  // Fetch subscription tier and sub_category
+  const { data: extraProfileData } = useQuery({
+    queryKey: ['barber-extra-profile', userId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('barber_profiles')
-        .select('active_subscription_tier')
-        .eq('user_id', userId)
-        .single();
-      
-      if (error) throw error;
-      return data;
+      const [barberRes, profileRes] = await Promise.all([
+        supabase.from('barber_profiles').select('active_subscription_tier').eq('user_id', userId).single(),
+        supabase.from('profiles').select('sub_category').eq('user_id', userId).single()
+      ]);
+      return {
+        active_subscription_tier: barberRes.data?.active_subscription_tier,
+        sub_category: profileRes.data?.sub_category
+      };
     },
     enabled: !!userId
   });
