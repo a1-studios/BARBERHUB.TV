@@ -422,6 +422,26 @@ const UserControlPanel = ({ stats, onRefresh }: UserControlPanelProps) => {
                       </Select>
                     </div>
                     {fieldInput('Country Code', 'country_code', profileEdits, setProfileEdits, getProfileVal)}
+                    <div className="space-y-1">
+                      <Label className="text-xs text-gray-400">Sub-Category</Label>
+                      <Select
+                        value={getProfileVal('sub_category') || 'none'}
+                        onValueChange={(v) => setProfileEdits({ ...profileEdits, sub_category: v === 'none' ? null : v })}
+                      >
+                        <SelectTrigger className="bg-[#0f0f1a] border-gray-700 text-white h-8 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-[#1a1a2e] border-gray-700">
+                          <SelectItem value="none">None</SelectItem>
+                          {(getProfileVal('user_type') === 'barber' || userDetails?.roles?.includes('barber')) && (
+                            <SelectItem value="educator">🎓 Educator</SelectItem>
+                          )}
+                          {(getProfileVal('user_type') === 'fan' || (!userDetails?.roles?.includes('barber'))) && (
+                            <SelectItem value="official_sponsor">🏆 Official Sponsor</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div className="mt-2">
                     <Label className="text-xs text-gray-400">Bio</Label>
