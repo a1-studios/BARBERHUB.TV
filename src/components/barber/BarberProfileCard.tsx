@@ -57,12 +57,16 @@ export const BarberProfileCard = ({
     queryKey: ['barber-extra-profile', userId],
     queryFn: async () => {
       const [barberRes, profileRes] = await Promise.all([
-        supabase.from('barber_profiles').select('active_subscription_tier').eq('user_id', userId).single(),
+        supabase.from('barber_profiles').select('active_subscription_tier, m4m_certified, m4m_paid, m4m_lives_touched, user_id').eq('user_id', userId).single(),
         supabase.from('profiles').select('sub_category').eq('user_id', userId).single()
       ]);
       return {
         active_subscription_tier: barberRes.data?.active_subscription_tier,
-        sub_category: profileRes.data?.sub_category
+        sub_category: profileRes.data?.sub_category,
+        m4m_certified: barberRes.data?.m4m_certified ?? false,
+        m4m_paid: barberRes.data?.m4m_paid ?? false,
+        m4m_lives_touched: barberRes.data?.m4m_lives_touched ?? 0,
+        barber_user_id: barberRes.data?.user_id,
       };
     },
     enabled: !!userId
