@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Sparkles } from 'lucide-react';
 import ScratchReveal from './ScratchReveal';
-import ColorfulText from './ColorfulText';
 import SponsoredBadge from './SponsoredBadge';
 import { useSponsorAds } from '@/hooks/useSponsorAds';
 
@@ -131,7 +130,11 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
 
   return (
     <div
-      className="relative overflow-hidden cursor-pointer select-none mb-3"
+      className="relative overflow-hidden cursor-pointer select-none mb-3 border rounded-lg"
+      style={{
+        borderColor: 'hsl(var(--cyan) / 0.3)',
+        boxShadow: '0 0 8px hsl(var(--cyan) / 0.25), inset 0 0 4px hsl(var(--cyan) / 0.1)',
+      }}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onClick={handleClick}
@@ -145,7 +148,7 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
       />
 
       {/* Content */}
-      <div className="flex items-center justify-center px-4 sm:px-6 py-5 min-h-[72px]">
+      <div className="flex items-center justify-center px-4 sm:px-6 py-5 min-h-[120px]">
         <AnimatePresence mode="wait">
           {currentSlide.type === 'prize-pool' ? (
             <motion.div
@@ -181,26 +184,24 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
               animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
               exit={{ opacity: 0, scale: 1.1, y: -15 }}
               transition={{ duration: 0.5, delay: 0.25 }}
-              className="flex items-center justify-center gap-3 flex-wrap"
+              className="flex flex-col items-center justify-center gap-2"
             >
               {/* Logo or fallback icon */}
               {currentSlide.logoUrl ? (
                 <motion.img
                   src={currentSlide.logoUrl}
                   alt={currentSlide.name}
-                  className="h-8 w-auto sm:h-10 object-contain rounded-md border border-white/10 shrink-0"
+                  className="h-14 sm:h-16 max-w-[180px] object-contain rounded-md border border-border shrink-0"
                   initial={{ filter: 'blur(8px)', opacity: 0 }}
                   animate={{ filter: 'blur(0px)', opacity: 1 }}
                   transition={{ duration: 0.4, delay: 0.3 }}
                 />
               ) : (
-                <Sparkles className="w-5 h-5 shrink-0 text-primary drop-shadow-[0_0_6px_hsl(var(--primary))]" />
+                <Sparkles className="w-6 h-6 shrink-0 text-primary drop-shadow-[0_0_6px_hsl(var(--primary))]" />
               )}
-              <ColorfulText
-                text={currentSlide.message}
-                highlightEnd={currentSlide.highlightEnd}
-                className="text-sm sm:text-base lg:text-lg"
-              />
+              <span className="text-sm sm:text-base font-bold text-foreground tracking-wide text-center">
+                {currentSlide.message}
+              </span>
               <SponsoredBadge />
             </motion.div>
           )}
