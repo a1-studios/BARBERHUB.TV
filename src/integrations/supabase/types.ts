@@ -359,6 +359,9 @@ export type Database = {
           last_live_check: string | null
           live_video_id: string | null
           location: string | null
+          m4m_certified: boolean
+          m4m_lives_touched: number
+          m4m_paid: boolean
           name: string
           nickname: string | null
           phone_number: string | null
@@ -392,6 +395,9 @@ export type Database = {
           last_live_check?: string | null
           live_video_id?: string | null
           location?: string | null
+          m4m_certified?: boolean
+          m4m_lives_touched?: number
+          m4m_paid?: boolean
           name: string
           nickname?: string | null
           phone_number?: string | null
@@ -425,6 +431,9 @@ export type Database = {
           last_live_check?: string | null
           live_video_id?: string | null
           location?: string | null
+          m4m_certified?: boolean
+          m4m_lives_touched?: number
+          m4m_paid?: boolean
           name?: string
           nickname?: string | null
           phone_number?: string | null
@@ -1916,6 +1925,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      m4m_session_logs: {
+        Row: {
+          barber_user_id: string
+          client_user_id: string | null
+          created_at: string | null
+          id: string
+          verification_code: string
+          verified: boolean
+          verified_at: string | null
+        }
+        Insert: {
+          barber_user_id: string
+          client_user_id?: string | null
+          created_at?: string | null
+          id?: string
+          verification_code: string
+          verified?: boolean
+          verified_at?: string | null
+        }
+        Update: {
+          barber_user_id?: string
+          client_user_id?: string | null
+          created_at?: string | null
+          id?: string
+          verification_code?: string
+          verified?: boolean
+          verified_at?: string | null
+        }
+        Relationships: []
       }
       marketing_leads: {
         Row: {
@@ -3555,6 +3594,10 @@ export type Database = {
       }
       validate_user_action: {
         Args: { action_type: string; target_user_type: string }
+        Returns: boolean
+      }
+      verify_m4m_session: {
+        Args: { p_client_id: string; p_code: string }
         Returns: boolean
       }
     }
