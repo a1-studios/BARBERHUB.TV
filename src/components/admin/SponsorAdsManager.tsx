@@ -340,7 +340,7 @@ export default function SponsorAdsManager() {
                 <label className="cursor-pointer">
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
                     className="hidden"
                     onChange={handleLogoUpload}
                     disabled={uploading}
