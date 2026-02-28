@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSponsorAds, type SponsorAd } from "@/hooks/useSponsorAds";
@@ -36,6 +36,9 @@ import {
   Sparkles,
   Eye,
   EyeOff,
+  BarChart3,
+  MousePointerClick,
+  Users,
 } from "lucide-react";
 
 interface SponsorFormData {
