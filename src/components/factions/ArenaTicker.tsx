@@ -89,7 +89,7 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
   useEffect(() => {
     if (hasAnimated.current || totalPool === 0) return;
     const current = displaySlides[activeIndex];
-    if (current.type !== 'prize-pool') return;
+    if (!current || current.type !== 'prize-pool') return;
 
     hasAnimated.current = true;
     const startTime = Date.now();
@@ -116,15 +116,18 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
     return () => clearInterval(timer);
   }, [isPaused, displaySlides.length]);
 
-  const currentSlide = displaySlides[activeIndex];
+  const currentSlide = displaySlides[activeIndex] ?? displaySlides[0];
 
   const handleClick = useCallback(() => {
+    if (!currentSlide) return;
     if (currentSlide.type === 'prize-pool') {
       onNavigate('/portal');
     } else if (currentSlide.link) {
       onNavigate(currentSlide.link);
     }
   }, [currentSlide, onNavigate]);
+
+  if (!currentSlide) return null;
 
   return (
     <div
