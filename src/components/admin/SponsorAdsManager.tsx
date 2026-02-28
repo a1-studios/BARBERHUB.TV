@@ -78,9 +78,22 @@ export default function SponsorAdsManager() {
     setDialogOpen(true);
   };
 
+  const ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/svg+xml'];
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      toast.error("Unsupported file type. Use PNG, JPG, WebP, GIF, or SVG.");
+      return;
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error("File too large. Maximum size is 5MB.");
+      return;
+    }
 
     setUploading(true);
     const ext = file.name.split(".").pop();
@@ -327,7 +340,7 @@ export default function SponsorAdsManager() {
                 <label className="cursor-pointer">
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml"
                     className="hidden"
                     onChange={handleLogoUpload}
                     disabled={uploading}
