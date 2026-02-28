@@ -55,7 +55,11 @@ export function BarberProfileHeader({
   onDeleteAccountClick,
   barberBucks,
   showActions = true,
-  socialLinks
+  socialLinks,
+  m4m_certified = false,
+  m4m_paid = false,
+  m4m_lives_touched = 0,
+  barber_user_id
 }: BarberProfileHeaderProps) {
   const getCountryFlag = (code: string) => {
     const codePoints = code
