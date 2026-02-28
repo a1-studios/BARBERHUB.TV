@@ -123,14 +123,32 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
 
   const currentSlide = displaySlides[activeIndex] ?? displaySlides[0];
 
-  const handleClick = useCallback(() => {
+  const handleClick = useCallback(async () => {
     if (!currentSlide) return;
     if (currentSlide.type === 'prize-pool') {
       onNavigate('/portal');
-    } else if ('link' in currentSlide && currentSlide.link) {
-      onNavigate(currentSlide.link);
+      return;
     }
-  }, [currentSlide, onNavigate]);
+
+    // Track click
+    if ('sponsorAdId' in currentSlide && currentSlide.sponsorAdId) {
+      (supabase.from('sponsor_ad_clicks' as any) as any).insert({
+        sponsor_ad_id: currentSlide.sponsorAdId,
+        user_id: user?.id ?? null,
+        click_type: 'click',
+        slide_type: currentSlide.type,
+      }).then(() => {});
+    }
+
+    const link = 'link' in currentSlide ? currentSlide.link : undefined;
+    if (link) {
+      if (link.startsWith('http')) {
+        window.open(link, '_blank', 'noopener,noreferrer');
+      } else {
+        onNavigate(link);
+      }
+    }
+  }, [currentSlide, onNavigate, user?.id]);
 
   if (!currentSlide) return null;
 
