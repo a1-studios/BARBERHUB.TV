@@ -179,6 +179,28 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
                 In Prizes
               </span>
             </motion.div>
+          ) : currentSlide.type === 'sponsor-image' ? (
+            <motion.div
+              key={currentSlide.id}
+              initial={{ opacity: 0, filter: 'blur(8px)', y: 10 }}
+              animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
+              exit={{ opacity: 0, scale: 1.1, y: -15 }}
+              transition={{ duration: 0.5, delay: 0.25 }}
+              className="flex items-center justify-center"
+            >
+              {currentSlide.logoUrl ? (
+                <motion.img
+                  src={currentSlide.logoUrl}
+                  alt={currentSlide.name}
+                  className="h-20 sm:h-24 max-w-[220px] object-contain rounded-md shrink-0"
+                  initial={{ filter: 'blur(8px)', opacity: 0 }}
+                  animate={{ filter: 'blur(0px)', opacity: 1 }}
+                  transition={{ duration: 0.4, delay: 0.3 }}
+                />
+              ) : (
+                <Sparkles className="w-10 h-10 shrink-0 text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" />
+              )}
+            </motion.div>
           ) : (
             <motion.div
               key={currentSlide.id}
@@ -188,23 +210,13 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
               transition={{ duration: 0.5, delay: 0.25 }}
               className="flex flex-col items-center justify-center gap-2"
             >
-              {/* Logo or fallback icon */}
-              {currentSlide.logoUrl ? (
-                <motion.img
-                  src={currentSlide.logoUrl}
-                  alt={currentSlide.name}
-                  className="h-14 sm:h-16 max-w-[180px] object-contain rounded-md border border-border shrink-0"
-                  initial={{ filter: 'blur(8px)', opacity: 0 }}
-                  animate={{ filter: 'blur(0px)', opacity: 1 }}
-                  transition={{ duration: 0.4, delay: 0.3 }}
-                />
-              ) : (
-                <Sparkles className="w-6 h-6 shrink-0 text-primary drop-shadow-[0_0_6px_hsl(var(--primary))]" />
-              )}
-              <span className="text-sm sm:text-base font-bold text-foreground tracking-wide text-center">
+              <SponsoredBadge />
+              <span className="text-base sm:text-lg font-black text-foreground tracking-wide text-center uppercase">
+                {currentSlide.name}
+              </span>
+              <span className="text-xs sm:text-sm text-muted-foreground text-center">
                 {currentSlide.message}
               </span>
-              <SponsoredBadge />
             </motion.div>
           )}
         </AnimatePresence>
