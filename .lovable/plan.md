@@ -1,119 +1,106 @@
 
 
-## Particle Explosion Animation for VS/ENTER Cycle
+## Vault of Honor: Full Implementation Plan
 
-### Concept
+This builds the entire 4-step gamified lead capture funnel with anti-repeat logic, role-tailored prizes, and pre-filled signup flow.
 
-Replace the current simple cross-fade between "VS" and "ENTER" (Swords) with a **particle explosion effect**. Every 3 seconds when the text transitions:
+### Database
 
-1. The current text ("VS" or "ENTER") **explodes outward** into ~20 particles (tiny orange and cyan dots) that scatter in all directions
-2. The particles dissipate over ~400ms
-3. The new text ("ENTER" or "VS") **implodes inward** -- particles rush from the edges to the center and coalesce into the new text
+#### 1. Migration: `marketing_leads` table
+```sql
+CREATE TABLE public.marketing_leads (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('barber', 'fan')),
+  device_fingerprint TEXT,
+  shared BOOLEAN DEFAULT false,
+  prize_id TEXT,
+  prize_label TEXT,
+  converted BOOLEAN DEFAULT false,
+  spins_used INTEGER DEFAULT 0,
+  max_spins INTEGER DEFAULT 2,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-This creates a dramatic energy-burst feel where the text appears to shatter and reform.
+CREATE UNIQUE INDEX idx_marketing_leads_email ON public.marketing_leads(email);
+CREATE INDEX idx_marketing_leads_fingerprint ON public.marketing_leads(device_fingerprint);
 
-### Animation Sequence
+ALTER TABLE public.marketing_leads ENABLE ROW LEVEL SECURITY;
 
-```text
-[VS visible for 5s with subtle idle glow pulse]
-         |
-   VS EXPLODES --> 20 particles scatter outward (400ms)
-         |
-   Particles converge inward --> ENTER forms (400ms)
-         |
-[ENTER visible for 3s with Swords icon pulse]
-         |
-   ENTER EXPLODES --> 20 particles scatter outward (400ms)
-         |
-   Particles converge inward --> VS reforms (400ms)
-         |
-   (repeat)
+-- Anon insert for lead capture
+CREATE POLICY "Anon can insert leads" ON public.marketing_leads FOR INSERT TO anon WITH CHECK (true);
+-- Anon can update own lead by email (for share/spin updates)
+CREATE POLICY "Anon can update leads" ON public.marketing_leads FOR UPDATE TO anon USING (true) WITH CHECK (true);
+-- Anon can read own lead by fingerprint
+CREATE POLICY "Anon can read own leads" ON public.marketing_leads FOR SELECT TO anon USING (true);
+-- Sovereign reads all
+CREATE POLICY "Sovereign reads all leads" ON public.marketing_leads FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'sovereign'));
 ```
 
-### Changes
+### New Files (7 total)
 
-#### File: `src/components/DynamicBattleHero.tsx`
+#### 2. `src/utils/deviceFingerprint.ts`
+- Generate a hash from `navigator.userAgent` + `screen.width` + `screen.height` + `Intl.DateTimeFormat().resolvedOptions().timeZone`
+- Simple string concat + basic hash, no external library
+- Export `getDeviceFingerprint(): string`
 
-**Modify the AnimatePresence transitions (lines 375-426):**
+#### 3. `src/pages/VaultOfHonor.tsx`
+- Full-screen page (`fixed inset-0 z-50`), dark metallic theme
+- State machine: `entry` → `viral-gate` → `spin` → `victory`
+- On mount: check `localStorage` for `vault_fingerprint` → query `marketing_leads` by fingerprint
+  - If found AND `spins_used >= max_spins`: show "You've already played!" message with CTA to sign up instead
+  - If found AND `spins_used < max_spins`: resume from where they left off (skip entry, go to viral gate or spin)
+- Passes `role`, `email`, `leadId` down to child components
 
-Replace the current simple opacity/scale fade with particle explosion animations:
+#### 4. `src/components/vault/VaultEntry.tsx` (View 1)
+- Pulsing vault door visual (CSS radial gradient + Framer Motion pulse)
+- Email input + Role toggle (Barber / Fan) using same button style as LandingHero
+- "POWER THE VAULT" CTA
+- On submit: upsert into `marketing_leads`, store fingerprint in `localStorage` as `vault_fingerprint`, advance
 
-- **Exit animation** (`exit` prop): The text scales down to 0 while spawning ~20 absolutely-positioned particle dots around it. Each particle flies outward in a random direction (random angle, random distance 20-50px) and fades to 0. Particles alternate between orange (`hsl(var(--primary))`) and cyan (`hsl(187 100% 50%)`) colors with matching glow shadows.
+#### 5. `src/components/vault/VaultViralGate.tsx` (View 2)
+- Lock animation (Framer Motion)
+- "SHARE TO SPIN" button using `navigator.share()` with fallback copy-link
+- On share intent: update `marketing_leads.shared = true`, advance
+- Skip button after 5 seconds (still advances but `shared` stays false)
 
-- **Enter animation** (`initial` + `animate`): The text starts at scale 0 with particles positioned at random outer positions. Particles animate inward to center (0,0) and fade, while the text scales from 0 to 1 with a slight overshoot (scale to 1.1 then settle to 1).
+#### 6. `src/components/vault/VaultSpinWheel.tsx` (View 3)
+- CSS wheel with 4 segments, Framer Motion rotate animation
+- **Role-based prizes**:
+  - **Barber**: Free month Bronze upgrade (60%), 100 BB bonus (25%), Free month Silver upgrade (10%), 3 months Gold tier (5%)
+  - **Fan**: 25 BB starter (60%), 100 BB bonus (25%), Hunter Pass trial (10%), National Contender Pass (5%)
+- Pre-calculate winning segment, animate to it
+- `canvas-confetti` burst on result
+- Update `marketing_leads` with `prize_id`, `prize_label`, increment `spins_used`
 
-**Implementation approach -- inline particle generation:**
+#### 7. `src/components/vault/VaultVictory.tsx` (View 4)
+- Prize reveal animation
+- "CLAIM YOUR BOUNTY" CTA → navigates to `/?tab=signup&email={email}&role={role}&prize_id={prize_id}`
+- Prize is escrowed — message says "Complete signup to claim"
 
-Rather than a separate component, generate particles directly in the motion variants using an array of `motion.div` elements rendered alongside the text inside each AnimatePresence child:
+#### 8. `src/components/sovereign/VaultMetricsPanel.tsx`
+- Fetch from `marketing_leads`: total leads, conversion rate, role split, prize distribution, share rate
+- Simple card layout with stats
 
-```text
-<motion.div key="vs" ...>
-  {/* Particle array */}
-  {Array.from({ length: 20 }).map((_, i) => (
-    <motion.div
-      key={i}
-      className="absolute w-1 h-1 rounded-full"
-      style={{ backgroundColor: i % 2 === 0 ? orange : cyan }}
-      initial={{ x: 0, y: 0, opacity: 1 }}
-      animate={{ x: 0, y: 0, opacity: 0 }}  // idle: invisible
-      exit={{
-        x: Math.cos(angle) * distance,
-        y: Math.sin(angle) * distance,
-        opacity: [1, 0],
-        scale: [1, 0]
-      }}
-    />
-  ))}
-  {/* VS text */}
-  <span>VS</span>
-</motion.div>
-```
+### File Edits (3 files)
 
-Each particle gets a pre-calculated random angle (evenly distributed around 360 degrees) and random distance (20-50px), with a staggered delay for a natural burst feel.
+#### 9. `App.tsx` — Add `/vault` route (public, no auth guard)
 
-**Apply to both barber and fan VS elements:**
+#### 10. `LandingHero.tsx` — Two changes:
+- Add pulsing "SPIN TO WIN" button below the sign-in card that links to `/vault`
+- Read URL params `?tab=signup&email=X&role=X&prize_id=X` on mount → pre-fill signup form with email and role, show prize banner at top of signup tab
 
-- **Barber VS** (lines 389-406): Add particles to the VS motion.span and the Swords motion.div
-- **Fan VS** (lines 411-425): For fans, since there is no cycle, add a subtle idle particle effect -- 4-6 particles that slowly orbit or float around the VS text on a loop, giving a constant "energy radiating" feel without the explosion
+#### 11. `SovereignHQ.tsx` — Import and render `VaultMetricsPanel` after `SponsorControlPanel`
 
-**Cycle timing unchanged:**
-- The existing `useEffect` at lines 166-173 stays as-is (5s VS, 3s Swords for barbers)
-- The explosion/implosion animation takes ~400ms for exit + ~400ms for enter, fitting within the transition window
+### Anti-Annoyance Logic
+- `localStorage` key `vault_fingerprint` persists the device fingerprint
+- On `/vault` load: if fingerprint exists in DB with `spins_used >= max_spins`, show a friendly "Already played" screen with direct signup link — never shows the wheel again
+- Max 2 spins per device (configurable via `max_spins` column)
+- The vault is only linked from the landing page (unauthenticated users) — logged-in users never see it
 
-**Rings unchanged:**
-- The rotating dashed ring and inner cyan ring remain as they are (lines 344-366)
-
-### Particle Specs
-
-| Property | Value |
-|----------|-------|
-| Count per explosion | 20 particles |
-| Size | 1-2px (w-1 h-1 or w-0.5 h-0.5) |
-| Colors | Alternating orange (primary) and cyan |
-| Scatter distance | 20-50px random per particle |
-| Scatter direction | Evenly distributed angles (360/20 = 18 degree increments + slight random offset) |
-| Glow | box-shadow matching particle color, 4px blur |
-| Exit duration | 400ms ease-out |
-| Enter duration | 400ms ease-out with overshoot |
-| Stagger | 20ms between particles for natural burst feel |
-
-### What Changes
-
-| Element | Before | After |
-|---------|--------|-------|
-| VS to ENTER transition | Simple opacity/scale fade | Particle explosion outward, then implosion inward |
-| ENTER to VS transition | Simple opacity/scale fade | Same particle explosion/implosion |
-| Fan VS | Static with glow pulse | Static with 4-6 subtle floating particles |
-| Rings | Unchanged | Unchanged |
-| Drawer | Unchanged | Unchanged |
-| Cycle timing | Unchanged (5s/3s) | Unchanged |
-
-### What Is NOT Changing
-
-- The 5s VS / 3s Swords timing cycle
-- Arena Drawer contents and navigation
-- Rotating ring animations
-- MobileVoteCenter replacement during active battles
-- Video layout, action bars, name overlays
-- Open challenges badge count query
+### Profile Pre-Fill Flow
+- When user clicks "CLAIM YOUR BOUNTY", they land on `/?tab=signup&email=EMAIL&role=ROLE&prize_id=PRIZE`
+- `LandingHero` reads these params, sets `activeTab='signup'`, pre-fills `signUpData.email` and `signUpData.userType`
+- After successful signup, the `handle_new_user()` DB trigger already creates the profile with `user_type` and `country_code` from metadata
+- A new `useEffect` in `LandingHero` marks `marketing_leads.converted = true` after signup completes (matching by email)
 
