@@ -110,20 +110,22 @@ export function BarberProfileHeader({
       
       <CardContent className="relative p-4 md:p-8 z-10">
         <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start">
-          <Avatar className="w-20 h-20 md:w-32 md:h-32 border-4 border-primary/30">
-            <AvatarImage src={avatar_url || undefined} />
-            <AvatarFallback className="bg-primary/20 text-primary text-3xl md:text-4xl font-bold">
-              {(display_name || 'B').charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <M4MHeartbeat
-            certified={m4m_certified}
-            paid={m4m_paid}
-            livesTouched={m4m_lives_touched}
-            barberName={display_name}
-            barberUserId={barber_user_id || ''}
-            size="md"
-          />
+          <div className="flex flex-col items-center gap-1">
+            <Avatar className="w-20 h-20 md:w-32 md:h-32 border-4 border-primary/30">
+              <AvatarImage src={avatar_url || undefined} />
+              <AvatarFallback className="bg-primary/20 text-primary text-3xl md:text-4xl font-bold">
+                {(display_name || 'B').charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <M4MHeartbeat
+              certified={m4m_certified}
+              paid={m4m_paid}
+              livesTouched={m4m_lives_touched}
+              barberName={display_name}
+              barberUserId={barber_user_id || ''}
+              size="md"
+            />
+          </div>
 
           <div className="flex-1 space-y-3 w-full">
             <div>

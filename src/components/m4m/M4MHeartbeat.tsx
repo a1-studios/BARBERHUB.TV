@@ -45,7 +45,7 @@ export function M4MHeartbeat({
 }: M4MHeartbeatProps) {
   const [modalOpen, setModalOpen] = useState(false);
 
-  const sizeClass = size === 'md' ? 'w-8 h-8' : 'w-6 h-6';
+  const sizeClass = size === 'md' ? 'w-16 h-16 md:w-24 md:h-24' : 'w-10 h-10';
 
   // State A: Not certified — hidden
   if (!certified) {
