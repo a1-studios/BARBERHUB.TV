@@ -9,9 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 interface ChallengeModalProps {
   open: boolean;
   onClose: () => void;
+  initialTab?: 'issue' | 'feed';
 }
 
-export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
+export const ChallengeModal = ({ open, onClose, initialTab = 'feed' }: ChallengeModalProps) => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -72,7 +73,7 @@ export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
 
             {/* Tabs: Issue / Feed */}
             <div className="p-4">
-              <Tabs defaultValue="issue" className="w-full">
+              <Tabs defaultValue={initialTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-4">
                   <TabsTrigger value="issue" className="gap-1.5 text-xs">
                     <Flame className="w-3.5 h-3.5" />

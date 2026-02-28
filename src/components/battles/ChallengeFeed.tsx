@@ -3,13 +3,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Swords, Coins, Clock, Users, Trophy, Lock } from 'lucide-react';
+import { Swords, Coins, Clock, Users, Trophy, Lock, Zap, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useSubscriptionLimits } from '@/hooks/useSubscriptionLimits';
 import { AcceptChallengeModal } from './AcceptChallengeModal';
-import { formatDistanceToNow, differenceInSeconds } from 'date-fns';
+import { differenceInSeconds } from 'date-fns';
 import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 interface Challenge {
   id: string;
@@ -24,6 +25,12 @@ interface Challenge {
   expires_at: string | null;
   duration_minutes: number | null;
 }
+
+const QUICK_PRESETS = [
+  { title: '⚔️ Sharpest Fade', stake: 100, emoji: '💈', color: 'from-blue-500 to-cyan-500' },
+  { title: '🧔 Beard Battle', stake: 150, emoji: '🔥', color: 'from-orange-500 to-red-500' },
+  { title: '🎨 Freestyle Showdown', stake: 200, emoji: '🎯', color: 'from-purple-500 to-pink-500' },
+];
 
 const CountdownBadge = ({ expiresAt }: { expiresAt: string }) => {
   const [secondsLeft, setSecondsLeft] = useState(() => Math.max(0, differenceInSeconds(new Date(expiresAt), new Date())));
@@ -51,6 +58,77 @@ const CountdownBadge = ({ expiresAt }: { expiresAt: string }) => {
   );
 };
 
+const QuickChallengePresets = ({ isSilverPlus }: { isSilverPlus: boolean }) => {
+  const [loadingPreset, setLoadingPreset] = useState<number | null>(null);
+  const queryClient = useQueryClient();
+
+  const handleQuickChallenge = async (preset: typeof QUICK_PRESETS[0], index: number) => {
+    if (!isSilverPlus) {
+      toast.error('Silver+ subscription required to issue challenges');
+      return;
+    }
+    setLoadingPreset(index);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { toast.error('Please sign in first'); return; }
+
+      const { data, error } = await supabase.functions.invoke('create-challenge-stake', {
+        body: { title: preset.title, stake_amount: preset.stake, duration_minutes: 60 },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast.success(`Challenge "${preset.title}" created! ${preset.stake} BB staked.`);
+      queryClient.invalidateQueries({ queryKey: ['open-challenges'] });
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to create challenge');
+    } finally {
+      setLoadingPreset(null);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Zap className="w-4 h-4 text-yellow-500" />
+        <h4 className="text-sm font-bold text-foreground">Quick Challenges</h4>
+        <span className="text-[10px] text-muted-foreground">One-click start</span>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {QUICK_PRESETS.map((preset, i) => (
+          <button
+            key={preset.title}
+            disabled={loadingPreset !== null || !isSilverPlus}
+            onClick={() => handleQuickChallenge(preset, i)}
+            className={`relative p-4 rounded-xl border border-border bg-gradient-to-br ${preset.color} bg-opacity-10 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-left disabled:opacity-50 disabled:cursor-not-allowed group`}
+          >
+            <div className="absolute inset-0 rounded-xl bg-gradient-to-br ${preset.color} opacity-10 group-hover:opacity-20 transition-opacity" />
+            <div className="relative">
+              <span className="text-2xl">{preset.emoji}</span>
+              <h5 className="font-bold text-white text-sm mt-1">{preset.title}</h5>
+              <div className="flex items-center gap-1 mt-2">
+                <Coins className="w-3.5 h-3.5 text-yellow-400" />
+                <span className="text-xs font-bold text-yellow-400">{preset.stake} BB</span>
+              </div>
+              {loadingPreset === i && (
+                <Loader2 className="absolute top-0 right-0 w-4 h-4 text-white animate-spin" />
+              )}
+            </div>
+            {!isSilverPlus && (
+              <div className="absolute inset-0 rounded-xl bg-black/60 flex items-center justify-center">
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Lock className="w-3 h-3" /> Silver+
+                </div>
+              </div>
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const ChallengeFeed = () => {
   const { user } = useAuth();
   const { isBarber } = useUserRole();
@@ -60,7 +138,6 @@ export const ChallengeFeed = () => {
 
   const isSilverPlus = ['silver', 'gold', 'diamond'].includes(tierName);
 
-  // Fetch challenge jackpot pool
   const { data: jackpot } = useQuery({
     queryKey: ['challenge-jackpot'],
     queryFn: async () => {
@@ -81,12 +158,14 @@ export const ChallengeFeed = () => {
         .from('open_challenges')
         .select('*')
         .eq('status', 'waiting_for_opponent')
+        .not('expires_at', 'is', null)
+        .gt('stake_amount', 0)
         .order('stake_amount', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       return (data as Challenge[]).filter(c => {
-        if (!c.expires_at) return true;
+        if (!c.expires_at) return false;
         return new Date(c.expires_at) > new Date();
       });
     },
@@ -124,15 +203,19 @@ export const ChallengeFeed = () => {
         </Card>
       )}
 
+      {/* Quick Presets */}
+      {isBarber && <QuickChallengePresets isSilverPlus={isSilverPlus} />}
+
+      {/* Active Challenges */}
       {isLoading ? (
         <div className="text-center py-12">
           <div className="animate-pulse text-muted-foreground">Loading challenges...</div>
         </div>
       ) : challenges.length === 0 ? (
-        <div className="text-center py-12 bg-card/30 backdrop-blur-sm rounded-lg border border-border">
-          <Users className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-          <h3 className="text-xl font-bold text-foreground mb-2">No Active Challenges</h3>
-          <p className="text-muted-foreground">Be the first to issue a challenge! Challenges expire after 1 hour.</p>
+        <div className="text-center py-8 bg-card/30 backdrop-blur-sm rounded-lg border border-border">
+          <Users className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+          <h3 className="text-lg font-bold text-foreground mb-1">No Active Challenges</h3>
+          <p className="text-sm text-muted-foreground">Use a quick preset above or issue a custom challenge!</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
