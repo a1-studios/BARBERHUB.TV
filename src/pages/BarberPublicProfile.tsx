@@ -51,7 +51,7 @@ export default function BarberPublicProfile() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('barber_profiles')
-        .select('active_subscription_tier')
+        .select('active_subscription_tier, m4m_certified, m4m_paid, m4m_lives_touched')
         .eq('user_id', userId)
         .single();
       
