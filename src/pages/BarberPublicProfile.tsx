@@ -296,6 +296,7 @@ export default function BarberPublicProfile() {
                 barberName={displayName || 'Barber'}
                 barberUserId={userId!}
                 size="md"
+                isOwnProfile={isOwner}
               />
 
               <div className="flex-1 space-y-4">

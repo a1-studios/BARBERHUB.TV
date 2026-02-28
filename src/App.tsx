@@ -196,6 +196,7 @@ const AppContent = () => {
               } 
             />
             <Route path="/vault" element={<VaultOfHonor />} />
+            <Route path="/m4m/verify/:barberUserId" element={<M4MVerify />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
     </>
