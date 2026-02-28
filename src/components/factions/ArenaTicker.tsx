@@ -130,7 +130,11 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
 
   return (
     <div
-      className="relative overflow-hidden cursor-pointer select-none mb-3"
+      className="relative overflow-hidden cursor-pointer select-none mb-3 border rounded-lg"
+      style={{
+        borderColor: 'hsl(var(--cyan) / 0.3)',
+        boxShadow: '0 0 8px hsl(var(--cyan) / 0.25), inset 0 0 4px hsl(var(--cyan) / 0.1)',
+      }}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
       onClick={handleClick}
@@ -144,7 +148,7 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
       />
 
       {/* Content */}
-      <div className="flex items-center justify-center px-4 sm:px-6 py-5 min-h-[72px]">
+      <div className="flex items-center justify-center px-4 sm:px-6 py-5 min-h-[120px]">
         <AnimatePresence mode="wait">
           {currentSlide.type === 'prize-pool' ? (
             <motion.div
