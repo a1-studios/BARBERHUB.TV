@@ -2598,6 +2598,41 @@ export type Database = {
         }
         Relationships: []
       }
+      sponsor_ad_clicks: {
+        Row: {
+          click_type: string
+          created_at: string | null
+          id: string
+          slide_type: string | null
+          sponsor_ad_id: string
+          user_id: string | null
+        }
+        Insert: {
+          click_type?: string
+          created_at?: string | null
+          id?: string
+          slide_type?: string | null
+          sponsor_ad_id: string
+          user_id?: string | null
+        }
+        Update: {
+          click_type?: string
+          created_at?: string | null
+          id?: string
+          slide_type?: string | null
+          sponsor_ad_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsor_ad_clicks_sponsor_ad_id_fkey"
+            columns: ["sponsor_ad_id"]
+            isOneToOne: false
+            referencedRelation: "sponsor_ads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sponsor_ads: {
         Row: {
           created_at: string

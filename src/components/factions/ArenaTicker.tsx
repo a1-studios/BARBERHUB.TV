@@ -5,6 +5,8 @@ import bbCoinLogo from '@/assets/bb-coin-logo.png';
 import ScratchReveal from './ScratchReveal';
 import SponsoredBadge from './SponsoredBadge';
 import { useSponsorAds } from '@/hooks/useSponsorAds';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface SponsorSlide {
   id: string;
@@ -28,9 +30,9 @@ interface ArenaTickerProps {
 }
 
 type DisplaySlide =
-  | { type: 'prize-pool'; id: string }
-  | { type: 'sponsor-image'; id: string; logoUrl?: string; name: string; link?: string }
-  | { type: 'sponsor-text'; id: string; name: string; message: string; link?: string };
+  | { type: 'prize-pool'; id: string; sponsorAdId?: string }
+  | { type: 'sponsor-image'; id: string; logoUrl?: string; name: string; link?: string; sponsorAdId: string }
+  | { type: 'sponsor-text'; id: string; name: string; message: string; link?: string; sponsorAdId: string };
 
 const INTERVAL_MS = 5000;
 const COUNTER_DURATION_MS = 1500;
@@ -55,6 +57,7 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
   const [isPaused, setIsPaused] = useState(false);
   const [displayValue, setDisplayValue] = useState(0);
   const hasAnimated = useRef(false);
+  const { user } = useAuth();
 
   const { data: dbSponsors = [] } = useSponsorAds(true);
 
@@ -81,8 +84,8 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
     () =>
       sponsors.flatMap((sponsor) => [
         { type: 'prize-pool' as const, id: `prize-${sponsor.id}` },
-        { type: 'sponsor-image' as const, id: `img-${sponsor.id}`, logoUrl: sponsor.logoUrl, name: sponsor.name, link: sponsor.link },
-        { type: 'sponsor-text' as const, id: `txt-${sponsor.id}`, name: sponsor.name, message: sponsor.message, link: sponsor.link },
+        { type: 'sponsor-image' as const, id: `img-${sponsor.id}`, logoUrl: sponsor.logoUrl, name: sponsor.name, link: sponsor.link, sponsorAdId: sponsor.id },
+        { type: 'sponsor-text' as const, id: `txt-${sponsor.id}`, name: sponsor.name, message: sponsor.message, link: sponsor.link, sponsorAdId: sponsor.id },
       ]),
     [sponsors],
   );
@@ -120,14 +123,32 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
 
   const currentSlide = displaySlides[activeIndex] ?? displaySlides[0];
 
-  const handleClick = useCallback(() => {
+  const handleClick = useCallback(async () => {
     if (!currentSlide) return;
     if (currentSlide.type === 'prize-pool') {
       onNavigate('/portal');
-    } else if ('link' in currentSlide && currentSlide.link) {
-      onNavigate(currentSlide.link);
+      return;
     }
-  }, [currentSlide, onNavigate]);
+
+    // Track click
+    if ('sponsorAdId' in currentSlide && currentSlide.sponsorAdId) {
+      (supabase.from('sponsor_ad_clicks' as any) as any).insert({
+        sponsor_ad_id: currentSlide.sponsorAdId,
+        user_id: user?.id ?? null,
+        click_type: 'click',
+        slide_type: currentSlide.type,
+      }).then(() => {});
+    }
+
+    const link = 'link' in currentSlide ? currentSlide.link : undefined;
+    if (link) {
+      if (link.startsWith('http')) {
+        window.open(link, '_blank', 'noopener,noreferrer');
+      } else {
+        onNavigate(link);
+      }
+    }
+  }, [currentSlide, onNavigate, user?.id]);
 
   if (!currentSlide) return null;
 
