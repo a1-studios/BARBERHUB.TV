@@ -296,6 +296,16 @@ const LandingHero = () => {
 
                   <TabsContent value="signup">
                     <form onSubmit={handleSignUp} className="space-y-4">
+                      {/* Prize banner from Vault */}
+                      {prizeBanner && (
+                        <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-center">
+                          <div className="flex items-center justify-center gap-2 text-primary text-sm font-bold">
+                            <Sparkles className="w-4 h-4" />
+                            Prize Unlocked: {prizeBanner}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">Complete signup to claim</p>
+                        </div>
+                      )}
                       <UserTypeSelector />
                       
                       <div className="space-y-2">
