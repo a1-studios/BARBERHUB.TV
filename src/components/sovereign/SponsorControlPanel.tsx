@@ -307,6 +307,34 @@ export default function SponsorControlPanel({ onRefresh }: Props) {
         </div>
       </div>
 
+      {/* Engagement Metrics */}
+      <div className="bg-[#0f0f1a] rounded-lg p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <BarChart3 className="w-4 h-4 text-purple-400" />
+          <h3 className="text-sm font-bold text-white">ENGAGEMENT METRICS</h3>
+          <Button size="sm" variant="ghost" onClick={fetchMetrics} disabled={metricsLoading} className="ml-auto text-xs text-gray-400">
+            {metricsLoading ? "Loading…" : "Refresh"}
+          </Button>
+        </div>
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-[#1a1a2e] rounded-lg p-2 text-center">
+            <MousePointerClick className="w-4 h-4 mx-auto text-cyan-400 mb-1" />
+            <p className="text-lg font-bold text-white">{totalClicks}</p>
+            <p className="text-[10px] text-gray-500">Total Clicks</p>
+          </div>
+          <div className="bg-[#1a1a2e] rounded-lg p-2 text-center">
+            <Users className="w-4 h-4 mx-auto text-green-400 mb-1" />
+            <p className="text-lg font-bold text-white">{totalUnique}</p>
+            <p className="text-[10px] text-gray-500">Unique Clickers</p>
+          </div>
+          <div className="bg-[#1a1a2e] rounded-lg p-2 text-center">
+            <BarChart3 className="w-4 h-4 mx-auto text-yellow-400 mb-1" />
+            <p className="text-lg font-bold text-white">{totalLast7}</p>
+            <p className="text-[10px] text-gray-500">Last 7 Days</p>
+          </div>
+        </div>
+      </div>
+
       {/* Bulk Controls */}
       <div className="flex gap-2">
         <Button
