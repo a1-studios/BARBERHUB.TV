@@ -51,6 +51,48 @@ const LandingHero = () => {
     // No need to set form data - account is already created
   };
 
+  // Pre-fill from vault redirect params
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const vaultEmail = searchParams.get('email');
+    const vaultRole = searchParams.get('role');
+    const prizeId = searchParams.get('prize_id');
+
+    if (tab === 'signup') {
+      setActiveTab('signup');
+      if (vaultEmail) setSignUpData(prev => ({ ...prev, email: vaultEmail }));
+      if (vaultRole === 'barber' || vaultRole === 'fan') {
+        setSignUpData(prev => ({ ...prev, userType: vaultRole }));
+      }
+      if (prizeId) {
+        const prizeLabels: Record<string, string> = {
+          tier_bronze: '1 Month Bronze Upgrade',
+          bb_100: '100 BB Bonus',
+          tier_silver: '1 Month Silver Upgrade',
+          tier_gold_3m: '3 Months Gold Tier',
+          bb_25: '25 BB Starter Pack',
+          hunter_pass: 'Hunter Pass Trial',
+          contender_pass: 'National Contender Pass',
+        };
+        setPrizeBanner(prizeLabels[prizeId] || prizeId);
+      }
+    }
+  }, [searchParams]);
+
+  // Mark lead as converted after signup
+  useEffect(() => {
+    if (user && prizeBanner) {
+      const email = searchParams.get('email');
+      if (email) {
+        supabase
+          .from('marketing_leads')
+          .update({ converted: true })
+          .eq('email', email)
+          .then(() => {});
+      }
+    }
+  }, [user, prizeBanner, searchParams]);
+
   const handleArenaGateClose = () => {
     setShowArenaGate(false);
     // If they close without completing, reset to fan
