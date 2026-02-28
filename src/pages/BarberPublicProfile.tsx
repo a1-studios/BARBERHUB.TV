@@ -289,6 +289,14 @@ export default function BarberPublicProfile() {
                   {(displayName || 'B').charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
+              <M4MHeartbeat
+                certified={subscriptionData?.m4m_certified ?? false}
+                paid={subscriptionData?.m4m_paid ?? false}
+                livesTouched={subscriptionData?.m4m_lives_touched ?? 0}
+                barberName={displayName || 'Barber'}
+                barberUserId={userId!}
+                size="md"
+              />
 
               <div className="flex-1 space-y-4">
                 <div>

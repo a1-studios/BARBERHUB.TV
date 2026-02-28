@@ -116,6 +116,14 @@ export function BarberProfileHeader({
               {(display_name || 'B').charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
+          <M4MHeartbeat
+            certified={m4m_certified}
+            paid={m4m_paid}
+            livesTouched={m4m_lives_touched}
+            barberName={display_name}
+            barberUserId={barber_user_id || ''}
+            size="md"
+          />
 
           <div className="flex-1 space-y-3 w-full">
             <div>

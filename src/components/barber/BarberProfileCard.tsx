@@ -191,6 +191,14 @@ export const BarberProfileCard = ({
                 {(displayName || 'B').charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
+            <M4MHeartbeat
+              certified={extraProfileData?.m4m_certified ?? false}
+              paid={extraProfileData?.m4m_paid ?? false}
+              livesTouched={extraProfileData?.m4m_lives_touched ?? 0}
+              barberName={displayName || 'Barber'}
+              barberUserId={userId}
+              size="sm"
+            />
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <CardTitle className="text-lg text-white">
