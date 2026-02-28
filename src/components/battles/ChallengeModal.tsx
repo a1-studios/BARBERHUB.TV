@@ -12,7 +12,7 @@ interface ChallengeModalProps {
   initialTab?: 'issue' | 'feed';
 }
 
-export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
+export const ChallengeModal = ({ open, onClose, initialTab = 'feed' }: ChallengeModalProps) => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
