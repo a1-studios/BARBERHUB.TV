@@ -123,7 +123,7 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
     if (!currentSlide) return;
     if (currentSlide.type === 'prize-pool') {
       onNavigate('/portal');
-    } else if (currentSlide.link) {
+    } else if ('link' in currentSlide && currentSlide.link) {
       onNavigate(currentSlide.link);
     }
   }, [currentSlide, onNavigate]);
