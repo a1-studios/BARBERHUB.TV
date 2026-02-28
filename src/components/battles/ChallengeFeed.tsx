@@ -195,8 +195,9 @@ export const ChallengeFeed = () => {
                   )}
 
                   {isOwnChallenge && (
-                    <div className="text-center text-sm text-muted-foreground py-2">
-                      Waiting for opponent to match your stake...
+                    <div className="text-center text-sm text-muted-foreground py-2 space-y-1">
+                      <p>Waiting for opponent to match your stake...</p>
+                      {challenge.expires_at && <CountdownBadge expiresAt={challenge.expires_at} />}
                     </div>
                   )}
 
