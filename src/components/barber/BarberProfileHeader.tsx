@@ -34,6 +34,10 @@ interface BarberProfileHeaderProps {
     twitter?: string | null;
     youtube?: string | null;
   };
+  m4m_certified?: boolean;
+  m4m_paid?: boolean;
+  m4m_lives_touched?: number;
+  barber_user_id?: string;
 }
 
 export function BarberProfileHeader({
