@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Sparkles } from 'lucide-react';
+import { Trophy, Sparkles, ChevronRight } from 'lucide-react';
+import bbCoinLogo from '@/assets/bb-coin-logo.png';
 import ScratchReveal from './ScratchReveal';
 import SponsoredBadge from './SponsoredBadge';
 import { useSponsorAds } from '@/hooks/useSponsorAds';
