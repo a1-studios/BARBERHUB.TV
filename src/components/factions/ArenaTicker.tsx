@@ -84,8 +84,8 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
     () =>
       sponsors.flatMap((sponsor) => [
         { type: 'prize-pool' as const, id: `prize-${sponsor.id}` },
-        { type: 'sponsor-image' as const, id: `img-${sponsor.id}`, logoUrl: sponsor.logoUrl, name: sponsor.name, link: sponsor.link },
-        { type: 'sponsor-text' as const, id: `txt-${sponsor.id}`, name: sponsor.name, message: sponsor.message, link: sponsor.link },
+        { type: 'sponsor-image' as const, id: `img-${sponsor.id}`, logoUrl: sponsor.logoUrl, name: sponsor.name, link: sponsor.link, sponsorAdId: sponsor.id },
+        { type: 'sponsor-text' as const, id: `txt-${sponsor.id}`, name: sponsor.name, message: sponsor.message, link: sponsor.link, sponsorAdId: sponsor.id },
       ]),
     [sponsors],
   );
