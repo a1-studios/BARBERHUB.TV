@@ -393,6 +393,13 @@ export default function SponsorControlPanel({ onRefresh }: Props) {
                   {ad.name}
                 </p>
                 <p className="text-xs text-gray-500 truncate">{ad.message}</p>
+                {clickMetrics[ad.id] && (
+                  <div className="flex gap-2 mt-1">
+                    <span className="text-[10px] text-cyan-400 font-mono">{clickMetrics[ad.id].total} clicks</span>
+                    <span className="text-[10px] text-green-400 font-mono">{clickMetrics[ad.id].unique} unique</span>
+                    <span className="text-[10px] text-yellow-400 font-mono">{clickMetrics[ad.id].last7} 7d</span>
+                  </div>
+                )}
               </div>
 
               {/* Order */}
