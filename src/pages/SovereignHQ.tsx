@@ -12,6 +12,7 @@ import SponsorControlPanel from '@/components/sovereign/SponsorControlPanel';
 import BattleDirectoryPanel from '@/components/sovereign/BattleDirectoryPanel';
 import TournamentQueuePanel from '@/components/sovereign/TournamentQueuePanel';
 import TournamentManagerPanel from '@/components/sovereign/TournamentManagerPanel';
+import VaultMetricsPanel from '@/components/sovereign/VaultMetricsPanel';
 
 const SovereignHQ = () => {
   const { user } = useAuth();
@@ -100,6 +101,9 @@ const SovereignHQ = () => {
 
         {/* Sponsor Board Control */}
         <SponsorControlPanel onRefresh={refresh} />
+
+        {/* Vault of Honor Metrics */}
+        <VaultMetricsPanel />
 
         {/* Battle Directory - Full CRUD */}
         <BattleDirectoryPanel onRefresh={refresh} />

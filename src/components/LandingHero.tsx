@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,18 +7,22 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
-import { Scissors, Users, Loader2, Lock } from "lucide-react";
+import { Scissors, Users, Loader2, Lock, Sparkles } from "lucide-react";
 import Globe3D from "@/components/Globe3D";
 import { CountrySelector } from "@/components/CountrySelector";
 import WorldCupPrizeCounter from "@/components/WorldCupPrizeCounter";
 import { ArenaGateModal, ArenaGateResult } from "@/components/auth/ArenaGateModal";
 import { toast } from "sonner";
 import { triggerCountryCelebration } from "@/utils/countryCelebration";
+import { supabase } from "@/integrations/supabase/client";
+import { Link } from "react-router-dom";
 
 const LandingHero = () => {
-  const { signUp, signIn } = useAuth();
+  const { signUp, signIn, user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("signin");
+  const [prizeBanner, setPrizeBanner] = useState<string | null>(null);
 
   // Arena Gate state for barbers
   const [showArenaGate, setShowArenaGate] = useState(false);
@@ -45,6 +50,48 @@ const LandingHero = () => {
     setArenaGateVerified(true);
     // No need to set form data - account is already created
   };
+
+  // Pre-fill from vault redirect params
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const vaultEmail = searchParams.get('email');
+    const vaultRole = searchParams.get('role');
+    const prizeId = searchParams.get('prize_id');
+
+    if (tab === 'signup') {
+      setActiveTab('signup');
+      if (vaultEmail) setSignUpData(prev => ({ ...prev, email: vaultEmail }));
+      if (vaultRole === 'barber' || vaultRole === 'fan') {
+        setSignUpData(prev => ({ ...prev, userType: vaultRole }));
+      }
+      if (prizeId) {
+        const prizeLabels: Record<string, string> = {
+          tier_bronze: '1 Month Bronze Upgrade',
+          bb_100: '100 BB Bonus',
+          tier_silver: '1 Month Silver Upgrade',
+          tier_gold_3m: '3 Months Gold Tier',
+          bb_25: '25 BB Starter Pack',
+          hunter_pass: 'Hunter Pass Trial',
+          contender_pass: 'National Contender Pass',
+        };
+        setPrizeBanner(prizeLabels[prizeId] || prizeId);
+      }
+    }
+  }, [searchParams]);
+
+  // Mark lead as converted after signup
+  useEffect(() => {
+    if (user && prizeBanner) {
+      const email = searchParams.get('email');
+      if (email) {
+        supabase
+          .from('marketing_leads')
+          .update({ converted: true })
+          .eq('email', email)
+          .then(() => {});
+      }
+    }
+  }, [user, prizeBanner, searchParams]);
 
   const handleArenaGateClose = () => {
     setShowArenaGate(false);
@@ -249,6 +296,16 @@ const LandingHero = () => {
 
                   <TabsContent value="signup">
                     <form onSubmit={handleSignUp} className="space-y-4">
+                      {/* Prize banner from Vault */}
+                      {prizeBanner && (
+                        <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-center">
+                          <div className="flex items-center justify-center gap-2 text-primary text-sm font-bold">
+                            <Sparkles className="w-4 h-4" />
+                            Prize Unlocked: {prizeBanner}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">Complete signup to claim</p>
+                        </div>
+                      )}
                       <UserTypeSelector />
                       
                       <div className="space-y-2">
@@ -341,6 +398,22 @@ const LandingHero = () => {
                   </TabsContent>
                 </Tabs>
               </Card>
+
+              {/* Vault CTA */}
+              <Link
+                to="/vault"
+                className="block w-full max-w-md mx-auto mt-3 py-3 rounded-xl text-center font-black text-sm tracking-wider text-black animate-pulse hover:animate-none transition-all"
+                style={{
+                  background: 'linear-gradient(135deg, #FF5F1F, #FF8C00)',
+                  boxShadow: '0 0 20px rgba(255,95,31,0.4)',
+                }}
+              >
+                <span className="flex items-center justify-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  SPIN TO WIN FREE REWARDS
+                  <Sparkles className="w-4 h-4" />
+                </span>
+              </Link>
             </div>
 
             {/* Branding section - Below prize counter */}

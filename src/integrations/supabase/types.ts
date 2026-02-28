@@ -1917,6 +1917,48 @@ export type Database = {
           },
         ]
       }
+      marketing_leads: {
+        Row: {
+          converted: boolean | null
+          created_at: string | null
+          device_fingerprint: string | null
+          email: string
+          id: string
+          max_spins: number | null
+          prize_id: string | null
+          prize_label: string | null
+          role: string
+          shared: boolean | null
+          spins_used: number | null
+        }
+        Insert: {
+          converted?: boolean | null
+          created_at?: string | null
+          device_fingerprint?: string | null
+          email: string
+          id?: string
+          max_spins?: number | null
+          prize_id?: string | null
+          prize_label?: string | null
+          role: string
+          shared?: boolean | null
+          spins_used?: number | null
+        }
+        Update: {
+          converted?: boolean | null
+          created_at?: string | null
+          device_fingerprint?: string | null
+          email?: string
+          id?: string
+          max_spins?: number | null
+          prize_id?: string | null
+          prize_label?: string | null
+          role?: string
+          shared?: boolean | null
+          spins_used?: number | null
+        }
+        Relationships: []
+      }
       match_results: {
         Row: {
           barber1_id: string | null

@@ -37,6 +37,7 @@ import BattleTheater from "./pages/BattleTheater";
 import ContenderTheater from "./pages/ContenderTheater";
 import SovereignHQ from "./pages/SovereignHQ";
 import SponsorAdsPage from "./pages/admin/SponsorAdsPage";
+import VaultOfHonor from "./pages/VaultOfHonor";
 
 const queryClient = new QueryClient();
 
@@ -193,6 +194,7 @@ const AppContent = () => {
                 </SovereignGuard>
               } 
             />
+            <Route path="/vault" element={<VaultOfHonor />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
     </>
