@@ -89,7 +89,7 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
   useEffect(() => {
     if (hasAnimated.current || totalPool === 0) return;
     const current = displaySlides[activeIndex];
-    if (current.type !== 'prize-pool') return;
+    if (!current || current.type !== 'prize-pool') return;
 
     hasAnimated.current = true;
     const startTime = Date.now();
