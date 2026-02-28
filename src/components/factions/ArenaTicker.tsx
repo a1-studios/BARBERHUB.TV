@@ -28,7 +28,8 @@ interface ArenaTickerProps {
 
 type DisplaySlide =
   | { type: 'prize-pool'; id: string }
-  | { type: 'sponsor'; id: string; name: string; message: string; highlightEnd: number; logoUrl?: string; link?: string };
+  | { type: 'sponsor-image'; id: string; logoUrl?: string; name: string; link?: string }
+  | { type: 'sponsor-text'; id: string; name: string; message: string; link?: string };
 
 const INTERVAL_MS = 5000;
 const COUNTER_DURATION_MS = 1500;
