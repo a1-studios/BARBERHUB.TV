@@ -124,6 +124,7 @@ export function BarberProfileHeader({
               barberName={display_name}
               barberUserId={barber_user_id || ''}
               size="md"
+              isOwnProfile={showActions}
             />
           </div>
 
