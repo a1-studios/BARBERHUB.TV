@@ -28,7 +28,8 @@ interface ArenaTickerProps {
 
 type DisplaySlide =
   | { type: 'prize-pool'; id: string }
-  | { type: 'sponsor'; id: string; name: string; message: string; highlightEnd: number; logoUrl?: string; link?: string };
+  | { type: 'sponsor-image'; id: string; logoUrl?: string; name: string; link?: string }
+  | { type: 'sponsor-text'; id: string; name: string; message: string; link?: string };
 
 const INTERVAL_MS = 5000;
 const COUNTER_DURATION_MS = 1500;
@@ -78,8 +79,9 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
   const displaySlides = useMemo<DisplaySlide[]>(
     () =>
       sponsors.flatMap((sponsor) => [
-        { type: 'prize-pool' as const, id: `prize-before-${sponsor.id}` },
-        { type: 'sponsor' as const, ...sponsor },
+        { type: 'prize-pool' as const, id: `prize-${sponsor.id}` },
+        { type: 'sponsor-image' as const, id: `img-${sponsor.id}`, logoUrl: sponsor.logoUrl, name: sponsor.name, link: sponsor.link },
+        { type: 'sponsor-text' as const, id: `txt-${sponsor.id}`, name: sponsor.name, message: sponsor.message, link: sponsor.link },
       ]),
     [sponsors],
   );
@@ -121,7 +123,7 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
     if (!currentSlide) return;
     if (currentSlide.type === 'prize-pool') {
       onNavigate('/portal');
-    } else if (currentSlide.link) {
+    } else if ('link' in currentSlide && currentSlide.link) {
       onNavigate(currentSlide.link);
     }
   }, [currentSlide, onNavigate]);
@@ -144,7 +146,7 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
       {/* Scratch-off overlay */}
       <ScratchReveal
         activeIndex={activeIndex}
-        variant={currentSlide.type === 'prize-pool' ? 'gold' : 'silver'}
+        variant={currentSlide.type === 'prize-pool' ? 'gold' : 'silver'} 
       />
 
       {/* Content */}
@@ -177,6 +179,28 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
                 In Prizes
               </span>
             </motion.div>
+          ) : currentSlide.type === 'sponsor-image' ? (
+            <motion.div
+              key={currentSlide.id}
+              initial={{ opacity: 0, filter: 'blur(8px)', y: 10 }}
+              animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
+              exit={{ opacity: 0, scale: 1.1, y: -15 }}
+              transition={{ duration: 0.5, delay: 0.25 }}
+              className="flex items-center justify-center"
+            >
+              {currentSlide.logoUrl ? (
+                <motion.img
+                  src={currentSlide.logoUrl}
+                  alt={currentSlide.name}
+                  className="h-20 sm:h-24 max-w-[220px] object-contain rounded-md shrink-0"
+                  initial={{ filter: 'blur(8px)', opacity: 0 }}
+                  animate={{ filter: 'blur(0px)', opacity: 1 }}
+                  transition={{ duration: 0.4, delay: 0.3 }}
+                />
+              ) : (
+                <Sparkles className="w-10 h-10 shrink-0 text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" />
+              )}
+            </motion.div>
           ) : (
             <motion.div
               key={currentSlide.id}
@@ -186,23 +210,13 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
               transition={{ duration: 0.5, delay: 0.25 }}
               className="flex flex-col items-center justify-center gap-2"
             >
-              {/* Logo or fallback icon */}
-              {currentSlide.logoUrl ? (
-                <motion.img
-                  src={currentSlide.logoUrl}
-                  alt={currentSlide.name}
-                  className="h-14 sm:h-16 max-w-[180px] object-contain rounded-md border border-border shrink-0"
-                  initial={{ filter: 'blur(8px)', opacity: 0 }}
-                  animate={{ filter: 'blur(0px)', opacity: 1 }}
-                  transition={{ duration: 0.4, delay: 0.3 }}
-                />
-              ) : (
-                <Sparkles className="w-6 h-6 shrink-0 text-primary drop-shadow-[0_0_6px_hsl(var(--primary))]" />
-              )}
-              <span className="text-sm sm:text-base font-bold text-foreground tracking-wide text-center">
+              <SponsoredBadge />
+              <span className="text-base sm:text-lg font-black text-foreground tracking-wide text-center uppercase">
+                {currentSlide.name}
+              </span>
+              <span className="text-xs sm:text-sm text-muted-foreground text-center">
                 {currentSlide.message}
               </span>
-              <SponsoredBadge />
             </motion.div>
           )}
         </AnimatePresence>
