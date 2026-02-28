@@ -46,6 +46,10 @@ const PaymentSuccess = () => {
     setBbVerifying(true);
     setBbError(null);
 
+    // Wait before first attempt — Stripe redirects before payment fully processes
+    const delayMs = retryCount === 0 ? 3000 : 4000;
+    await new Promise(r => setTimeout(r, delayMs));
+
     try {
       const { data, error } = await supabase.functions.invoke('verify-bb-purchase', {
         body: { session_id: sessionId }
@@ -70,10 +74,9 @@ const PaymentSuccess = () => {
       });
     } catch (err: any) {
       console.error("BB verification error:", err);
-      // Retry up to 3 times with 2s delay (auth session may not be ready in new tab)
-      if (retryCount < 3) {
-        console.log(`[verify-bb] Retrying in 2s (attempt ${retryCount + 1}/3)...`);
-        await new Promise(r => setTimeout(r, 2000));
+      // Retry up to 5 times with increasing delay (Stripe may take time to process)
+      if (retryCount < 5) {
+        console.log(`[verify-bb] Retrying in ${delayMs / 1000}s (attempt ${retryCount + 1}/5)...`);
         return verifyBbPurchase(retryCount + 1);
       }
       setBbError(err.message || "Verification failed. Your balance may update shortly.");
