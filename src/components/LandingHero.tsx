@@ -18,9 +18,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 
 const LandingHero = () => {
-  const { signUp, signIn } = useAuth();
+  const { signUp, signIn, user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("signin");
+  const [prizeBanner, setPrizeBanner] = useState<string | null>(null);
 
   // Arena Gate state for barbers
   const [showArenaGate, setShowArenaGate] = useState(false);
