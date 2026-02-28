@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, Sparkles } from 'lucide-react';
 import ScratchReveal from './ScratchReveal';
-import ColorfulText from './ColorfulText';
 import SponsoredBadge from './SponsoredBadge';
 import { useSponsorAds } from '@/hooks/useSponsorAds';
 
