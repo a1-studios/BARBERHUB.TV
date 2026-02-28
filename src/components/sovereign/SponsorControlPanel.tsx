@@ -77,9 +77,49 @@ export default function SponsorControlPanel({ onRefresh }: Props) {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [bulkToggling, setBulkToggling] = useState(false);
+  const [clickMetrics, setClickMetrics] = useState<Record<string, { total: number; unique: number; last7: number }>>({});
+  const [metricsLoading, setMetricsLoading] = useState(false);
 
   const activeCount = sponsors.filter((s) => s.is_active).length;
   const inactiveCount = sponsors.length - activeCount;
+
+  const fetchMetrics = async () => {
+    setMetricsLoading(true);
+    try {
+      const { data, error } = await (supabase.from("sponsor_ad_clicks" as any) as any)
+        .select("sponsor_ad_id, user_id, created_at");
+      if (error) throw error;
+
+      const metrics: Record<string, { total: number; unique: Set<string>; last7: number }> = {};
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+      for (const row of (data || [])) {
+        if (!metrics[row.sponsor_ad_id]) {
+          metrics[row.sponsor_ad_id] = { total: 0, unique: new Set(), last7: 0 };
+        }
+        metrics[row.sponsor_ad_id].total++;
+        if (row.user_id) metrics[row.sponsor_ad_id].unique.add(row.user_id);
+        if (row.created_at >= sevenDaysAgo) metrics[row.sponsor_ad_id].last7++;
+      }
+
+      const result: Record<string, { total: number; unique: number; last7: number }> = {};
+      for (const [id, m] of Object.entries(metrics)) {
+        result[id] = { total: m.total, unique: m.unique.size, last7: m.last7 };
+      }
+      setClickMetrics(result);
+    } catch {
+      // Sovereign role required
+    }
+    setMetricsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchMetrics();
+  }, [sponsors]);
+
+  const totalClicks = Object.values(clickMetrics).reduce((s, m) => s + m.total, 0);
+  const totalUnique = new Set(Object.values(clickMetrics).flatMap(() => [])).size || Object.values(clickMetrics).reduce((s, m) => s + m.unique, 0);
+  const totalLast7 = Object.values(clickMetrics).reduce((s, m) => s + m.last7, 0);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["sponsor-ads"] });
