@@ -1,92 +1,119 @@
 
 
-## M4M Heartbeat System — Implementation Plan
+## Particle Explosion Animation for VS/ENTER Cycle
 
-This adds the "Minutes for Men" peer support badge to barber profiles with a 3-tier visual state, heartbeat animation, and client verification flow.
+### Concept
 
-### 1. Database Migration
+Replace the current simple cross-fade between "VS" and "ENTER" (Swords) with a **particle explosion effect**. Every 3 seconds when the text transitions:
 
-Add M4M columns to `barber_profiles` and create a session verification table:
+1. The current text ("VS" or "ENTER") **explodes outward** into ~20 particles (tiny orange and cyan dots) that scatter in all directions
+2. The particles dissipate over ~400ms
+3. The new text ("ENTER" or "VS") **implodes inward** -- particles rush from the edges to the center and coalesce into the new text
 
-```sql
--- Add M4M fields to barber_profiles
-ALTER TABLE barber_profiles
-  ADD COLUMN m4m_certified BOOLEAN NOT NULL DEFAULT false,
-  ADD COLUMN m4m_paid BOOLEAN NOT NULL DEFAULT false,
-  ADD COLUMN m4m_lives_touched INTEGER NOT NULL DEFAULT 0;
+This creates a dramatic energy-burst feel where the text appears to shatter and reform.
 
--- Session verification log
-CREATE TABLE m4m_session_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  barber_user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  client_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-  verification_code TEXT NOT NULL,
-  verified BOOLEAN NOT NULL DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  verified_at TIMESTAMPTZ
-);
+### Animation Sequence
 
-CREATE INDEX idx_m4m_code ON m4m_session_logs(verification_code);
-ALTER TABLE m4m_session_logs ENABLE ROW LEVEL SECURITY;
-
--- Barbers can insert (generate codes) and read own logs
-CREATE POLICY "Barbers manage own m4m logs"
-  ON m4m_session_logs FOR ALL TO authenticated
-  USING (barber_user_id = auth.uid())
-  WITH CHECK (barber_user_id = auth.uid());
-
--- Clients can read by code and update to verify
-CREATE POLICY "Clients can verify sessions"
-  ON m4m_session_logs FOR UPDATE TO authenticated
-  USING (true)
-  WITH CHECK (client_user_id = auth.uid() AND verified = true);
-
--- Anyone authenticated can read verified count (for display)
-CREATE POLICY "Anyone can read verified sessions"
-  ON m4m_session_logs FOR SELECT TO authenticated
-  USING (verified = true);
+```text
+[VS visible for 5s with subtle idle glow pulse]
+         |
+   VS EXPLODES --> 20 particles scatter outward (400ms)
+         |
+   Particles converge inward --> ENTER forms (400ms)
+         |
+[ENTER visible for 3s with Swords icon pulse]
+         |
+   ENTER EXPLODES --> 20 particles scatter outward (400ms)
+         |
+   Particles converge inward --> VS reforms (400ms)
+         |
+   (repeat)
 ```
 
-### 2. New Component: `src/components/m4m/M4MHeartbeat.tsx`
+### Changes
 
-- **Props**: `{ certified: boolean, paid: boolean, livesTouched: number, barberName: string, barberUserId: string, size?: 'sm' | 'md' }`
-- **SVG Icon**: Custom inline SVG of interlocking hands forming a heart outline
-- **Three states**:
-  - `!certified`: Hidden (`opacity-0` or not rendered)
-  - `certified && !paid`: Static white/grey outline at 50% opacity
-  - `certified && paid`: Framer Motion scale animation (1.0 → 1.08 → 1.0, 2s loop) with Zion Blue (`#002D62`) neon glow via `filter: drop-shadow`
-- **On click**: Opens `M4MVerificationModal`
+#### File: `src/components/DynamicBattleHero.tsx`
 
-### 3. New Component: `src/components/m4m/M4MVerificationModal.tsx`
+**Modify the AnimatePresence transitions (lines 375-426):**
 
-- Dialog with title "Minutes for Men Impact"
-- Shows: "This Barber has touched **{count}** lives through M4M peer support."
-- 4-digit code input using OTP input component (reuse `InputOTP`)
-- "Verify Connection" button
-- On verify: query `m4m_session_logs` by code, update `verified = true` and `client_user_id`, then increment `barber_profiles.m4m_lives_touched`
+Replace the current simple opacity/scale fade with particle explosion animations:
 
-### 4. Edit: `src/components/barber/BarberProfileCard.tsx`
+- **Exit animation** (`exit` prop): The text scales down to 0 while spawning ~20 absolutely-positioned particle dots around it. Each particle flies outward in a random direction (random angle, random distance 20-50px) and fades to 0. Particles alternate between orange (`hsl(var(--primary))`) and cyan (`hsl(187 100% 50%)`) colors with matching glow shadows.
 
-- Fetch `m4m_certified`, `m4m_paid`, `m4m_lives_touched` from `barber_profiles` (add to `extraProfileData` query)
-- Place `<M4MHeartbeat>` centered below the Avatar (after line 188, before `<div className="flex-1">`)
+- **Enter animation** (`initial` + `animate`): The text starts at scale 0 with particles positioned at random outer positions. Particles animate inward to center (0,0) and fade, while the text scales from 0 to 1 with a slight overshoot (scale to 1.1 then settle to 1).
 
-### 5. Edit: `src/pages/BarberPublicProfile.tsx`
+**Implementation approach -- inline particle generation:**
 
-- Fetch M4M fields from `barber_profiles` (add to subscription query)
-- Place `<M4MHeartbeat>` centered below the Avatar (after line 290)
+Rather than a separate component, generate particles directly in the motion variants using an array of `motion.div` elements rendered alongside the text inside each AnimatePresence child:
 
-### 6. Edit: `src/components/barber/BarberProfileHeader.tsx`
+```text
+<motion.div key="vs" ...>
+  {/* Particle array */}
+  {Array.from({ length: 20 }).map((_, i) => (
+    <motion.div
+      key={i}
+      className="absolute w-1 h-1 rounded-full"
+      style={{ backgroundColor: i % 2 === 0 ? orange : cyan }}
+      initial={{ x: 0, y: 0, opacity: 1 }}
+      animate={{ x: 0, y: 0, opacity: 0 }}  // idle: invisible
+      exit={{
+        x: Math.cos(angle) * distance,
+        y: Math.sin(angle) * distance,
+        opacity: [1, 0],
+        scale: [1, 0]
+      }}
+    />
+  ))}
+  {/* VS text */}
+  <span>VS</span>
+</motion.div>
+```
 
-- Add M4M props to interface: `m4m_certified`, `m4m_paid`, `m4m_lives_touched`, `barber_user_id`
-- Place `<M4MHeartbeat>` centered below the Avatar (after line 109)
+Each particle gets a pre-calculated random angle (evenly distributed around 360 degrees) and random distance (20-50px), with a staggered delay for a natural burst feel.
 
-### Files Created
-1. `src/components/m4m/M4MHeartbeat.tsx`
-2. `src/components/m4m/M4MVerificationModal.tsx`
-3. Database migration
+**Apply to both barber and fan VS elements:**
 
-### Files Edited
-1. `src/components/barber/BarberProfileCard.tsx` — add M4M data fetch + heart placement
-2. `src/pages/BarberPublicProfile.tsx` — add M4M data fetch + heart placement
-3. `src/components/barber/BarberProfileHeader.tsx` — add M4M props + heart placement
+- **Barber VS** (lines 389-406): Add particles to the VS motion.span and the Swords motion.div
+- **Fan VS** (lines 411-425): For fans, since there is no cycle, add a subtle idle particle effect -- 4-6 particles that slowly orbit or float around the VS text on a loop, giving a constant "energy radiating" feel without the explosion
+
+**Cycle timing unchanged:**
+- The existing `useEffect` at lines 166-173 stays as-is (5s VS, 3s Swords for barbers)
+- The explosion/implosion animation takes ~400ms for exit + ~400ms for enter, fitting within the transition window
+
+**Rings unchanged:**
+- The rotating dashed ring and inner cyan ring remain as they are (lines 344-366)
+
+### Particle Specs
+
+| Property | Value |
+|----------|-------|
+| Count per explosion | 20 particles |
+| Size | 1-2px (w-1 h-1 or w-0.5 h-0.5) |
+| Colors | Alternating orange (primary) and cyan |
+| Scatter distance | 20-50px random per particle |
+| Scatter direction | Evenly distributed angles (360/20 = 18 degree increments + slight random offset) |
+| Glow | box-shadow matching particle color, 4px blur |
+| Exit duration | 400ms ease-out |
+| Enter duration | 400ms ease-out with overshoot |
+| Stagger | 20ms between particles for natural burst feel |
+
+### What Changes
+
+| Element | Before | After |
+|---------|--------|-------|
+| VS to ENTER transition | Simple opacity/scale fade | Particle explosion outward, then implosion inward |
+| ENTER to VS transition | Simple opacity/scale fade | Same particle explosion/implosion |
+| Fan VS | Static with glow pulse | Static with 4-6 subtle floating particles |
+| Rings | Unchanged | Unchanged |
+| Drawer | Unchanged | Unchanged |
+| Cycle timing | Unchanged (5s/3s) | Unchanged |
+
+### What Is NOT Changing
+
+- The 5s VS / 3s Swords timing cycle
+- Arena Drawer contents and navigation
+- Rotating ring animations
+- MobileVoteCenter replacement during active battles
+- Video layout, action bars, name overlays
+- Open challenges badge count query
 

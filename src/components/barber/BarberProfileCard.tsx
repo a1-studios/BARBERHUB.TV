@@ -14,6 +14,7 @@ import { BarberVideoSection } from './BarberVideoSection';
 import { BarberActionButtons } from './BarberActionButtons';
 import { SubscriptionBadge } from '../SubscriptionBadge';
 import { SubCategoryBadge } from '../SubCategoryBadge';
+import { M4MHeartbeat } from '../m4m/M4MHeartbeat';
 
 interface BarberProfileCardProps {
   barberId: string;
@@ -57,12 +58,16 @@ export const BarberProfileCard = ({
     queryKey: ['barber-extra-profile', userId],
     queryFn: async () => {
       const [barberRes, profileRes] = await Promise.all([
-        supabase.from('barber_profiles').select('active_subscription_tier').eq('user_id', userId).single(),
+        supabase.from('barber_profiles').select('active_subscription_tier, m4m_certified, m4m_paid, m4m_lives_touched, user_id').eq('user_id', userId).single(),
         supabase.from('profiles').select('sub_category').eq('user_id', userId).single()
       ]);
       return {
         active_subscription_tier: barberRes.data?.active_subscription_tier,
-        sub_category: profileRes.data?.sub_category
+        sub_category: profileRes.data?.sub_category,
+        m4m_certified: barberRes.data?.m4m_certified ?? false,
+        m4m_paid: barberRes.data?.m4m_paid ?? false,
+        m4m_lives_touched: barberRes.data?.m4m_lives_touched ?? 0,
+        barber_user_id: barberRes.data?.user_id,
       };
     },
     enabled: !!userId
@@ -186,6 +191,14 @@ export const BarberProfileCard = ({
                 {(displayName || 'B').charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
+            <M4MHeartbeat
+              certified={extraProfileData?.m4m_certified ?? false}
+              paid={extraProfileData?.m4m_paid ?? false}
+              livesTouched={extraProfileData?.m4m_lives_touched ?? 0}
+              barberName={displayName || 'Barber'}
+              barberUserId={userId}
+              size="sm"
+            />
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <CardTitle className="text-lg text-white">

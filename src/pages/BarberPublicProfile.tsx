@@ -14,6 +14,7 @@ import { BarberActionButtons } from '@/components/barber/BarberActionButtons';
 import { SubscriptionBadge } from '@/components/SubscriptionBadge';
 import { useState } from 'react';
 import { DonationModal } from '@/components/DonationModal';
+import { M4MHeartbeat } from '@/components/m4m/M4MHeartbeat';
 import { BookingConsole } from '@/components/booking/BookingConsole';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -50,7 +51,7 @@ export default function BarberPublicProfile() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('barber_profiles')
-        .select('active_subscription_tier')
+        .select('active_subscription_tier, m4m_certified, m4m_paid, m4m_lives_touched')
         .eq('user_id', userId)
         .single();
       
@@ -288,6 +289,14 @@ export default function BarberPublicProfile() {
                   {(displayName || 'B').charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
+              <M4MHeartbeat
+                certified={subscriptionData?.m4m_certified ?? false}
+                paid={subscriptionData?.m4m_paid ?? false}
+                livesTouched={subscriptionData?.m4m_lives_touched ?? 0}
+                barberName={displayName || 'Barber'}
+                barberUserId={userId!}
+                size="md"
+              />
 
               <div className="flex-1 space-y-4">
                 <div>

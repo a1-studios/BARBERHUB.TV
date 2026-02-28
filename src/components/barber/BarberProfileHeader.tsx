@@ -7,6 +7,7 @@ import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
 import { Link } from 'react-router-dom';
 import { ExternalLink, Settings, Plus, ArrowDownToLine, Instagram, Twitter, Youtube, Facebook, LogOut, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { M4MHeartbeat } from '@/components/m4m/M4MHeartbeat';
 
 interface BarberProfileHeaderProps {
   avatar_url?: string | null;
@@ -33,6 +34,10 @@ interface BarberProfileHeaderProps {
     twitter?: string | null;
     youtube?: string | null;
   };
+  m4m_certified?: boolean;
+  m4m_paid?: boolean;
+  m4m_lives_touched?: number;
+  barber_user_id?: string;
 }
 
 export function BarberProfileHeader({
@@ -50,7 +55,11 @@ export function BarberProfileHeader({
   onDeleteAccountClick,
   barberBucks,
   showActions = true,
-  socialLinks
+  socialLinks,
+  m4m_certified = false,
+  m4m_paid = false,
+  m4m_lives_touched = 0,
+  barber_user_id
 }: BarberProfileHeaderProps) {
   const getCountryFlag = (code: string) => {
     const codePoints = code
@@ -107,6 +116,14 @@ export function BarberProfileHeader({
               {(display_name || 'B').charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
+          <M4MHeartbeat
+            certified={m4m_certified}
+            paid={m4m_paid}
+            livesTouched={m4m_lives_touched}
+            barberName={display_name}
+            barberUserId={barber_user_id || ''}
+            size="md"
+          />
 
           <div className="flex-1 space-y-3 w-full">
             <div>
