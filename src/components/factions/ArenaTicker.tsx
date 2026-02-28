@@ -57,6 +57,7 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
   const [isPaused, setIsPaused] = useState(false);
   const [displayValue, setDisplayValue] = useState(0);
   const hasAnimated = useRef(false);
+  const { user } = useAuth();
 
   const { data: dbSponsors = [] } = useSponsorAds(true);
 
