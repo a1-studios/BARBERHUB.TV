@@ -47,9 +47,28 @@ export function M4MHeartbeat({
 
   const sizeClass = size === 'md' ? 'w-16 h-16 md:w-24 md:h-24' : 'w-10 h-10';
 
-  // State A: Not certified — hidden
+  // State A: Not certified — ghost outline
   if (!certified) {
-    return null;
+    return (
+      <div className="flex justify-center mt-1">
+        <button
+          onClick={() => setModalOpen(true)}
+          className="focus:outline-none"
+          aria-label="M4M Status"
+        >
+          <HandsHeartIcon
+            className={`${sizeClass} text-gray-500 opacity-[0.15]`}
+          />
+        </button>
+        <M4MVerificationModal
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          barberName={barberName}
+          barberUserId={barberUserId}
+          livesTouched={livesTouched}
+        />
+      </div>
+    );
   }
 
   // State B: Certified but not paid — static grey outline

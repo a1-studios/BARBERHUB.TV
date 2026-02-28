@@ -188,6 +188,10 @@ const Profile = () => {
                 onSignOutClick={async () => { await signOut(); navigate('/'); }}
                 onDeleteAccountClick={() => setShowDeleteConfirm(true)}
                 showActions={true}
+                m4m_certified={(barberProfile as any).m4m_certified || false}
+                m4m_paid={(barberProfile as any).m4m_paid || false}
+                m4m_lives_touched={(barberProfile as any).m4m_lives_touched || 0}
+                barber_user_id={user?.id}
                 socialLinks={{
                   instagram: (barberProfile as any).instagram_handle,
                   facebook: (barberProfile as any).facebook_handle,
