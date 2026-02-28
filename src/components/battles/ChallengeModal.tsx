@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 interface ChallengeModalProps {
   open: boolean;
   onClose: () => void;
+  initialTab?: 'issue' | 'feed';
 }
 
 export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
