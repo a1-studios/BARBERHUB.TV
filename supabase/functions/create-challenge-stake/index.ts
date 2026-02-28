@@ -112,6 +112,32 @@ serve(async (req) => {
         description: `Challenge stake escrow: "${title}"`,
       });
 
+    // Pre-create a battle record so complete-open-challenge can link to it
+    const { data: battle, error: battleError } = await supabase
+      .from('battles')
+      .insert({
+        title,
+        organizer_id: user.id,
+        battle_type: 'challenge',
+        status: 'upcoming',
+        currency: 'BB',
+        prize_amount: stake_amount * 2,
+        barber1_id: null,
+        barber2_id: null,
+      })
+      .select('id')
+      .single();
+
+    if (battleError) {
+      // Rollback stake
+      await supabase
+        .from('profiles')
+        .update({ barber_bucks: currentBalance })
+        .eq('user_id', user.id);
+      console.error('Battle pre-create error:', battleError);
+      throw new Error('Failed to create battle record');
+    }
+
     // Create challenge with stake
     const { data: challenge, error: challengeError } = await supabase
       .from('open_challenges')
@@ -128,6 +154,7 @@ serve(async (req) => {
         bounty_description: challenge_message || null,
         duration_minutes: durationMins,
         expires_at: expiresAt,
+        battle_id: battle.id,
       })
       .select()
       .single();
