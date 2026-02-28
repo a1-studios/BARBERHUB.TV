@@ -127,6 +127,8 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
     }
   }, [currentSlide, onNavigate]);
 
+  if (!currentSlide) return null;
+
   return (
     <div
       className="relative overflow-hidden cursor-pointer select-none mb-3"
