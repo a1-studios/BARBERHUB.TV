@@ -5,6 +5,8 @@ import bbCoinLogo from '@/assets/bb-coin-logo.png';
 import ScratchReveal from './ScratchReveal';
 import SponsoredBadge from './SponsoredBadge';
 import { useSponsorAds } from '@/hooks/useSponsorAds';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface SponsorSlide {
   id: string;
