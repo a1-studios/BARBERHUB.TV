@@ -146,7 +146,7 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
       {/* Scratch-off overlay */}
       <ScratchReveal
         activeIndex={activeIndex}
-        variant={currentSlide.type === 'prize-pool' ? 'gold' : 'silver'}
+        variant={currentSlide.type === 'prize-pool' ? 'gold' : 'silver'} 
       />
 
       {/* Content */}
