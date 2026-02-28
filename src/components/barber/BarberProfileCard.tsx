@@ -14,6 +14,7 @@ import { BarberVideoSection } from './BarberVideoSection';
 import { BarberActionButtons } from './BarberActionButtons';
 import { SubscriptionBadge } from '../SubscriptionBadge';
 import { SubCategoryBadge } from '../SubCategoryBadge';
+import { M4MHeartbeat } from '../m4m/M4MHeartbeat';
 
 interface BarberProfileCardProps {
   barberId: string;
