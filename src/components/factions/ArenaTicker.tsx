@@ -187,20 +187,36 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
               animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
               exit={{ opacity: 0, scale: 1.1, y: -15 }}
               transition={{ duration: 0.5, delay: 0.25 }}
-              className="flex items-center justify-center"
+              className="grid grid-cols-[32px_1fr_32px] sm:grid-cols-[40px_1fr_40px] items-center w-full gap-1"
             >
-              {currentSlide.logoUrl ? (
-                <motion.img
-                  src={currentSlide.logoUrl}
-                  alt={currentSlide.name}
-                  className="h-20 sm:h-24 max-w-[220px] object-contain rounded-md shrink-0"
-                  initial={{ filter: 'blur(8px)', opacity: 0 }}
-                  animate={{ filter: 'blur(0px)', opacity: 1 }}
-                  transition={{ duration: 0.4, delay: 0.3 }}
-                />
-              ) : (
-                <Sparkles className="w-10 h-10 shrink-0 text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" />
-              )}
+              <motion.div
+                className="flex flex-col items-center gap-0.5 text-muted-foreground"
+                animate={{ opacity: [0.4, 1, 0.4] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-[7px] sm:text-[8px] font-bold uppercase tracking-wider">Tap</span>
+              </motion.div>
+
+              <div className="flex items-center justify-center">
+                {currentSlide.logoUrl ? (
+                  <motion.img
+                    src={currentSlide.logoUrl}
+                    alt={currentSlide.name}
+                    className="h-20 sm:h-24 max-w-[220px] object-contain rounded-md shrink-0"
+                    initial={{ filter: 'blur(8px)', opacity: 0 }}
+                    animate={{ filter: 'blur(0px)', opacity: 1 }}
+                    transition={{ duration: 0.4, delay: 0.3 }}
+                  />
+                ) : (
+                  <Sparkles className="w-10 h-10 shrink-0 text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]" />
+                )}
+              </div>
+
+              <div className="flex flex-col items-center gap-0.5">
+                <img src={bbCoinLogo} alt="BB" className="h-4 w-4 sm:h-5 sm:w-5 rounded-full" />
+                <span className="text-[7px] sm:text-[8px] font-black text-primary leading-none">2x BB</span>
+              </div>
             </motion.div>
           ) : (
             <motion.div
@@ -209,20 +225,41 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
               animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
               exit={{ opacity: 0, scale: 1.1, y: -15 }}
               transition={{ duration: 0.5, delay: 0.25 }}
-              className="flex flex-col items-center justify-center gap-2"
+              className="grid grid-cols-[32px_1fr_32px] sm:grid-cols-[40px_1fr_40px] items-center w-full gap-1"
             >
-              <SponsoredBadge />
-              <span className="text-base sm:text-lg font-black text-foreground tracking-wide text-center uppercase">
-                {currentSlide.name}
-              </span>
-              <span className="text-xs sm:text-sm text-muted-foreground text-center">
-                {currentSlide.message}
-              </span>
+              <motion.div
+                className="flex flex-col items-center gap-0.5 text-muted-foreground"
+                animate={{ opacity: [0.4, 1, 0.4] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+              >
+                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-[7px] sm:text-[8px] font-bold uppercase tracking-wider">Tap</span>
+              </motion.div>
+
+              <div className="flex flex-col items-center justify-center gap-1">
+                <span className="text-xl sm:text-2xl lg:text-3xl font-black text-foreground tracking-wide text-center uppercase leading-tight">
+                  {currentSlide.name}
+                </span>
+                <span className="text-xs sm:text-sm text-muted-foreground text-center leading-snug">
+                  {currentSlide.message}
+                </span>
+              </div>
+
+              <div className="flex flex-col items-center gap-0.5">
+                <img src={bbCoinLogo} alt="BB" className="h-4 w-4 sm:h-5 sm:w-5 rounded-full" />
+                <span className="text-[7px] sm:text-[8px] font-black text-primary leading-none">2x BB</span>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
+      {/* Sponsored badge — bottom-right, only on sponsor slides */}
+      {currentSlide.type !== 'prize-pool' && (
+        <div className="absolute bottom-1.5 right-2 z-10">
+          <SponsoredBadge />
+        </div>
+      )}
     </div>
   );
 };
