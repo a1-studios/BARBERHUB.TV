@@ -102,6 +102,9 @@ const SovereignHQ = () => {
         {/* Sponsor Board Control */}
         <SponsorControlPanel onRefresh={refresh} />
 
+        {/* Vault of Honor Metrics */}
+        <VaultMetricsPanel />
+
         {/* Battle Directory - Full CRUD */}
         <BattleDirectoryPanel onRefresh={refresh} />
 

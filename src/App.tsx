@@ -194,6 +194,7 @@ const AppContent = () => {
                 </SovereignGuard>
               } 
             />
+            <Route path="/vault" element={<VaultOfHonor />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
     </>
