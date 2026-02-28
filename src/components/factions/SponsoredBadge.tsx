@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 const SponsoredBadge = () => {
   return (
     <motion.span
-      className="relative text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] text-primary border border-primary/40 px-2.5 py-1 rounded-md overflow-hidden shrink-0"
+      className="relative text-[8px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-primary border border-primary/40 px-2 py-0.5 rounded-md overflow-hidden shrink-0"
       animate={{
         boxShadow: [
           '0 0 4px hsl(var(--primary) / 0.3)',
