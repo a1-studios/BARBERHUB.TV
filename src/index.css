@@ -465,6 +465,26 @@
     -webkit-overflow-scrolling: auto;
   }
 
+  /* M4M Edge Glow — subtle pulsing stroke for certified state */
+  @keyframes edgeGlow {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 0.8; }
+  }
+
+  .animate-edge-glow {
+    animation: edgeGlow 2.5s ease-in-out infinite;
+  }
+
+  /* M4M Trace Light — light segment travels along heart outline */
+  @keyframes traceLight {
+    0% { stroke-dashoffset: 300; }
+    100% { stroke-dashoffset: 0; }
+  }
+
+  .animate-trace-light {
+    animation: traceLight 2s linear infinite;
+  }
+
   /* Auto-hiding controls */
   .controls-overlay {
     transition: opacity 0.3s ease, transform 0.3s ease;

@@ -16,33 +16,76 @@ interface M4MHeartbeatProps {
 
 const ZION_BLUE = '#002D62';
 
-const HandsHeartIcon = ({ className, style }: { className?: string; style?: React.CSSProperties }) => (
+const HeartShieldIcon = ({
+  className,
+  style,
+  glowState,
+}: {
+  className?: string;
+  style?: React.CSSProperties;
+  glowState: 'ghost' | 'certified' | 'complete';
+}) => (
   <svg
     viewBox="0 0 100 100"
     fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
     className={className}
     style={style}
   >
     {/* Heart outline */}
-    <path d="M50 85 C50 85, 15 60, 15 35 C15 22, 25 15, 35 15 C42 15, 48 20, 50 25 C52 20, 58 15, 65 15 C75 15, 85 22, 85 35 C85 60, 50 85, 50 85Z" />
-    {/* Left hand - fingers reaching right */}
-    <path d="M28 52 L38 48 L42 44 L46 48" />
-    <path d="M30 56 L38 52 L42 48" />
-    <path d="M32 60 L40 56 L44 52" />
-    {/* Right hand - fingers reaching left */}
-    <path d="M72 52 L62 48 L58 44 L54 48" />
-    <path d="M70 56 L62 52 L58 48" />
-    <path d="M68 60 L60 56 L56 52" />
-    {/* Handshake clasp in center */}
-    <path d="M46 48 C48 46, 52 46, 54 48" />
-    <path d="M44 52 C47 50, 53 50, 56 52" />
-    {/* Wrists */}
-    <path d="M25 58 L32 60" />
-    <path d="M75 58 L68 60" />
+    <path
+      d="M50 88 C50 88, 10 60, 10 33 C10 18, 22 10, 34 10 C42 10, 48 16, 50 22 C52 16, 58 10, 66 10 C78 10, 90 18, 90 33 C90 60, 50 88, 50 88Z"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
+    />
+
+    {/* Glowing trace path — only for certified/complete */}
+    {glowState !== 'ghost' && (
+      <path
+        d="M50 88 C50 88, 10 60, 10 33 C10 18, 22 10, 34 10 C42 10, 48 16, 50 22 C52 16, 58 10, 66 10 C78 10, 90 18, 90 33 C90 60, 50 88, 50 88Z"
+        stroke={ZION_BLUE}
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+        className={
+          glowState === 'complete'
+            ? 'animate-trace-light'
+            : 'animate-edge-glow'
+        }
+        style={{
+          strokeDasharray: glowState === 'complete' ? '40 260' : 'none',
+          filter:
+            glowState === 'complete'
+              ? `drop-shadow(0 0 6px ${ZION_BLUE}) drop-shadow(0 0 12px ${ZION_BLUE}80)`
+              : `drop-shadow(0 0 3px ${ZION_BLUE}60)`,
+        }}
+      />
+    )}
+
+    {/* Shield inside the heart */}
+    <path
+      d="M50 30 L36 38 L36 52 C36 62, 42 70, 50 74 C58 70, 64 62, 64 52 L64 38 Z"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill={glowState === 'complete' ? `${ZION_BLUE}30` : 'none'}
+    />
+
+    {/* Shield checkmark — only for certified states */}
+    {glowState !== 'ghost' && (
+      <path
+        d="M44 52 L48 57 L56 46"
+        stroke="currentColor"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    )}
   </svg>
 );
 
@@ -53,7 +96,7 @@ export function M4MHeartbeat({
   barberName,
   barberUserId,
   size = 'sm',
-  isOwnProfile = false
+  isOwnProfile = false,
 }: M4MHeartbeatProps) {
   const [verificationModalOpen, setVerificationModalOpen] = useState(false);
   const [certificationModalOpen, setCertificationModalOpen] = useState(false);
@@ -73,39 +116,42 @@ export function M4MHeartbeat({
     }
   };
 
-  // Determine visual state
   const renderIcon = () => {
-    // State C: Full member — beating pulse with Zion Blue glow
+    // State C: Full member — beating pulse with bright glow + tracing edge
     if (certified && paid) {
       return (
         <motion.div
-          animate={{ scale: [1, 1.08, 1] }}
-          transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+          animate={{ scale: [1, 1.12, 1, 1.08, 1] }}
+          transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.6 }}
         >
-          <HandsHeartIcon
+          <HeartShieldIcon
             className={sizeClass}
+            glowState="complete"
             style={{
               color: ZION_BLUE,
-              filter: `drop-shadow(0 0 6px ${ZION_BLUE}) drop-shadow(0 0 12px ${ZION_BLUE}80)`,
+              filter: `drop-shadow(0 0 8px ${ZION_BLUE}) drop-shadow(0 0 16px ${ZION_BLUE}80)`,
             }}
           />
         </motion.div>
       );
     }
 
-    // State B: Certified but not paid — static grey outline
+    // State B: Certified but not paid — brighter with edge glow
     if (certified) {
       return (
-        <HandsHeartIcon
-          className={`${sizeClass} text-muted-foreground opacity-50`}
+        <HeartShieldIcon
+          className={`${sizeClass} opacity-60`}
+          glowState="certified"
+          style={{ color: ZION_BLUE }}
         />
       );
     }
 
-    // State A: Not certified — ghost outline
+    // State A: Not certified — ghost
     return (
-      <HandsHeartIcon
-        className={`${sizeClass} text-gray-500 opacity-[0.15]`}
+      <HeartShieldIcon
+        className={`${sizeClass} text-muted-foreground opacity-[0.15]`}
+        glowState="ghost"
       />
     );
   };
@@ -120,7 +166,6 @@ export function M4MHeartbeat({
         {renderIcon()}
       </button>
 
-      {/* Client verification modal */}
       <M4MVerificationModal
         open={verificationModalOpen}
         onOpenChange={setVerificationModalOpen}
@@ -129,7 +174,6 @@ export function M4MHeartbeat({
         livesTouched={livesTouched}
       />
 
-      {/* Barber certification flow */}
       <M4MCertificationModal
         open={certificationModalOpen}
         onOpenChange={setCertificationModalOpen}
@@ -137,7 +181,6 @@ export function M4MHeartbeat({
         barberUserId={barberUserId}
       />
 
-      {/* Barber QR code display */}
       <M4MQRCodeModal
         open={qrModalOpen}
         onOpenChange={setQrModalOpen}
