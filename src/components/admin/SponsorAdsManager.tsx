@@ -44,9 +44,12 @@ const DEFAULT_FORM: SponsorFormData = {
   message: "",
   highlight_end: 15,
   logo_url: "",
+  product_image_url: "",
   link: "",
   display_order: 0,
   is_active: true,
+  starts_at: "",
+  ends_at: "",
 };
 
 export default function SponsorAdsManager() {
