@@ -305,6 +305,7 @@ export default function CreatorHub() {
           </div>
         </div>
       </div>
+      <BottomNavBar />
     </>
   );
 }

@@ -326,6 +326,7 @@ const Portal = () => {
         </div>
       </main>
       <Footer />
+      <BottomNavBar />
     </div>;
 };
 export default Portal;

@@ -118,6 +118,7 @@ const Index = () => {
       )}
       
       <Footer />
+      {user && <BottomNavBar />}
     </div>
   );
 };

@@ -285,6 +285,7 @@ const Profile = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <BottomNavBar />
     </div>
   );
 };
