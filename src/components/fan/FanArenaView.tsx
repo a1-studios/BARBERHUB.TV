@@ -40,21 +40,10 @@ export const FanArenaView = () => {
         <LiveBattleFeed />
       </section>
 
-      {/* Bottom row: Wallet + Global League */}
-      <section className="px-3 sm:px-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <BBWalletWidget
-          isBarber={false}
-          barberBucks={barberBucks ?? 0}
-          displayName={profile?.display_name ?? 'Fan'}
-          onAddFunds={() => setShowAddFunds(true)}
-        />
+      {/* Global League */}
+      <section className="px-3 sm:px-6">
         <GlobalLeagueDashboard />
       </section>
-
-      <AddFundsModal
-        isOpen={showAddFunds}
-        onClose={() => setShowAddFunds(false)}
-      />
     </main>
   );
 };
