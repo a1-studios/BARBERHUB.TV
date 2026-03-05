@@ -121,20 +121,17 @@ export const BattleCard = ({
           <div className="grid grid-cols-3 gap-2 mb-4">
             {/* Barber 1 */}
             <div className="text-center">
-              <Avatar className="w-14 h-14 mx-auto mb-2 border-2 border-primary/20">
-                <AvatarImage src={barber1?.avatar_url} />
-                <AvatarFallback className="bg-primary/10">
-                  {barber1?.name?.charAt(0) || '?'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex items-center justify-center gap-1 mb-1">
-                <p className="font-semibold text-sm truncate">
-                  {barber1?.name || 'Unknown'}
-                </p>
-                {barber1Tier && (
-                  <SubscriptionBadge tier={barber1Tier} size="sm" showTooltip={false} />
-                )}
-              </div>
+              <TierRing tier={barber1Tier} size="sm" className="mx-auto mb-2">
+                <Avatar className="w-14 h-14">
+                  <AvatarImage src={barber1?.avatar_url} />
+                  <AvatarFallback className="bg-primary/10">
+                    {barber1?.name?.charAt(0) || '?'}
+                  </AvatarFallback>
+                </Avatar>
+              </TierRing>
+              <p className="font-semibold text-sm truncate mb-1">
+                {barber1?.name || 'Unknown'}
+              </p>
               <span className="text-xl">
                 {getCountryFlag(barber1?.country_code || null)}
               </span>
