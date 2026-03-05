@@ -153,18 +153,53 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
   if (!currentSlide) return null;
 
   return (
-    <div
-      className="relative overflow-hidden cursor-pointer select-none mb-3 border rounded-lg"
-      style={{
-        borderColor: 'hsl(var(--cyan) / 0.3)',
-        boxShadow: '0 0 8px hsl(var(--cyan) / 0.25), inset 0 0 4px hsl(var(--cyan) / 0.1)',
-      }}
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-      onClick={handleClick}
-      role="marquee"
-      aria-live="polite"
-    >
+    <div className="relative mb-3">
+      {/* Slow-burning fire border effect */}
+      <div
+        className="absolute -inset-[2px] rounded-lg pointer-events-none z-0"
+        style={{
+          background: `conic-gradient(
+            from var(--fire-angle, 0deg),
+            hsl(0 90% 50% / 0.8) 0deg,
+            hsl(25 100% 55% / 0.9) 60deg,
+            hsl(45 100% 55% / 0.7) 120deg,
+            hsl(25 100% 50% / 0.6) 180deg,
+            hsl(0 90% 45% / 0.8) 240deg,
+            hsl(15 100% 50% / 0.7) 300deg,
+            hsl(0 90% 50% / 0.8) 360deg
+          )`,
+          animation: 'fire-rotate 6s linear infinite',
+          filter: 'blur(3px)',
+        }}
+      />
+      {/* Fire glow pulse */}
+      <div
+        className="absolute -inset-[4px] rounded-lg pointer-events-none z-0"
+        style={{
+          background: `conic-gradient(
+            from var(--fire-angle, 180deg),
+            transparent 0deg,
+            hsl(25 100% 50% / 0.4) 90deg,
+            transparent 180deg,
+            hsl(0 80% 50% / 0.3) 270deg,
+            transparent 360deg
+          )`,
+          animation: 'fire-rotate 4s linear infinite reverse',
+          filter: 'blur(8px)',
+        }}
+      />
+      <div
+        className="relative overflow-hidden cursor-pointer select-none border rounded-lg z-[1] bg-background"
+        style={{
+          borderColor: 'hsl(25 100% 50% / 0.3)',
+          boxShadow: '0 0 12px hsl(25 100% 50% / 0.2), 0 0 30px hsl(0 80% 50% / 0.1)',
+        }}
+        onMouseEnter={() => setIsPaused(true)}
+        onMouseLeave={() => setIsPaused(false)}
+        onClick={handleClick}
+        role="marquee"
+        aria-live="polite"
+      >
       {/* Scratch-off overlay */}
       <ScratchReveal
         activeIndex={activeIndex}
