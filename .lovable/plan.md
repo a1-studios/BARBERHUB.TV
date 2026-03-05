@@ -1,119 +1,95 @@
 
 
-## Particle Explosion Animation for VS/ENTER Cycle
+## Reshape Creator Hub: Educator-First + Universal Feed Architecture
 
-### Concept
+### What We're Building
 
-Replace the current simple cross-fade between "VS" and "ENTER" (Swords) with a **particle explosion effect**. Every 3 seconds when the text transitions:
+The Creator Hub transforms from a dashboard-heavy page into an **educator-first media upload station** with a compact stats popup, a "Promote to Feed" toggle, and the foundation for a universal feed system. The page becomes the barber's content creation command center — native iOS feel, everything fits on one screen.
 
-1. The current text ("VS" or "ENTER") **explodes outward** into ~20 particles (tiny orange and cyan dots) that scatter in all directions
-2. The particles dissipate over ~400ms
-3. The new text ("ENTER" or "VS") **implodes inward** -- particles rush from the edges to the center and coalesce into the new text
+### Database Changes
 
-This creates a dramatic energy-burst feel where the text appears to shatter and reform.
+**1. Add columns to `creator_content` table:**
+- `promote_to_feed` BOOLEAN DEFAULT false — barber controls whether content appears in global feed
+- `content_category` TEXT — 'masterclass', 'tutorial', 'tip', 'course'
+- `boost_amount_bb` INTEGER DEFAULT 0 — BB spent to boost visibility
+- `is_published` BOOLEAN DEFAULT false — gates on subscription tier
 
-### Animation Sequence
-
-```text
-[VS visible for 5s with subtle idle glow pulse]
-         |
-   VS EXPLODES --> 20 particles scatter outward (400ms)
-         |
-   Particles converge inward --> ENTER forms (400ms)
-         |
-[ENTER visible for 3s with Swords icon pulse]
-         |
-   ENTER EXPLODES --> 20 particles scatter outward (400ms)
-         |
-   Particles converge inward --> VS reforms (400ms)
-         |
-   (repeat)
+**2. Create `feed_items` table:**
 ```
-
-### Changes
-
-#### File: `src/components/DynamicBattleHero.tsx`
-
-**Modify the AnimatePresence transitions (lines 375-426):**
-
-Replace the current simple opacity/scale fade with particle explosion animations:
-
-- **Exit animation** (`exit` prop): The text scales down to 0 while spawning ~20 absolutely-positioned particle dots around it. Each particle flies outward in a random direction (random angle, random distance 20-50px) and fades to 0. Particles alternate between orange (`hsl(var(--primary))`) and cyan (`hsl(187 100% 50%)`) colors with matching glow shadows.
-
-- **Enter animation** (`initial` + `animate`): The text starts at scale 0 with particles positioned at random outer positions. Particles animate inward to center (0,0) and fade, while the text scales from 0 to 1 with a slight overshoot (scale to 1.1 then settle to 1).
-
-**Implementation approach -- inline particle generation:**
-
-Rather than a separate component, generate particles directly in the motion variants using an array of `motion.div` elements rendered alongside the text inside each AnimatePresence child:
-
-```text
-<motion.div key="vs" ...>
-  {/* Particle array */}
-  {Array.from({ length: 20 }).map((_, i) => (
-    <motion.div
-      key={i}
-      className="absolute w-1 h-1 rounded-full"
-      style={{ backgroundColor: i % 2 === 0 ? orange : cyan }}
-      initial={{ x: 0, y: 0, opacity: 1 }}
-      animate={{ x: 0, y: 0, opacity: 0 }}  // idle: invisible
-      exit={{
-        x: Math.cos(angle) * distance,
-        y: Math.sin(angle) * distance,
-        opacity: [1, 0],
-        scale: [1, 0]
-      }}
-    />
-  ))}
-  {/* VS text */}
-  <span>VS</span>
-</motion.div>
+id UUID PK
+content_id UUID NOT NULL
+content_type ENUM ('battle', 'course_teaser', 'sponsor_ad', 'update')
+source_table TEXT — origin table name for joins
+creator_id UUID REFERENCES profiles(user_id)
+is_locked BOOLEAN DEFAULT false
+rank_score FLOAT DEFAULT 0
+promote_boost INTEGER DEFAULT 0
+created_at TIMESTAMPTZ DEFAULT now()
 ```
+With RLS: everyone can SELECT, only system/creator can INSERT/UPDATE own rows.
 
-Each particle gets a pre-calculated random angle (evenly distributed around 360 degrees) and random distance (20-50px), with a staggered delay for a natural burst feel.
+**3. Create DB function `build_universal_feed()`:**
+A function that unions battle_submissions, creator_content (where promote_to_feed=true), and sponsor_ads into a ranked feed with the 50/30/10/10 ratio logic.
 
-**Apply to both barber and fan VS elements:**
+### UI Changes
 
-- **Barber VS** (lines 389-406): Add particles to the VS motion.span and the Swords motion.div
-- **Fan VS** (lines 411-425): For fans, since there is no cycle, add a subtle idle particle effect -- 4-6 particles that slowly orbit or float around the VS text on a loop, giving a constant "energy radiating" feel without the explosion
+**`src/pages/CreatorHub.tsx` — Full Rewrite:**
+- Remove: BarberProfileHeader, BackButton, featured creator section, appointments section, the 3-column grid layout
+- New layout: Compact single-screen, mobile-native (pt-16, no container margins)
+- Structure:
+  1. **Header bar** — "CREATOR HUB" title + small gear icon for stats popup
+  2. **Media Upload Zone** — Large upload area (video/image) with title, category selector (Masterclass, Tutorial, Tip), description
+  3. **"Promote to Feed" toggle** — Switch that controls whether content goes to the global feed
+  4. **"Boost with BB" option** — Small input to spend BB on feed visibility
+  5. **Publish button** — If barber has no active subscription tier, tapping "Publish" opens the UpgradePrompt drawer. If subscribed, publishes directly
+  6. **Deal Board** — Kept below the upload section
+  7. **Bottom Nav** — Existing BottomNavBar
 
-**Cycle timing unchanged:**
-- The existing `useEffect` at lines 166-173 stays as-is (5s VS, 3s Swords for barbers)
-- The explosion/implosion animation takes ~400ms for exit + ~400ms for enter, fitting within the transition window
+**`src/components/creator/CreatorStatsDrawer.tsx` — New Component:**
+A bottom sheet (Drawer) that consolidates all the old dashboard content into a popup:
+- Content count, Views, Likes, Shares (the 4 stat cards)
+- Earning history (recent transactions from EarningSystem)
+- Recent achievements (milestones)
+- Referral program summary with code + share button
+- Triggered by tapping the gear/stats icon in the header
 
-**Rings unchanged:**
-- The rotating dashed ring and inner cyan ring remain as they are (lines 344-366)
+**`src/components/creator/EducatorUpload.tsx` — New Component:**
+The main upload interface replacing CreatorDashboard:
+- Video + image upload to Supabase Storage (`videos` bucket for video, `creations` for images)
+- Content type selector: Masterclass | Tutorial | Quick Tip
+- Title + description fields
+- "Promote to Feed" toggle switch
+- "Boost" BB input (optional)
+- Publish button with tier-gate logic:
+  - If no subscription → opens UpgradePrompt with reason='premium_feature' and title='Publish to the Global Feed — upgrade to Educator tier'
+  - If subscribed → inserts into `creator_content` with status='published' and creates a `feed_items` row if promote_to_feed is on
 
-### Particle Specs
+**`src/components/creator/CreatorDashboard.tsx` — Delete** (absorbed into CreatorStatsDrawer)
 
-| Property | Value |
-|----------|-------|
-| Count per explosion | 20 particles |
-| Size | 1-2px (w-1 h-1 or w-0.5 h-0.5) |
-| Colors | Alternating orange (primary) and cyan |
-| Scatter distance | 20-50px random per particle |
-| Scatter direction | Evenly distributed angles (360/20 = 18 degree increments + slight random offset) |
-| Glow | box-shadow matching particle color, 4px blur |
-| Exit duration | 400ms ease-out |
-| Enter duration | 400ms ease-out with overshoot |
-| Stagger | 20ms between particles for natural burst feel |
+**`src/components/creator/EarningSystem.tsx` — Keep** but import into CreatorStatsDrawer instead of page
 
-### What Changes
+**`src/components/creator/ReferralProgram.tsx` — Keep** but import into CreatorStatsDrawer instead of page
 
-| Element | Before | After |
-|---------|--------|-------|
-| VS to ENTER transition | Simple opacity/scale fade | Particle explosion outward, then implosion inward |
-| ENTER to VS transition | Simple opacity/scale fade | Same particle explosion/implosion |
-| Fan VS | Static with glow pulse | Static with 4-6 subtle floating particles |
-| Rings | Unchanged | Unchanged |
-| Drawer | Unchanged | Unchanged |
-| Cycle timing | Unchanged (5s/3s) | Unchanged |
+### Feed Integration (WatchFeed)
 
-### What Is NOT Changing
+**`src/pages/WatchFeed.tsx` — Modify:**
+- Add a query to `feed_items` joined with source tables
+- Interleave using the ratio: 50% battles, 30% educator teasers, 10% social updates, 10% sponsor ads
+- Educator teasers show as 30s clips (using `media_url` from `creator_content`) with the barber's TierRing avatar
 
-- The 5s VS / 3s Swords timing cycle
-- Arena Drawer contents and navigation
-- Rotating ring animations
-- MobileVoteCenter replacement during active battles
-- Video layout, action bars, name overlays
-- Open challenges badge count query
+### Binary Role Logic
+- Only barbers can access Creator Hub (already enforced via `isBarber` check)
+- Only fans/sponsors can sponsor (SponsorDealBoard posts are created by sponsor role — existing logic)
+- Barbers use existing "Promote" system (sponsor_ads table pattern) to boost content with BB
+
+### Changes Summary
+
+| File | Action |
+|------|--------|
+| `src/pages/CreatorHub.tsx` | **Rewrite** — Educator-first layout, compact mobile-native |
+| `src/components/creator/EducatorUpload.tsx` | **Create** — Video/image upload with promote toggle + publish gate |
+| `src/components/creator/CreatorStatsDrawer.tsx` | **Create** — Bottom sheet consolidating stats, earnings, referrals |
+| `src/components/creator/CreatorDashboard.tsx` | **Delete** — Absorbed into stats drawer |
+| `src/pages/WatchFeed.tsx` | **Modify** — Add educator content to feed mix |
+| DB Migration | `feed_items` table + `creator_content` columns + `build_universal_feed` function |
 
