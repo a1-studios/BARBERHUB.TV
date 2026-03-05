@@ -169,7 +169,7 @@ export const PortalGlobeHero = () => {
             transition={{ duration: 0.4 }}
             className="text-center text-sm font-medium text-foreground"
           >
-            {tickerItems[tickerIndex]}
+            {dynamicTickerItems[tickerIndex]}
           </motion.p>
         </AnimatePresence>
       </div>
