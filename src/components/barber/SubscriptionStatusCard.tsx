@@ -107,41 +107,51 @@ export const SubscriptionStatusCard = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="text-center space-y-2">
-            <Badge 
-              variant="secondary" 
-              className={`${tierInfo.color} bg-primary/10 border-primary/30 uppercase text-sm px-4 py-1`}
-            >
-              {tierName} Tier
-            </Badge>
-            {subscription?.current_period_end && (
-              <p className="text-xs text-muted-foreground">
-                {subscription.cancel_at_period_end ? 'Expires' : 'Renews'} on {format(new Date(subscription.current_period_end), 'MMM d, yyyy')}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Monthly Battles</span>
-              <span className="font-semibold text-foreground">
-                {isUnlimited ? 'Unlimited' : `${battlesUsed} / ${battlesLimit}`}
-              </span>
+          {DEV_MODE ? (
+            <div className="text-center space-y-2">
+              <Badge variant="secondary" className="text-primary bg-primary/10 border-primary/30 uppercase text-sm px-4 py-1">
+                DEV MODE — All Unlocked
+              </Badge>
+              <p className="text-xs text-muted-foreground">All tier restrictions bypassed for testing</p>
             </div>
-            {!isUnlimited && (
-              <Progress value={usagePercentage} className="h-2" />
-            )}
-            <p className="text-xs text-center text-muted-foreground">
-              {isUnlimited ? (
-                <span className="text-primary">Create unlimited battles!</span>
-              ) : battlesRemaining > 0 ? (
-                `${battlesRemaining} battle${battlesRemaining !== 1 ? 's' : ''} remaining this month`
-              ) : (
-                <span className="text-destructive">Limit reached. Upgrade to create more battles.</span>
-              )}
-            </p>
-          </div>
+          ) : (
+            <>
+              <div className="text-center space-y-2">
+                <Badge 
+                  variant="secondary" 
+                  className={`${tierInfo.color} bg-primary/10 border-primary/30 uppercase text-sm px-4 py-1`}
+                >
+                  {tierName} Tier
+                </Badge>
+                {subscription?.current_period_end && (
+                  <p className="text-xs text-muted-foreground">
+                    {subscription.cancel_at_period_end ? 'Expires' : 'Renews'} on {format(new Date(subscription.current_period_end), 'MMM d, yyyy')}
+                  </p>
+                )}
+              </div>
 
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Monthly Battles</span>
+                  <span className="font-semibold text-foreground">
+                    {isUnlimited ? 'Unlimited' : `${battlesUsed} / ${battlesLimit}`}
+                  </span>
+                </div>
+                {!isUnlimited && (
+                  <Progress value={usagePercentage} className="h-2" />
+                )}
+                <p className="text-xs text-center text-muted-foreground">
+                  {isUnlimited ? (
+                    <span className="text-primary">Create unlimited battles!</span>
+                  ) : battlesRemaining > 0 ? (
+                    `${battlesRemaining} battle${battlesRemaining !== 1 ? 's' : ''} remaining this month`
+                  ) : (
+                    <span className="text-destructive">Limit reached. Upgrade to create more battles.</span>
+                  )}
+                </p>
+              </div>
+            </>
+          )}
           <div className="space-y-1 pt-2 border-t border-border/50">
             <p className="text-xs font-semibold text-foreground mb-2">Your Benefits:</p>
             <div className="space-y-1">
