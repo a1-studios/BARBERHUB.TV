@@ -1,119 +1,43 @@
 
 
-## Particle Explosion Animation for VS/ENTER Cycle
+## Audit Results: Duplicate Battle Creation & Remaining Tier Gates
 
-### Concept
+### Findings
 
-Replace the current simple cross-fade between "VS" and "ENTER" (Swords) with a **particle explosion effect**. Every 3 seconds when the text transitions:
+**Duplicate Battle Creation Paths (5 total):**
 
-1. The current text ("VS" or "ENTER") **explodes outward** into ~20 particles (tiny orange and cyan dots) that scatter in all directions
-2. The particles dissipate over ~400ms
-3. The new text ("ENTER" or "VS") **implodes inward** -- particles rush from the edges to the center and coalesce into the new text
+1. **`/battles/create` page** (`CreateBattle.tsx`) — Full-page form for "unofficial battles" with dates, categories, rules, cover image
+2. **ChallengeFeed inline** (presets + custom form) — Creates challenge stakes (100-500 BB) directly in the Challenge Arena modal
+3. **BottomNavBar FAB** — Central "+" button navigates to `/battles/create`
+4. **BattlesPage button** — "Create Unofficial Battle" links to `/battles/create`
+5. **Sovereign BattleDirectoryPanel** — Admin override battle creation (intentional, keep)
 
-This creates a dramatic energy-burst feel where the text appears to shatter and reform.
+Paths 1-4 overlap. The ChallengeFeed creates peer-to-peer challenges, while CreateBattle creates broader "unofficial battles." Both insert into the `battles`/`open_challenges` tables with `battle_type: 'unofficial'`. This creates user confusion about which path to use.
 
-### Animation Sequence
+**DEV_MODE bypass status — all frontend gates pass:**
+- `useSubscriptionLimits` returns `hasActiveSubscription: true`, `tierName: 'diamond'`, `canCreateBattle: true` ✓
+- `isSilverPlus` checks in ChallengeFeed and AcceptChallengeModal resolve to `true` (diamond is in the array) ✓
+- Backend edge functions have `DEV_BYPASS = true` ✓
 
-```text
-[VS visible for 5s with subtle idle glow pulse]
-         |
-   VS EXPLODES --> 20 particles scatter outward (400ms)
-         |
-   Particles converge inward --> ENTER forms (400ms)
-         |
-[ENTER visible for 3s with Swords icon pulse]
-         |
-   ENTER EXPLODES --> 20 particles scatter outward (400ms)
-         |
-   Particles converge inward --> VS reforms (400ms)
-         |
-   (repeat)
-```
+**One redundant gate:** `CreateBattle.tsx` lines 115-123 query the `profiles` table to check `user_type !== 'barber'` and redirect — but `BarberGuard` in the router already handles this. This is unnecessary duplication.
 
-### Changes
+---
 
-#### File: `src/components/DynamicBattleHero.tsx`
+### Proposed Changes
 
-**Modify the AnimatePresence transitions (lines 375-426):**
+| File | Action |
+|------|--------|
+| `src/pages/CreateBattle.tsx` | **Modify** — Remove the redundant `profiles` query and `user_type` redirect (BarberGuard already does this). Remove the `hasActiveSubscription` gate/paywall UI since DEV_MODE bypasses it anyway — simplify to just show the form directly. |
+| `src/components/battles/ChallengeFeed.tsx` | **Modify** — Remove `isSilverPlus` gating on presets, custom form, and accept button. In DEV_MODE these pass anyway, but the Lock overlays and "Silver+ required" messages still render conditionally. Instead, derive `isSilverPlus` from DEV_MODE directly so the lock UI never shows. |
+| `src/components/battles/AcceptChallengeModal.tsx` | **Modify** — Same treatment: when DEV_MODE is on, skip showing the "Silver+ required" lock message and disabled state. |
+| `src/components/barber/SubscriptionStatusCard.tsx` | **Modify** — When DEV_MODE is active, show "DEV MODE — All features unlocked" instead of tier-specific limits. |
 
-Replace the current simple opacity/scale fade with particle explosion animations:
+### What stays
+- ChallengeFeed and CreateBattle remain as **separate features** (challenges vs. custom battles) — they serve different purposes despite overlap
+- Sovereign BattleDirectoryPanel untouched (admin tool)
+- BottomNavBar FAB keeps pointing to `/battles/create`
+- Backend `DEV_BYPASS` flags unchanged
 
-- **Exit animation** (`exit` prop): The text scales down to 0 while spawning ~20 absolutely-positioned particle dots around it. Each particle flies outward in a random direction (random angle, random distance 20-50px) and fades to 0. Particles alternate between orange (`hsl(var(--primary))`) and cyan (`hsl(187 100% 50%)`) colors with matching glow shadows.
-
-- **Enter animation** (`initial` + `animate`): The text starts at scale 0 with particles positioned at random outer positions. Particles animate inward to center (0,0) and fade, while the text scales from 0 to 1 with a slight overshoot (scale to 1.1 then settle to 1).
-
-**Implementation approach -- inline particle generation:**
-
-Rather than a separate component, generate particles directly in the motion variants using an array of `motion.div` elements rendered alongside the text inside each AnimatePresence child:
-
-```text
-<motion.div key="vs" ...>
-  {/* Particle array */}
-  {Array.from({ length: 20 }).map((_, i) => (
-    <motion.div
-      key={i}
-      className="absolute w-1 h-1 rounded-full"
-      style={{ backgroundColor: i % 2 === 0 ? orange : cyan }}
-      initial={{ x: 0, y: 0, opacity: 1 }}
-      animate={{ x: 0, y: 0, opacity: 0 }}  // idle: invisible
-      exit={{
-        x: Math.cos(angle) * distance,
-        y: Math.sin(angle) * distance,
-        opacity: [1, 0],
-        scale: [1, 0]
-      }}
-    />
-  ))}
-  {/* VS text */}
-  <span>VS</span>
-</motion.div>
-```
-
-Each particle gets a pre-calculated random angle (evenly distributed around 360 degrees) and random distance (20-50px), with a staggered delay for a natural burst feel.
-
-**Apply to both barber and fan VS elements:**
-
-- **Barber VS** (lines 389-406): Add particles to the VS motion.span and the Swords motion.div
-- **Fan VS** (lines 411-425): For fans, since there is no cycle, add a subtle idle particle effect -- 4-6 particles that slowly orbit or float around the VS text on a loop, giving a constant "energy radiating" feel without the explosion
-
-**Cycle timing unchanged:**
-- The existing `useEffect` at lines 166-173 stays as-is (5s VS, 3s Swords for barbers)
-- The explosion/implosion animation takes ~400ms for exit + ~400ms for enter, fitting within the transition window
-
-**Rings unchanged:**
-- The rotating dashed ring and inner cyan ring remain as they are (lines 344-366)
-
-### Particle Specs
-
-| Property | Value |
-|----------|-------|
-| Count per explosion | 20 particles |
-| Size | 1-2px (w-1 h-1 or w-0.5 h-0.5) |
-| Colors | Alternating orange (primary) and cyan |
-| Scatter distance | 20-50px random per particle |
-| Scatter direction | Evenly distributed angles (360/20 = 18 degree increments + slight random offset) |
-| Glow | box-shadow matching particle color, 4px blur |
-| Exit duration | 400ms ease-out |
-| Enter duration | 400ms ease-out with overshoot |
-| Stagger | 20ms between particles for natural burst feel |
-
-### What Changes
-
-| Element | Before | After |
-|---------|--------|-------|
-| VS to ENTER transition | Simple opacity/scale fade | Particle explosion outward, then implosion inward |
-| ENTER to VS transition | Simple opacity/scale fade | Same particle explosion/implosion |
-| Fan VS | Static with glow pulse | Static with 4-6 subtle floating particles |
-| Rings | Unchanged | Unchanged |
-| Drawer | Unchanged | Unchanged |
-| Cycle timing | Unchanged (5s/3s) | Unchanged |
-
-### What Is NOT Changing
-
-- The 5s VS / 3s Swords timing cycle
-- Arena Drawer contents and navigation
-- Rotating ring animations
-- MobileVoteCenter replacement during active battles
-- Video layout, action bars, name overlays
-- Open challenges badge count query
+### Result
+With DEV_MODE on, all battle/challenge creation paths will be fully accessible with no lock overlays, no subscription paywalls, and no redundant profile checks. Flipping DEV_MODE to `false` restores all gates.
 
