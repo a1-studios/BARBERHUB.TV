@@ -416,6 +416,7 @@ export default function SponsorAdsManager() {
                 <Input id="ends_at" type="datetime-local" value={form.ends_at ? form.ends_at.slice(0, 16) : ''} onChange={(e) => setForm((p) => ({ ...p, ends_at: e.target.value ? new Date(e.target.value).toISOString() : '' }))} />
               </div>
             </div>
+            <div className="flex items-end gap-4">
               <div className="flex-1">
                 <Label htmlFor="order">Display Order</Label>
                 <Input
