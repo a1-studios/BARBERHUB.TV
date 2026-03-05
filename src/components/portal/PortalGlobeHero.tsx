@@ -126,20 +126,12 @@ export const PortalGlobeHero = () => {
         {/* Prize Pool Display */}
         <div className="flex flex-col items-center mb-2">
           <motion.span
-            key={`usd-${totalDollars}`}
+            key={`bb-${bbEquivalent}`}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-primary via-orange-400 to-primary bg-clip-text text-transparent"
+            className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-[hsl(187_100%_50%)] bg-clip-text text-transparent"
           >
-            {prizeLoading ? '...' : formatCurrency(totalDollars)}
-          </motion.span>
-          <motion.span
-            key={`bb-${bbEquivalent}`}
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-sm sm:text-base font-semibold bg-gradient-to-r from-primary to-[hsl(187_100%_50%)] bg-clip-text text-transparent"
-          >
-            {prizeLoading ? '...' : `≈ ${formatBB(bbEquivalent)} BB`}
+            {prizeLoading ? '...' : `${formatBB(bbEquivalent)} BB`}
           </motion.span>
         </div>
 
