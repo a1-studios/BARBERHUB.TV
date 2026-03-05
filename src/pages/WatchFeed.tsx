@@ -205,14 +205,27 @@ const WatchFeed = () => {
           allowFullScreen
         />
       ) : item.media_url && (item.media_url.includes('.mp4') || item.media_url.includes('.webm')) ? (
-        <video
-          src={item.media_url}
-          className="absolute inset-0 w-full h-full object-cover"
-          autoPlay={activeIndex === idx}
-          muted
-          loop
-          playsInline
-        />
+        <>
+          <video
+            ref={(el) => { if (el) videoRefs.current.set(item.id, el); }}
+            src={item.media_url}
+            className="absolute inset-0 w-full h-full object-contain"
+            autoPlay={activeIndex === idx}
+            muted
+            playsInline
+            onEnded={() => handleVideoEnded(item.id)}
+          />
+          {endedVideos.has(item.id) && (
+            <button
+              onClick={() => handleReplay(item.id)}
+              className="absolute inset-0 z-10 flex items-center justify-center bg-black/50"
+            >
+              <div className="w-16 h-16 rounded-full bg-primary/80 backdrop-blur-sm flex items-center justify-center">
+                <Play className="w-8 h-8 text-primary-foreground ml-1" />
+              </div>
+            </button>
+          )}
+        </>
       ) : (
         <div
           className="absolute inset-0 bg-cover bg-center"
