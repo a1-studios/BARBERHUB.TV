@@ -45,7 +45,7 @@ export const LiveBattleFeed = () => {
           barber2_id,
           starts_at,
           voting_ends_at,
-          youtube_stream_url
+          stream_url
         `)
         .in('status', ['voting', 'upcoming'])
         .order('starts_at', { ascending: true })

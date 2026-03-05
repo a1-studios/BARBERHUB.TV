@@ -94,6 +94,14 @@ export function QuickActionsMenu() {
       barberOnly: true
     },
     {
+      id: 'camera-studio',
+      label: 'Camera Studio',
+      icon: <Camera className="w-5 h-5 text-primary" />,
+      path: '/studio',
+      requiresAuth: true,
+      barberOnly: true
+    },
+    {
       id: 'admin-dashboard',
       label: 'Admin Dashboard',
       icon: <Zap className="w-5 h-5 text-red-500" />,

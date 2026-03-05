@@ -198,6 +198,16 @@ const AppContent = () => {
             />
             <Route path="/vault" element={<VaultOfHonor />} />
             <Route path="/m4m/verify/:barberUserId" element={<M4MVerify />} />
+            <Route 
+              path="/studio" 
+              element={
+                <AuthGuard>
+                  <BarberGuard>
+                    <CameraStudio />
+                  </BarberGuard>
+                </AuthGuard>
+              } 
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
     </>

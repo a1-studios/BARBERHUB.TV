@@ -132,8 +132,8 @@ export const BattleVotingView = ({
             transition={{ duration: 0.2 }}
           >
             {barber.videoUrl ? (
-              <YouTubeStreamPlayer 
-                videoUrl={barber.videoUrl} 
+              <HLSVideoPlayer 
+                src={barber.videoUrl} 
                 isLive={barber.isLive}
                 title={barber.name}
                 size="large"
