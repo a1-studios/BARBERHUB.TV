@@ -6,6 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// 🔴 DEV BYPASS — set to false before going live
+const DEV_BYPASS = true;
+
 const MIN_STAKE_BB = 100;
 const MAX_DURATION_MINUTES = 60;
 
@@ -52,21 +55,23 @@ serve(async (req) => {
     }
 
     // Silver+ subscription check
-    const { data: subscription, error: subError } = await supabase
-      .from('barber_subscriptions')
-      .select('id, tier:barber_subscription_tiers(tier_name)')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .maybeSingle();
+    if (!DEV_BYPASS) {
+      const { data: subscription, error: subError } = await supabase
+        .from('barber_subscriptions')
+        .select('id, tier:barber_subscription_tiers(tier_name)')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle();
 
-    if (subError) {
-      console.error('Subscription check error:', subError);
-      throw new Error('Could not verify subscription');
-    }
+      if (subError) {
+        console.error('Subscription check error:', subError);
+        throw new Error('Could not verify subscription');
+      }
 
-    const tierName = (subscription?.tier as any)?.tier_name || 'free';
-    if (!['silver', 'gold', 'diamond'].includes(tierName)) {
-      throw new Error('Silver+ subscription required to issue challenges. Upgrade your tier to unlock challenges.');
+      const tierName = (subscription?.tier as any)?.tier_name || 'free';
+      if (!['silver', 'gold', 'diamond'].includes(tierName)) {
+        throw new Error('Silver+ subscription required to issue challenges. Upgrade your tier to unlock challenges.');
+      }
     }
 
     // Get user profile

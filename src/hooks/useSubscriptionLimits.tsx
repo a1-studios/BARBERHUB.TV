@@ -2,9 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
-
-// TODO: Set to false before going live
-export const DEV_MODE = true;
+import { DEV_MODE } from '@/config/features';
 
 const TIER_LIMITS = {
   'free': 2,

@@ -1,5 +1,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// 🔴 DEV BYPASS — set to false before going live
+const DEV_BYPASS = true;
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -39,7 +42,7 @@ Deno.serve(async (req) => {
     }
 
     // 2. Tier gate: check barber subscription for house_call / sos
-    if (appointment_type !== "standard") {
+    if (!DEV_BYPASS && appointment_type !== "standard") {
       const { data: barber } = await supabase
         .from("barber_profiles")
         .select("active_subscription_tier")

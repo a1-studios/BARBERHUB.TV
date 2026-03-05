@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+// 🔴 DEV BYPASS — set to false before going live
+const DEV_BYPASS = true;
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -38,21 +41,23 @@ serve(async (req) => {
     console.log(`Matching challenge stake: ${challenge_id} by ${user.id}`);
 
     // Silver+ subscription check for acceptor
-    const { data: subscription, error: subError } = await supabase
-      .from('barber_subscriptions')
-      .select('id, tier:barber_subscription_tiers(tier_name)')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .maybeSingle();
+    if (!DEV_BYPASS) {
+      const { data: subscription, error: subError } = await supabase
+        .from('barber_subscriptions')
+        .select('id, tier:barber_subscription_tiers(tier_name)')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle();
 
-    if (subError) {
-      console.error('Subscription check error:', subError);
-      throw new Error('Could not verify subscription');
-    }
+      if (subError) {
+        console.error('Subscription check error:', subError);
+        throw new Error('Could not verify subscription');
+      }
 
-    const tierName = (subscription?.tier as any)?.tier_name || 'free';
-    if (!['silver', 'gold', 'diamond'].includes(tierName)) {
-      throw new Error('Silver+ subscription required to accept challenges. Upgrade your tier to unlock challenges.');
+      const tierName = (subscription?.tier as any)?.tier_name || 'free';
+      if (!['silver', 'gold', 'diamond'].includes(tierName)) {
+        throw new Error('Silver+ subscription required to accept challenges. Upgrade your tier to unlock challenges.');
+      }
     }
 
     // Get challenge details

@@ -1,4 +1,8 @@
 // Feature flags to control which elements appear in the app
+
+// 🔴 MASTER SWITCH — set to false before going live
+export const DEV_MODE = true;
+
 export const FEATURES = {
   // Header elements
   HEADER_INSTAGRAM_FOLLOW: false,
