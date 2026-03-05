@@ -14,7 +14,8 @@ import {
   Zap,
   Loader2,
   Shield,
-  Trophy
+  Trophy,
+  Camera
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
