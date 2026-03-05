@@ -3,14 +3,21 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Swords, Coins, Clock, Users, Trophy, Lock, Zap, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Slider } from '@/components/ui/slider';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Swords, Coins, Clock, Users, Trophy, Lock, Zap, Loader2, ChevronDown, Flame, Settings2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useSubscriptionLimits } from '@/hooks/useSubscriptionLimits';
+import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { AcceptChallengeModal } from './AcceptChallengeModal';
 import { differenceInSeconds } from 'date-fns';
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 
 interface Challenge {
   id: string;
@@ -79,7 +86,7 @@ const QuickChallengePresets = ({ isSilverPlus }: { isSilverPlus: boolean }) => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      toast.success(`Challenge "${preset.title}" created! ${preset.stake} BB staked.`);
+      toast.success(`🔥 "${preset.title}" issued! ${preset.stake} BB staked.`);
       queryClient.invalidateQueries({ queryKey: ['open-challenges'] });
     } catch (err: any) {
       toast.error(err.message || 'Failed to create challenge');
@@ -92,40 +99,181 @@ const QuickChallengePresets = ({ isSilverPlus }: { isSilverPlus: boolean }) => {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Zap className="w-4 h-4 text-yellow-500" />
-        <h4 className="text-sm font-bold text-foreground">Quick Challenges</h4>
-        <span className="text-[10px] text-muted-foreground">One-click start</span>
+        <h4 className="text-sm font-bold text-foreground">Instant Challenge</h4>
+        <span className="text-[10px] text-muted-foreground">One tap to start</span>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-3 gap-2">
         {QUICK_PRESETS.map((preset, i) => (
-          <button
+          <motion.button
             key={preset.title}
+            whileTap={{ scale: 0.93 }}
+            whileHover={{ scale: 1.03 }}
             disabled={loadingPreset !== null || !isSilverPlus}
             onClick={() => handleQuickChallenge(preset, i)}
-            className={`relative p-4 rounded-xl border border-border bg-gradient-to-br ${preset.color} bg-opacity-10 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 text-left disabled:opacity-50 disabled:cursor-not-allowed group`}
+            className={`relative p-3 sm:p-4 rounded-xl border border-border/50 bg-gradient-to-br ${preset.color} hover:shadow-lg hover:shadow-primary/10 transition-shadow duration-200 text-left disabled:opacity-50 disabled:cursor-not-allowed group overflow-hidden`}
           >
-            <div className="absolute inset-0 rounded-xl bg-gradient-to-br ${preset.color} opacity-10 group-hover:opacity-20 transition-opacity" />
-            <div className="relative">
-              <span className="text-2xl">{preset.emoji}</span>
-              <h5 className="font-bold text-white text-sm mt-1">{preset.title}</h5>
-              <div className="flex items-center gap-1 mt-2">
-                <Coins className="w-3.5 h-3.5 text-yellow-400" />
-                <span className="text-xs font-bold text-yellow-400">{preset.stake} BB</span>
+            <div className="relative z-10">
+              <span className="text-xl sm:text-2xl block">{preset.emoji}</span>
+              <h5 className="font-bold text-white text-[11px] sm:text-sm mt-1 leading-tight">{preset.title}</h5>
+              <div className="flex items-center gap-1 mt-1.5">
+                <Coins className="w-3 h-3 text-yellow-300" />
+                <span className="text-[10px] sm:text-xs font-bold text-yellow-300">{preset.stake} BB</span>
               </div>
               {loadingPreset === i && (
                 <Loader2 className="absolute top-0 right-0 w-4 h-4 text-white animate-spin" />
               )}
             </div>
             {!isSilverPlus && (
-              <div className="absolute inset-0 rounded-xl bg-black/60 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-xl bg-black/60 flex items-center justify-center z-20">
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Lock className="w-3 h-3" /> Silver+
                 </div>
               </div>
             )}
-          </button>
+          </motion.button>
         ))}
       </div>
     </div>
+  );
+};
+
+const CustomChallengeForm = ({ isSilverPlus }: { isSilverPlus: boolean }) => {
+  const { barberBucks: balance } = useBarberBucks();
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState('');
+  const [stakeValue, setStakeValue] = useState(100);
+  const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const hasEnoughBalance = (balance || 0) >= stakeValue;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isSilverPlus || !title || !hasEnoughBalance) return;
+
+    setIsSubmitting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-challenge-stake', {
+        body: {
+          title,
+          stake_amount: stakeValue,
+          challenge_message: message || null,
+          duration_minutes: 60,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast.success(`🔥 Challenge issued! ${stakeValue} BB staked.`);
+      queryClient.invalidateQueries({ queryKey: ['open-challenges'] });
+      setTitle('');
+      setStakeValue(100);
+      setMessage('');
+      setOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to create challenge');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isSilverPlus) return null;
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger asChild>
+        <button className="w-full flex items-center justify-between p-3 rounded-lg border border-dashed border-border/60 hover:border-primary/40 hover:bg-muted/20 transition-colors text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Settings2 className="w-4 h-4" />
+            <span className="font-medium">Custom Challenge</span>
+          </div>
+          <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+            <ChevronDown className="w-4 h-4" />
+          </motion.div>
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mt-3 p-4 rounded-xl border border-border bg-card/50 backdrop-blur-sm space-y-4"
+        >
+          {/* Balance */}
+          <div className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg border border-border/50">
+            <span className="text-xs text-muted-foreground">Balance</span>
+            <div className="flex items-center gap-1 font-bold text-sm text-foreground">
+              <Coins className="w-3.5 h-3.5 text-yellow-500" />
+              {balance?.toLocaleString() || 0} BB
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div>
+              <Label htmlFor="custom-title" className="text-xs">Title</Label>
+              <Input
+                id="custom-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g., Best Fade in Miami"
+                required
+                className="mt-1 h-9 text-sm"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-xs">Stake</Label>
+                <span className="text-sm font-bold text-yellow-500">{stakeValue} BB</span>
+              </div>
+              <Slider
+                value={[stakeValue]}
+                onValueChange={([v]) => setStakeValue(v)}
+                min={100}
+                max={500}
+                step={50}
+                className="py-1"
+              />
+              <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                <span>100 BB</span>
+                <span>500 BB</span>
+              </div>
+              {!hasEnoughBalance && (
+                <p className="text-[11px] text-destructive mt-1">Insufficient balance ({balance || 0} BB)</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="custom-msg" className="text-xs">Trash Talk (optional)</Label>
+              <Textarea
+                id="custom-msg"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="I can out-fade anyone in the city!"
+                className="mt-1 min-h-[60px] text-sm"
+                rows={2}
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isSubmitting || !title || !hasEnoughBalance}
+              className="w-full bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-600 h-9 text-sm"
+            >
+              {isSubmitting ? (
+                <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Creating...</>
+              ) : (
+                <>🔥 Stake {stakeValue} BB & Challenge</>
+              )}
+            </Button>
+            <p className="text-[10px] text-muted-foreground text-center">
+              Opponent matches your stake · Winner takes pot minus 5% to jackpot
+            </p>
+          </form>
+        </motion.div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 };
 
@@ -186,61 +334,71 @@ export const ChallengeFeed = () => {
     <div className="space-y-4">
       {/* Jackpot Pool Banner */}
       {jackpot && (jackpot.total_pool_bb || 0) > 0 && (
-        <Card className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-yellow-500/30 p-4">
+        <Card className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-yellow-500/30 p-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Trophy className="w-6 h-6 text-yellow-500" />
+            <div className="flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-yellow-500" />
               <div>
-                <h4 className="font-bold text-foreground text-sm">Challenge Jackpot Pool</h4>
-                <p className="text-xs text-muted-foreground">{jackpot.total_challenges_completed || 0} challenges completed</p>
+                <h4 className="font-bold text-foreground text-xs">Challenge Jackpot</h4>
+                <p className="text-[10px] text-muted-foreground">{jackpot.total_challenges_completed || 0} completed</p>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 font-bold text-xl text-yellow-500">
-              <Coins className="w-5 h-5" />
+            <div className="flex items-center gap-1 font-bold text-lg text-yellow-500">
+              <Coins className="w-4 h-4" />
               {(jackpot.total_pool_bb || 0).toLocaleString()} BB
             </div>
           </div>
         </Card>
       )}
 
-      {/* Quick Presets */}
+      {/* Preset Cards */}
       {isBarber && <QuickChallengePresets isSilverPlus={isSilverPlus} />}
+
+      {/* Custom Challenge */}
+      {isBarber && <CustomChallengeForm isSilverPlus={isSilverPlus} />}
+
+      {/* Divider */}
+      <div className="flex items-center gap-2 pt-1">
+        <Flame className="w-4 h-4 text-primary" />
+        <h4 className="text-sm font-bold text-foreground">Open Challenges</h4>
+        <Badge variant="outline" className="text-[10px] ml-auto">{challenges.length} active</Badge>
+      </div>
 
       {/* Active Challenges */}
       {isLoading ? (
-        <div className="text-center py-12">
-          <div className="animate-pulse text-muted-foreground">Loading challenges...</div>
+        <div className="text-center py-8">
+          <Loader2 className="w-5 h-5 mx-auto animate-spin text-muted-foreground" />
         </div>
       ) : challenges.length === 0 ? (
-        <div className="text-center py-8 bg-card/30 backdrop-blur-sm rounded-lg border border-border">
-          <Users className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-          <h3 className="text-lg font-bold text-foreground mb-1">No Active Challenges</h3>
-          <p className="text-sm text-muted-foreground">Use a quick preset above or issue a custom challenge!</p>
+        <div className="text-center py-6 bg-card/30 backdrop-blur-sm rounded-lg border border-border">
+          <Users className="w-10 h-10 mx-auto mb-2 text-muted-foreground" />
+          <h3 className="text-sm font-bold text-foreground mb-1">No Open Challenges</h3>
+          <p className="text-xs text-muted-foreground">Tap a preset above to throw down!</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {challenges.map((challenge) => {
             const isOwnChallenge = user?.id === challenge.challenger_id;
             const canAccept = isBarber && !isOwnChallenge;
 
             return (
-              <Card key={challenge.id} className="bg-card/50 backdrop-blur-sm border-border hover:border-primary/50 transition-all duration-300 p-6 relative overflow-hidden">
+              <Card key={challenge.id} className="bg-card/50 backdrop-blur-sm border-border hover:border-primary/50 transition-all duration-300 p-5 relative overflow-hidden">
                 {challenge.stake_amount && (
-                  <div className="absolute top-0 right-0 bg-gradient-to-r from-yellow-500 to-orange-500 px-4 py-1 rounded-bl-lg">
-                    <div className="flex items-center gap-1 text-white font-bold text-sm">
-                      <Coins className="w-4 h-4" />
+                  <div className="absolute top-0 right-0 bg-gradient-to-r from-yellow-500 to-orange-500 px-3 py-0.5 rounded-bl-lg">
+                    <div className="flex items-center gap-1 text-white font-bold text-xs">
+                      <Coins className="w-3 h-3" />
                       <span>{challenge.stake_amount} BB</span>
                     </div>
                   </div>
                 )}
 
                 <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1 pr-16">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Swords className="w-5 h-5 text-primary" />
-                      <span className="font-bold text-foreground">{challenge.challenger_username}</span>
+                  <div className="flex-1 pr-14">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Swords className="w-4 h-4 text-primary" />
+                      <span className="font-bold text-foreground text-sm">{challenge.challenger_username}</span>
                     </div>
-                    <h4 className="text-lg font-bold text-foreground mb-2">{challenge.title}</h4>
+                    <h4 className="text-base font-bold text-foreground mb-2">{challenge.title}</h4>
                     <div className="flex items-center gap-2">
                       {challenge.expires_at && <CountdownBadge expiresAt={challenge.expires_at} />}
                     </div>
@@ -250,12 +408,12 @@ export const ChallengeFeed = () => {
                 <Badge variant="outline" className="mb-3 text-[10px] border-yellow-500/40 text-yellow-500/80">UNOFFICIAL</Badge>
 
                 {challenge.stake_amount && (
-                  <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Stake to match:</span>
+                  <div className="mb-3 p-2.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Match stake:</span>
                       <span className="font-bold text-yellow-500">{challenge.stake_amount} BB</span>
                     </div>
-                    <div className="flex items-center justify-between text-sm mt-1">
+                    <div className="flex items-center justify-between text-xs mt-1">
                       <span className="text-muted-foreground">Total pot:</span>
                       <span className="font-bold text-foreground">{(challenge.stake_amount || 0) * 2} BB</span>
                     </div>
@@ -273,20 +431,20 @@ export const ChallengeFeed = () => {
                   {canAccept && !isSilverPlus && (
                     <div className="flex items-center gap-2 text-center text-xs text-muted-foreground py-2 bg-muted/30 rounded-lg px-3">
                       <Lock className="w-4 h-4 flex-shrink-0" />
-                      <span>Silver+ subscription required to accept</span>
+                      <span>Silver+ required to accept</span>
                     </div>
                   )}
 
                   {isOwnChallenge && (
-                    <div className="text-center text-sm text-muted-foreground py-2 space-y-1">
-                      <p>Waiting for opponent to match your stake...</p>
+                    <div className="text-center text-xs text-muted-foreground py-2 space-y-1">
+                      <p>Waiting for opponent...</p>
                       {challenge.expires_at && <CountdownBadge expiresAt={challenge.expires_at} />}
                     </div>
                   )}
 
                   {!isBarber && !isOwnChallenge && (
-                    <div className="text-center text-xs text-muted-foreground py-2">
-                      Only barbers can accept challenges
+                    <div className="text-center text-[10px] text-muted-foreground py-2">
+                      Only barbers can accept
                     </div>
                   )}
                 </div>
