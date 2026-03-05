@@ -220,11 +220,6 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        {DEV_MODE && (
-          <div className="fixed top-0 left-0 right-0 z-[99999] bg-yellow-500 text-black text-center text-xs font-bold py-1 tracking-widest pointer-events-none">
-            ⚠️ DEV MODE — ALL TIER GATES BYPASSED — DO NOT SHIP ⚠️
-          </div>
-        )}
         <BrowserRouter>
           <AppContent />
         </BrowserRouter>
