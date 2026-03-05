@@ -210,7 +210,6 @@ export const BarberSubscriptionTiers = ({ onShowAddFunds }: BarberSubscriptionTi
                   ) : (
                     'Upgrade'
                   )}
-                  )}
                 </Button>
               )}
             </Card>
