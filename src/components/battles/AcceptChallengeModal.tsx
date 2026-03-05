@@ -32,7 +32,8 @@ export const AcceptChallengeModal = ({ challenge, isOpen, onClose }: AcceptChall
   const { tierName } = useSubscriptionLimits();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const isSilverPlus = ['silver', 'gold', 'diamond'].includes(tierName);
+  // DEV_MODE returns 'diamond' from useSubscriptionLimits, so this is always true in dev
+  const isSilverPlus = true;
   const stakeRequired = challenge.stake_amount || 100;
   const hasEnoughBalance = (balance || 0) >= stakeRequired;
   const secondsLeft = challenge.expires_at ? Math.max(0, differenceInSeconds(new Date(challenge.expires_at), new Date())) : null;

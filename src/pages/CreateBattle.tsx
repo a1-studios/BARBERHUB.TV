@@ -83,23 +83,6 @@ const CreateBattle = () => {
     hasActiveSubscription
   } = useSubscriptionLimits();
 
-  // Check user profile and role
-  const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id
-  });
-
   const form = useForm<BattleFormData>({
     resolver: zodResolver(battleSchema),
     defaultValues: {
