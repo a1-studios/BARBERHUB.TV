@@ -15,6 +15,20 @@ const tickerItems = [
 
 export const PortalGlobeHero = () => {
   const [tickerIndex, setTickerIndex] = useState(0);
+  const { totalPrizePool, isLoading: prizeLoading } = useCategoryPrizePools();
+
+  const totalDollars = totalPrizePool / 100;
+  const bbEquivalent = totalDollars * 5;
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
+  const formatBB = (value: number) =>
+    new Intl.NumberFormat('en-US').format(value);
+
+  const dynamicTickerItems = [
+    `🏆 Prize Pool: ${prizeLoading ? '$25,000+' : formatCurrency(totalDollars)} (${prizeLoading ? '125,000' : formatBB(bbEquivalent)} BB)`,
+    ...tickerItems.slice(1),
+  ];
 
   useEffect(() => {
     const interval = setInterval(() => {
