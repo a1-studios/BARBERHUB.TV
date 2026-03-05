@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Header from "@/components/Header";
 import LandingHero from "@/components/LandingHero";
 import CommunitySection from "@/components/CommunitySection";
@@ -18,11 +18,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { BottomNavBar } from "@/components/BottomNavBar";
+import { useUserRole } from "@/hooks/useUserRole";
+import { FanIntroSequence } from "@/components/fan/FanIntroSequence";
+import { FanArenaView } from "@/components/fan/FanArenaView";
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const { isFan, isLoading: roleLoading } = useUserRole();
   const queryClient = useQueryClient();
   const recoveryAttempted = useRef(false);
+  const [introComplete, setIntroComplete] = useState(() =>
+    sessionStorage.getItem('fan_intro_seen') === 'true'
+  );
 
   // Recover any pending BB purchase that wasn't verified (e.g. user closed Stripe success tab)
   useEffect(() => {
