@@ -88,27 +88,14 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
     [sponsors],
   );
 
-  // Animated counter on first prize-pool appearance
-  useEffect(() => {
-    if (hasAnimated.current || totalPool === 0) return;
-    const current = displaySlides[activeIndex];
-    if (!current || current.type !== 'prize-pool') return;
-
-    hasAnimated.current = true;
-    const startTime = Date.now();
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / COUNTER_DURATION_MS, 1);
-      const easeOut = 1 - Math.pow(1 - progress, 3);
-      setDisplayValue(Math.round(totalPool * easeOut));
-      if (progress < 1) requestAnimationFrame(animate);
-    };
-    requestAnimationFrame(animate);
-  }, [activeIndex, totalPool, displaySlides]);
+  // Smooth animated counter using framer-motion spring
+  const bbValue = useMemo(() => Math.round((totalPool / 100) * 5), [totalPool]);
+  const spring = useSpring(0, { stiffness: 40, damping: 20 });
+  const displayBB = useTransform(spring, (val) => Math.floor(val).toLocaleString());
 
   useEffect(() => {
-    if (hasAnimated.current) setDisplayValue(totalPool);
-  }, [totalPool]);
+    spring.set(bbValue);
+  }, [bbValue, spring]);
 
   // Auto-rotate
   useEffect(() => {
