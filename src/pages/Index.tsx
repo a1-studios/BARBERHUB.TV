@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Header from "@/components/Header";
 import LandingHero from "@/components/LandingHero";
 import CommunitySection from "@/components/CommunitySection";
@@ -18,11 +18,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { BottomNavBar } from "@/components/BottomNavBar";
+import { useUserRole } from "@/hooks/useUserRole";
+import { FanIntroSequence } from "@/components/fan/FanIntroSequence";
+import { FanArenaView } from "@/components/fan/FanArenaView";
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const { isFan, isLoading: roleLoading } = useUserRole();
   const queryClient = useQueryClient();
   const recoveryAttempted = useRef(false);
+  const [introComplete, setIntroComplete] = useState(() =>
+    sessionStorage.getItem('fan_intro_seen') === 'true'
+  );
 
   // Recover any pending BB purchase that wasn't verified (e.g. user closed Stripe success tab)
   useEffect(() => {
@@ -79,38 +86,49 @@ const Index = () => {
       
       {/* Content gated behind authentication */}
       {user ? (
-        <main>
-          {/* Welcome Modal for First-Time Users */}
-          <WelcomeModal />
-          
-          {/* Head-to-Head Battle Hero */}
-          <DynamicBattleHero />
-          
-          {/* Immersive Faction Banners - Full Screen Selection */}
-          <ImmersiveFactionBanners />
-          
-          {/* Global League Dashboard */}
-          <GlobalLeagueDashboard />
-          
-          {/* Live Streaming Barbers - Watch active streams */}
-          <LiveBarberStreams />
-          
-          {/* Main Battles Section with all navigation and features */}
-          <BattlesSection />
-          
-
-
-          
-          {/* Community Leaderboard */}
-          {FEATURES.COMMUNITY_LEADERBOARD && (
-            <CommunitySection />
+        <>
+          {/* Fan intro sequence — plays once per session */}
+          {isFan && !introComplete && (
+            <FanIntroSequence onComplete={() => {
+              setIntroComplete(true);
+              sessionStorage.setItem('fan_intro_seen', 'true');
+            }} />
           )}
-          
-          {/* Grants Section */}
-          {FEATURES.GRANTS_SECTION && (
-            <GrantsSection />
+
+          {isFan ? (
+            <FanArenaView />
+          ) : (
+            <main>
+              {/* Welcome Modal for First-Time Users */}
+              <WelcomeModal />
+              
+              {/* Head-to-Head Battle Hero */}
+              <DynamicBattleHero />
+              
+              {/* Immersive Faction Banners - Full Screen Selection */}
+              <ImmersiveFactionBanners />
+              
+              {/* Global League Dashboard */}
+              <GlobalLeagueDashboard />
+              
+              {/* Live Streaming Barbers - Watch active streams */}
+              <LiveBarberStreams />
+              
+              {/* Main Battles Section with all navigation and features */}
+              <BattlesSection />
+
+              {/* Community Leaderboard */}
+              {FEATURES.COMMUNITY_LEADERBOARD && (
+                <CommunitySection />
+              )}
+              
+              {/* Grants Section */}
+              {FEATURES.GRANTS_SECTION && (
+                <GrantsSection />
+              )}
+            </main>
           )}
-        </main>
+        </>
       ) : (
         <>
           <LandingHero />
