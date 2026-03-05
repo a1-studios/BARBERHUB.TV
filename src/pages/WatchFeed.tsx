@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSponsorAds } from "@/hooks/useSponsorAds";
-import { ArrowLeft, Eye, Heart, Play } from "lucide-react";
+import { ArrowLeft, Eye, Heart, Play, GraduationCap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 
 interface FeedItem {
-  type: "video" | "sponsor";
+  type: "video" | "sponsor" | "educator";
   id: string;
   // Video fields
   media_url?: string;
@@ -15,6 +15,7 @@ interface FeedItem {
   description?: string;
   thumbnail_url?: string;
   barber_name?: string;
+  creator_avatar?: string;
   // Sponsor fields
   name?: string;
   message?: string;
@@ -39,7 +40,6 @@ const WatchFeed = () => {
         .limit(30);
       if (error) throw error;
 
-      // Fetch barber names
       const userIds = [...new Set(data?.map((v) => v.user_id) || [])];
       let barberMap: Record<string, string> = {};
       if (userIds.length > 0) {
@@ -64,14 +64,45 @@ const WatchFeed = () => {
     },
   });
 
+  // Fetch educator content (promoted to feed)
+  const { data: educatorContent = [] } = useQuery({
+    queryKey: ["watch-feed-educator"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("build_universal_feed", {
+        p_limit: 20,
+        p_offset: 0,
+      });
+      if (error) throw error;
+      return (data || [])
+        .filter((item: any) => item.content_type === "course_teaser")
+        .map((item: any) => ({
+          type: "educator" as const,
+          id: item.item_id,
+          media_url: item.media_url,
+          title: item.title,
+          description: item.description,
+          thumbnail_url: item.thumbnail_url,
+          barber_name: item.creator_name || "Educator",
+          creator_avatar: item.creator_avatar,
+        }));
+    },
+  });
+
   const { data: sponsors = [] } = useSponsorAds(true);
 
-  // Interleave: 2 videos then 1 sponsor (70/30 ratio)
+  // Interleave: 5 battles, 3 educator, 1 social, 1 sponsor pattern
   const feed: FeedItem[] = [];
   let sponsorIdx = 0;
+  let educatorIdx = 0;
   videos.forEach((video, i) => {
     feed.push(video);
-    if ((i + 1) % 2 === 0 && sponsors.length > 0) {
+    // After every 2 videos, insert educator content (30% layer)
+    if ((i + 1) % 2 === 0 && educatorContent.length > 0) {
+      feed.push(educatorContent[educatorIdx % educatorContent.length]);
+      educatorIdx++;
+    }
+    // After every 3 videos, insert sponsor (10% layer)
+    if ((i + 1) % 3 === 0 && sponsors.length > 0) {
       const sponsor = sponsors[sponsorIdx % sponsors.length];
       feed.push({
         type: "sponsor",
@@ -142,7 +173,7 @@ const WatchFeed = () => {
             data-index={idx}
             className="h-screen w-full snap-start snap-always relative flex items-center justify-center"
           >
-            {item.type === "video" ? (
+            {item.type === "video" || item.type === "educator" ? (
               <div className="relative w-full h-full bg-black">
                 {/* YouTube embed or thumbnail fallback */}
                 {getYouTubeId(item.media_url) ? (
@@ -152,18 +183,35 @@ const WatchFeed = () => {
                     allow="autoplay; encrypted-media"
                     allowFullScreen
                   />
+                ) : item.media_url && (item.media_url.includes('.mp4') || item.media_url.includes('.webm')) ? (
+                  <video
+                    src={item.media_url}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    autoPlay={activeIndex === idx}
+                    muted
+                    loop
+                    playsInline
+                  />
                 ) : (
                   <div
                     className="absolute inset-0 bg-cover bg-center"
                     style={{
-                      backgroundImage: item.thumbnail_url
-                        ? `url(${item.thumbnail_url})`
+                      backgroundImage: item.thumbnail_url || item.media_url
+                        ? `url(${item.thumbnail_url || item.media_url})`
                         : "none",
                     }}
                   >
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                       <Play className="w-12 h-12 text-white/80" />
                     </div>
+                  </div>
+                )}
+
+                {/* Educator badge */}
+                {item.type === "educator" && (
+                  <div className="absolute top-16 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/80 backdrop-blur-sm">
+                    <GraduationCap className="w-3 h-3 text-primary-foreground" />
+                    <span className="text-[10px] font-bold text-primary-foreground uppercase tracking-wider">Masterclass</span>
                   </div>
                 )}
 
@@ -179,7 +227,7 @@ const WatchFeed = () => {
                   )}
                 </div>
               </div>
-            ) : (
+            ) : item.type === "sponsor" ? (
               /* Sponsor Card */
               <div className="w-full h-full flex items-center justify-center bg-card p-6">
                 <motion.div
@@ -214,7 +262,7 @@ const WatchFeed = () => {
                   )}
                 </motion.div>
               </div>
-            )}
+            ) : null}
           </div>
         ))}
       </div>

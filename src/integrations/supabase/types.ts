@@ -1639,14 +1639,18 @@ export type Database = {
       }
       creator_content: {
         Row: {
+          boost_amount_bb: number | null
+          content_category: string | null
           content_type: string
           created_at: string
           creator_id: string
           description: string | null
           earnings: number | null
           id: string
+          is_published: boolean | null
           likes: number | null
           media_url: string | null
+          promote_to_feed: boolean | null
           shares: number | null
           status: string | null
           thumbnail_url: string | null
@@ -1655,14 +1659,18 @@ export type Database = {
           views: number | null
         }
         Insert: {
+          boost_amount_bb?: number | null
+          content_category?: string | null
           content_type: string
           created_at?: string
           creator_id: string
           description?: string | null
           earnings?: number | null
           id?: string
+          is_published?: boolean | null
           likes?: number | null
           media_url?: string | null
+          promote_to_feed?: boolean | null
           shares?: number | null
           status?: string | null
           thumbnail_url?: string | null
@@ -1671,14 +1679,18 @@ export type Database = {
           views?: number | null
         }
         Update: {
+          boost_amount_bb?: number | null
+          content_category?: string | null
           content_type?: string
           created_at?: string
           creator_id?: string
           description?: string | null
           earnings?: number | null
           id?: string
+          is_published?: boolean | null
           likes?: number | null
           media_url?: string | null
+          promote_to_feed?: boolean | null
           shares?: number | null
           status?: string | null
           thumbnail_url?: string | null
@@ -1883,6 +1895,57 @@ export type Database = {
           {
             foreignKeyName: "earning_transactions_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_user_profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      feed_items: {
+        Row: {
+          content_id: string
+          content_type: Database["public"]["Enums"]["feed_content_type"]
+          created_at: string | null
+          creator_id: string | null
+          id: string
+          is_locked: boolean | null
+          promote_boost: number | null
+          rank_score: number | null
+          source_table: string | null
+        }
+        Insert: {
+          content_id: string
+          content_type?: Database["public"]["Enums"]["feed_content_type"]
+          created_at?: string | null
+          creator_id?: string | null
+          id?: string
+          is_locked?: boolean | null
+          promote_boost?: number | null
+          rank_score?: number | null
+          source_table?: string | null
+        }
+        Update: {
+          content_id?: string
+          content_type?: Database["public"]["Enums"]["feed_content_type"]
+          created_at?: string | null
+          creator_id?: string | null
+          id?: string
+          is_locked?: boolean | null
+          promote_boost?: number | null
+          rank_score?: number | null
+          source_table?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feed_items_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "feed_items_creator_id_fkey"
+            columns: ["creator_id"]
             isOneToOne: false
             referencedRelation: "public_user_profiles"
             referencedColumns: ["user_id"]
@@ -3427,6 +3490,24 @@ export type Database = {
       }
     }
     Functions: {
+      build_universal_feed: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          content_id: string
+          content_type: string
+          created_at: string
+          creator_avatar: string
+          creator_id: string
+          creator_name: string
+          description: string
+          is_locked: boolean
+          item_id: string
+          media_url: string
+          rank_score: number
+          thumbnail_url: string
+          title: string
+        }[]
+      }
       calculate_battle_results: {
         Args: { battle_id_param: string }
         Returns: {
@@ -3668,6 +3749,7 @@ export type Database = {
         | "no_show"
         | "denied"
       appointment_type: "standard" | "house_call" | "sos"
+      feed_content_type: "battle" | "course_teaser" | "sponsor_ad" | "update"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3807,6 +3889,7 @@ export const Constants = {
         "denied",
       ],
       appointment_type: ["standard", "house_call", "sos"],
+      feed_content_type: ["battle", "course_teaser", "sponsor_ad", "update"],
     },
   },
 } as const
