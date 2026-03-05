@@ -25,7 +25,7 @@ export default function CameraStudio() {
   const battleId = searchParams.get('battleId');
 
   const videoRef = useRef<HTMLVideoElement>(null);
-  const opponentVideoRef = useRef<HTMLVideoElement>(null);
+  const opponentVideoRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animFrameRef = useRef<number>(0);
