@@ -39,6 +39,7 @@ import SovereignHQ from "./pages/SovereignHQ";
 import SponsorAdsPage from "./pages/admin/SponsorAdsPage";
 import VaultOfHonor from "./pages/VaultOfHonor";
 import M4MVerify from "./pages/M4MVerify";
+import CameraStudio from "./pages/CameraStudio";
 
 const queryClient = new QueryClient();
 
