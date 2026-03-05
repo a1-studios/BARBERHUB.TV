@@ -21,6 +21,7 @@ import { BarberProfileHeader } from '@/components/barber/BarberProfileHeader';
 import { FanProfileHeader } from '@/components/fan/FanProfileHeader';
 import { SponsorBoardPurchaseModal } from '@/components/fan/SponsorBoardPurchaseModal';
 import { TransactionHistory } from '@/components/analytics/TransactionHistory';
+import { MyAppointments } from '@/components/fan/MyAppointments';
 import { toast } from 'sonner';
 import { BottomNavBar } from '@/components/BottomNavBar';
 
