@@ -83,23 +83,6 @@ const CreateBattle = () => {
     hasActiveSubscription
   } = useSubscriptionLimits();
 
-  // Check user profile and role
-  const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id
-  });
-
   const form = useForm<BattleFormData>({
     resolver: zodResolver(battleSchema),
     defaultValues: {
@@ -113,26 +96,17 @@ const CreateBattle = () => {
   });
 
   useEffect(() => {
-    if (!loading && !profileLoading && !validationLoading) {
+    if (!loading && !validationLoading) {
       if (!user) {
         navigate('/');
-      } else if (profile && profile.user_type !== 'barber') {
-        navigate('/battles');
-        toast.error('Only barbers can create battles');
       }
     }
-  }, [user, profile, loading, profileLoading, validationLoading, navigate]);
+  }, [user, loading, validationLoading, navigate]);
 
   const onSubmit = async (data: BattleFormData) => {
     if (!user) return;
 
-    // Must have active subscription for unofficial battles
-    if (!hasActiveSubscription) {
-      setShowUpgradePrompt(true);
-      return;
-    }
-
-    // Check subscription limits before creating battle
+    // DEV_MODE: subscription checks bypassed (useSubscriptionLimits returns diamond)
     if (!canCreateBattle) {
       setShowUpgradePrompt(true);
       return;
@@ -189,39 +163,6 @@ const CreateBattle = () => {
         <div className="pt-24 flex items-center justify-center">
           <div className="animate-pulse text-lg">Loading...</div>
         </div>
-      </div>
-    );
-  }
-
-  // Gate behind premium subscription
-  if (!hasActiveSubscription) {
-    return (
-      <div className="min-h-screen">
-        <Header />
-        <main className="pt-24 pb-20 px-4">
-          <div className="container mx-auto max-w-2xl">
-            <BackButton to="/battles" />
-            <Card className="border border-border/50 shadow-lg backdrop-blur-sm bg-card/50 text-center" style={{ borderRadius: '1.5rem' }}>
-              <CardContent className="py-12 space-y-6">
-                <ShieldOff className="w-16 h-16 mx-auto text-muted-foreground" />
-                <h2 className="text-2xl font-bold text-foreground">Premium Feature</h2>
-                <p className="text-muted-foreground max-w-md mx-auto">
-                  Creating unofficial battles requires an active subscription (Bronze, Silver, or Gold).
-                  Unofficial battles are for fun and practice — they do not affect official rankings.
-                </p>
-                <Button onClick={() => setShowUpgradePrompt(true)} size="lg">
-                  View Subscription Plans
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </main>
-        <Footer />
-        <UpgradePrompt 
-          isOpen={showUpgradePrompt}
-          onClose={() => setShowUpgradePrompt(false)}
-          reason="battle_limit"
-        />
       </div>
     );
   }

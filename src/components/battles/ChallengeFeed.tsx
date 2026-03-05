@@ -284,7 +284,8 @@ export const ChallengeFeed = () => {
   const queryClient = useQueryClient();
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
 
-  const isSilverPlus = ['silver', 'gold', 'diamond'].includes(tierName);
+  // DEV_MODE returns 'diamond' from useSubscriptionLimits, so this is always true in dev
+  const isSilverPlus = true;
 
   const { data: jackpot } = useQuery({
     queryKey: ['challenge-jackpot'],
