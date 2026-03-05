@@ -77,9 +77,12 @@ export default function SponsorAdsManager() {
       message: ad.message,
       highlight_end: ad.highlight_end,
       logo_url: ad.logo_url ?? "",
+      product_image_url: ad.product_image_url ?? "",
       link: ad.link ?? "",
       display_order: ad.display_order,
       is_active: ad.is_active,
+      starts_at: ad.starts_at ?? "",
+      ends_at: ad.ends_at ?? "",
     });
     setDialogOpen(true);
   };
