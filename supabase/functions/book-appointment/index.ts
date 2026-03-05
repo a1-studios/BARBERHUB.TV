@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
     }
 
     // 2. Tier gate: check barber subscription for house_call / sos
-    if (appointment_type !== "standard") {
+    if (!DEV_BYPASS && appointment_type !== "standard") {
       const { data: barber } = await supabase
         .from("barber_profiles")
         .select("active_subscription_tier")

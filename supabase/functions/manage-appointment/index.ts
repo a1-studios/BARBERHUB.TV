@@ -42,7 +42,7 @@ Deno.serve(async (req) => {
       if (appt.status !== "pending") throw new Error("Can only accept pending appointments");
 
       // Check tier for house_call/sos
-      if (appt.appointment_type !== "standard") {
+      if (!DEV_BYPASS && appt.appointment_type !== "standard") {
         const { data: barber } = await supabase
           .from("barber_profiles")
           .select("active_subscription_tier")
