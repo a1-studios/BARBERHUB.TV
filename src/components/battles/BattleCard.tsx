@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Users, Eye } from 'lucide-react';
 import { AnimatedCounter } from './AnimatedCounter';
 import { useRealtimeBattleViewers } from '@/hooks/useRealtimeBattleViewers';
-import { SubscriptionBadge } from '../SubscriptionBadge';
+import { TierRing } from '../TierRing';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
