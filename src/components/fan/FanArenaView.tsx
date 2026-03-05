@@ -14,9 +14,9 @@ import { Trophy } from 'lucide-react';
 export const FanArenaView = () => {
   const navigate = useNavigate();
   const [showAddFunds, setShowAddFunds] = useState(false);
-  const { balance } = useBarberBucks();
+  const { barberBucks } = useBarberBucks();
   const { profile } = useUserProfile();
-  const { data: prizePools = [] } = useCategoryPrizePools();
+  const { prizePools } = useCategoryPrizePools();
 
   return (
     <main className="space-y-4 pb-24">
@@ -52,7 +52,7 @@ export const FanArenaView = () => {
       <section className="px-3 sm:px-6 grid grid-cols-1 md:grid-cols-2 gap-4">
         <BBWalletWidget
           isBarber={false}
-          barberBucks={balance}
+          barberBucks={barberBucks ?? 0}
           displayName={profile?.display_name ?? 'Fan'}
           onAddFunds={() => setShowAddFunds(true)}
         />
@@ -60,8 +60,8 @@ export const FanArenaView = () => {
       </section>
 
       <AddFundsModal
-        open={showAddFunds}
-        onOpenChange={setShowAddFunds}
+        isOpen={showAddFunds}
+        onClose={() => setShowAddFunds(false)}
       />
     </main>
   );
