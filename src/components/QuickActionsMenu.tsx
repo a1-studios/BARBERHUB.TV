@@ -14,7 +14,8 @@ import {
   Zap,
   Loader2,
   Shield,
-  Trophy
+  Trophy,
+  Camera
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -89,6 +90,14 @@ export function QuickActionsMenu() {
       label: 'Creator Hub',
       icon: <Crown className="w-5 h-5" />,
       path: '/creator-hub',
+      requiresAuth: true,
+      barberOnly: true
+    },
+    {
+      id: 'camera-studio',
+      label: 'Camera Studio',
+      icon: <Camera className="w-5 h-5 text-primary" />,
+      path: '/studio',
       requiresAuth: true,
       barberOnly: true
     },

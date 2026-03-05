@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { YouTubeStreamPlayer } from "./YouTubeStreamPlayer";
+import { HLSVideoPlayer } from "./HLSVideoPlayer";
 import { Trophy, Crown, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -93,8 +93,8 @@ export const BattleResultsView = ({
         {/* Video */}
         {barber.videoUrl && (
           <div className="relative z-10 w-full max-w-sm mx-auto h-96 rounded-xl overflow-hidden shadow-2xl">
-            <YouTubeStreamPlayer 
-              videoUrl={barber.videoUrl} 
+            <HLSVideoPlayer 
+              src={barber.videoUrl} 
               title={barber.name}
               size="large"
             />

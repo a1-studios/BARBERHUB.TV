@@ -369,6 +369,7 @@ export type Database = {
           rating: number | null
           specialty: string | null
           subscription_expires_at: string | null
+          tier_level: number
           total_stream_minutes: number | null
           total_streams: number | null
           twitter_handle: string | null
@@ -405,6 +406,7 @@ export type Database = {
           rating?: number | null
           specialty?: string | null
           subscription_expires_at?: string | null
+          tier_level?: number
           total_stream_minutes?: number | null
           total_streams?: number | null
           twitter_handle?: string | null
@@ -441,6 +443,7 @@ export type Database = {
           rating?: number | null
           specialty?: string | null
           subscription_expires_at?: string | null
+          tier_level?: number
           total_stream_minutes?: number | null
           total_streams?: number | null
           twitter_handle?: string | null
@@ -1060,6 +1063,9 @@ export type Database = {
           forfeit_winner_id: string | null
           id: string
           is_tournament_match: boolean | null
+          ivs_channel_arn: string | null
+          ivs_playback_url: string | null
+          ivs_stream_key: string | null
           last_viewer_check: string | null
           live_viewers: number | null
           match_number: number | null
@@ -1115,6 +1121,9 @@ export type Database = {
           forfeit_winner_id?: string | null
           id?: string
           is_tournament_match?: boolean | null
+          ivs_channel_arn?: string | null
+          ivs_playback_url?: string | null
+          ivs_stream_key?: string | null
           last_viewer_check?: string | null
           live_viewers?: number | null
           match_number?: number | null
@@ -1170,6 +1179,9 @@ export type Database = {
           forfeit_winner_id?: string | null
           id?: string
           is_tournament_match?: boolean | null
+          ivs_channel_arn?: string | null
+          ivs_playback_url?: string | null
+          ivs_stream_key?: string | null
           last_viewer_check?: string | null
           live_viewers?: number | null
           match_number?: number | null
@@ -1925,6 +1937,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      m4m_fund_ledger: {
+        Row: {
+          amount_bb: number
+          created_at: string
+          id: string
+          reference_id: string | null
+          source_type: string
+        }
+        Insert: {
+          amount_bb: number
+          created_at?: string
+          id?: string
+          reference_id?: string | null
+          source_type: string
+        }
+        Update: {
+          amount_bb?: number
+          created_at?: string
+          id?: string
+          reference_id?: string | null
+          source_type?: string
+        }
+        Relationships: []
       }
       m4m_session_logs: {
         Row: {
@@ -2719,6 +2755,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           display_order: number
+          ends_at: string | null
           highlight_end: number
           id: string
           is_active: boolean
@@ -2726,12 +2763,15 @@ export type Database = {
           logo_url: string | null
           message: string
           name: string
+          product_image_url: string | null
+          starts_at: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           created_by?: string | null
           display_order?: number
+          ends_at?: string | null
           highlight_end?: number
           id?: string
           is_active?: boolean
@@ -2739,12 +2779,15 @@ export type Database = {
           logo_url?: string | null
           message: string
           name: string
+          product_image_url?: string | null
+          starts_at?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           created_by?: string | null
           display_order?: number
+          ends_at?: string | null
           highlight_end?: number
           id?: string
           is_active?: boolean
@@ -2752,6 +2795,8 @@ export type Database = {
           logo_url?: string | null
           message?: string
           name?: string
+          product_image_url?: string | null
+          starts_at?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -3575,6 +3620,16 @@ export type Database = {
           p_type?: string
         }
         Returns: number
+      }
+      process_battle_donation: {
+        Args: {
+          p_amount_bb: number
+          p_barber_id: string
+          p_battle_id: string
+          p_donor_id: string
+          p_message?: string
+        }
+        Returns: Json
       }
       refresh_barber_stats: { Args: never; Returns: undefined }
       reset_monthly_battle_counters: { Args: never; Returns: undefined }

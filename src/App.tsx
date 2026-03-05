@@ -39,6 +39,7 @@ import SovereignHQ from "./pages/SovereignHQ";
 import SponsorAdsPage from "./pages/admin/SponsorAdsPage";
 import VaultOfHonor from "./pages/VaultOfHonor";
 import M4MVerify from "./pages/M4MVerify";
+import CameraStudio from "./pages/CameraStudio";
 
 const queryClient = new QueryClient();
 
@@ -197,6 +198,16 @@ const AppContent = () => {
             />
             <Route path="/vault" element={<VaultOfHonor />} />
             <Route path="/m4m/verify/:barberUserId" element={<M4MVerify />} />
+            <Route 
+              path="/studio" 
+              element={
+                <AuthGuard>
+                  <BarberGuard>
+                    <CameraStudio />
+                  </BarberGuard>
+                </AuthGuard>
+              } 
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
     </>

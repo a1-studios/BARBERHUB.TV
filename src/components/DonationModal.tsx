@@ -16,12 +16,16 @@ interface DonationModalProps {
   onClose: () => void;
   creatorId: string;
   creatorName: string;
+  /** If provided, donation routes through the secure 80/15/5 RPC */
+  battleId?: string;
+  /** The barber profile id receiving the donation in a battle context */
+  barberId?: string;
 }
 
 // BB donation amounts (1 BB = $0.20, so 5 BB = $1)
 const PRESET_AMOUNTS = [25, 50, 100, 250, 500];
 
-export const DonationModal = ({ isOpen, onClose, creatorId, creatorName }: DonationModalProps) => {
+export const DonationModal = ({ isOpen, onClose, creatorId, creatorName, battleId, barberId }: DonationModalProps) => {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState('');
   const [message, setMessage] = useState('');
@@ -48,23 +52,33 @@ export const DonationModal = ({ isOpen, onClose, creatorId, creatorName }: Donat
       return;
     }
 
-    // Check if user has enough BB
     if (!checkFunds(amount)) {
-      return; // checkFunds shows toast and opens AddFundsModal
+      return;
     }
 
     setIsLoading(true);
     try {
-      // Process BB donation via edge function
-      const { data, error } = await supabase.functions.invoke('process-bb-donation', {
-        body: {
-          creator_id: creatorId,
-          amount_bb: amount,
-          message: message.trim() || undefined
-        }
-      });
-
-      if (error) throw error;
+      if (battleId && barberId) {
+        // Battle donation → secure RPC handles 80/15/5 split server-side
+        const { error } = await supabase.rpc('process_battle_donation' as any, {
+          p_battle_id: battleId,
+          p_donor_id: user.id,
+          p_barber_id: barberId,
+          p_amount_bb: amount,
+          p_message: message.trim() || null,
+        });
+        if (error) throw error;
+      } else {
+        // Direct creator tip → 100% to creator via edge function
+        const { error } = await supabase.functions.invoke('process-bb-donation', {
+          body: {
+            creator_id: creatorId,
+            amount_bb: amount,
+            message: message.trim() || undefined,
+          },
+        });
+        if (error) throw error;
+      }
 
       toast.success(`Successfully donated ${amount} BB to ${creatorName}!`);
       handleClose();
@@ -97,7 +111,8 @@ export const DonationModal = ({ isOpen, onClose, creatorId, creatorName }: Donat
             Support {creatorName}
           </DialogTitle>
           <DialogDescription>
-            Send Barber Bucks to show your appreciation. Every contribution helps creators continue their amazing work.
+            Send Barber Bucks to show your appreciation.
+            {battleId && ' 80% goes to the prize pool, 15% to the barber, 5% to Minutes for Men.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -120,10 +135,7 @@ export const DonationModal = ({ isOpen, onClose, creatorId, creatorName }: Donat
                   key={amount}
                   variant={selectedAmount === amount ? "default" : "outline"}
                   size="sm"
-                  onClick={() => {
-                    setSelectedAmount(amount);
-                    setCustomAmount('');
-                  }}
+                  onClick={() => { setSelectedAmount(amount); setCustomAmount(''); }}
                   disabled={isLoading}
                   className="text-xs flex flex-col h-auto py-2"
                 >
@@ -148,10 +160,7 @@ export const DonationModal = ({ isOpen, onClose, creatorId, creatorName }: Donat
                 step="1"
                 placeholder="Enter BB amount"
                 value={customAmount}
-                onChange={(e) => {
-                  setCustomAmount(e.target.value);
-                  setSelectedAmount(null);
-                }}
+                onChange={(e) => { setCustomAmount(e.target.value); setSelectedAmount(null); }}
                 disabled={isLoading}
                 className="pl-10"
               />
@@ -174,9 +183,7 @@ export const DonationModal = ({ isOpen, onClose, creatorId, creatorName }: Donat
               className="resize-none"
             />
             {message.length > 0 && (
-              <p className="text-xs text-muted-foreground mt-1">
-                {message.length}/500 characters
-              </p>
+              <p className="text-xs text-muted-foreground mt-1">{message.length}/500 characters</p>
             )}
           </div>
 
@@ -191,10 +198,7 @@ export const DonationModal = ({ isOpen, onClose, creatorId, creatorName }: Donat
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => {
-                  setShowAddFundsModal(true);
-                  setPausedForFunds(true);
-                }}
+                onClick={() => { setShowAddFundsModal(true); setPausedForFunds(true); }}
                 className="border-destructive/30 text-destructive hover:bg-destructive/10"
               >
                 Add Funds
@@ -222,9 +226,7 @@ export const DonationModal = ({ isOpen, onClose, creatorId, creatorName }: Donat
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={isLoading}>
-            Cancel
-          </Button>
+          <Button variant="outline" onClick={handleClose} disabled={isLoading}>Cancel</Button>
           <Button
             onClick={handleDonation}
             disabled={!getAmount() || isLoading || insufficientFunds}
@@ -236,12 +238,9 @@ export const DonationModal = ({ isOpen, onClose, creatorId, creatorName }: Donat
       </DialogContent>
     </Dialog>
 
-    <AddFundsModal 
-      isOpen={showAddFundsModal} 
-      onClose={() => {
-        setShowAddFundsModal(false);
-        setPausedForFunds(false);
-      }} 
+    <AddFundsModal
+      isOpen={showAddFundsModal}
+      onClose={() => { setShowAddFundsModal(false); setPausedForFunds(false); }}
     />
     </>
   );

@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { YouTubeStreamPlayer } from "./YouTubeStreamPlayer";
+import { HLSVideoPlayer } from "./HLSVideoPlayer";
 import { Play, Trophy, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -132,8 +132,8 @@ export const BattleVotingView = ({
             transition={{ duration: 0.2 }}
           >
             {barber.videoUrl ? (
-              <YouTubeStreamPlayer 
-                videoUrl={barber.videoUrl} 
+              <HLSVideoPlayer 
+                src={barber.videoUrl} 
                 isLive={barber.isLive}
                 title={barber.name}
                 size="large"

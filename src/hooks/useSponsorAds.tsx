@@ -13,6 +13,9 @@ export interface SponsorAd {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  product_image_url: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
 }
 
 export const useSponsorAds = (activeOnly = true) => {
