@@ -142,3 +142,15 @@ verify_jwt = false
 
 [functions.cleanup-expired-challenges]
 verify_jwt = false
+
+[functions.post-bounty]
+verify_jwt = false
+
+[functions.claim-bounty]
+verify_jwt = false
+
+[functions.book-appointment]
+verify_jwt = false
+
+[functions.manage-appointment]
+verify_jwt = false

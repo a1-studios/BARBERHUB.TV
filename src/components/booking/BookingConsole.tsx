@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,7 +14,7 @@ import { useBarberAvailability } from '@/hooks/useBarberAvailability';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { useBookAppointment } from '@/hooks/useBookAppointment';
 import { cn } from '@/lib/utils';
-import { Calendar, Zap, Home, Lock, Wallet } from 'lucide-react';
+import { Calendar, Zap, Home, Wallet, Gift } from 'lucide-react';
 
 type BookingType = 'standard' | 'sos' | 'house_call';
 
@@ -49,38 +49,47 @@ export function BookingConsole({
   const { barberBucks } = useBarberBucks();
   const { bookMutation } = useBookAppointment();
 
-  const canAcceptPremium = barberTier && barberTier !== 'bronze';
-  const isPremiumLocked = !canAcceptPremium && bookingType !== 'standard';
+  const selectedSvc = services.find(s => s.id === selectedService);
 
-  // Calculate price
+  // Calculate price with deposit awareness
   const getPrice = () => {
     if (bookingType === 'house_call') return Math.max(bountyAmount, 500);
     if (bookingType === 'sos') {
-      const service = services.find(s => s.id === selectedService);
-      return Math.max((service?.price_bb || 250) * 2, 500);
+      return Math.max((selectedSvc?.price_bb || 250) * 2, 500);
     }
-    const service = services.find(s => s.id === selectedService);
-    return service?.price_bb || 0;
+    if (selectedSvc?.is_free_intro) return 0;
+    return selectedSvc?.price_bb || 0;
   };
 
+  const getDepositAmount = () => {
+    if (bookingType !== 'standard' || !selectedSvc) return getPrice();
+    if (selectedSvc.is_free_intro) return 0;
+    if (selectedSvc.deposit_bb > 0 && selectedSvc.deposit_bb < selectedSvc.price_bb) {
+      return selectedSvc.deposit_bb;
+    }
+    return getPrice();
+  };
+
+  const getRemainder = () => {
+    const deposit = getDepositAmount();
+    const total = getPrice();
+    return total - deposit;
+  };
+
+  const isDepositOnly = getRemainder() > 0;
+  const isFreeBooking = selectedSvc?.is_free_intro && bookingType === 'standard';
+
   const getServiceName = () => {
-    const service = services.find(s => s.id === selectedService);
-    return service?.service_name || (bookingType === 'house_call' ? 'House Call' : 'Emergency Cut');
+    return selectedSvc?.service_name || (bookingType === 'house_call' ? 'House Call' : 'Emergency Cut');
   };
 
   const getScheduledAt = () => {
-    if (bookingType === 'sos') {
-      // Next available = now + 1 hour
-      return new Date(Date.now() + 60 * 60000).toISOString();
-    }
+    if (bookingType === 'sos') return new Date(Date.now() + 60 * 60000).toISOString();
     return selectedSlot || new Date().toISOString();
   };
 
   const handleBook = () => {
-    if (isPremiumLocked) return;
-    const price = getPrice();
-    if (price <= 0) return;
-    if (bookingType === 'standard' && !selectedSlot) return;
+    if (bookingType === 'standard' && !selectedSlot && !isFreeBooking) return;
     setShowEscrow(true);
   };
 
@@ -92,8 +101,8 @@ export function BookingConsole({
         service_id: selectedService || undefined,
         appointment_type: bookingType,
         scheduled_at: getScheduledAt(),
-        duration_minutes: services.find(s => s.id === selectedService)?.duration_minutes || 30,
-        escrow_amount_bb: getPrice(),
+        duration_minutes: selectedSvc?.duration_minutes || 30,
+        escrow_amount_bb: getDepositAmount(),
         client_location_text: bookingType === 'house_call' ? locationText : undefined,
         notes: notes || undefined,
       },
@@ -101,7 +110,6 @@ export function BookingConsole({
         onSuccess: () => {
           setShowEscrow(false);
           onOpenChange(false);
-          // Reset
           setSelectedService('');
           setSelectedSlot(null);
           setBountyAmount(750);
@@ -134,9 +142,7 @@ export function BookingConsole({
                 </Avatar>
               </TierRing>
               <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-base">{barberName}</h3>
-                </div>
+                <h3 className="font-bold text-base">{barberName}</h3>
                 <p className="text-xs text-muted-foreground">Booking appointment</p>
               </div>
             </div>
@@ -179,16 +185,6 @@ export function BookingConsole({
 
           {/* Content */}
           <div className="px-4 pb-3 space-y-3">
-            {/* Tier Lock Message */}
-            {isPremiumLocked && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-muted-foreground/20">
-                <Lock className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  This barber needs Silver+ to accept {bookingType === 'sos' ? 'Emergency SOS' : 'House Call'} bookings
-                </span>
-              </div>
-            )}
-
             {/* Standard Mode */}
             {bookingType === 'standard' && (
               <>
@@ -198,6 +194,12 @@ export function BookingConsole({
                   onChange={setSelectedService}
                   filterType="standard"
                 />
+                {isFreeBooking && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                    <Gift className="h-4 w-4 text-green-400" />
+                    <span className="text-sm text-green-400 font-bold">FREE First Cut!</span>
+                  </div>
+                )}
                 {isLoading ? (
                   <div className="animate-pulse h-32 bg-muted rounded-lg" />
                 ) : (
@@ -211,7 +213,7 @@ export function BookingConsole({
             )}
 
             {/* SOS Mode */}
-            {bookingType === 'sos' && !isPremiumLocked && (
+            {bookingType === 'sos' && (
               <div className="space-y-4">
                 <div className="p-4 rounded-lg border-2 border-destructive/30 bg-destructive/5 text-center space-y-2">
                   <Zap className="h-8 w-8 text-destructive mx-auto animate-pulse" />
@@ -230,7 +232,7 @@ export function BookingConsole({
             )}
 
             {/* House Call Mode */}
-            {bookingType === 'house_call' && !isPremiumLocked && (
+            {bookingType === 'house_call' && (
               <div className="space-y-4">
                 <BountyPresetPicker
                   value={bountyAmount}
@@ -274,21 +276,34 @@ export function BookingConsole({
             {/* Total & CTA */}
             <div className="pt-2 border-t border-border space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium">Total</span>
-                <span className="text-lg font-black text-primary">{getPrice().toLocaleString()} BB</span>
+                <span className="text-sm font-medium">
+                  {isFreeBooking ? 'Total' : isDepositOnly ? 'Deposit Now' : 'Total'}
+                </span>
+                <span className="text-lg font-black text-primary">
+                  {isFreeBooking ? (
+                    <span className="text-green-400">FREE</span>
+                  ) : (
+                    `${getDepositAmount().toLocaleString()} BB`
+                  )}
+                </span>
               </div>
+              {isDepositOnly && (
+                <div className="flex justify-between items-center text-xs text-muted-foreground">
+                  <span>Due on arrival</span>
+                  <span>{getRemainder().toLocaleString()} BB</span>
+                </div>
+              )}
               <Button
                 className="w-full h-10 font-black text-sm bg-primary hover:bg-primary/90"
                 disabled={
-                  isPremiumLocked ||
-                  getPrice() <= 0 ||
+                  (!isFreeBooking && getDepositAmount() <= 0 && !isFreeBooking) ||
                   (bookingType === 'standard' && !selectedSlot) ||
                   (bookingType === 'house_call' && bountyAmount < 500) ||
                   bookMutation.isPending
                 }
                 onClick={handleBook}
               >
-                COMMIT TO ESCROW
+                {isFreeBooking ? 'BOOK FREE CUT' : 'COMMIT TO ESCROW'}
               </Button>
               <p className="text-[10px] text-center text-muted-foreground">
                 5% platform fee · Refundable if cancelled 2+ hrs before
@@ -305,9 +320,12 @@ export function BookingConsole({
         loading={bookMutation.isPending}
         appointmentType={bookingType}
         serviceName={getServiceName()}
-        amount={getPrice()}
+        amount={getDepositAmount()}
         currentBalance={barberBucks}
         scheduledAt={getScheduledAt()}
+        isDepositOnly={isDepositOnly}
+        remainderBb={getRemainder()}
+        isFree={!!isFreeBooking}
       />
     </>
   );

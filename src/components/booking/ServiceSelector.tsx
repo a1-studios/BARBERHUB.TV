@@ -1,5 +1,6 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 
 interface Service {
   id: string;
@@ -8,6 +9,8 @@ interface Service {
   duration_minutes: number;
   allows_house_call: boolean;
   allows_sos: boolean;
+  deposit_bb?: number;
+  is_free_intro?: boolean;
 }
 
 interface ServiceSelectorProps {
@@ -45,9 +48,20 @@ export function ServiceSelector({ services, value, onChange, filterType }: Servi
           {filtered.map((s) => (
             <SelectItem key={s.id} value={s.id}>
               <span className="flex items-center justify-between w-full gap-4">
-                <span>{s.service_name}</span>
+                <span className="flex items-center gap-2">
+                  {s.service_name}
+                  {s.is_free_intro && (
+                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[9px] px-1 py-0">
+                      FREE
+                    </Badge>
+                  )}
+                </span>
                 <span className="text-xs text-muted-foreground">
-                  {s.price_bb} BB · {s.duration_minutes}min
+                  {s.is_free_intro ? 'Free' : `${s.price_bb} BB`}
+                  {!s.is_free_intro && s.deposit_bb && s.deposit_bb > 0 && s.deposit_bb < s.price_bb && (
+                    <span className="text-primary"> ({s.deposit_bb} BB deposit)</span>
+                  )}
+                  {' · '}{s.duration_minutes}min
                 </span>
               </span>
             </SelectItem>

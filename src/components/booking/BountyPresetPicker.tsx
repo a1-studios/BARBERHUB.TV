@@ -11,6 +11,7 @@ interface BountyPresetPickerProps {
 }
 
 const PRESETS = [
+  { label: '500 BB', value: 500 },
   { label: '750 BB', value: 750 },
   { label: '1,200 BB', value: 1200 },
   { label: '2,000 BB', value: 2000 },
@@ -23,7 +24,7 @@ export function BountyPresetPicker({ value, onChange, minAmount = 500 }: BountyP
     <div className="space-y-3">
       <Label className="text-sm font-medium text-muted-foreground">Set Your Bounty</Label>
       
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         {PRESETS.map((preset) => (
           <Button
             key={preset.value}

@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CalendarDays, Clock, Coins, Star } from 'lucide-react';
-import { format, isPast } from 'date-fns';
+import { CalendarDays, Clock, Coins, Star, Home, X } from 'lucide-react';
+import { format, isPast, formatDistanceToNow } from 'date-fns';
 import { PostAppointmentReviewModal } from '@/components/reviews/PostAppointmentReviewModal';
+import { HouseCallBountyWidget } from '@/components/booking/HouseCallBountyWidget';
+import { toast } from 'sonner';
 
 interface Appointment {
   id: string;
@@ -22,6 +24,16 @@ interface Appointment {
   barber_user_id: string;
 }
 
+interface Bounty {
+  id: string;
+  location_text: string;
+  service_description: string | null;
+  bounty_amount_bb: number;
+  status: string;
+  expires_at: string;
+  created_at: string;
+}
+
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
   confirmed: 'bg-green-500/20 text-green-400 border-green-500/30',
@@ -29,6 +41,9 @@ const statusColors: Record<string, string> = {
   cancelled: 'bg-destructive/20 text-destructive border-destructive/30',
   denied: 'bg-destructive/20 text-destructive border-destructive/30',
   no_show: 'bg-muted text-muted-foreground border-muted',
+  open: 'bg-accent/20 text-accent border-accent/30',
+  claimed: 'bg-green-500/20 text-green-400 border-green-500/30',
+  expired: 'bg-muted text-muted-foreground border-muted',
 };
 
 function AppointmentCard({ appointment, barberName, hasReview, onReview }: {
@@ -80,6 +95,7 @@ function AppointmentCard({ appointment, barberName, hasReview, onReview }: {
 
 export function MyAppointments() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [reviewTarget, setReviewTarget] = useState<{ appointmentId: string; revieweeId: string } | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
@@ -107,7 +123,6 @@ export function MyAppointments() {
         barbers?.forEach(b => { barberNames[b.id] = b.name; });
       }
 
-      // Check which appointments user has already reviewed
       const completedIds = (appointments || []).filter(a => a.status === 'completed').map(a => a.id);
       const reviewedIds = new Set<string>();
       if (completedIds.length > 0) {
@@ -124,12 +139,51 @@ export function MyAppointments() {
     enabled: !!user?.id,
   });
 
+  // Fetch client's bounties
+  const { data: bounties, isLoading: bountiesLoading } = useQuery({
+    queryKey: ['my-bounties', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from('house_call_bounties')
+        .select('*')
+        .eq('client_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return (data || []) as Bounty[];
+    },
+    enabled: !!user?.id,
+  });
+
+  const cancelBounty = useMutation({
+    mutationFn: async (bountyId: string) => {
+      // Client cancels their own bounty - update status, trigger will refund
+      const { error } = await supabase
+        .from('house_call_bounties')
+        .update({ status: 'expired' })
+        .eq('id', bountyId)
+        .eq('client_id', user!.id)
+        .eq('status', 'open');
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-bounties'] });
+      queryClient.invalidateQueries({ queryKey: ['barber_bucks'] });
+      toast.success('Bounty cancelled. BB refunded.');
+    },
+    onError: () => toast.error('Failed to cancel bounty'),
+  });
+
   const upcoming = data?.appointments.filter(
     a => ['pending', 'confirmed'].includes(a.status) && !isPast(new Date(a.scheduled_at))
   ) || [];
   const past = data?.appointments.filter(
     a => !(['pending', 'confirmed'].includes(a.status) && !isPast(new Date(a.scheduled_at)))
   ).slice(0, 10) || [];
+
+  const activeBounties = bounties?.filter(b => b.status === 'open') || [];
+  const pastBounties = bounties?.filter(b => b.status !== 'open') || [];
 
   return (
     <>
@@ -144,6 +198,10 @@ export function MyAppointments() {
                 Upcoming {upcoming.length > 0 && `(${upcoming.length})`}
               </TabsTrigger>
               <TabsTrigger value="past" className="flex-1">Past</TabsTrigger>
+              <TabsTrigger value="bounties" className="flex-1">
+                <Home className="h-3 w-3 mr-1" />
+                Bounties {activeBounties.length > 0 && `(${activeBounties.length})`}
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="upcoming">
@@ -180,6 +238,61 @@ export function MyAppointments() {
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground text-center py-6">No past appointments</p>
+              )}
+            </TabsContent>
+
+            <TabsContent value="bounties" className="space-y-4">
+              <HouseCallBountyWidget />
+
+              {activeBounties.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Active Bounties</p>
+                  {activeBounties.map(b => (
+                    <Card key={b.id} className="border-accent/20">
+                      <CardContent className="p-3 space-y-2">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium">📍 {b.location_text}</p>
+                            {b.service_description && <p className="text-xs text-muted-foreground">{b.service_description}</p>}
+                            <p className="text-[10px] text-muted-foreground">
+                              Expires {formatDistanceToNow(new Date(b.expires_at), { addSuffix: true })}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-black text-primary">{b.bounty_amount_bb} BB</p>
+                            <Badge variant="outline" className={`text-[10px] ${statusColors[b.status]}`}>{b.status}</Badge>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="w-full text-xs text-destructive hover:text-destructive"
+                          onClick={() => cancelBounty.mutate(b.id)}
+                          disabled={cancelBounty.isPending}
+                        >
+                          <X className="h-3 w-3 mr-1" /> Cancel & Refund
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {pastBounties.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Past Bounties</p>
+                  {pastBounties.slice(0, 5).map(b => (
+                    <Card key={b.id} className="opacity-60">
+                      <CardContent className="p-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-sm">📍 {b.location_text}</p>
+                          <p className="text-xs text-muted-foreground">{b.bounty_amount_bb} BB</p>
+                        </div>
+                        <Badge variant="outline" className={`text-[10px] ${statusColors[b.status]}`}>{b.status}</Badge>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               )}
             </TabsContent>
           </Tabs>
