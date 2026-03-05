@@ -1,119 +1,55 @@
 
 
-## Particle Explosion Animation for VS/ENTER Cycle
+## Quick Book Banner + My Appointments Section
 
-### Concept
-
-Replace the current simple cross-fade between "VS" and "ENTER" (Swords) with a **particle explosion effect**. Every 3 seconds when the text transitions:
-
-1. The current text ("VS" or "ENTER") **explodes outward** into ~20 particles (tiny orange and cyan dots) that scatter in all directions
-2. The particles dissipate over ~400ms
-3. The new text ("ENTER" or "VS") **implodes inward** -- particles rush from the edges to the center and coalesce into the new text
-
-This creates a dramatic energy-burst feel where the text appears to shatter and reform.
-
-### Animation Sequence
-
-```text
-[VS visible for 5s with subtle idle glow pulse]
-         |
-   VS EXPLODES --> 20 particles scatter outward (400ms)
-         |
-   Particles converge inward --> ENTER forms (400ms)
-         |
-[ENTER visible for 3s with Swords icon pulse]
-         |
-   ENTER EXPLODES --> 20 particles scatter outward (400ms)
-         |
-   Particles converge inward --> VS reforms (400ms)
-         |
-   (repeat)
-```
+### Overview
+Two additions: (1) a dismissible "Quick Book" banner at the top of the Barber Directory highlighting top-rated barbers for fans, and (2) a "My Appointments" section on the fan Profile page showing upcoming and past bookings.
 
 ### Changes
 
-#### File: `src/components/DynamicBattleHero.tsx`
+| File | Action |
+|------|--------|
+| `src/components/fan/QuickBookBanner.tsx` | **Create** — Highlighted horizontal scroll of top-rated barbers with "Book Now" CTA |
+| `src/pages/BarbersDirectory.tsx` | **Modify** — Insert `QuickBookBanner` above the filters card |
+| `src/components/fan/MyAppointments.tsx` | **Create** — Tabbed section showing upcoming vs. past appointments |
+| `src/pages/Profile.tsx` | **Modify** — Add `MyAppointments` below `FanProfileHeader` for non-barber users |
 
-**Modify the AnimatePresence transitions (lines 375-426):**
+---
 
-Replace the current simple opacity/scale fade with particle explosion animations:
+### 1. `QuickBookBanner.tsx` (New)
 
-- **Exit animation** (`exit` prop): The text scales down to 0 while spawning ~20 absolutely-positioned particle dots around it. Each particle flies outward in a random direction (random angle, random distance 20-50px) and fades to 0. Particles alternate between orange (`hsl(var(--primary))`) and cyan (`hsl(187 100% 50%)`) colors with matching glow shadows.
+A compact, eye-catching banner that appears at the top of the directory page:
 
-- **Enter animation** (`initial` + `animate`): The text starts at scale 0 with particles positioned at random outer positions. Particles animate inward to center (0,0) and fade, while the text scales from 0 to 1 with a slight overshoot (scale to 1.1 then settle to 1).
+- Fetches top 5 barbers from `public_barber_profiles` sorted by `rating DESC` (or `follower_count DESC` as fallback)
+- Renders as a gradient card with heading "Top Barbers -- Book Now" and a horizontally scrollable row of mini barber avatars with name + specialty
+- Each avatar is clickable and navigates to `/barber/:userId` (the existing `BarberPublicProfile` page where `BookingConsole` is accessible)
+- Dismissible via an X button (stores dismissal in `sessionStorage` so it reappears next session)
+- Uses `framer-motion` for a subtle slide-in entrance
 
-**Implementation approach -- inline particle generation:**
+### 2. `BarbersDirectory.tsx` Changes
 
-Rather than a separate component, generate particles directly in the motion variants using an array of `motion.div` elements rendered alongside the text inside each AnimatePresence child:
+- Import and render `QuickBookBanner` between the page header and the filters card
+- No other changes needed
 
-```text
-<motion.div key="vs" ...>
-  {/* Particle array */}
-  {Array.from({ length: 20 }).map((_, i) => (
-    <motion.div
-      key={i}
-      className="absolute w-1 h-1 rounded-full"
-      style={{ backgroundColor: i % 2 === 0 ? orange : cyan }}
-      initial={{ x: 0, y: 0, opacity: 1 }}
-      animate={{ x: 0, y: 0, opacity: 0 }}  // idle: invisible
-      exit={{
-        x: Math.cos(angle) * distance,
-        y: Math.sin(angle) * distance,
-        opacity: [1, 0],
-        scale: [1, 0]
-      }}
-    />
-  ))}
-  {/* VS text */}
-  <span>VS</span>
-</motion.div>
-```
+### 3. `MyAppointments.tsx` (New)
 
-Each particle gets a pre-calculated random angle (evenly distributed around 360 degrees) and random distance (20-50px), with a staggered delay for a natural burst feel.
+A self-contained component that queries the `appointments` table:
 
-**Apply to both barber and fan VS elements:**
+- Fetches appointments where `client_id = auth.uid()`
+- Joins with `barber_profiles` (via `barber_id`) to get barber name and avatar
+- Splits into two lists:
+  - **Upcoming**: `status IN ('pending', 'confirmed')` and `scheduled_at > now()`, sorted ascending
+  - **Past**: everything else, sorted descending, limited to 10
+- Uses shadcn `Tabs` component for "Upcoming" / "Past" toggle
+- Each appointment card shows: barber name, date/time (formatted with `date-fns`), service type, status badge, and BB escrow amount
+- Empty state for each tab ("No upcoming appointments" / "No past appointments")
 
-- **Barber VS** (lines 389-406): Add particles to the VS motion.span and the Swords motion.div
-- **Fan VS** (lines 411-425): For fans, since there is no cycle, add a subtle idle particle effect -- 4-6 particles that slowly orbit or float around the VS text on a loop, giving a constant "energy radiating" feel without the explosion
+### 4. `Profile.tsx` Changes
 
-**Cycle timing unchanged:**
-- The existing `useEffect` at lines 166-173 stays as-is (5s VS, 3s Swords for barbers)
-- The explosion/implosion animation takes ~400ms for exit + ~400ms for enter, fitting within the transition window
-
-**Rings unchanged:**
-- The rotating dashed ring and inner cyan ring remain as they are (lines 344-366)
-
-### Particle Specs
-
-| Property | Value |
-|----------|-------|
-| Count per explosion | 20 particles |
-| Size | 1-2px (w-1 h-1 or w-0.5 h-0.5) |
-| Colors | Alternating orange (primary) and cyan |
-| Scatter distance | 20-50px random per particle |
-| Scatter direction | Evenly distributed angles (360/20 = 18 degree increments + slight random offset) |
-| Glow | box-shadow matching particle color, 4px blur |
-| Exit duration | 400ms ease-out |
-| Enter duration | 400ms ease-out with overshoot |
-| Stagger | 20ms between particles for natural burst feel |
-
-### What Changes
-
-| Element | Before | After |
-|---------|--------|-------|
-| VS to ENTER transition | Simple opacity/scale fade | Particle explosion outward, then implosion inward |
-| ENTER to VS transition | Simple opacity/scale fade | Same particle explosion/implosion |
-| Fan VS | Static with glow pulse | Static with 4-6 subtle floating particles |
-| Rings | Unchanged | Unchanged |
-| Drawer | Unchanged | Unchanged |
-| Cycle timing | Unchanged (5s/3s) | Unchanged |
-
-### What Is NOT Changing
-
-- The 5s VS / 3s Swords timing cycle
-- Arena Drawer contents and navigation
-- Rotating ring animations
-- MobileVoteCenter replacement during active battles
-- Video layout, action bars, name overlays
-- Open challenges badge count query
+- Import `MyAppointments`
+- Render it below the `FanProfileHeader` block (line ~228), only when `!isBarber`:
+  ```tsx
+  {!isBarber && <MyAppointments />}
+  ```
+- Placed before `TransactionHistory` for logical flow (appointments > transactions)
 
