@@ -86,38 +86,49 @@ const Index = () => {
       
       {/* Content gated behind authentication */}
       {user ? (
-        <main>
-          {/* Welcome Modal for First-Time Users */}
-          <WelcomeModal />
-          
-          {/* Head-to-Head Battle Hero */}
-          <DynamicBattleHero />
-          
-          {/* Immersive Faction Banners - Full Screen Selection */}
-          <ImmersiveFactionBanners />
-          
-          {/* Global League Dashboard */}
-          <GlobalLeagueDashboard />
-          
-          {/* Live Streaming Barbers - Watch active streams */}
-          <LiveBarberStreams />
-          
-          {/* Main Battles Section with all navigation and features */}
-          <BattlesSection />
-          
-
-
-          
-          {/* Community Leaderboard */}
-          {FEATURES.COMMUNITY_LEADERBOARD && (
-            <CommunitySection />
+        <>
+          {/* Fan intro sequence — plays once per session */}
+          {isFan && !introComplete && (
+            <FanIntroSequence onComplete={() => {
+              setIntroComplete(true);
+              sessionStorage.setItem('fan_intro_seen', 'true');
+            }} />
           )}
-          
-          {/* Grants Section */}
-          {FEATURES.GRANTS_SECTION && (
-            <GrantsSection />
+
+          {isFan ? (
+            <FanArenaView />
+          ) : (
+            <main>
+              {/* Welcome Modal for First-Time Users */}
+              <WelcomeModal />
+              
+              {/* Head-to-Head Battle Hero */}
+              <DynamicBattleHero />
+              
+              {/* Immersive Faction Banners - Full Screen Selection */}
+              <ImmersiveFactionBanners />
+              
+              {/* Global League Dashboard */}
+              <GlobalLeagueDashboard />
+              
+              {/* Live Streaming Barbers - Watch active streams */}
+              <LiveBarberStreams />
+              
+              {/* Main Battles Section with all navigation and features */}
+              <BattlesSection />
+
+              {/* Community Leaderboard */}
+              {FEATURES.COMMUNITY_LEADERBOARD && (
+                <CommunitySection />
+              )}
+              
+              {/* Grants Section */}
+              {FEATURES.GRANTS_SECTION && (
+                <GrantsSection />
+              )}
+            </main>
           )}
-        </main>
+        </>
       ) : (
         <>
           <LandingHero />
