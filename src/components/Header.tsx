@@ -73,14 +73,6 @@ const Header = () => {
       barberOnly: true
     },
     {
-      id: 'create-battle',
-      label: 'Create Battle',
-      icon: <Plus className="w-5 h-5" />,
-      path: '/battles/create',
-      requiresAuth: true,
-      barberOnly: true
-    },
-    {
       id: 'creator-hub',
       label: 'Creator Hub',
       icon: <Crown className="w-5 h-5" />,
