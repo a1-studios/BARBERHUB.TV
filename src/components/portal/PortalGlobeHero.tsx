@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Globe3D from "@/components/Globe3D";
 import { LiveMatchCounter } from "@/components/tournament/LiveMatchCounter";
+import { useCategoryPrizePools } from "@/hooks/useCategoryPrizePools";
 
 const tickerItems = [
   "🏆 Prize Pool: $25,000+ and growing",
