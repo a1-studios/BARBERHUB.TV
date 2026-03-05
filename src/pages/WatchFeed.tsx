@@ -173,7 +173,7 @@ const WatchFeed = () => {
             data-index={idx}
             className="h-screen w-full snap-start snap-always relative flex items-center justify-center"
           >
-            {item.type === "video" ? (
+            {item.type === "video" || item.type === "educator" ? (
               <div className="relative w-full h-full bg-black">
                 {/* YouTube embed or thumbnail fallback */}
                 {getYouTubeId(item.media_url) ? (
@@ -183,18 +183,35 @@ const WatchFeed = () => {
                     allow="autoplay; encrypted-media"
                     allowFullScreen
                   />
+                ) : item.media_url && (item.media_url.includes('.mp4') || item.media_url.includes('.webm')) ? (
+                  <video
+                    src={item.media_url}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    autoPlay={activeIndex === idx}
+                    muted
+                    loop
+                    playsInline
+                  />
                 ) : (
                   <div
                     className="absolute inset-0 bg-cover bg-center"
                     style={{
-                      backgroundImage: item.thumbnail_url
-                        ? `url(${item.thumbnail_url})`
+                      backgroundImage: item.thumbnail_url || item.media_url
+                        ? `url(${item.thumbnail_url || item.media_url})`
                         : "none",
                     }}
                   >
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                       <Play className="w-12 h-12 text-white/80" />
                     </div>
+                  </div>
+                )}
+
+                {/* Educator badge */}
+                {item.type === "educator" && (
+                  <div className="absolute top-16 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/80 backdrop-blur-sm">
+                    <GraduationCap className="w-3 h-3 text-primary-foreground" />
+                    <span className="text-[10px] font-bold text-primary-foreground uppercase tracking-wider">Masterclass</span>
                   </div>
                 )}
 
@@ -210,7 +227,7 @@ const WatchFeed = () => {
                   )}
                 </div>
               </div>
-            ) : (
+            ) : item.type === "sponsor" ? (
               /* Sponsor Card */
               <div className="w-full h-full flex items-center justify-center bg-card p-6">
                 <motion.div
