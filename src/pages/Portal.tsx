@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TournamentRegistration } from "@/components/tournament/TournamentRegistration";
 import { TournamentQueueStatus } from "@/components/tournament/TournamentQueueStatus";
-import { LiveMatchCounter } from "@/components/tournament/LiveMatchCounter";
+import { PortalGlobeHero } from "@/components/portal/PortalGlobeHero";
 import { MyBattlesSection } from "@/components/barber/MyBattlesSection";
 
 import { Trophy, Users, Clock, Vote, DollarSign, Play, Calendar, Target, Loader2, Swords, Hash, Camera } from "lucide-react";
@@ -144,38 +144,8 @@ const Portal = () => {
       <Header />
       <main className="pt-20 sm:pt-24 pb-12">
         <div className="container mx-auto px-4">
-          {/* Portal Header - World Cup Style */}
-          <div className="mt-8 mb-10 text-center relative">
-            <div className="rounded-2xl border border-primary/30 bg-gradient-to-b from-primary/10 via-background to-background p-6 sm:p-10 shadow-[0_0_40px_-10px_hsl(var(--primary)/0.4)]">
-              {/* Emoji Row */}
-              <div className="text-2xl sm:text-3xl mb-3 tracking-[0.3em]">
-                🏆🔥⚔️🔥🏆
-              </div>
-              
-              {/* Title */}
-              <div className="flex items-center justify-center gap-4 mb-3">
-                <h1 className="text-3xl sm:text-5xl font-extrabold uppercase tracking-tight leading-tight">
-                  <span className="text-foreground">2026</span>{' '}
-                  <span className="text-primary tracking-wide">GLOBAL</span>{' '}
-                  <span className="text-foreground">CHAMPIONSHIP</span>
-                </h1>
-              </div>
-              
-              <LiveMatchCounter />
-
-              {/* Subtitle with pulsing live dot */}
-              <div className="flex items-center justify-center gap-2 mt-3">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
-                </span>
-                <p className="text-sm sm:text-base">
-                  <span className="text-primary font-semibold">Live battles</span>{' '}
-                  <span className="text-muted-foreground">every Sunday, 10:00 AM - 6:00 PM EST</span>
-                </p>
-              </div>
-            </div>
-          </div>
+          {/* Animated Globe Championship Hub */}
+          <PortalGlobeHero />
 
           {/* Faction Banners - Same as main page */}
           <div className="mb-8">
