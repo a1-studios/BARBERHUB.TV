@@ -4,7 +4,7 @@ import { useSponsorAds } from "@/hooks/useSponsorAds";
 import { ArrowLeft, Play, GraduationCap, Flame } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 interface FeedItem {
   type: "video" | "sponsor" | "educator" | "platform";
