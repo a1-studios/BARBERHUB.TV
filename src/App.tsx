@@ -5,7 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
-import { DEV_MODE } from "@/hooks/useSubscriptionLimits";
+
 import { AuthGuard } from "@/components/auth/AuthGuard";
 import { BarberGuard } from "@/components/auth/BarberGuard";
 import { AdminGuard } from "@/components/auth/AdminGuard";
@@ -220,11 +220,6 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        {DEV_MODE && (
-          <div className="fixed top-0 left-0 right-0 z-[99999] bg-yellow-500 text-black text-center text-xs font-bold py-1 tracking-widest pointer-events-none">
-            ⚠️ DEV MODE — ALL TIER GATES BYPASSED — DO NOT SHIP ⚠️
-          </div>
-        )}
         <BrowserRouter>
           <AppContent />
         </BrowserRouter>
