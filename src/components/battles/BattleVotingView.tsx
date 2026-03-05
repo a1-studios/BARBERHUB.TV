@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { YouTubeStreamPlayer } from "./YouTubeStreamPlayer";
+import { HLSVideoPlayer } from "./HLSVideoPlayer";
 import { Play, Trophy, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
