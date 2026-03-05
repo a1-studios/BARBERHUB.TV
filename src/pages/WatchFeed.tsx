@@ -90,12 +90,19 @@ const WatchFeed = () => {
 
   const { data: sponsors = [] } = useSponsorAds(true);
 
-  // Interleave: 2 videos then 1 sponsor (70/30 ratio)
+  // Interleave: 5 battles, 3 educator, 1 social, 1 sponsor pattern
   const feed: FeedItem[] = [];
   let sponsorIdx = 0;
+  let educatorIdx = 0;
   videos.forEach((video, i) => {
     feed.push(video);
-    if ((i + 1) % 2 === 0 && sponsors.length > 0) {
+    // After every 2 videos, insert educator content (30% layer)
+    if ((i + 1) % 2 === 0 && educatorContent.length > 0) {
+      feed.push(educatorContent[educatorIdx % educatorContent.length]);
+      educatorIdx++;
+    }
+    // After every 3 videos, insert sponsor (10% layer)
+    if ((i + 1) % 3 === 0 && sponsors.length > 0) {
       const sponsor = sponsors[sponsorIdx % sponsors.length];
       feed.push({
         type: "sponsor",
