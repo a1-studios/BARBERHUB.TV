@@ -316,6 +316,20 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
           <SponsoredBadge />
         </div>
       )}
+      </div>
+
+      {/* Fire rotation keyframes */}
+      <style>{`
+        @property --fire-angle {
+          syntax: '<angle>';
+          initial-value: 0deg;
+          inherits: false;
+        }
+        @keyframes fire-rotate {
+          from { --fire-angle: 0deg; }
+          to { --fire-angle: 360deg; }
+        }
+      `}</style>
     </div>
   );
 };
