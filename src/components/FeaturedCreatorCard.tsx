@@ -9,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { DonationModal } from './DonationModal';
-import { SubscriptionBadge } from './SubscriptionBadge';
+import { TierRing } from './TierRing';
 
 interface Creator {
   user_id: string;
