@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -12,22 +12,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { useBookAppointment } from '@/hooks/useBookAppointment';
-import { useSubscriptionLimits } from '@/hooks/useSubscriptionLimits';
 import { toast } from 'sonner';
-import { Plus, Trash2, Calendar, Clock, Zap, Home, Check, X } from 'lucide-react';
+import { Plus, Trash2, Calendar, Clock, Zap, Home, Check, X, Star } from 'lucide-react';
+import { ClientSnapshotWidget } from '@/components/reviews/ClientSnapshotWidget';
+import { PostAppointmentReviewModal } from '@/components/reviews/PostAppointmentReviewModal';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export function BarberAppointmentManager() {
   const { user } = useAuth();
-  const queryClient = useQueryClient();
   const { manageMutation } = useBookAppointment();
   const [showAddService, setShowAddService] = useState(false);
   const [showDenyDialog, setShowDenyDialog] = useState<string | null>(null);
   const [denyReason, setDenyReason] = useState('');
+  const [reviewTarget, setReviewTarget] = useState<{ appointmentId: string; revieweeId: string } | null>(null);
   const [newService, setNewService] = useState({ service_name: '', price_bb: 100, duration_minutes: 30, allows_house_call: false, allows_sos: false });
 
-  // Get barber profile
   const { data: barberProfile } = useQuery({
     queryKey: ['my-barber-profile', user?.id],
     queryFn: async () => {
@@ -42,7 +42,6 @@ export function BarberAppointmentManager() {
     enabled: !!user,
   });
 
-  // Services
   const { data: services, refetch: refetchServices } = useQuery({
     queryKey: ['my-services', barberProfile?.id],
     queryFn: async () => {
@@ -57,7 +56,6 @@ export function BarberAppointmentManager() {
     enabled: !!barberProfile,
   });
 
-  // Availability
   const { data: availability, refetch: refetchAvailability } = useQuery({
     queryKey: ['my-availability', barberProfile?.id],
     queryFn: async () => {
@@ -72,23 +70,39 @@ export function BarberAppointmentManager() {
     enabled: !!barberProfile,
   });
 
-  // Appointments
   const { data: appointments, refetch: refetchAppointments } = useQuery({
-    queryKey: ['my-appointments', barberProfile?.id],
+    queryKey: ['my-appointments-barber', barberProfile?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('appointments')
         .select('*')
         .eq('barber_id', barberProfile!.id)
-        .in('status', ['pending', 'confirmed', 'escrow_locked', 'in_transit'])
-        .order('scheduled_at', { ascending: true });
+        .in('status', ['pending', 'confirmed', 'escrow_locked', 'in_transit', 'completed'])
+        .order('scheduled_at', { ascending: true })
+        .limit(30);
       if (error) throw error;
       return data;
     },
     enabled: !!barberProfile,
   });
 
-  // Add service
+  // Check which completed appointments barber has already reviewed
+  const completedAppts = appointments?.filter(a => a.status === 'completed') || [];
+  const { data: reviewedIds } = useQuery({
+    queryKey: ['barber-reviewed', user?.id, completedAppts.map(a => a.id)],
+    queryFn: async () => {
+      const ids = completedAppts.map(a => a.id);
+      if (ids.length === 0) return new Set<string>();
+      const { data } = await supabase
+        .from('appointment_reviews')
+        .select('appointment_id')
+        .eq('reviewer_id', user!.id)
+        .in('appointment_id', ids);
+      return new Set((data || []).map(r => r.appointment_id));
+    },
+    enabled: !!user && completedAppts.length > 0,
+  });
+
   const addServiceMutation = useMutation({
     mutationFn: async () => {
       if (!barberProfile || !user) throw new Error('Not ready');
@@ -108,7 +122,6 @@ export function BarberAppointmentManager() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  // Delete service
   const deleteServiceMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('barber_services').delete().eq('id', id);
@@ -117,7 +130,6 @@ export function BarberAppointmentManager() {
     onSuccess: () => { refetchServices(); toast.success('Service removed'); },
   });
 
-  // Save availability for a day
   const saveAvailability = useMutation({
     mutationFn: async (params: { day: number; start: string; end: string; available: boolean }) => {
       if (!barberProfile || !user) throw new Error('Not ready');
@@ -148,6 +160,7 @@ export function BarberAppointmentManager() {
     pending: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
     confirmed: 'bg-green-500/20 text-green-400 border-green-500/30',
     in_transit: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    completed: 'bg-primary/20 text-primary border-primary/30',
   };
 
   const typeIcons: Record<string, React.ReactNode> = {
@@ -156,12 +169,15 @@ export function BarberAppointmentManager() {
     house_call: <Home className="h-4 w-4 text-amber-400" />,
   };
 
+  const activeAppts = appointments?.filter(a => a.status !== 'completed') || [];
+  const recentCompleted = completedAppts.slice(0, 5);
+
   return (
     <div className="space-y-6">
       <Tabs defaultValue="appointments">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="appointments">
-            Appointments {appointments?.length ? `(${appointments.length})` : ''}
+            Appointments {activeAppts.length ? `(${activeAppts.length})` : ''}
           </TabsTrigger>
           <TabsTrigger value="services">Services</TabsTrigger>
           <TabsTrigger value="schedule">Schedule</TabsTrigger>
@@ -169,75 +185,112 @@ export function BarberAppointmentManager() {
 
         {/* ---- APPOINTMENTS ---- */}
         <TabsContent value="appointments" className="space-y-4">
-          {(!appointments || appointments.length === 0) ? (
+          {activeAppts.length === 0 && recentCompleted.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-muted-foreground">No upcoming appointments</CardContent></Card>
           ) : (
-            appointments.map((appt) => (
-              <Card key={appt.id} className={appt.appointment_type === 'sos' ? 'border-destructive/30 animate-pulse' : ''}>
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-center gap-2">
-                      {typeIcons[appt.appointment_type]}
-                      <div>
-                        <p className="font-semibold text-sm capitalize">{appt.appointment_type.replace('_', ' ')}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(appt.scheduled_at).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                        </p>
-                        {appt.client_location_text && (
-                          <p className="text-xs text-amber-400 mt-1">📍 {appt.client_location_text}</p>
-                        )}
+            <>
+              {activeAppts.map((appt) => (
+                <Card key={appt.id} className={appt.appointment_type === 'sos' ? 'border-destructive/30 animate-pulse' : ''}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                        {typeIcons[appt.appointment_type]}
+                        <div>
+                          <p className="font-semibold text-sm capitalize">{appt.appointment_type.replace('_', ' ')}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(appt.scheduled_at).toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                          </p>
+                          {appt.client_location_text && (
+                            <p className="text-xs text-amber-400 mt-1">📍 {appt.client_location_text}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right space-y-2">
+                        <Badge className={statusColors[appt.status] || ''}>{appt.status}</Badge>
+                        <p className="text-lg font-black text-primary">{appt.escrow_amount_bb} BB</p>
                       </div>
                     </div>
-                    <div className="text-right space-y-2">
-                      <Badge className={statusColors[appt.status] || ''}>{appt.status}</Badge>
-                      <p className="text-lg font-black text-primary">{appt.escrow_amount_bb} BB</p>
-                    </div>
-                  </div>
 
-                  {/* Actions */}
-                  {appt.status === 'pending' && (
-                    <div className="flex gap-2 mt-4">
-                      {appt.appointment_type !== 'standard' && !canAcceptPremium ? (
-                        <Button variant="outline" size="sm" className="flex-1 text-muted-foreground" disabled>
-                          Upgrade to Silver+ to accept
-                        </Button>
-                      ) : (
-                        <>
+                    {/* Client Snapshot */}
+                    {appt.status === 'pending' && (
+                      <ClientSnapshotWidget clientId={appt.client_id} className="mt-3" />
+                    )}
+
+                    {appt.status === 'pending' && (
+                      <div className="flex gap-2 mt-4">
+                        {appt.appointment_type !== 'standard' && !canAcceptPremium ? (
+                          <Button variant="outline" size="sm" className="flex-1 text-muted-foreground" disabled>
+                            Upgrade to Silver+ to accept
+                          </Button>
+                        ) : (
+                          <>
+                            <Button
+                              size="sm"
+                              className="flex-1 bg-green-600 hover:bg-green-700"
+                              onClick={() => manageMutation.mutate({ appointment_id: appt.id, action: 'accept' }, { onSuccess: () => refetchAppointments() })}
+                              disabled={manageMutation.isPending}
+                            >
+                              <Check className="h-4 w-4 mr-1" /> Accept
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              className="flex-1"
+                              onClick={() => setShowDenyDialog(appt.id)}
+                              disabled={manageMutation.isPending}
+                            >
+                              <X className="h-4 w-4 mr-1" /> Deny
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {(appt.status === 'confirmed' || appt.status === 'in_transit') && (
+                      <Button
+                        size="sm"
+                        className="w-full mt-4 bg-primary"
+                        onClick={() => manageMutation.mutate({ appointment_id: appt.id, action: 'complete' }, { onSuccess: () => refetchAppointments() })}
+                        disabled={manageMutation.isPending}
+                      >
+                        Mark Complete ✂️
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+
+              {/* Recently completed - review prompt */}
+              {recentCompleted.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Recently Completed</p>
+                  {recentCompleted.map((appt) => (
+                    <Card key={appt.id}>
+                      <CardContent className="p-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium">Completed appointment</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(appt.scheduled_at).toLocaleString('en-US', { month: 'short', day: 'numeric' })}
+                          </p>
+                        </div>
+                        {reviewedIds?.has(appt.id) ? (
+                          <Badge variant="outline" className="text-[10px] text-primary border-primary/30">Reviewed ✓</Badge>
+                        ) : (
                           <Button
                             size="sm"
-                            className="flex-1 bg-green-600 hover:bg-green-700"
-                            onClick={() => manageMutation.mutate({ appointment_id: appt.id, action: 'accept' }, { onSuccess: () => refetchAppointments() })}
-                            disabled={manageMutation.isPending}
+                            variant="outline"
+                            className="text-xs"
+                            onClick={() => setReviewTarget({ appointmentId: appt.id, revieweeId: appt.client_id })}
                           >
-                            <Check className="h-4 w-4 mr-1" /> Accept
+                            <Star className="h-3 w-3 mr-1" /> Rate Client
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            className="flex-1"
-                            onClick={() => setShowDenyDialog(appt.id)}
-                            disabled={manageMutation.isPending}
-                          >
-                            <X className="h-4 w-4 mr-1" /> Deny
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  )}
-
-                  {(appt.status === 'confirmed' || appt.status === 'in_transit') && (
-                    <Button
-                      size="sm"
-                      className="w-full mt-4 bg-primary"
-                      onClick={() => manageMutation.mutate({ appointment_id: appt.id, action: 'complete' }, { onSuccess: () => refetchAppointments() })}
-                      disabled={manageMutation.isPending}
-                    >
-                      Mark Complete ✂️
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            ))
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
 
@@ -355,6 +408,18 @@ export function BarberAppointmentManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Review Client Modal */}
+      {reviewTarget && (
+        <PostAppointmentReviewModal
+          open={!!reviewTarget}
+          onOpenChange={(open) => !open && setReviewTarget(null)}
+          appointmentId={reviewTarget.appointmentId}
+          revieweeId={reviewTarget.revieweeId}
+          isBarberReviewing={true}
+          onSuccess={() => refetchAppointments()}
+        />
+      )}
     </div>
   );
 }
