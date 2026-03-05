@@ -128,6 +128,9 @@ export default function BarbersDirectory() {
           </p>
         </div>
 
+        {/* Quick Book Banner */}
+        <QuickBookBanner />
+
         {/* Filters */}
         <Card className="mb-8">
           <CardContent className="p-6">

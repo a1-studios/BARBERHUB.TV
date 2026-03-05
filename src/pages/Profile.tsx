@@ -228,6 +228,9 @@ const Profile = () => {
             </div>
           )}
 
+          {/* My Appointments (fans only) */}
+          {!isBarber && <MyAppointments />}
+
           {/* Transaction History */}
           <TransactionHistory />
 
