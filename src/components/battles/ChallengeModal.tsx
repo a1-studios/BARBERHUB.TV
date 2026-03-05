@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Flame, Zap } from 'lucide-react';
-import { IssueChallenge } from './IssueChallenge';
+import { X, Flame } from 'lucide-react';
 import { ChallengeFeed } from './ChallengeFeed';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface ChallengeModalProps {
   open: boolean;
@@ -12,7 +10,7 @@ interface ChallengeModalProps {
   initialTab?: 'issue' | 'feed';
 }
 
-export const ChallengeModal = ({ open, onClose, initialTab = 'feed' }: ChallengeModalProps) => {
+export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -71,28 +69,9 @@ export const ChallengeModal = ({ open, onClose, initialTab = 'feed' }: Challenge
               </button>
             </div>
 
-            {/* Tabs: Issue / Feed */}
+            {/* Unified Feed */}
             <div className="p-4">
-              <Tabs defaultValue={initialTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="issue" className="gap-1.5 text-xs">
-                    <Flame className="w-3.5 h-3.5" />
-                    Issue Challenge
-                  </TabsTrigger>
-                  <TabsTrigger value="feed" className="gap-1.5 text-xs">
-                    <Zap className="w-3.5 h-3.5" />
-                    Active Challenges
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="issue">
-                  <IssueChallenge />
-                </TabsContent>
-
-                <TabsContent value="feed">
-                  <ChallengeFeed />
-                </TabsContent>
-              </Tabs>
+              <ChallengeFeed />
             </div>
           </motion.div>
         </div>
