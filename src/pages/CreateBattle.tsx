@@ -106,13 +106,7 @@ const CreateBattle = () => {
   const onSubmit = async (data: BattleFormData) => {
     if (!user) return;
 
-    // Must have active subscription for unofficial battles
-    if (!hasActiveSubscription) {
-      setShowUpgradePrompt(true);
-      return;
-    }
-
-    // Check subscription limits before creating battle
+    // DEV_MODE: subscription checks bypassed (useSubscriptionLimits returns diamond)
     if (!canCreateBattle) {
       setShowUpgradePrompt(true);
       return;
