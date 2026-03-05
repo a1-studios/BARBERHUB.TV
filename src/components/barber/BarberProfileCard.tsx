@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { DonationModal } from '../DonationModal';
 import { BarberVideoSection } from './BarberVideoSection';
 import { BarberActionButtons } from './BarberActionButtons';
-import { SubscriptionBadge } from '../SubscriptionBadge';
+import { TierRing } from '../TierRing';
 import { SubCategoryBadge } from '../SubCategoryBadge';
 import { M4MHeartbeat } from '../m4m/M4MHeartbeat';
 
