@@ -38,7 +38,7 @@ export function BottomNavBar() {
       {/* Glass background */}
       <div className="absolute inset-0 bg-card/95 backdrop-blur-xl border-t border-border/50" />
 
-      <div className="relative flex items-end justify-around px-2 h-16">
+      <div className="relative flex items-end justify-around px-2 h-11">
         {tabs.map((tab, i) => {
           if ('isFab' in tab && tab.isFab) {
             return (
@@ -46,14 +46,14 @@ export function BottomNavBar() {
                 key="fab"
                 onClick={handleFabPress}
                 className={cn(
-                  'relative -mt-7 flex items-center justify-center',
-                  'w-14 h-14 rounded-full',
+                  'relative -mt-5 flex items-center justify-center',
+                  'w-10 h-10 rounded-full',
                   'bg-primary shadow-lg shadow-primary/40',
                   'active:scale-95 transition-transform duration-100',
                 )}
                 aria-label="Create Battle"
               >
-                <Plus className="w-7 h-7 text-primary-foreground" strokeWidth={2.5} />
+                <Plus className="w-5 h-5 text-primary-foreground" strokeWidth={2.5} />
               </button>
             );
           }
@@ -66,14 +66,14 @@ export function BottomNavBar() {
               key={path}
               onClick={() => navigate(path)}
               className={cn(
-                'flex flex-col items-center justify-center gap-0.5 flex-1 h-full',
+                'flex flex-col items-center justify-center gap-0 flex-1 h-full',
                 'transition-colors duration-150',
                 active ? 'text-primary' : 'text-muted-foreground',
               )}
               aria-label={label}
             >
-              <Icon className="w-5 h-5" strokeWidth={active ? 2.5 : 2} />
-              <span className="text-[10px] font-semibold tracking-wide">{label}</span>
+              <Icon className="w-3.5 h-3.5" strokeWidth={active ? 2.5 : 2} />
+              <span className="text-[8px] font-semibold tracking-wide">{label}</span>
             </button>
           );
         })}
