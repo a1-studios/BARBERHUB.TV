@@ -40,7 +40,6 @@ const WatchFeed = () => {
         .limit(30);
       if (error) throw error;
 
-      // Fetch barber names
       const userIds = [...new Set(data?.map((v) => v.user_id) || [])];
       let barberMap: Record<string, string> = {};
       if (userIds.length > 0) {
@@ -62,6 +61,30 @@ const WatchFeed = () => {
         thumbnail_url: v.thumbnail_url,
         barber_name: barberMap[v.user_id] || "Barber",
       }));
+    },
+  });
+
+  // Fetch educator content (promoted to feed)
+  const { data: educatorContent = [] } = useQuery({
+    queryKey: ["watch-feed-educator"],
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("build_universal_feed", {
+        p_limit: 20,
+        p_offset: 0,
+      });
+      if (error) throw error;
+      return (data || [])
+        .filter((item: any) => item.content_type === "course_teaser")
+        .map((item: any) => ({
+          type: "educator" as const,
+          id: item.item_id,
+          media_url: item.media_url,
+          title: item.title,
+          description: item.description,
+          thumbnail_url: item.thumbnail_url,
+          barber_name: item.creator_name || "Educator",
+          creator_avatar: item.creator_avatar,
+        }));
     },
   });
 
