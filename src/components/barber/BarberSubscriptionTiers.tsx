@@ -208,7 +208,8 @@ export const BarberSubscriptionTiers = ({ onShowAddFunds }: BarberSubscriptionTi
                       Processing...
                     </>
                   ) : (
-                    `Subscribe for ${bbPrice} BB`
+                    'Upgrade'
+                  )}
                   )}
                 </Button>
               )}
