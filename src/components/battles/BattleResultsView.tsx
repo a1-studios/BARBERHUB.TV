@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { YouTubeStreamPlayer } from "./YouTubeStreamPlayer";
+import { HLSVideoPlayer } from "./HLSVideoPlayer";
 import { Trophy, Crown, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
