@@ -111,12 +111,14 @@ export function BarberProfileHeader({
       <CardContent className="relative p-4 md:p-8 z-10">
         <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start">
           <div className="flex flex-col items-center gap-1">
-            <Avatar className="w-20 h-20 md:w-32 md:h-32 border-4 border-primary/30">
-              <AvatarImage src={avatar_url || undefined} />
-              <AvatarFallback className="bg-primary/20 text-primary text-3xl md:text-4xl font-bold">
-                {(display_name || 'B').charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <TierRing tier={subscription_tier} size="lg" interactive={showActions}>
+              <Avatar className="w-20 h-20 md:w-32 md:h-32">
+                <AvatarImage src={avatar_url || undefined} />
+                <AvatarFallback className="bg-primary/20 text-primary text-3xl md:text-4xl font-bold">
+                  {(display_name || 'B').charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            </TierRing>
             <M4MHeartbeat
               certified={m4m_certified}
               paid={m4m_paid}
