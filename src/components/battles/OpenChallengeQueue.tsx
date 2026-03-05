@@ -40,6 +40,16 @@ export const OpenChallengeQueue = () => {
             </span>
           </div>
 
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground"
+            onClick={() => navigate('/studio')}
+          >
+            <Camera className="w-4 h-4 mr-1" />
+            Check Gear
+          </Button>
+
           {isSilverPlus && (
             <Drawer>
               <DrawerTrigger asChild>

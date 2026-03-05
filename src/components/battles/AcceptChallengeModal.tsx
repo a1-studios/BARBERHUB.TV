@@ -54,7 +54,7 @@ export const AcceptChallengeModal = ({ challenge, isOpen, onClose }: AcceptChall
       toast({ title: "Challenge Accepted! 🎉", description: `You matched the ${stakeRequired} BB stake. The battle is on!` });
 
       if (data?.battle_id) {
-        setTimeout(() => navigate(`/battles/${data.battle_id}`), 1000);
+        setTimeout(() => navigate(`/studio?battleId=${data.battle_id}`), 1000);
       }
       onClose();
     } catch (error: any) {
