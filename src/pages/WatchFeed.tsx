@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 
 interface FeedItem {
-  type: "video" | "sponsor";
+  type: "video" | "sponsor" | "educator";
   id: string;
   // Video fields
   media_url?: string;
@@ -15,6 +15,7 @@ interface FeedItem {
   description?: string;
   thumbnail_url?: string;
   barber_name?: string;
+  creator_avatar?: string;
   // Sponsor fields
   name?: string;
   message?: string;
