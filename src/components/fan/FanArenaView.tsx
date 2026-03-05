@@ -22,14 +22,6 @@ export const FanArenaView = () => {
     <main className="space-y-4 pb-24">
       {/* Grand Prize Banner */}
       <section className="px-3 sm:px-6">
-        <div className="flex items-center justify-center gap-2 py-3">
-          <Trophy className="h-5 w-5 text-primary" />
-          <span className="text-sm font-bold uppercase tracking-widest text-primary/80">
-            The Arena
-          </span>
-          <Trophy className="h-5 w-5 text-primary" />
-        </div>
-
         <ArenaTicker
           prizePools={prizePools}
           isBarber={false}
