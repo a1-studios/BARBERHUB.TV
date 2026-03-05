@@ -1063,6 +1063,9 @@ export type Database = {
           forfeit_winner_id: string | null
           id: string
           is_tournament_match: boolean | null
+          ivs_channel_arn: string | null
+          ivs_playback_url: string | null
+          ivs_stream_key: string | null
           last_viewer_check: string | null
           live_viewers: number | null
           match_number: number | null
@@ -1118,6 +1121,9 @@ export type Database = {
           forfeit_winner_id?: string | null
           id?: string
           is_tournament_match?: boolean | null
+          ivs_channel_arn?: string | null
+          ivs_playback_url?: string | null
+          ivs_stream_key?: string | null
           last_viewer_check?: string | null
           live_viewers?: number | null
           match_number?: number | null
@@ -1173,6 +1179,9 @@ export type Database = {
           forfeit_winner_id?: string | null
           id?: string
           is_tournament_match?: boolean | null
+          ivs_channel_arn?: string | null
+          ivs_playback_url?: string | null
+          ivs_stream_key?: string | null
           last_viewer_check?: string | null
           live_viewers?: number | null
           match_number?: number | null
@@ -2746,6 +2755,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           display_order: number
+          ends_at: string | null
           highlight_end: number
           id: string
           is_active: boolean
@@ -2753,12 +2763,15 @@ export type Database = {
           logo_url: string | null
           message: string
           name: string
+          product_image_url: string | null
+          starts_at: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           created_by?: string | null
           display_order?: number
+          ends_at?: string | null
           highlight_end?: number
           id?: string
           is_active?: boolean
@@ -2766,12 +2779,15 @@ export type Database = {
           logo_url?: string | null
           message: string
           name: string
+          product_image_url?: string | null
+          starts_at?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           created_by?: string | null
           display_order?: number
+          ends_at?: string | null
           highlight_end?: number
           id?: string
           is_active?: boolean
@@ -2779,6 +2795,8 @@ export type Database = {
           logo_url?: string | null
           message?: string
           name?: string
+          product_image_url?: string | null
+          starts_at?: string | null
           updated_at?: string
         }
         Relationships: []
