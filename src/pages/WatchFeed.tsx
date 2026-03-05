@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSponsorAds } from "@/hooks/useSponsorAds";
-import { ArrowLeft, Eye, Heart, Play } from "lucide-react";
+import { ArrowLeft, Eye, Heart, Play, GraduationCap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
