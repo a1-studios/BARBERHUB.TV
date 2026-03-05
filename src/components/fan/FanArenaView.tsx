@@ -1,15 +1,9 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DynamicBattleHero } from '@/components/DynamicBattleHero';
 import { LiveBattleFeed } from '@/components/LiveBattleFeed';
-import { BBWalletWidget } from '@/components/economy/BBWalletWidget';
 import { GlobalLeagueDashboard } from '@/components/GlobalLeagueDashboard';
 import { ArenaTicker } from '@/components/factions/ArenaTicker';
-import { AddFundsModal } from '@/components/AddFundsModal';
-import { useBarberBucks } from '@/hooks/useBarberBucks';
-import { useUserProfile } from '@/hooks/useUserProfile';
 import { useCategoryPrizePools } from '@/hooks/useCategoryPrizePools';
-import { Trophy } from 'lucide-react';
 
 export const FanArenaView = () => {
   const navigate = useNavigate();
