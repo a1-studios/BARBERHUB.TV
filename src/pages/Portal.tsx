@@ -226,7 +226,19 @@ const Portal = () => {
                 </CardContent>
               </Card>
             </div>
-          )}
+
+            {/* Camera Studio Quick Access */}
+            <Card className="bg-muted/50 col-span-2 sm:col-span-4 cursor-pointer hover:border-primary/30 transition-colors" onClick={() => navigate('/studio')}>
+              <CardContent className="p-4 flex items-center gap-4">
+                <Camera className="h-6 w-6 text-primary shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground">Camera Studio</p>
+                  <p className="text-xs text-muted-foreground">Test your camera, mic & lighting before battle</p>
+                </div>
+                <Play className="h-4 w-4 text-muted-foreground" />
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Fan Hub - Show only for fans */}
           {isFan && (
