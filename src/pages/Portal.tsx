@@ -17,7 +17,7 @@ import { TournamentQueueStatus } from "@/components/tournament/TournamentQueueSt
 import { LiveMatchCounter } from "@/components/tournament/LiveMatchCounter";
 import { MyBattlesSection } from "@/components/barber/MyBattlesSection";
 
-import { Trophy, Users, Clock, Vote, DollarSign, Play, Calendar, Target, Loader2, Swords, Hash } from "lucide-react";
+import { Trophy, Users, Clock, Vote, DollarSign, Play, Calendar, Target, Loader2, Swords, Hash, Camera } from "lucide-react";
 import { useBarberStats } from "@/hooks/useBarberStats";
 import { OpenChallengeQueue } from "@/components/battles/OpenChallengeQueue";
 import { ImmersiveFactionBanners } from "@/components/factions/ImmersiveFactionBanners";
