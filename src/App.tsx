@@ -67,13 +67,7 @@ const AppContent = () => {
             />
             <Route 
               path="/battles/create" 
-              element={
-                <AuthGuard>
-                  <BarberGuard>
-                    <CreateBattle />
-                  </BarberGuard>
-                </AuthGuard>
-              } 
+              element={<Navigate to="/creator-hub" replace />}
             />
             <Route 
               path="/battles/:id" 

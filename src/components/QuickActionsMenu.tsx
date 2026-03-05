@@ -71,14 +71,6 @@ export function QuickActionsMenu() {
       requiresAuth: true
     },
     {
-      id: 'create-battle',
-      label: 'Unofficial Battle',
-      icon: <Plus className="w-5 h-5" />,
-      path: '/battles/create',
-      requiresAuth: true,
-      barberOnly: true
-    },
-    {
       id: 'profile',
       label: 'Profile',
       icon: <User className="w-5 h-5" />,
