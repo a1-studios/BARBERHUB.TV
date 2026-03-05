@@ -19,6 +19,7 @@ export const OpenChallengeQueue = () => {
   const { user } = useAuth();
   const { isBarber } = useUserRole();
   const { tierName } = useSubscriptionLimits();
+  const navigate = useNavigate();
 
   const isSilverPlus = ['silver', 'gold', 'diamond'].includes(tierName);
 
