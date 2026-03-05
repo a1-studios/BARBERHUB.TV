@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Sparkles, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { motion, AnimatePresence, useSpring, useTransform } from 'framer-motion';
+import { Sparkles, ChevronRight } from 'lucide-react';
 import bbCoinLogo from '@/assets/bb-coin-logo.png';
 import ScratchReveal from './ScratchReveal';
 import SponsoredBadge from './SponsoredBadge';
