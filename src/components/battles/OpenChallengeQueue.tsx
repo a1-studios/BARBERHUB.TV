@@ -1,10 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useSubscriptionLimits } from '@/hooks/useSubscriptionLimits';
 import { IssueChallenge } from './IssueChallenge';
 import { ChallengeFeed } from './ChallengeFeed';
-import { Flame, Plus } from 'lucide-react';
+import { Flame, Plus, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
