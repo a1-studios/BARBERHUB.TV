@@ -239,6 +239,7 @@ const Portal = () => {
               </CardContent>
             </Card>
           </div>
+          )}
 
           {/* Fan Hub - Show only for fans */}
           {isFan && (
