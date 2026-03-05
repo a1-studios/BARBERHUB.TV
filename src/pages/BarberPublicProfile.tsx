@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, MapPin, Award, Upload, Image as ImageIcon, Video, Trash2, Calendar, Instagram, Twitter, Youtube, Facebook } from 'lucide-react';
 import { BarberVideoSection } from '@/components/barber/BarberVideoSection';
 import { BarberActionButtons } from '@/components/barber/BarberActionButtons';
-import { SubscriptionBadge } from '@/components/SubscriptionBadge';
+import { TierRing } from '@/components/TierRing';
 import { useState } from 'react';
 import { DonationModal } from '@/components/DonationModal';
 import { M4MHeartbeat } from '@/components/m4m/M4MHeartbeat';
@@ -283,12 +283,14 @@ export default function BarberPublicProfile() {
           <div className="absolute inset-0 bg-gradient-to-br from-background/90 via-background/80 to-primary/20" />
           <CardContent className="relative p-8 z-10">
             <div className="flex flex-col md:flex-row gap-6 items-start">
-              <Avatar className="w-32 h-32 border-4 border-primary/30">
-                <AvatarImage src={barberData.avatar_url || undefined} />
-                <AvatarFallback className="bg-primary/20 text-primary text-4xl font-bold">
-                  {(displayName || 'B').charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <TierRing tier={subscriptionData?.active_subscription_tier} size="lg" interactive={!isOwner}>
+                <Avatar className="w-32 h-32">
+                  <AvatarImage src={barberData.avatar_url || undefined} />
+                  <AvatarFallback className="bg-primary/20 text-primary text-4xl font-bold">
+                    {(displayName || 'B').charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </TierRing>
               <M4MHeartbeat
                 certified={subscriptionData?.m4m_certified ?? false}
                 paid={subscriptionData?.m4m_paid ?? false}
@@ -303,9 +305,6 @@ export default function BarberPublicProfile() {
                 <div>
                   <div className="flex items-center gap-3 flex-wrap">
                     <h1 className="text-4xl font-bold text-white">{displayName}</h1>
-                    {subscriptionData?.active_subscription_tier && (
-                      <SubscriptionBadge tier={subscriptionData.active_subscription_tier} size="md" />
-                    )}
                     {barberData.country_code && (
                       <span className="text-3xl">{getCountryFlag(barberData.country_code)}</span>
                     )}

@@ -494,6 +494,58 @@
     pointer-events: none;
     transform: translateY(20px);
   }
+
+  /* ===== Tier Ring Animations ===== */
+
+  /* Orbiting LED dots */
+  @keyframes tierOrbit {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .animate-tier-orbit {
+    animation: tierOrbit 6s linear infinite;
+  }
+
+  /* Bronze glow pulse */
+  @keyframes tierGlowBronze {
+    0%, 100% { box-shadow: 0 0 8px hsl(24 100% 52% / 0.3), inset 0 0 4px hsl(24 100% 52% / 0.1); }
+    50% { box-shadow: 0 0 18px hsl(24 100% 52% / 0.6), inset 0 0 8px hsl(24 100% 52% / 0.2); }
+  }
+  .animate-tier-glow-bronze {
+    animation: tierGlowBronze 2.5s ease-in-out infinite;
+  }
+
+  /* Silver glow pulse */
+  @keyframes tierGlowSilver {
+    0%, 100% { box-shadow: 0 0 10px hsl(210 20% 80% / 0.3), 0 0 20px hsl(210 20% 80% / 0.15); }
+    50% { box-shadow: 0 0 22px hsl(210 20% 80% / 0.6), 0 0 40px hsl(210 20% 80% / 0.25); }
+  }
+  .animate-tier-glow-silver {
+    animation: tierGlowSilver 2s ease-in-out infinite;
+  }
+
+  /* Gold glow pulse */
+  @keyframes tierGlowGold {
+    0%, 100% { box-shadow: 0 0 12px hsl(45 100% 55% / 0.4), 0 0 25px hsl(45 100% 55% / 0.2); }
+    50% { box-shadow: 0 0 30px hsl(45 100% 55% / 0.7), 0 0 60px hsl(45 100% 55% / 0.35), 0 0 90px hsl(45 100% 55% / 0.15); }
+  }
+  .animate-tier-glow-gold {
+    animation: tierGlowGold 1.8s ease-in-out infinite;
+  }
+
+  /* Shimmer sweep */
+  @keyframes tierShimmer {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  .animate-tier-shimmer {
+    animation: tierShimmer 3s linear infinite;
+  }
+
+  /* Conic gradient utility */
+  .bg-gradient-conic {
+    background: conic-gradient(from 0deg, transparent, var(--tw-gradient-via), transparent, var(--tw-gradient-via), transparent);
+  }
 }
 
 @layer base {

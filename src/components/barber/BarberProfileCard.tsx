@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { DonationModal } from '../DonationModal';
 import { BarberVideoSection } from './BarberVideoSection';
 import { BarberActionButtons } from './BarberActionButtons';
-import { SubscriptionBadge } from '../SubscriptionBadge';
+import { TierRing } from '../TierRing';
 import { SubCategoryBadge } from '../SubCategoryBadge';
 import { M4MHeartbeat } from '../m4m/M4MHeartbeat';
 
@@ -185,12 +185,14 @@ export const BarberProfileCard = ({
       <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:border-primary/40 transition-all duration-300">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-3">
-            <Avatar className="w-12 h-12 border-2 border-primary/30">
-              <AvatarImage src={barberProfile.avatar_url || undefined} />
-              <AvatarFallback className="bg-primary/20 text-primary font-semibold">
-                {(displayName || 'B').charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <TierRing tier={extraProfileData?.active_subscription_tier} size="sm">
+              <Avatar className="w-12 h-12">
+                <AvatarImage src={barberProfile.avatar_url || undefined} />
+                <AvatarFallback className="bg-primary/20 text-primary font-semibold">
+                  {(displayName || 'B').charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            </TierRing>
             <M4MHeartbeat
               certified={extraProfileData?.m4m_certified ?? false}
               paid={extraProfileData?.m4m_paid ?? false}
@@ -204,9 +206,6 @@ export const BarberProfileCard = ({
                 <CardTitle className="text-lg text-white">
                   {displayName}
                 </CardTitle>
-                {extraProfileData?.active_subscription_tier && (
-                  <SubscriptionBadge tier={extraProfileData.active_subscription_tier} size="sm" />
-                )}
                 <SubCategoryBadge subCategory={extraProfileData?.sub_category} size="sm" />
                 {barberProfile.country_code && (
                   <span className="text-lg" title={`Country: ${barberProfile.country_code}`}>

@@ -2,7 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { SubscriptionBadge } from '@/components/SubscriptionBadge';
+import { TierRing } from '@/components/TierRing';
 import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
 import { Link } from 'react-router-dom';
 import { ExternalLink, Settings, Plus, ArrowDownToLine, Instagram, Twitter, Youtube, Facebook, LogOut, Trash2 } from 'lucide-react';
@@ -111,12 +111,14 @@ export function BarberProfileHeader({
       <CardContent className="relative p-4 md:p-8 z-10">
         <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start">
           <div className="flex flex-col items-center gap-1">
-            <Avatar className="w-20 h-20 md:w-32 md:h-32 border-4 border-primary/30">
-              <AvatarImage src={avatar_url || undefined} />
-              <AvatarFallback className="bg-primary/20 text-primary text-3xl md:text-4xl font-bold">
-                {(display_name || 'B').charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <TierRing tier={subscription_tier} size="lg" interactive={showActions}>
+              <Avatar className="w-20 h-20 md:w-32 md:h-32">
+                <AvatarImage src={avatar_url || undefined} />
+                <AvatarFallback className="bg-primary/20 text-primary text-3xl md:text-4xl font-bold">
+                  {(display_name || 'B').charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+            </TierRing>
             <M4MHeartbeat
               certified={m4m_certified}
               paid={m4m_paid}
@@ -132,9 +134,6 @@ export function BarberProfileHeader({
             <div>
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl md:text-4xl font-bold text-white">{display_name}</h1>
-                {(
-                  <SubscriptionBadge tier={subscription_tier || 'free'} size="md" interactive={showActions} />
-                )}
                 {country_code && (
                   <span className="text-2xl md:text-3xl">{getCountryFlag(country_code)}</span>
                 )}

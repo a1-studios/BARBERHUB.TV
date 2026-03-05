@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { SubscriptionBadge } from '@/components/SubscriptionBadge';
+import { TierRing } from '@/components/TierRing';
 import { ServiceSelector } from './ServiceSelector';
 import { DateSlotPicker } from './DateSlotPicker';
 import { BountyPresetPicker } from './BountyPresetPicker';
@@ -125,16 +125,17 @@ export function BookingConsole({
           {/* Barber Header */}
           <div className="p-4 pb-3 border-b border-border">
             <div className="flex items-center gap-3">
-              <Avatar className="h-10 w-10 border-2 border-primary/30">
-                <AvatarImage src={barberAvatar} />
-                <AvatarFallback className="bg-primary/20 text-primary font-bold">
-                  {barberName.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <TierRing tier={barberTier} size="sm">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={barberAvatar} />
+                  <AvatarFallback className="bg-primary/20 text-primary font-bold">
+                    {barberName.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </TierRing>
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <h3 className="font-bold text-base">{barberName}</h3>
-                  {barberTier && <SubscriptionBadge tier={barberTier} size="sm" />}
                 </div>
                 <p className="text-xs text-muted-foreground">Booking appointment</p>
               </div>

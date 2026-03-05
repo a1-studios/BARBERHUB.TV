@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Users, Eye } from 'lucide-react';
 import { AnimatedCounter } from './AnimatedCounter';
 import { useRealtimeBattleViewers } from '@/hooks/useRealtimeBattleViewers';
-import { SubscriptionBadge } from '../SubscriptionBadge';
+import { TierRing } from '../TierRing';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -121,20 +121,17 @@ export const BattleCard = ({
           <div className="grid grid-cols-3 gap-2 mb-4">
             {/* Barber 1 */}
             <div className="text-center">
-              <Avatar className="w-14 h-14 mx-auto mb-2 border-2 border-primary/20">
-                <AvatarImage src={barber1?.avatar_url} />
-                <AvatarFallback className="bg-primary/10">
-                  {barber1?.name?.charAt(0) || '?'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex items-center justify-center gap-1 mb-1">
-                <p className="font-semibold text-sm truncate">
-                  {barber1?.name || 'Unknown'}
-                </p>
-                {barber1Tier && (
-                  <SubscriptionBadge tier={barber1Tier} size="sm" showTooltip={false} />
-                )}
-              </div>
+              <TierRing tier={barber1Tier} size="sm" className="mx-auto mb-2">
+                <Avatar className="w-14 h-14">
+                  <AvatarImage src={barber1?.avatar_url} />
+                  <AvatarFallback className="bg-primary/10">
+                    {barber1?.name?.charAt(0) || '?'}
+                  </AvatarFallback>
+                </Avatar>
+              </TierRing>
+              <p className="font-semibold text-sm truncate mb-1">
+                {barber1?.name || 'Unknown'}
+              </p>
               <span className="text-xl">
                 {getCountryFlag(barber1?.country_code || null)}
               </span>
@@ -171,20 +168,17 @@ export const BattleCard = ({
 
             {/* Barber 2 */}
             <div className="text-center">
-              <Avatar className="w-14 h-14 mx-auto mb-2 border-2 border-secondary/20">
-                <AvatarImage src={barber2?.avatar_url} />
-                <AvatarFallback className="bg-secondary/10">
-                  {barber2?.name?.charAt(0) || '?'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex items-center justify-center gap-1 mb-1">
-                <p className="font-semibold text-sm truncate">
-                  {barber2?.name || 'Unknown'}
-                </p>
-                {barber2Tier && (
-                  <SubscriptionBadge tier={barber2Tier} size="sm" showTooltip={false} />
-                )}
-              </div>
+              <TierRing tier={barber2Tier} size="sm" className="mx-auto mb-2">
+                <Avatar className="w-14 h-14">
+                  <AvatarImage src={barber2?.avatar_url} />
+                  <AvatarFallback className="bg-secondary/10">
+                    {barber2?.name?.charAt(0) || '?'}
+                  </AvatarFallback>
+                </Avatar>
+              </TierRing>
+              <p className="font-semibold text-sm truncate mb-1">
+                {barber2?.name || 'Unknown'}
+              </p>
               <span className="text-xl">
                 {getCountryFlag(barber2?.country_code || null)}
               </span>
