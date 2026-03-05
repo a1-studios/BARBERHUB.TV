@@ -4,7 +4,7 @@ import { useSponsorAds } from "@/hooks/useSponsorAds";
 import { ArrowLeft, Play, GraduationCap, Flame } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 
 interface FeedItem {
   type: "video" | "sponsor" | "educator" | "platform";
@@ -34,7 +34,26 @@ const PLATFORM_PROMOS: FeedItem[] = [
 const WatchFeed = () => {
   const navigate = useNavigate();
   const [activeIndex, setActiveIndex] = useState(0);
+  const [endedVideos, setEndedVideos] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
+  const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
+
+  const handleVideoEnded = useCallback((id: string) => {
+    setEndedVideos(prev => new Set(prev).add(id));
+  }, []);
+
+  const handleReplay = useCallback((id: string) => {
+    const video = videoRefs.current.get(id);
+    if (video) {
+      video.currentTime = 0;
+      video.play();
+      setEndedVideos(prev => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  }, []);
 
   const { data: videos = [] } = useQuery({
     queryKey: ["watch-feed-videos"],
@@ -186,14 +205,27 @@ const WatchFeed = () => {
           allowFullScreen
         />
       ) : item.media_url && (item.media_url.includes('.mp4') || item.media_url.includes('.webm')) ? (
-        <video
-          src={item.media_url}
-          className="absolute inset-0 w-full h-full object-cover"
-          autoPlay={activeIndex === idx}
-          muted
-          loop
-          playsInline
-        />
+        <>
+          <video
+            ref={(el) => { if (el) videoRefs.current.set(item.id, el); }}
+            src={item.media_url}
+            className="absolute inset-0 w-full h-full object-contain"
+            autoPlay={activeIndex === idx}
+            muted
+            playsInline
+            onEnded={() => handleVideoEnded(item.id)}
+          />
+          {endedVideos.has(item.id) && (
+            <button
+              onClick={() => handleReplay(item.id)}
+              className="absolute inset-0 z-10 flex items-center justify-center bg-black/50"
+            >
+              <div className="w-16 h-16 rounded-full bg-primary/80 backdrop-blur-sm flex items-center justify-center">
+                <Play className="w-8 h-8 text-primary-foreground ml-1" />
+              </div>
+            </button>
+          )}
+        </>
       ) : (
         <div
           className="absolute inset-0 bg-cover bg-center"
