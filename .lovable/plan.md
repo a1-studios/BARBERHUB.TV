@@ -1,119 +1,118 @@
 
 
-## Particle Explosion Animation for VS/ENTER Cycle
+## Full Appointment Engine -- Anti-Gravity Audit & Build Plan
 
-### Concept
+### Current State
 
-Replace the current simple cross-fade between "VS" and "ENTER" (Swords) with a **particle explosion effect**. Every 3 seconds when the text transitions:
+**What exists:**
+- `appointments` table with full schema (status enum, escrow, SOS multiplier, location fields)
+- `barber_services` table (name, price_bb, duration, allows_house_call, allows_sos, is_active)
+- `barber_availability` table (day_of_week, start/end time, slot_duration)
+- `barber_blocked_slots` table (blocked_start/end, reason)
+- `barber_bucks_transactions` ledger
+- `appointment_reviews` + `review_tags` + `reputation_scores` (Pioneer system -- done)
+- Edge functions: `book-appointment`, `manage-appointment`
+- Frontend: `BookingConsole`, `ServiceSelector`, `DateSlotPicker`, `BountyPresetPicker`, `EscrowConfirmDialog`, `BarberAppointmentManager`, `MyAppointments`
+- Hook: `useBarberAvailability` (slots, blocked, existing appointments)
 
-1. The current text ("VS" or "ENTER") **explodes outward** into ~20 particles (tiny orange and cyan dots) that scatter in all directions
-2. The particles dissipate over ~400ms
-3. The new text ("ENTER" or "VS") **implodes inward** -- particles rush from the edges to the center and coalesce into the new text
+**What's missing for the full Anti-Gravity engine:**
 
-This creates a dramatic energy-burst feel where the text appears to shatter and reform.
+| Gap | Detail |
+|-----|--------|
+| No `deposit_bb` or `is_free_intro` on `barber_services` | Can't do "free first cut" or deposit-only holds |
+| No `house_call_bounties` table | Client-initiated bounty board doesn't exist |
+| No `post-bounty` edge function | Can't post bounties with BB escrow |
+| No `claim-bounty` edge function | Can't atomically claim bounties |
+| No expiration trigger for bounties | No auto-refund on unclaimed bounties |
+| Tier-gating still in code | `BookingConsole` + `BarberAppointmentManager` + both edge functions still block Bronze barbers |
+| `book-appointment` doesn't handle deposits | Always escrows full price |
+| No `HouseCallBountyWidget` | Clients can't post open bounties |
+| No `BountyBoard` | Barbers can't see/claim bounties |
+| No "My Bounties" in `MyAppointments` | Clients can't track posted bounties |
+| `appointments` table missing `is_deposit_only` and `remainder_bb` | Can't track partial escrow |
 
-### Animation Sequence
+---
 
-```text
-[VS visible for 5s with subtle idle glow pulse]
-         |
-   VS EXPLODES --> 20 particles scatter outward (400ms)
-         |
-   Particles converge inward --> ENTER forms (400ms)
-         |
-[ENTER visible for 3s with Swords icon pulse]
-         |
-   ENTER EXPLODES --> 20 particles scatter outward (400ms)
-         |
-   Particles converge inward --> VS reforms (400ms)
-         |
-   (repeat)
+### Implementation Plan
+
+#### 1. Database Migration
+
+**Alter `barber_services`:**
+- Add `deposit_bb INTEGER DEFAULT 0`
+- Add `is_free_intro BOOLEAN DEFAULT false`
+
+**Alter `appointments`:**
+- Add `is_deposit_only BOOLEAN DEFAULT false`
+- Add `remainder_bb INTEGER DEFAULT 0`
+
+**Create `house_call_bounties`:**
+```
+id, client_id, location_text, location_lat, location_lng,
+service_description, bounty_amount_bb, preferred_date,
+status (open/claimed/completed/expired/cancelled),
+claimed_by_barber_id, claimed_by_user_id, claimed_at,
+appointment_id (FK to appointments, set on claim),
+expires_at (default NOW + 24hrs), notes, created_at
 ```
 
-### Changes
+**RLS:** Authenticated SELECT all open bounties. Clients INSERT/UPDATE own. Barbers UPDATE to claim.
 
-#### File: `src/components/DynamicBattleHero.tsx`
+**Anti-Gravity Triggers:**
 
-**Modify the AnimatePresence transitions (lines 375-426):**
+1. `trg_bounty_status_change` -- AFTER UPDATE on `house_call_bounties`:
+   - On `expired`: refund client BB, notify client
+   - On `claimed`: notify client that a barber accepted
 
-Replace the current simple opacity/scale fade with particle explosion animations:
+2. `expire_bounties_batch()` -- callable function that sets `status = 'expired'` for all open bounties past `expires_at` (called by pg_cron every 5 minutes)
 
-- **Exit animation** (`exit` prop): The text scales down to 0 while spawning ~20 absolutely-positioned particle dots around it. Each particle flies outward in a random direction (random angle, random distance 20-50px) and fades to 0. Particles alternate between orange (`hsl(var(--primary))`) and cyan (`hsl(187 100% 50%)`) colors with matching glow shadows.
+#### 2. Edge Functions
 
-- **Enter animation** (`initial` + `animate`): The text starts at scale 0 with particles positioned at random outer positions. Particles animate inward to center (0,0) and fade, while the text scales from 0 to 1 with a slight overshoot (scale to 1.1 then settle to 1).
+**`post-bounty`** (new):
+- Validate client has sufficient BB
+- Enforce min 500 BB
+- Deduct BB from client (escrow)
+- Insert into `house_call_bounties`
+- Notify nearby barbers via `create_battle_notification`
 
-**Implementation approach -- inline particle generation:**
+**`claim-bounty`** (new):
+- Validate bounty is still `open`
+- Atomic claim with row-level lock (`FOR UPDATE`)
+- Create appointment from bounty data
+- Link `appointment_id` back to bounty
+- Notify client
 
-Rather than a separate component, generate particles directly in the motion variants using an array of `motion.div` elements rendered alongside the text inside each AnimatePresence child:
+**`book-appointment`** (modify):
+- Support `deposit_bb` from service: if service has `deposit_bb > 0`, only escrow that amount, set `is_deposit_only = true`, `remainder_bb = price - deposit`
+- Allow `escrow_amount_bb = 0` for `is_free_intro` services
+- Remove tier-gate block entirely
 
-```text
-<motion.div key="vs" ...>
-  {/* Particle array */}
-  {Array.from({ length: 20 }).map((_, i) => (
-    <motion.div
-      key={i}
-      className="absolute w-1 h-1 rounded-full"
-      style={{ backgroundColor: i % 2 === 0 ? orange : cyan }}
-      initial={{ x: 0, y: 0, opacity: 1 }}
-      animate={{ x: 0, y: 0, opacity: 0 }}  // idle: invisible
-      exit={{
-        x: Math.cos(angle) * distance,
-        y: Math.sin(angle) * distance,
-        opacity: [1, 0],
-        scale: [1, 0]
-      }}
-    />
-  ))}
-  {/* VS text */}
-  <span>VS</span>
-</motion.div>
-```
+**`manage-appointment`** (modify):
+- Remove tier-gate block in accept action
+- On complete for deposit-only appointments: collect remainder from client wallet before paying barber
 
-Each particle gets a pre-calculated random angle (evenly distributed around 360 degrees) and random distance (20-50px), with a staggered delay for a natural burst feel.
+#### 3. Frontend Changes
 
-**Apply to both barber and fan VS elements:**
+| File | Change |
+|------|--------|
+| `BookingConsole.tsx` | Remove `canAcceptPremium`/`isPremiumLocked` logic. Show deposit vs. full price breakdown. Support 0 BB "FREE" bookings. |
+| `ServiceSelector.tsx` | Show "FREE" badge for `is_free_intro`. Show "X BB deposit" if `deposit_bb > 0`. |
+| `BarberAppointmentManager.tsx` | Remove tier check on accept. Add deposit/free-intro fields to Add Service dialog. Add "Bounty Board" tab. |
+| `MyAppointments.tsx` | Add "My Bounties" tab showing posted bounties + status. Add cancel bounty button. |
+| `EscrowConfirmDialog.tsx` | Show deposit vs. remainder breakdown when `is_deposit_only`. |
+| `HouseCallBountyWidget.tsx` | **Create** -- location input, bounty slider, service description, preferred date. Calls `post-bounty`. |
+| `BountyBoard.tsx` | **Create** -- barber-facing feed of open bounties. Cards show location, amount, description, expiry countdown. "Claim" button calls `claim-bounty`. |
+| `BountyPresetPicker.tsx` | Add 500 BB preset. |
 
-- **Barber VS** (lines 389-406): Add particles to the VS motion.span and the Swords motion.div
-- **Fan VS** (lines 411-425): For fans, since there is no cycle, add a subtle idle particle effect -- 4-6 particles that slowly orbit or float around the VS text on a loop, giving a constant "energy radiating" feel without the explosion
+#### 4. Anti-Gravity Summary
 
-**Cycle timing unchanged:**
-- The existing `useEffect` at lines 166-173 stays as-is (5s VS, 3s Swords for barbers)
-- The explosion/implosion animation takes ~400ms for exit + ~400ms for enter, fitting within the transition window
-
-**Rings unchanged:**
-- The rotating dashed ring and inner cyan ring remain as they are (lines 344-366)
-
-### Particle Specs
-
-| Property | Value |
-|----------|-------|
-| Count per explosion | 20 particles |
-| Size | 1-2px (w-1 h-1 or w-0.5 h-0.5) |
-| Colors | Alternating orange (primary) and cyan |
-| Scatter distance | 20-50px random per particle |
-| Scatter direction | Evenly distributed angles (360/20 = 18 degree increments + slight random offset) |
-| Glow | box-shadow matching particle color, 4px blur |
-| Exit duration | 400ms ease-out |
-| Enter duration | 400ms ease-out with overshoot |
-| Stagger | 20ms between particles for natural burst feel |
-
-### What Changes
-
-| Element | Before | After |
-|---------|--------|-------|
-| VS to ENTER transition | Simple opacity/scale fade | Particle explosion outward, then implosion inward |
-| ENTER to VS transition | Simple opacity/scale fade | Same particle explosion/implosion |
-| Fan VS | Static with glow pulse | Static with 4-6 subtle floating particles |
-| Rings | Unchanged | Unchanged |
-| Drawer | Unchanged | Unchanged |
-| Cycle timing | Unchanged (5s/3s) | Unchanged |
-
-### What Is NOT Changing
-
-- The 5s VS / 3s Swords timing cycle
-- Arena Drawer contents and navigation
-- Rotating ring animations
-- MobileVoteCenter replacement during active battles
-- Video layout, action bars, name overlays
-- Open challenges badge count query
+| Capability | Mechanism |
+|------------|-----------|
+| Free first cut | `is_free_intro` flag on service, `book-appointment` allows 0 BB |
+| Deposit-only escrow | `deposit_bb` on service, edge function escrows deposit only |
+| Remainder collection on complete | `manage-appointment` collects `remainder_bb` from client on completion |
+| Bounty posting + BB lock | `post-bounty` edge function deducts BB upfront |
+| Bounty claiming (atomic) | `claim-bounty` edge function with `FOR UPDATE` row lock |
+| Bounty expiration + refund | DB trigger on status change + `pg_cron` batch every 5 min |
+| Notifications | DB triggers on bounty status changes |
+| No tier-gating | All tier checks removed from edge functions and frontend |
 
