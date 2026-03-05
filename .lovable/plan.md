@@ -1,119 +1,126 @@
 
 
-## Particle Explosion Animation for VS/ENTER Cycle
+## System Sync & Implementation Plan
 
-### Concept
+### Schema Sync Confirmed
 
-Replace the current simple cross-fade between "VS" and "ENTER" (Swords) with a **particle explosion effect**. Every 3 seconds when the text transitions:
+The latest Supabase schema has been verified. Key confirmations:
+- `m4m_fund_ledger` table exists (id, amount_bb, source_type, reference_id, created_at)
+- `process_battle_donation` RPC exists as a SECURITY DEFINER function implementing the 80/15/5 split with row-level locking
+- **No IVS columns** exist on the `battles` table yet (ivs_playback_url, ivs_stream_key, ivs_channel_arn need to be added)
+- `sponsor_ads` table lacks `product_image_url`, `starts_at`, `ends_at` columns
 
-1. The current text ("VS" or "ENTER") **explodes outward** into ~20 particles (tiny orange and cyan dots) that scatter in all directions
-2. The particles dissipate over ~400ms
-3. The new text ("ENTER" or "VS") **implodes inward** -- particles rush from the edges to the center and coalesce into the new text
+---
 
-This creates a dramatic energy-burst feel where the text appears to shatter and reform.
+### Task 1: Economy Guardrail — Wire UI to RPC
 
-### Animation Sequence
+**Problem:** `DonationModal.tsx` currently calls the `process-bb-donation` Edge Function (which does a flat 100% transfer). The secure `process_battle_donation` RPC already handles the 80/15/5 split server-side.
 
-```text
-[VS visible for 5s with subtle idle glow pulse]
-         |
-   VS EXPLODES --> 20 particles scatter outward (400ms)
-         |
-   Particles converge inward --> ENTER forms (400ms)
-         |
-[ENTER visible for 3s with Swords icon pulse]
-         |
-   ENTER EXPLODES --> 20 particles scatter outward (400ms)
-         |
-   Particles converge inward --> VS reforms (400ms)
-         |
-   (repeat)
+**Changes:**
+- **`src/components/DonationModal.tsx`** — For battle-context donations, call `supabase.rpc('process_battle_donation', { p_battle_id, p_donor_id, p_barber_id, p_amount_bb, p_message })` instead of invoking the edge function. For direct creator tips (non-battle), keep the existing `process-bb-donation` EF (those are 100% to barber, no split).
+- Add an optional `battleId` and `barberId` prop to `DonationModal` so it knows which path to take.
+
+---
+
+### Task 2: AWS IVS Pivot — Remove YouTube, Add HLS Video Player
+
+**Problem:** `BattleTheater.tsx` imports `YouTubeStreamPlayer`. `VideoSubmissionModal.tsx` uses `youtubeHelpers.ts`. These must be replaced.
+
+**Changes:**
+
+**DB Migration** — Add IVS columns to `battles`:
+```sql
+ALTER TABLE public.battles
+  ADD COLUMN IF NOT EXISTS ivs_stream_key TEXT,
+  ADD COLUMN IF NOT EXISTS ivs_playback_url TEXT,
+  ADD COLUMN IF NOT EXISTS ivs_channel_arn TEXT;
 ```
 
-### Changes
+**Delete files:**
+- `src/components/battles/YouTubeStreamPlayer.tsx`
+- `src/utils/youtubeHelpers.ts`
 
-#### File: `src/components/DynamicBattleHero.tsx`
+**New file: `src/components/battles/HLSVideoPlayer.tsx`**
+- A simple component wrapping a `<video>` tag
+- Accepts `src` (HLS playback URL), `isLive`, `poster` props
+- Ready for `amazon-ivs-player` integration later (comment placeholder)
 
-**Modify the AnimatePresence transitions (lines 375-426):**
+**Update `src/pages/BattleTheater.tsx`:**
+- Replace `YouTubeStreamPlayer` import with `HLSVideoPlayer`
+- Use `battle.ivs_playback_url` or `battle.barber_1_video_url` / `battle.barber_2_video_url` as source
 
-Replace the current simple opacity/scale fade with particle explosion animations:
+**Update `src/components/battles/VideoSubmissionModal.tsx`:**
+- Remove YouTube URL validation and `youtubeHelpers` import
+- Replace with a generic video URL input (Twilio VOD or HLS URL)
+- Remove YouTube-specific instructions card
 
-- **Exit animation** (`exit` prop): The text scales down to 0 while spawning ~20 absolutely-positioned particle dots around it. Each particle flies outward in a random direction (random angle, random distance 20-50px) and fades to 0. Particles alternate between orange (`hsl(var(--primary))`) and cyan (`hsl(187 100% 50%)`) colors with matching glow shadows.
+**Update `src/components/VideoPlayer.tsx`:**
+- Remove `youtubeVideoId` prop and all YouTube embed logic
 
-- **Enter animation** (`initial` + `animate`): The text starts at scale 0 with particles positioned at random outer positions. Particles animate inward to center (0,0) and fade, while the text scales from 0 to 1 with a slight overshoot (scale to 1.1 then settle to 1).
+**Update any other files** referencing `YouTubeStreamPlayer` or `youtubeHelpers` (search confirms: `FullscreenBattleVideoModal`, `SubmissionPreview`, `LiveBarberStreams`).
 
-**Implementation approach -- inline particle generation:**
+**Barber "Go Live" UI in `src/components/barber/BarberDashboard.tsx`:**
+- Add a "Go Live" card that displays `ivs_stream_key` and `ivs_playback_url` from the active battle
+- Include a "Request Stream Key" button (placeholder — will call AWS backend when connected)
+- Show stream key in a copyable input field
 
-Rather than a separate component, generate particles directly in the motion variants using an array of `motion.div` elements rendered alongside the text inside each AnimatePresence child:
+---
 
-```text
-<motion.div key="vs" ...>
-  {/* Particle array */}
-  {Array.from({ length: 20 }).map((_, i) => (
-    <motion.div
-      key={i}
-      className="absolute w-1 h-1 rounded-full"
-      style={{ backgroundColor: i % 2 === 0 ? orange : cyan }}
-      initial={{ x: 0, y: 0, opacity: 1 }}
-      animate={{ x: 0, y: 0, opacity: 0 }}  // idle: invisible
-      exit={{
-        x: Math.cos(angle) * distance,
-        y: Math.sin(angle) * distance,
-        opacity: [1, 0],
-        scale: [1, 0]
-      }}
-    />
-  ))}
-  {/* VS text */}
-  <span>VS</span>
-</motion.div>
+### Task 3: Camera Calibration Studio
+
+**New file: `src/pages/CameraStudio.tsx`**
+- Full-screen local camera preview using `navigator.mediaDevices.getUserMedia`
+- Device selectors (camera/mic dropdowns via `enumerateDevices`)
+- Audio level meter using Web Audio API `AnalyserNode` rendered to a canvas or progress bar
+- Lighting/framing guide overlay (rule-of-thirds grid, brightness indicator)
+- "Back to Dashboard" button
+
+**Update `src/App.tsx`:**
+- Add route `/studio` wrapped in `AuthGuard` + `BarberGuard`
+
+**Update `src/components/QuickActionsMenu.tsx`:**
+- Add "Camera Studio" action (barberOnly, path: `/studio`, Camera icon)
+
+**Update `src/components/barber/BarberDashboard.tsx`:**
+- Add "Camera Studio" link button in the Live Streaming section
+
+---
+
+### Task 4: Sponsor Marketplace Consolidation
+
+**DB Migration** — Enhance `sponsor_ads`:
+```sql
+ALTER TABLE public.sponsor_ads
+  ADD COLUMN IF NOT EXISTS product_image_url TEXT,
+  ADD COLUMN IF NOT EXISTS starts_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS ends_at TIMESTAMPTZ;
 ```
 
-Each particle gets a pre-calculated random angle (evenly distributed around 360 degrees) and random distance (20-50px), with a staggered delay for a natural burst feel.
+**Update `src/components/admin/SponsorAdsManager.tsx`:**
+- Add `product_image_url` upload field (same pattern as logo upload)
+- Add `starts_at` / `ends_at` date inputs for scheduling
 
-**Apply to both barber and fan VS elements:**
+**Update `src/hooks/useSponsorAds.tsx`:**
+- Add `product_image_url`, `starts_at`, `ends_at` to `SponsorAd` interface
+- When `activeOnly`, also filter by date range: `starts_at <= now AND (ends_at IS NULL OR ends_at >= now)`
 
-- **Barber VS** (lines 389-406): Add particles to the VS motion.span and the Swords motion.div
-- **Fan VS** (lines 411-425): For fans, since there is no cycle, add a subtle idle particle effect -- 4-6 particles that slowly orbit or float around the VS text on a loop, giving a constant "energy radiating" feel without the explosion
+**Update `src/components/creator/SponsorDealBoard.tsx`:**
+- Cross-reference: fetch gigs where `sponsor_id` matches `created_by` of active sponsor ads
+- Show a "Sponsored" badge on gigs from sponsors with active ads
 
-**Cycle timing unchanged:**
-- The existing `useEffect` at lines 166-173 stays as-is (5s VS, 3s Swords for barbers)
-- The explosion/implosion animation takes ~400ms for exit + ~400ms for enter, fitting within the transition window
+---
 
-**Rings unchanged:**
-- The rotating dashed ring and inner cyan ring remain as they are (lines 344-366)
+### Summary of Files Changed
 
-### Particle Specs
+| Change | Files |
+|--------|-------|
+| Economy RPC wiring | `DonationModal.tsx` |
+| YouTube removal | Delete 2 files, update ~6 components |
+| HLS player | New `HLSVideoPlayer.tsx` |
+| IVS columns | DB migration |
+| Go Live UI | `BarberDashboard.tsx` |
+| Camera Studio | New `CameraStudio.tsx`, `App.tsx`, `QuickActionsMenu.tsx` |
+| Sponsor enhancement | DB migration, `SponsorAdsManager.tsx`, `useSponsorAds.tsx`, `SponsorDealBoard.tsx` |
 
-| Property | Value |
-|----------|-------|
-| Count per explosion | 20 particles |
-| Size | 1-2px (w-1 h-1 or w-0.5 h-0.5) |
-| Colors | Alternating orange (primary) and cyan |
-| Scatter distance | 20-50px random per particle |
-| Scatter direction | Evenly distributed angles (360/20 = 18 degree increments + slight random offset) |
-| Glow | box-shadow matching particle color, 4px blur |
-| Exit duration | 400ms ease-out |
-| Enter duration | 400ms ease-out with overshoot |
-| Stagger | 20ms between particles for natural burst feel |
-
-### What Changes
-
-| Element | Before | After |
-|---------|--------|-------|
-| VS to ENTER transition | Simple opacity/scale fade | Particle explosion outward, then implosion inward |
-| ENTER to VS transition | Simple opacity/scale fade | Same particle explosion/implosion |
-| Fan VS | Static with glow pulse | Static with 4-6 subtle floating particles |
-| Rings | Unchanged | Unchanged |
-| Drawer | Unchanged | Unchanged |
-| Cycle timing | Unchanged (5s/3s) | Unchanged |
-
-### What Is NOT Changing
-
-- The 5s VS / 3s Swords timing cycle
-- Arena Drawer contents and navigation
-- Rotating ring animations
-- MobileVoteCenter replacement during active battles
-- Video layout, action bars, name overlays
-- Open challenges badge count query
+No CSS, Tailwind config, or branding changes.
 
