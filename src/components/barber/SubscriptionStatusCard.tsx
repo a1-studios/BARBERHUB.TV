@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { BarberSubscriptionTiers } from './BarberSubscriptionTiers';
 import { AddFundsModal } from '@/components/AddFundsModal';
 import { useState } from 'react';
+import { DEV_MODE } from '@/config/features';
 
 const TIER_LIMITS = {
   'free': { battles: 2, icon: Star, color: 'text-gray-400' },
