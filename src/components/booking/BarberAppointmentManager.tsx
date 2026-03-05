@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 import { Plus, Trash2, Calendar, Clock, Zap, Home, Check, X, Star } from 'lucide-react';
 import { ClientSnapshotWidget } from '@/components/reviews/ClientSnapshotWidget';
 import { PostAppointmentReviewModal } from '@/components/reviews/PostAppointmentReviewModal';
+import { BountyBoard } from './BountyBoard';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -26,7 +27,11 @@ export function BarberAppointmentManager() {
   const [showDenyDialog, setShowDenyDialog] = useState<string | null>(null);
   const [denyReason, setDenyReason] = useState('');
   const [reviewTarget, setReviewTarget] = useState<{ appointmentId: string; revieweeId: string } | null>(null);
-  const [newService, setNewService] = useState({ service_name: '', price_bb: 100, duration_minutes: 30, allows_house_call: false, allows_sos: false });
+  const [newService, setNewService] = useState({
+    service_name: '', price_bb: 100, duration_minutes: 30,
+    allows_house_call: false, allows_sos: false,
+    deposit_bb: 0, is_free_intro: false,
+  });
 
   const { data: barberProfile } = useQuery({
     queryKey: ['my-barber-profile', user?.id],
@@ -86,7 +91,6 @@ export function BarberAppointmentManager() {
     enabled: !!barberProfile,
   });
 
-  // Check which completed appointments barber has already reviewed
   const completedAppts = appointments?.filter(a => a.status === 'completed') || [];
   const { data: reviewedIds } = useQuery({
     queryKey: ['barber-reviewed', user?.id, completedAppts.map(a => a.id)],
@@ -109,14 +113,20 @@ export function BarberAppointmentManager() {
       const { error } = await supabase.from('barber_services').insert({
         barber_id: barberProfile.id,
         barber_user_id: user.id,
-        ...newService,
+        service_name: newService.service_name,
+        price_bb: newService.is_free_intro ? 0 : newService.price_bb,
+        duration_minutes: newService.duration_minutes,
+        allows_house_call: newService.allows_house_call,
+        allows_sos: newService.allows_sos,
+        deposit_bb: newService.deposit_bb,
+        is_free_intro: newService.is_free_intro,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       refetchServices();
       setShowAddService(false);
-      setNewService({ service_name: '', price_bb: 100, duration_minutes: 30, allows_house_call: false, allows_sos: false });
+      setNewService({ service_name: '', price_bb: 100, duration_minutes: 30, allows_house_call: false, allows_sos: false, deposit_bb: 0, is_free_intro: false });
       toast.success('Service added!');
     },
     onError: (e: any) => toast.error(e.message),
@@ -148,8 +158,6 @@ export function BarberAppointmentManager() {
     onSuccess: () => { refetchAvailability(); toast.success('Schedule updated'); },
   });
 
-  const canAcceptPremium = barberProfile?.active_subscription_tier && barberProfile.active_subscription_tier !== 'bronze';
-
   const handleDeny = (id: string) => {
     manageMutation.mutate({ appointment_id: id, action: 'deny', denial_reason: denyReason }, {
       onSuccess: () => { setShowDenyDialog(null); setDenyReason(''); refetchAppointments(); },
@@ -175,9 +183,12 @@ export function BarberAppointmentManager() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="appointments">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="appointments">
-            Appointments {activeAppts.length ? `(${activeAppts.length})` : ''}
+            Appts {activeAppts.length ? `(${activeAppts.length})` : ''}
+          </TabsTrigger>
+          <TabsTrigger value="bounties">
+            <Home className="h-3 w-3 mr-1" /> Bounties
           </TabsTrigger>
           <TabsTrigger value="services">Services</TabsTrigger>
           <TabsTrigger value="schedule">Schedule</TabsTrigger>
@@ -208,41 +219,35 @@ export function BarberAppointmentManager() {
                       <div className="text-right space-y-2">
                         <Badge className={statusColors[appt.status] || ''}>{appt.status}</Badge>
                         <p className="text-lg font-black text-primary">{appt.escrow_amount_bb} BB</p>
+                        {appt.is_deposit_only && (
+                          <p className="text-[10px] text-muted-foreground">+{appt.remainder_bb} BB on arrival</p>
+                        )}
                       </div>
                     </div>
 
-                    {/* Client Snapshot */}
                     {appt.status === 'pending' && (
                       <ClientSnapshotWidget clientId={appt.client_id} className="mt-3" />
                     )}
 
                     {appt.status === 'pending' && (
                       <div className="flex gap-2 mt-4">
-                        {appt.appointment_type !== 'standard' && !canAcceptPremium ? (
-                          <Button variant="outline" size="sm" className="flex-1 text-muted-foreground" disabled>
-                            Upgrade to Silver+ to accept
-                          </Button>
-                        ) : (
-                          <>
-                            <Button
-                              size="sm"
-                              className="flex-1 bg-green-600 hover:bg-green-700"
-                              onClick={() => manageMutation.mutate({ appointment_id: appt.id, action: 'accept' }, { onSuccess: () => refetchAppointments() })}
-                              disabled={manageMutation.isPending}
-                            >
-                              <Check className="h-4 w-4 mr-1" /> Accept
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              className="flex-1"
-                              onClick={() => setShowDenyDialog(appt.id)}
-                              disabled={manageMutation.isPending}
-                            >
-                              <X className="h-4 w-4 mr-1" /> Deny
-                            </Button>
-                          </>
-                        )}
+                        <Button
+                          size="sm"
+                          className="flex-1 bg-green-600 hover:bg-green-700"
+                          onClick={() => manageMutation.mutate({ appointment_id: appt.id, action: 'accept' }, { onSuccess: () => refetchAppointments() })}
+                          disabled={manageMutation.isPending}
+                        >
+                          <Check className="h-4 w-4 mr-1" /> Accept
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="flex-1"
+                          onClick={() => setShowDenyDialog(appt.id)}
+                          disabled={manageMutation.isPending}
+                        >
+                          <X className="h-4 w-4 mr-1" /> Deny
+                        </Button>
                       </div>
                     )}
 
@@ -260,7 +265,6 @@ export function BarberAppointmentManager() {
                 </Card>
               ))}
 
-              {/* Recently completed - review prompt */}
               {recentCompleted.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Recently Completed</p>
@@ -294,6 +298,11 @@ export function BarberAppointmentManager() {
           )}
         </TabsContent>
 
+        {/* ---- BOUNTY BOARD ---- */}
+        <TabsContent value="bounties">
+          <BountyBoard />
+        </TabsContent>
+
         {/* ---- SERVICES ---- */}
         <TabsContent value="services" className="space-y-4">
           <Button size="sm" onClick={() => setShowAddService(true)}>
@@ -303,8 +312,15 @@ export function BarberAppointmentManager() {
             <Card key={s.id}>
               <CardContent className="p-4 flex items-center justify-between">
                 <div>
-                  <p className="font-semibold">{s.service_name}</p>
-                  <p className="text-sm text-muted-foreground">{s.price_bb} BB · {s.duration_minutes}min</p>
+                  <p className="font-semibold flex items-center gap-2">
+                    {s.service_name}
+                    {s.is_free_intro && <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[9px]">FREE</Badge>}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {s.is_free_intro ? 'Free' : `${s.price_bb} BB`}
+                    {!s.is_free_intro && s.deposit_bb > 0 && ` (${s.deposit_bb} BB deposit)`}
+                    {' · '}{s.duration_minutes}min
+                  </p>
                   <div className="flex gap-1 mt-1">
                     {s.allows_house_call && <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-400">House Call</Badge>}
                     {s.allows_sos && <Badge variant="outline" className="text-[10px] border-destructive/30 text-destructive">SOS</Badge>}
@@ -381,10 +397,25 @@ export function BarberAppointmentManager() {
           <DialogHeader><DialogTitle>Add Service</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div><Label>Service Name</Label><Input value={newService.service_name} onChange={e => setNewService(p => ({ ...p, service_name: e.target.value }))} placeholder="e.g. Fade Cut" /></div>
+
+            <div className="flex items-center gap-2 pb-2">
+              <Switch checked={newService.is_free_intro} onCheckedChange={v => setNewService(p => ({ ...p, is_free_intro: v, price_bb: v ? 0 : 100 }))} />
+              <Label className="text-sm">Free Intro Cut 🎉</Label>
+            </div>
+
+            {!newService.is_free_intro && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div><Label>Price (BB)</Label><Input type="number" value={newService.price_bb} onChange={e => setNewService(p => ({ ...p, price_bb: parseInt(e.target.value) || 0 }))} /></div>
+                  <div><Label>Deposit (BB)</Label><Input type="number" value={newService.deposit_bb} onChange={e => setNewService(p => ({ ...p, deposit_bb: parseInt(e.target.value) || 0 }))} placeholder="0 = full price" /></div>
+                </div>
+              </>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Price (BB)</Label><Input type="number" value={newService.price_bb} onChange={e => setNewService(p => ({ ...p, price_bb: parseInt(e.target.value) || 0 }))} /></div>
               <div><Label>Duration (min)</Label><Input type="number" value={newService.duration_minutes} onChange={e => setNewService(p => ({ ...p, duration_minutes: parseInt(e.target.value) || 30 }))} /></div>
             </div>
+
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2"><Switch checked={newService.allows_house_call} onCheckedChange={v => setNewService(p => ({ ...p, allows_house_call: v }))} /><Label className="text-sm">House Call</Label></div>
               <div className="flex items-center gap-2"><Switch checked={newService.allows_sos} onCheckedChange={v => setNewService(p => ({ ...p, allows_sos: v }))} /><Label className="text-sm">SOS</Label></div>

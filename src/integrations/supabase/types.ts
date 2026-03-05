@@ -99,8 +99,10 @@ export type Database = {
           duration_minutes: number
           escrow_amount_bb: number
           id: string
+          is_deposit_only: boolean
           notes: string | null
           platform_fee_bb: number
+          remainder_bb: number
           scheduled_at: string
           service_id: string | null
           sos_multiplier: number
@@ -120,8 +122,10 @@ export type Database = {
           duration_minutes?: number
           escrow_amount_bb?: number
           id?: string
+          is_deposit_only?: boolean
           notes?: string | null
           platform_fee_bb?: number
+          remainder_bb?: number
           scheduled_at: string
           service_id?: string | null
           sos_multiplier?: number
@@ -141,8 +145,10 @@ export type Database = {
           duration_minutes?: number
           escrow_amount_bb?: number
           id?: string
+          is_deposit_only?: boolean
           notes?: string | null
           platform_fee_bb?: number
+          remainder_bb?: number
           scheduled_at?: string
           service_id?: string | null
           sos_multiplier?: number
@@ -518,9 +524,11 @@ export type Database = {
           barber_id: string
           barber_user_id: string
           created_at: string
+          deposit_bb: number
           duration_minutes: number
           id: string
           is_active: boolean
+          is_free_intro: boolean
           price_bb: number
           service_name: string
           updated_at: string
@@ -531,9 +539,11 @@ export type Database = {
           barber_id: string
           barber_user_id: string
           created_at?: string
+          deposit_bb?: number
           duration_minutes?: number
           id?: string
           is_active?: boolean
+          is_free_intro?: boolean
           price_bb?: number
           service_name: string
           updated_at?: string
@@ -544,9 +554,11 @@ export type Database = {
           barber_id?: string
           barber_user_id?: string
           created_at?: string
+          deposit_bb?: number
           duration_minutes?: number
           id?: string
           is_active?: boolean
+          is_free_intro?: boolean
           price_bb?: number
           service_name?: string
           updated_at?: string
@@ -2039,6 +2051,120 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "sponsor_gigs"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      house_call_bounties: {
+        Row: {
+          appointment_id: string | null
+          bounty_amount_bb: number
+          claimed_at: string | null
+          claimed_by_barber_id: string | null
+          claimed_by_user_id: string | null
+          client_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          location_lat: number | null
+          location_lng: number | null
+          location_text: string
+          notes: string | null
+          preferred_date: string | null
+          service_description: string | null
+          status: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          bounty_amount_bb: number
+          claimed_at?: string | null
+          claimed_by_barber_id?: string | null
+          claimed_by_user_id?: string | null
+          client_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          location_text: string
+          notes?: string | null
+          preferred_date?: string | null
+          service_description?: string | null
+          status?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          bounty_amount_bb?: number
+          claimed_at?: string | null
+          claimed_by_barber_id?: string | null
+          claimed_by_user_id?: string | null
+          client_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          location_lat?: number | null
+          location_lng?: number | null
+          location_text?: string
+          notes?: string | null
+          preferred_date?: string | null
+          service_description?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "house_call_bounties_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "house_call_bounties_claimed_by_barber_id_fkey"
+            columns: ["claimed_by_barber_id"]
+            isOneToOne: false
+            referencedRelation: "barber_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "house_call_bounties_claimed_by_barber_id_fkey"
+            columns: ["claimed_by_barber_id"]
+            isOneToOne: false
+            referencedRelation: "barber_stats"
+            referencedColumns: ["barber_id"]
+          },
+          {
+            foreignKeyName: "house_call_bounties_claimed_by_barber_id_fkey"
+            columns: ["claimed_by_barber_id"]
+            isOneToOne: false
+            referencedRelation: "public_barber_profiles"
+            referencedColumns: ["barber_id"]
+          },
+          {
+            foreignKeyName: "house_call_bounties_claimed_by_user_id_fkey"
+            columns: ["claimed_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "house_call_bounties_claimed_by_user_id_fkey"
+            columns: ["claimed_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "public_user_profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "house_call_bounties_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "house_call_bounties_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "public_user_profiles"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -3664,6 +3790,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      expire_bounties_batch: { Args: never; Returns: number }
       generate_elimination_bracket: {
         Args: { num_participants?: number; tournament_id_param: string }
         Returns: undefined

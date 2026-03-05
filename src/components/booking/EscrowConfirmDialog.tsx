@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Lock, AlertTriangle } from 'lucide-react';
+import { Lock, AlertTriangle, Gift } from 'lucide-react';
 
 interface EscrowConfirmDialogProps {
   open: boolean;
@@ -20,6 +20,9 @@ interface EscrowConfirmDialogProps {
   amount: number;
   currentBalance: number;
   scheduledAt: string;
+  isDepositOnly?: boolean;
+  remainderBb?: number;
+  isFree?: boolean;
 }
 
 export function EscrowConfirmDialog({
@@ -32,9 +35,12 @@ export function EscrowConfirmDialog({
   amount,
   currentBalance,
   scheduledAt,
+  isDepositOnly = false,
+  remainderBb = 0,
+  isFree = false,
 }: EscrowConfirmDialogProps) {
   const balanceAfter = currentBalance - amount;
-  const insufficient = balanceAfter < 0;
+  const insufficient = !isFree && balanceAfter < 0;
 
   const typeLabels: Record<string, string> = {
     standard: '📅 Standard',
@@ -47,11 +53,15 @@ export function EscrowConfirmDialog({
       <DialogContent className="sm:max-w-md border-primary/30">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Lock className="h-5 w-5 text-primary" />
-            Confirm Escrow Payment
+            {isFree ? <Gift className="h-5 w-5 text-green-400" /> : <Lock className="h-5 w-5 text-primary" />}
+            {isFree ? 'Confirm Free Appointment' : 'Confirm Escrow Payment'}
           </DialogTitle>
           <DialogDescription>
-            Your BB will be held in escrow until the barber completes the appointment.
+            {isFree
+              ? 'This is a free introductory appointment — no BB will be charged.'
+              : isDepositOnly
+                ? 'A deposit will be held now. The remainder is due when the appointment is completed.'
+                : 'Your BB will be held in escrow until the barber completes the appointment.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -77,22 +87,37 @@ export function EscrowConfirmDialog({
             </span>
           </div>
 
-          <div className="border-t border-border pt-4 space-y-2">
-            <div className="flex justify-between items-center">
-              <span className="text-sm">Current Balance</span>
-              <span className="font-bold text-primary">{currentBalance.toLocaleString()} BB</span>
+          {!isFree && (
+            <div className="border-t border-border pt-4 space-y-2">
+              <div className="flex justify-between items-center">
+                <span className="text-sm">Current Balance</span>
+                <span className="font-bold text-primary">{currentBalance.toLocaleString()} BB</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm">{isDepositOnly ? 'Deposit Now' : 'Escrow Amount'}</span>
+                <span className="font-bold text-destructive">-{amount.toLocaleString()} BB</span>
+              </div>
+              {isDepositOnly && (
+                <div className="flex justify-between items-center text-xs text-muted-foreground">
+                  <span>Due on arrival</span>
+                  <span>{remainderBb.toLocaleString()} BB</span>
+                </div>
+              )}
+              <div className="flex justify-between items-center border-t border-border pt-2">
+                <span className="text-sm font-medium">Balance After</span>
+                <span className={`font-bold ${insufficient ? 'text-destructive' : 'text-green-400'}`}>
+                  {balanceAfter.toLocaleString()} BB
+                </span>
+              </div>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm">Escrow Amount</span>
-              <span className="font-bold text-destructive">-{amount.toLocaleString()} BB</span>
+          )}
+
+          {isFree && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+              <Gift className="h-4 w-4 text-green-400" />
+              <span className="text-sm text-green-400 font-bold">No charge — free introductory service</span>
             </div>
-            <div className="flex justify-between items-center border-t border-border pt-2">
-              <span className="text-sm font-medium">Balance After</span>
-              <span className={`font-bold ${insufficient ? 'text-destructive' : 'text-green-400'}`}>
-                {balanceAfter.toLocaleString()} BB
-              </span>
-            </div>
-          </div>
+          )}
 
           {insufficient && (
             <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30">
@@ -111,7 +136,11 @@ export function EscrowConfirmDialog({
             disabled={loading || insufficient}
             className="bg-primary hover:bg-primary/90 font-bold"
           >
-            {loading ? 'Processing...' : `COMMIT ${amount.toLocaleString()} BB`}
+            {loading
+              ? 'Processing...'
+              : isFree
+                ? 'CONFIRM FREE BOOKING'
+                : `COMMIT ${amount.toLocaleString()} BB`}
           </Button>
         </DialogFooter>
       </DialogContent>
