@@ -167,39 +167,6 @@ const CreateBattle = () => {
     );
   }
 
-  // Gate behind premium subscription
-  if (!hasActiveSubscription) {
-    return (
-      <div className="min-h-screen">
-        <Header />
-        <main className="pt-24 pb-20 px-4">
-          <div className="container mx-auto max-w-2xl">
-            <BackButton to="/battles" />
-            <Card className="border border-border/50 shadow-lg backdrop-blur-sm bg-card/50 text-center" style={{ borderRadius: '1.5rem' }}>
-              <CardContent className="py-12 space-y-6">
-                <ShieldOff className="w-16 h-16 mx-auto text-muted-foreground" />
-                <h2 className="text-2xl font-bold text-foreground">Premium Feature</h2>
-                <p className="text-muted-foreground max-w-md mx-auto">
-                  Creating unofficial battles requires an active subscription (Bronze, Silver, or Gold).
-                  Unofficial battles are for fun and practice — they do not affect official rankings.
-                </p>
-                <Button onClick={() => setShowUpgradePrompt(true)} size="lg">
-                  View Subscription Plans
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </main>
-        <Footer />
-        <UpgradePrompt 
-          isOpen={showUpgradePrompt}
-          onClose={() => setShowUpgradePrompt(false)}
-          reason="battle_limit"
-        />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen">
       <Header />
