@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Trophy, Sparkles, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { motion, AnimatePresence, useSpring, useTransform } from 'framer-motion';
+import { Sparkles, ChevronRight } from 'lucide-react';
 import bbCoinLogo from '@/assets/bb-coin-logo.png';
 import ScratchReveal from './ScratchReveal';
 import SponsoredBadge from './SponsoredBadge';
@@ -55,8 +55,6 @@ const formatCurrency = (cents: number) =>
 export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerProps) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const [displayValue, setDisplayValue] = useState(0);
-  const hasAnimated = useRef(false);
   const { user } = useAuth();
 
   const { data: dbSponsors = [] } = useSponsorAds(true);
@@ -90,27 +88,14 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
     [sponsors],
   );
 
-  // Animated counter on first prize-pool appearance
-  useEffect(() => {
-    if (hasAnimated.current || totalPool === 0) return;
-    const current = displaySlides[activeIndex];
-    if (!current || current.type !== 'prize-pool') return;
-
-    hasAnimated.current = true;
-    const startTime = Date.now();
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / COUNTER_DURATION_MS, 1);
-      const easeOut = 1 - Math.pow(1 - progress, 3);
-      setDisplayValue(Math.round(totalPool * easeOut));
-      if (progress < 1) requestAnimationFrame(animate);
-    };
-    requestAnimationFrame(animate);
-  }, [activeIndex, totalPool, displaySlides]);
+  // Smooth animated counter using framer-motion spring
+  const bbValue = useMemo(() => Math.round((totalPool / 100) * 5), [totalPool]);
+  const spring = useSpring(0, { stiffness: 40, damping: 20 });
+  const displayBB = useTransform(spring, (val) => Math.floor(val).toLocaleString());
 
   useEffect(() => {
-    if (hasAnimated.current) setDisplayValue(totalPool);
-  }, [totalPool]);
+    spring.set(bbValue);
+  }, [bbValue, spring]);
 
   // Auto-rotate
   useEffect(() => {
@@ -181,23 +166,18 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
               animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
               exit={{ opacity: 0, scale: 1.1, y: -15 }}
               transition={{ duration: 0.5, delay: 0.25 }}
-              className="flex items-center justify-center gap-3"
+              className="flex flex-col items-center justify-center"
             >
               <motion.div
-                key={`trophy-${activeIndex}`}
-                animate={{ rotate: [0, 360] }}
+                key={totalPool}
+                animate={{ scale: [1, 1.08, 1], filter: ['brightness(1)', 'brightness(1.4)', 'brightness(1)'] }}
                 transition={{ duration: 0.6, ease: 'easeOut' }}
               >
-                <Trophy className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 text-primary drop-shadow-[0_0_10px_hsl(var(--primary))]" />
+                <span className="text-3xl sm:text-4xl lg:text-5xl font-black bg-gradient-to-r from-primary via-foreground to-cyan bg-clip-text text-transparent drop-shadow-[0_0_20px_hsl(var(--primary)/0.4)]">
+                  <motion.span>{displayBB}</motion.span> BB
+                </span>
               </motion.div>
-              <motion.span
-                animate={{ scale: [1, 1.03, 1] }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                className="text-xl sm:text-2xl lg:text-3xl font-black bg-gradient-to-r from-primary via-foreground to-cyan bg-clip-text text-transparent"
-              >
-                {new Intl.NumberFormat('en-US').format(Math.round((displayValue / 100) * 5))} BB
-              </motion.span>
-              <span className="text-xs sm:text-sm uppercase tracking-widest text-primary/70 font-bold shrink-0">
+              <span className="text-xs sm:text-sm uppercase tracking-widest text-primary/70 font-bold mt-1">
                 In Prizes
               </span>
             </motion.div>
