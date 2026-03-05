@@ -6,6 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// 🔴 DEV BYPASS — set to false before going live
+const DEV_BYPASS = true;
+
 const MIN_STAKE_BB = 100;
 const MAX_DURATION_MINUTES = 60;
 
