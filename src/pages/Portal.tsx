@@ -14,7 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { TournamentRegistration } from "@/components/tournament/TournamentRegistration";
 import { TournamentQueueStatus } from "@/components/tournament/TournamentQueueStatus";
-import { LiveMatchCounter } from "@/components/tournament/LiveMatchCounter";
+import { PortalGlobeHero } from "@/components/portal/PortalGlobeHero";
 import { MyBattlesSection } from "@/components/barber/MyBattlesSection";
 
 import { Trophy, Users, Clock, Vote, DollarSign, Play, Calendar, Target, Loader2, Swords, Hash, Camera } from "lucide-react";
