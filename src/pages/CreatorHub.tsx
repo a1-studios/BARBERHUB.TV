@@ -6,23 +6,27 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { AuthDialog } from '@/components/auth/AuthDialog';
 import { ProfileSetupPrompt } from '@/components/auth/ProfileSetupPrompt';
-import { EducatorUpload } from '@/components/creator/EducatorUpload';
+import { CreatorActionBar } from '@/components/creator/CreatorActionBar';
+import { UploadDrawer } from '@/components/creator/UploadDrawer';
+import { CreateBattleDrawer } from '@/components/creator/CreateBattleDrawer';
+import { DealsDrawer } from '@/components/creator/DealsDrawer';
 import { CreatorStatsDrawer } from '@/components/creator/CreatorStatsDrawer';
-import { SponsorDealBoard } from '@/components/creator/SponsorDealBoard';
+import { ChallengeModal } from '@/components/battles/ChallengeModal';
 import Header from '@/components/Header';
 import { BottomNavBar } from '@/components/BottomNavBar';
 import { toast } from 'sonner';
-import { 
-  Crown,
-  Scissors,
-  BarChart3
-} from 'lucide-react';
+import { Crown, Scissors } from 'lucide-react';
 
 export default function CreatorHub() {
   const { user, loading } = useAuth();
   const { isBarber, isLoading: rolesLoading } = useUserRole();
   const { needsSetup, isLoading: validationLoading } = useProfileValidator();
   const navigate = useNavigate();
+
+  const [showUpload, setShowUpload] = useState(false);
+  const [showBattle, setShowBattle] = useState(false);
+  const [showChallenge, setShowChallenge] = useState(false);
+  const [showDeals, setShowDeals] = useState(false);
   const [showStats, setShowStats] = useState(false);
 
   // Redirect non-barbers
@@ -51,8 +55,8 @@ export default function CreatorHub() {
       <>
         <Header />
         <div className="min-h-screen pt-16 px-4 flex flex-col items-center justify-center bg-gradient-to-br from-background to-muted/20">
-          <Crown className="h-10 w-10 text-primary mb-4" />
-          <h1 className="text-3xl font-bold mb-2">
+          <Crown className="h-12 w-12 text-primary mb-4" />
+          <h1 className="text-4xl font-black mb-2 tracking-tight">
             <span className="text-foreground">CREATOR</span>
             <span className="text-primary">-HUB</span>
           </h1>
@@ -74,34 +78,45 @@ export default function CreatorHub() {
     <>
       <Header />
       <div className="min-h-screen pt-16 pb-20 bg-gradient-to-b from-background to-muted/10">
-        {/* Top Bar */}
-        <div className="flex items-center justify-between px-4 py-3 sticky top-16 z-10 bg-background/80 backdrop-blur-lg border-b border-border/10">
-          <div className="flex items-center gap-2">
-            <Crown className="h-5 w-5 text-primary" />
-            <h1 className="text-base font-bold tracking-tight">
-              <span className="text-foreground">CREATOR</span>
-              <span className="text-primary">-HUB</span>
-            </h1>
-          </div>
-          <button
-            onClick={() => setShowStats(true)}
-            className="p-2 rounded-xl bg-card/50 border border-border/20 hover:bg-card/80 transition-colors"
-          >
-            <BarChart3 className="w-4 h-4 text-muted-foreground" />
-          </button>
+        {/* Centered Title — 20% larger */}
+        <div className="flex flex-col items-center justify-center pt-6 pb-4">
+          <Crown className="h-8 w-8 text-primary mb-2" />
+          <h1 className="text-4xl font-black tracking-tight text-center">
+            <span className="text-foreground">CREATOR</span>
+            <span className="text-primary">-HUB</span>
+          </h1>
+          <p className="text-xs text-muted-foreground mt-1">Your content command center</p>
         </div>
 
-        {/* Main Content */}
-        <div className="px-4 py-4 space-y-6">
-          {/* Educator Upload — Main Stage */}
-          <EducatorUpload />
+        {/* Action Pills */}
+        <div className="px-4 pb-4">
+          <CreatorActionBar
+            onUpload={() => setShowUpload(true)}
+            onBattle={() => setShowBattle(true)}
+            onChallenge={() => setShowChallenge(true)}
+            onDeals={() => setShowDeals(true)}
+            onStats={() => setShowStats(true)}
+          />
+        </div>
 
-          {/* Sponsor Deal Board */}
-          <SponsorDealBoard />
+        {/* Content feed placeholder */}
+        <div className="px-4">
+          <div className="rounded-2xl border border-border/20 bg-card/30 p-8 text-center">
+            <p className="text-sm text-muted-foreground">Your published content will appear here</p>
+          </div>
         </div>
       </div>
 
+      {/* Drawers / Modals */}
+      <UploadDrawer isOpen={showUpload} onClose={() => setShowUpload(false)} />
+      <CreateBattleDrawer isOpen={showBattle} onClose={() => setShowBattle(false)} />
+      <DealsDrawer isOpen={showDeals} onClose={() => setShowDeals(false)} />
       <CreatorStatsDrawer isOpen={showStats} onClose={() => setShowStats(false)} />
+      <ChallengeModal
+        open={showChallenge}
+        onClose={() => setShowChallenge(false)}
+      />
+
       <BottomNavBar />
     </>
   );
