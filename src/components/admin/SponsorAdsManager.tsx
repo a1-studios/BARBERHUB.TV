@@ -31,9 +31,12 @@ interface SponsorFormData {
   message: string;
   highlight_end: number;
   logo_url: string;
+  product_image_url: string;
   link: string;
   display_order: number;
   is_active: boolean;
+  starts_at: string;
+  ends_at: string;
 }
 
 const DEFAULT_FORM: SponsorFormData = {
