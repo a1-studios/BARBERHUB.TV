@@ -166,23 +166,18 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
               animate={{ opacity: 1, filter: 'blur(0px)', y: 0 }}
               exit={{ opacity: 0, scale: 1.1, y: -15 }}
               transition={{ duration: 0.5, delay: 0.25 }}
-              className="flex items-center justify-center gap-3"
+              className="flex flex-col items-center justify-center"
             >
               <motion.div
-                key={`trophy-${activeIndex}`}
-                animate={{ rotate: [0, 360] }}
+                key={totalPool}
+                animate={{ scale: [1, 1.08, 1], filter: ['brightness(1)', 'brightness(1.4)', 'brightness(1)'] }}
                 transition={{ duration: 0.6, ease: 'easeOut' }}
               >
-                <Trophy className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 text-primary drop-shadow-[0_0_10px_hsl(var(--primary))]" />
+                <span className="text-3xl sm:text-4xl lg:text-5xl font-black bg-gradient-to-r from-primary via-foreground to-cyan bg-clip-text text-transparent drop-shadow-[0_0_20px_hsl(var(--primary)/0.4)]">
+                  <motion.span>{displayBB}</motion.span> BB
+                </span>
               </motion.div>
-              <motion.span
-                animate={{ scale: [1, 1.03, 1] }}
-                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                className="text-xl sm:text-2xl lg:text-3xl font-black bg-gradient-to-r from-primary via-foreground to-cyan bg-clip-text text-transparent"
-              >
-                {new Intl.NumberFormat('en-US').format(Math.round((displayValue / 100) * 5))} BB
-              </motion.span>
-              <span className="text-xs sm:text-sm uppercase tracking-widest text-primary/70 font-bold shrink-0">
+              <span className="text-xs sm:text-sm uppercase tracking-widest text-primary/70 font-bold mt-1">
                 In Prizes
               </span>
             </motion.div>
