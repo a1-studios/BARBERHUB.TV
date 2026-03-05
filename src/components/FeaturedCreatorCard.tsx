@@ -185,20 +185,19 @@ export const FeaturedCreatorCard = ({ creator, isFavorite, onSetFavorite }: Feat
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Avatar className="w-12 h-12 border-2 border-primary/30">
-                <AvatarImage src={creator.avatar_url || undefined} />
-                <AvatarFallback className="bg-primary/20 text-primary font-semibold">
-                  {(creator.display_name || creator.username || 'U').charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+              <TierRing tier={subscriptionData?.active_subscription_tier} size="sm">
+                <Avatar className="w-12 h-12">
+                  <AvatarImage src={creator.avatar_url || undefined} />
+                  <AvatarFallback className="bg-primary/20 text-primary font-semibold">
+                    {(creator.display_name || creator.username || 'U').charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </TierRing>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <CardTitle className="text-lg text-white">
                     {creator.display_name || creator.username || 'Anonymous Creator'}
                   </CardTitle>
-                  {subscriptionData?.active_subscription_tier && (
-                    <SubscriptionBadge tier={subscriptionData.active_subscription_tier} size="sm" />
-                  )}
                   {creator.country_code && (
                     <span className="text-lg" title={`Country: ${creator.country_code}`}>
                       {getCountryFlag(creator.country_code)}

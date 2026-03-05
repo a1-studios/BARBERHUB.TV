@@ -305,9 +305,6 @@ export default function BarberPublicProfile() {
                 <div>
                   <div className="flex items-center gap-3 flex-wrap">
                     <h1 className="text-4xl font-bold text-white">{displayName}</h1>
-                    {subscriptionData?.active_subscription_tier && (
-                      <SubscriptionBadge tier={subscriptionData.active_subscription_tier} size="md" />
-                    )}
                     {barberData.country_code && (
                       <span className="text-3xl">{getCountryFlag(barberData.country_code)}</span>
                     )}

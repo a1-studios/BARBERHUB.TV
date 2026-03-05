@@ -134,9 +134,6 @@ export function BarberProfileHeader({
             <div>
               <div className="flex items-center gap-3 flex-wrap">
                 <h1 className="text-2xl md:text-4xl font-bold text-white">{display_name}</h1>
-                {(
-                  <SubscriptionBadge tier={subscription_tier || 'free'} size="md" interactive={showActions} />
-                )}
                 {country_code && (
                   <span className="text-2xl md:text-3xl">{getCountryFlag(country_code)}</span>
                 )}
