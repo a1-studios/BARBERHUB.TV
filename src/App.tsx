@@ -14,7 +14,7 @@ import { useFollowedBarbersNotifications } from "@/hooks/useFollowedBarbersNotif
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import BattlesPage from "./pages/BattlesPage";
-
+import BattleDetails from "./pages/BattleDetails";
 
 import Analytics from "./pages/Analytics";
 import Portal from "./pages/Portal";
