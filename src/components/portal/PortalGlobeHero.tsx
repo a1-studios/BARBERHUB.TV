@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import Globe3D from "@/components/Globe3D";
 import { LiveMatchCounter } from "@/components/tournament/LiveMatchCounter";
+import { useCategoryPrizePools } from "@/hooks/useCategoryPrizePools";
 
 const tickerItems = [
   "🏆 Prize Pool: $25,000+ and growing",
@@ -14,10 +15,24 @@ const tickerItems = [
 
 export const PortalGlobeHero = () => {
   const [tickerIndex, setTickerIndex] = useState(0);
+  const { totalPrizePool, isLoading: prizeLoading } = useCategoryPrizePools();
+
+  const totalDollars = totalPrizePool / 100;
+  const bbEquivalent = totalDollars * 5;
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(value);
+  const formatBB = (value: number) =>
+    new Intl.NumberFormat('en-US').format(value);
+
+  const dynamicTickerItems = [
+    `🏆 Prize Pool: ${prizeLoading ? '$25,000+' : formatCurrency(totalDollars)} (${prizeLoading ? '125,000' : formatBB(bbEquivalent)} BB)`,
+    ...tickerItems.slice(1),
+  ];
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setTickerIndex((prev) => (prev + 1) % tickerItems.length);
+      setTickerIndex((prev) => (prev + 1) % dynamicTickerItems.length);
     }, 4000);
     return () => clearInterval(interval);
   }, []);
@@ -108,6 +123,26 @@ export const PortalGlobeHero = () => {
           <span className="text-foreground">CHAMPIONSHIP</span>
         </h1>
 
+        {/* Prize Pool Display */}
+        <div className="flex flex-col items-center mb-2">
+          <motion.span
+            key={`usd-${totalDollars}`}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-primary via-orange-400 to-primary bg-clip-text text-transparent"
+          >
+            {prizeLoading ? '...' : formatCurrency(totalDollars)}
+          </motion.span>
+          <motion.span
+            key={`bb-${bbEquivalent}`}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-sm sm:text-base font-semibold bg-gradient-to-r from-primary to-[hsl(187_100%_50%)] bg-clip-text text-transparent"
+          >
+            {prizeLoading ? '...' : `≈ ${formatBB(bbEquivalent)} BB`}
+          </motion.span>
+        </div>
+
         <LiveMatchCounter />
 
         {/* Live dot + subtitle */}
@@ -134,7 +169,7 @@ export const PortalGlobeHero = () => {
             transition={{ duration: 0.4 }}
             className="text-center text-sm font-medium text-foreground"
           >
-            {tickerItems[tickerIndex]}
+            {dynamicTickerItems[tickerIndex]}
           </motion.p>
         </AnimatePresence>
       </div>
