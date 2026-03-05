@@ -1,10 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useSubscriptionLimits } from '@/hooks/useSubscriptionLimits';
 import { IssueChallenge } from './IssueChallenge';
 import { ChallengeFeed } from './ChallengeFeed';
-import { Flame, Plus } from 'lucide-react';
+import { Flame, Plus, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
@@ -18,6 +19,7 @@ export const OpenChallengeQueue = () => {
   const { user } = useAuth();
   const { isBarber } = useUserRole();
   const { tierName } = useSubscriptionLimits();
+  const navigate = useNavigate();
 
   const isSilverPlus = ['silver', 'gold', 'diamond'].includes(tierName);
 
@@ -37,6 +39,16 @@ export const OpenChallengeQueue = () => {
               Unofficial — no ranking impact
             </span>
           </div>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground"
+            onClick={() => navigate('/studio')}
+          >
+            <Camera className="w-4 h-4 mr-1" />
+            Check Gear
+          </Button>
 
           {isSilverPlus && (
             <Drawer>

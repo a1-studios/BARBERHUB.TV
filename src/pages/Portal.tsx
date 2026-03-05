@@ -17,7 +17,7 @@ import { TournamentQueueStatus } from "@/components/tournament/TournamentQueueSt
 import { LiveMatchCounter } from "@/components/tournament/LiveMatchCounter";
 import { MyBattlesSection } from "@/components/barber/MyBattlesSection";
 
-import { Trophy, Users, Clock, Vote, DollarSign, Play, Calendar, Target, Loader2, Swords, Hash } from "lucide-react";
+import { Trophy, Users, Clock, Vote, DollarSign, Play, Calendar, Target, Loader2, Swords, Hash, Camera } from "lucide-react";
 import { useBarberStats } from "@/hooks/useBarberStats";
 import { OpenChallengeQueue } from "@/components/battles/OpenChallengeQueue";
 import { ImmersiveFactionBanners } from "@/components/factions/ImmersiveFactionBanners";
@@ -195,7 +195,7 @@ const Portal = () => {
           )}
 
           {/* Barber Quick Stats */}
-          {isBarber && barberStats && (
+          {isBarber && barberStats && (<>
             <div className="mb-8 grid grid-cols-2 sm:grid-cols-4 gap-3">
               <Card className="bg-muted/50">
                 <CardContent className="p-4 text-center">
@@ -226,7 +226,19 @@ const Portal = () => {
                 </CardContent>
               </Card>
             </div>
-          )}
+
+            {/* Camera Studio Quick Access */}
+            <Card className="mb-8 bg-muted/50 cursor-pointer hover:border-primary/30 transition-colors" onClick={() => navigate('/studio')}>
+              <CardContent className="p-4 flex items-center gap-4">
+                <Camera className="h-6 w-6 text-primary shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-foreground">Camera Studio</p>
+                  <p className="text-xs text-muted-foreground">Test your camera, mic & lighting before battle</p>
+                </div>
+                <Play className="h-4 w-4 text-muted-foreground" />
+              </CardContent>
+            </Card>
+          </>)}
 
           {/* Fan Hub - Show only for fans */}
           {isFan && (
