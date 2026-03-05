@@ -140,9 +140,12 @@ export default function SponsorAdsManager() {
       message: form.message.trim(),
       highlight_end: form.highlight_end,
       logo_url: form.logo_url || null,
+      product_image_url: form.product_image_url || null,
       link: form.link || null,
       display_order: form.display_order,
       is_active: form.is_active,
+      starts_at: form.starts_at || null,
+      ends_at: form.ends_at || null,
     };
 
     if (editingId) {
