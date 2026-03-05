@@ -152,23 +152,7 @@ export const BarberSubscriptionTiers = ({ onShowAddFunds }: BarberSubscriptionTi
 
   return (
     <div className="space-y-6">
-      <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold">Choose Your Tier</h2>
-        <p className="text-muted-foreground">
-          Unlock premium features and boost your competitive advantage
-        </p>
-      </div>
-
-      {/* Balance indicator */}
-      <div className="flex items-center justify-center gap-2 py-2 px-4 bg-muted/30 rounded-lg border border-border/30 mx-auto w-fit">
-        <Coins className="h-4 w-4 text-primary" />
-        <span className="text-sm font-medium">
-          Your Balance:{" "}
-          <span className="text-primary font-bold">
-            {bbLoading ? "..." : `${barberBucks} BB`}
-          </span>
-        </span>
-      </div>
+      {/* Header removed — parent components provide title and balance */}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {tiers?.map((tier) => {
@@ -224,7 +208,7 @@ export const BarberSubscriptionTiers = ({ onShowAddFunds }: BarberSubscriptionTi
                       Processing...
                     </>
                   ) : (
-                    `Subscribe for ${bbPrice} BB`
+                    'Upgrade'
                   )}
                 </Button>
               )}
