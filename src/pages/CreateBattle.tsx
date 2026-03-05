@@ -96,15 +96,12 @@ const CreateBattle = () => {
   });
 
   useEffect(() => {
-    if (!loading && !profileLoading && !validationLoading) {
+    if (!loading && !validationLoading) {
       if (!user) {
         navigate('/');
-      } else if (profile && profile.user_type !== 'barber') {
-        navigate('/battles');
-        toast.error('Only barbers can create battles');
       }
     }
-  }, [user, profile, loading, profileLoading, validationLoading, navigate]);
+  }, [user, loading, validationLoading, navigate]);
 
   const onSubmit = async (data: BattleFormData) => {
     if (!user) return;
