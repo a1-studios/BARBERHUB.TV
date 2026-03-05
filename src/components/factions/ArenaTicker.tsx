@@ -195,7 +195,7 @@ export const ArenaTicker = ({ prizePools, isBarber, onNavigate }: ArenaTickerPro
                 transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                 className="text-xl sm:text-2xl lg:text-3xl font-black bg-gradient-to-r from-primary via-foreground to-cyan bg-clip-text text-transparent"
               >
-                {formatCurrency(displayValue)}+
+                {new Intl.NumberFormat('en-US').format(Math.round((displayValue / 100) * 5))} BB
               </motion.span>
               <span className="text-xs sm:text-sm uppercase tracking-widest text-primary/70 font-bold shrink-0">
                 In Prizes
