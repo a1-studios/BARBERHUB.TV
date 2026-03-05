@@ -384,7 +384,38 @@ export default function SponsorAdsManager() {
                 placeholder="https://sponsor-website.com"
               />
             </div>
-            <div className="flex items-center gap-4">
+            {/* Product Image Upload */}
+            <div>
+              <Label>Product Image (shown in battle theater)</Label>
+              <div className="flex items-center gap-3 mt-1">
+                {form.product_image_url ? (
+                  <img src={form.product_image_url} alt="Product preview" className="h-10 w-10 rounded object-contain bg-muted border" />
+                ) : (
+                  <div className="h-10 w-10 rounded bg-muted flex items-center justify-center border">
+                    <Sparkles className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                )}
+                <Input
+                  placeholder="Product image URL"
+                  value={form.product_image_url}
+                  onChange={(e) => setForm((p) => ({ ...p, product_image_url: e.target.value }))}
+                />
+                {form.product_image_url && (
+                  <Button variant="ghost" size="sm" onClick={() => setForm((p) => ({ ...p, product_image_url: "" }))}>Remove</Button>
+                )}
+              </div>
+            </div>
+            {/* Scheduling */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="starts_at">Starts At</Label>
+                <Input id="starts_at" type="datetime-local" value={form.starts_at ? form.starts_at.slice(0, 16) : ''} onChange={(e) => setForm((p) => ({ ...p, starts_at: e.target.value ? new Date(e.target.value).toISOString() : '' }))} />
+              </div>
+              <div>
+                <Label htmlFor="ends_at">Ends At</Label>
+                <Input id="ends_at" type="datetime-local" value={form.ends_at ? form.ends_at.slice(0, 16) : ''} onChange={(e) => setForm((p) => ({ ...p, ends_at: e.target.value ? new Date(e.target.value).toISOString() : '' }))} />
+              </div>
+            </div>
               <div className="flex-1">
                 <Label htmlFor="order">Display Order</Label>
                 <Input
