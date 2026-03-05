@@ -1,8 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// 🔴 DEV BYPASS — set to false before going live
-const DEV_BYPASS = true;
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -26,7 +23,7 @@ Deno.serve(async (req) => {
       barber_id,
       barber_user_id,
       service_id,
-      appointment_type, // 'standard' | 'house_call' | 'sos'
+      appointment_type,
       scheduled_at,
       duration_minutes = 30,
       escrow_amount_bb,
@@ -36,72 +33,82 @@ Deno.serve(async (req) => {
       notes,
     } = body;
 
-    // 1. Validate required fields
-    if (!barber_id || !barber_user_id || !appointment_type || !scheduled_at || !escrow_amount_bb) {
+    if (!barber_id || !barber_user_id || !appointment_type || !scheduled_at) {
       throw new Error("Missing required fields");
     }
 
-    // 2. Tier gate: check barber subscription for house_call / sos
-    if (!DEV_BYPASS && appointment_type !== "standard") {
-      const { data: barber } = await supabase
-        .from("barber_profiles")
-        .select("active_subscription_tier")
-        .eq("id", barber_id)
+    // Look up service for deposit/free-intro logic
+    let depositAmount = escrow_amount_bb || 0;
+    let isDepositOnly = false;
+    let remainderBb = 0;
+
+    if (service_id) {
+      const { data: service } = await supabase
+        .from("barber_services")
+        .select("price_bb, deposit_bb, is_free_intro")
+        .eq("id", service_id)
         .single();
 
-      const tier = barber?.active_subscription_tier;
-      if (!tier || tier === "bronze") {
-        return new Response(
-          JSON.stringify({ error: "This barber needs Silver+ subscription to accept House Calls and SOS cuts. They need to upgrade first.", upgrade_required: true }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      if (service) {
+        if (service.is_free_intro) {
+          // Free intro: no escrow
+          depositAmount = 0;
+          isDepositOnly = false;
+          remainderBb = 0;
+        } else if (service.deposit_bb > 0 && service.deposit_bb < service.price_bb) {
+          // Deposit-only booking
+          depositAmount = service.deposit_bb;
+          isDepositOnly = true;
+          remainderBb = service.price_bb - service.deposit_bb;
+        }
       }
     }
 
-    // 3. Enforce minimum 500 BB for house_call and sos
-    if ((appointment_type === "house_call" || appointment_type === "sos") && escrow_amount_bb < 500) {
-      throw new Error("Minimum 500 BB required for House Calls and SOS cuts");
-    }
-
-    // 4. Calculate SOS multiplier
+    // SOS: enforce minimum 500 BB and 2x multiplier
     const sos_multiplier = appointment_type === "sos" ? 2.0 : 1.0;
-    const finalAmount = appointment_type === "sos" ? Math.max(escrow_amount_bb, 500) : escrow_amount_bb;
-
-    // 5. Check client BB balance
-    const { data: clientProfile } = await supabase
-      .from("profiles")
-      .select("barber_bucks")
-      .eq("user_id", user.id)
-      .single();
-
-    const clientBalance = clientProfile?.barber_bucks || 0;
-    if (clientBalance < finalAmount) {
-      return new Response(
-        JSON.stringify({ error: "Insufficient Barber Bucks", balance: clientBalance, required: finalAmount }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (appointment_type === "sos") {
+      depositAmount = Math.max(depositAmount, 500);
+    }
+    if ((appointment_type === "house_call") && depositAmount < 500) {
+      depositAmount = Math.max(escrow_amount_bb || 0, 500);
     }
 
-    // 6. Deduct BB from client
-    const newBalance = clientBalance - finalAmount;
-    await supabase
-      .from("profiles")
-      .update({ barber_bucks: newBalance })
-      .eq("user_id", user.id);
+    // Check client BB balance (skip if free)
+    if (depositAmount > 0) {
+      const { data: clientProfile } = await supabase
+        .from("profiles")
+        .select("barber_bucks")
+        .eq("user_id", user.id)
+        .single();
 
-    // 7. Record escrow transaction
-    await supabase.from("barber_bucks_transactions").insert({
-      user_id: user.id,
-      amount: -finalAmount,
-      balance_after: newBalance,
-      transaction_type: "appointment_escrow",
-      description: `Escrow for ${appointment_type} appointment`,
-    });
+      const clientBalance = clientProfile?.barber_bucks || 0;
+      if (clientBalance < depositAmount) {
+        return new Response(
+          JSON.stringify({ error: "Insufficient Barber Bucks", balance: clientBalance, required: depositAmount }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
-    // 8. Calculate platform fee (5%)
-    const platformFee = Math.floor(finalAmount * 0.05);
+      // Deduct BB
+      const newBalance = clientBalance - depositAmount;
+      await supabase.from("profiles").update({ barber_bucks: newBalance }).eq("user_id", user.id);
 
-    // 9. Insert appointment
+      await supabase.from("barber_bucks_transactions").insert({
+        user_id: user.id,
+        amount: -depositAmount,
+        balance_after: newBalance,
+        transaction_type: isDepositOnly ? "appointment_deposit" : "appointment_escrow",
+        description: isDepositOnly
+          ? `Deposit for ${appointment_type} appointment (${remainderBb} BB due on arrival)`
+          : `Escrow for ${appointment_type} appointment`,
+      });
+    }
+
+    // Calculate platform fee (5%)
+    const totalPrice = isDepositOnly ? depositAmount + remainderBb : depositAmount;
+    const platformFee = Math.floor(totalPrice * 0.05);
+
+    // Insert appointment
     const { data: appointment, error: insertError } = await supabase
       .from("appointments")
       .insert({
@@ -113,20 +120,22 @@ Deno.serve(async (req) => {
         status: "pending",
         scheduled_at,
         duration_minutes,
-        escrow_amount_bb: finalAmount,
+        escrow_amount_bb: depositAmount,
         platform_fee_bb: platformFee,
         client_location_text: client_location_text || null,
         client_lat: client_lat || null,
         client_lng: client_lng || null,
         sos_multiplier,
         notes: notes || null,
+        is_deposit_only: isDepositOnly,
+        remainder_bb: remainderBb,
       })
       .select()
       .single();
 
     if (insertError) throw insertError;
 
-    // 10. For SOS: auto-insert 30-min buffer blocked slots
+    // SOS: auto-insert 30-min buffer blocked slots
     if (appointment_type === "sos") {
       const scheduledDate = new Date(scheduled_at);
       const bufferBefore = new Date(scheduledDate.getTime() - 30 * 60000);
@@ -150,13 +159,21 @@ Deno.serve(async (req) => {
       ]);
     }
 
-    // 11. Notify barber
+    // Notify barber
+    const notifTitle = appointment_type === "sos"
+      ? "🚨 Emergency SOS Booking!"
+      : appointment_type === "house_call"
+        ? "🏠 New House Call Bounty!"
+        : depositAmount === 0
+          ? "🎉 Free Intro Appointment!"
+          : "📅 New Appointment Request";
+
     await supabase.from("notifications").insert({
       user_id: barber_user_id,
       type: "new_appointment",
-      title: appointment_type === "sos" ? "🚨 Emergency SOS Booking!" : appointment_type === "house_call" ? "🏠 New House Call Bounty!" : "📅 New Appointment Request",
-      message: `You have a new ${appointment_type.replace("_", " ")} appointment request for ${finalAmount} BB`,
-      data: { appointment_id: appointment.id, appointment_type, amount_bb: finalAmount },
+      title: notifTitle,
+      message: `You have a new ${appointment_type.replace("_", " ")} appointment request${depositAmount > 0 ? ` for ${depositAmount} BB` : ''}${isDepositOnly ? ` (${remainderBb} BB due on arrival)` : ''}`,
+      data: { appointment_id: appointment.id, appointment_type, amount_bb: depositAmount },
     });
 
     return new Response(

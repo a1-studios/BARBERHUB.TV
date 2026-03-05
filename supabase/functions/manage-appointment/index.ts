@@ -1,8 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// 🔴 DEV BYPASS — set to false before going live
-const DEV_BYPASS = true;
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -23,11 +20,9 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const { appointment_id, action, denial_reason } = body;
-    // action: 'accept' | 'deny' | 'complete' | 'cancel'
 
     if (!appointment_id || !action) throw new Error("Missing appointment_id or action");
 
-    // Get appointment
     const { data: appt, error: fetchError } = await supabase
       .from("appointments")
       .select("*")
@@ -41,28 +36,8 @@ Deno.serve(async (req) => {
       if (appt.barber_user_id !== user.id) throw new Error("Only the barber can accept");
       if (appt.status !== "pending") throw new Error("Can only accept pending appointments");
 
-      // Check tier for house_call/sos
-      if (!DEV_BYPASS && appt.appointment_type !== "standard") {
-        const { data: barber } = await supabase
-          .from("barber_profiles")
-          .select("active_subscription_tier")
-          .eq("id", appt.barber_id)
-          .single();
-        const tier = barber?.active_subscription_tier;
-        if (!tier || tier === "bronze") {
-          return new Response(
-            JSON.stringify({ error: "Upgrade to Silver+ to accept this booking", upgrade_required: true }),
-            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-      }
+      await supabase.from("appointments").update({ status: "confirmed" }).eq("id", appointment_id);
 
-      await supabase
-        .from("appointments")
-        .update({ status: "confirmed" })
-        .eq("id", appointment_id);
-
-      // Notify client
       await supabase.from("notifications").insert({
         user_id: appt.client_id,
         type: "appointment_accepted",
@@ -71,9 +46,7 @@ Deno.serve(async (req) => {
         data: { appointment_id },
       });
 
-      return new Response(JSON.stringify({ success: true, status: "confirmed" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return respond({ success: true, status: "confirmed" });
     }
 
     // ---- DENY ----
@@ -89,22 +62,18 @@ Deno.serve(async (req) => {
         .single();
 
       const newBalance = (clientProfile?.barber_bucks || 0) + appt.escrow_amount_bb;
-      await supabase
-        .from("profiles")
-        .update({ barber_bucks: newBalance })
-        .eq("user_id", appt.client_id);
+      await supabase.from("profiles").update({ barber_bucks: newBalance }).eq("user_id", appt.client_id);
 
       await supabase.from("barber_bucks_transactions").insert({
         user_id: appt.client_id,
         amount: appt.escrow_amount_bb,
         balance_after: newBalance,
         transaction_type: "appointment_refund",
-        description: `Refund: appointment denied by barber`,
+        description: "Refund: appointment denied by barber",
         reference_id: appointment_id,
       });
 
-      await supabase
-        .from("appointments")
+      await supabase.from("appointments")
         .update({ status: "denied", denial_reason: denial_reason || "Barber declined" })
         .eq("id", appointment_id);
 
@@ -116,9 +85,7 @@ Deno.serve(async (req) => {
         data: { appointment_id, reason: denial_reason },
       });
 
-      return new Response(JSON.stringify({ success: true, status: "denied" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return respond({ success: true, status: "denied" });
     }
 
     // ---- COMPLETE ----
@@ -126,8 +93,41 @@ Deno.serve(async (req) => {
       if (appt.barber_user_id !== user.id) throw new Error("Only the barber can complete");
       if (appt.status !== "confirmed" && appt.status !== "in_transit") throw new Error("Appointment must be confirmed first");
 
-      const platformFee = appt.platform_fee_bb || Math.floor(appt.escrow_amount_bb * 0.05);
-      const barberPayout = appt.escrow_amount_bb - platformFee;
+      let totalEscrow = appt.escrow_amount_bb;
+
+      // If deposit-only, collect remainder from client
+      if (appt.is_deposit_only && appt.remainder_bb > 0) {
+        const { data: clientProfile } = await supabase
+          .from("profiles")
+          .select("barber_bucks")
+          .eq("user_id", appt.client_id)
+          .single();
+
+        const clientBal = clientProfile?.barber_bucks || 0;
+        if (clientBal < appt.remainder_bb) {
+          return new Response(
+            JSON.stringify({ error: "Client has insufficient BB for remainder payment", required: appt.remainder_bb, client_balance: clientBal }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const clientNewBal = clientBal - appt.remainder_bb;
+        await supabase.from("profiles").update({ barber_bucks: clientNewBal }).eq("user_id", appt.client_id);
+
+        await supabase.from("barber_bucks_transactions").insert({
+          user_id: appt.client_id,
+          amount: -appt.remainder_bb,
+          balance_after: clientNewBal,
+          transaction_type: "appointment_remainder",
+          description: "Remainder payment on completed appointment",
+          reference_id: appointment_id,
+        });
+
+        totalEscrow += appt.remainder_bb;
+      }
+
+      const platformFee = appt.platform_fee_bb || Math.floor(totalEscrow * 0.05);
+      const barberPayout = totalEscrow - platformFee;
 
       // Pay barber
       const { data: barberProfile } = await supabase
@@ -137,10 +137,7 @@ Deno.serve(async (req) => {
         .single();
 
       const barberNewBalance = (barberProfile?.barber_bucks || 0) + barberPayout;
-      await supabase
-        .from("profiles")
-        .update({ barber_bucks: barberNewBalance })
-        .eq("user_id", appt.barber_user_id);
+      await supabase.from("profiles").update({ barber_bucks: barberNewBalance }).eq("user_id", appt.barber_user_id);
 
       await supabase.from("barber_bucks_transactions").insert({
         user_id: appt.barber_user_id,
@@ -151,7 +148,7 @@ Deno.serve(async (req) => {
         reference_id: appointment_id,
       });
 
-      // Route platform fee: 50% prize pool, 50% platform
+      // Route platform fee
       const prizePoolShare = Math.floor(platformFee / 2);
       await supabase.from("platform_transactions").insert({
         transaction_type: "appointment_fee",
@@ -162,8 +159,7 @@ Deno.serve(async (req) => {
         reference_id: appointment_id,
       });
 
-      await supabase
-        .from("appointments")
+      await supabase.from("appointments")
         .update({ status: "completed", platform_fee_bb: platformFee })
         .eq("id", appointment_id);
 
@@ -171,34 +167,28 @@ Deno.serve(async (req) => {
         user_id: appt.client_id,
         type: "appointment_completed",
         title: "✂️ Appointment Complete!",
-        message: `Your appointment has been completed successfully`,
+        message: "Your appointment has been completed successfully",
         data: { appointment_id },
       });
 
-      return new Response(JSON.stringify({ success: true, status: "completed", payout: barberPayout }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return respond({ success: true, status: "completed", payout: barberPayout });
     }
 
     // ---- CANCEL (by client) ----
     if (action === "cancel") {
       if (appt.client_id !== user.id) throw new Error("Only the client can cancel");
-      if (appt.status === "completed" || appt.status === "cancelled" || appt.status === "denied") {
+      if (["completed", "cancelled", "denied"].includes(appt.status)) {
         throw new Error("Cannot cancel this appointment");
       }
 
-      const scheduledTime = new Date(appt.scheduled_at).getTime();
-      const now = Date.now();
-      const hoursUntil = (scheduledTime - now) / (1000 * 60 * 60);
+      const hoursUntil = (new Date(appt.scheduled_at).getTime() - Date.now()) / (1000 * 60 * 60);
 
       let refundAmount: number;
       let barberCompensation = 0;
 
       if (hoursUntil > 2) {
-        // Full refund
         refundAmount = appt.escrow_amount_bb;
       } else {
-        // 50% refund, 50% to barber
         refundAmount = Math.floor(appt.escrow_amount_bb / 2);
         barberCompensation = appt.escrow_amount_bb - refundAmount;
       }
@@ -223,20 +213,20 @@ Deno.serve(async (req) => {
 
       // Compensate barber if late cancel
       if (barberCompensation > 0) {
-        const { data: barberProfile } = await supabase
+        const { data: barberProf } = await supabase
           .from("profiles")
           .select("barber_bucks")
           .eq("user_id", appt.barber_user_id)
           .single();
 
-        const barberNewBal = (barberProfile?.barber_bucks || 0) + barberCompensation;
+        const barberNewBal = (barberProf?.barber_bucks || 0) + barberCompensation;
         await supabase.from("profiles").update({ barber_bucks: barberNewBal }).eq("user_id", appt.barber_user_id);
         await supabase.from("barber_bucks_transactions").insert({
           user_id: appt.barber_user_id,
           amount: barberCompensation,
           balance_after: barberNewBal,
           transaction_type: "appointment_cancel_compensation",
-          description: `Late cancellation compensation`,
+          description: "Late cancellation compensation",
           reference_id: appointment_id,
         });
       }
@@ -245,16 +235,13 @@ Deno.serve(async (req) => {
 
       // Remove SOS blocked slots if applicable
       if (appt.appointment_type === "sos") {
-        await supabase
-          .from("barber_blocked_slots")
+        await supabase.from("barber_blocked_slots")
           .delete()
           .eq("barber_id", appt.barber_id)
           .like("reason", "SOS buffer%");
       }
 
-      return new Response(JSON.stringify({ success: true, status: "cancelled", refund: refundAmount }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return respond({ success: true, status: "cancelled", refund: refundAmount });
     }
 
     throw new Error("Invalid action");
@@ -263,5 +250,11 @@ Deno.serve(async (req) => {
       JSON.stringify({ error: error.message }),
       { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
+  }
+
+  function respond(data: Record<string, any>) {
+    return new Response(JSON.stringify(data), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
