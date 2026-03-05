@@ -11,6 +11,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Search, MapPin, Scissors, Crown, Sparkles, Star } from 'lucide-react';
 import { BarberProfileCard } from '@/components/barber/BarberProfileCard';
 import { BackButton } from '@/components/ui/BackButton';
+import { QuickBookBanner } from '@/components/fan/QuickBookBanner';
 
 export default function BarbersDirectory() {
   const [searchParams] = useSearchParams();
