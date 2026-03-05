@@ -1,12 +1,19 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Swords, Plus, BarChart3, User } from 'lucide-react';
+import { Home, Swords, Plus, BarChart3, User, Play, Scissors } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
-import { toast } from 'sonner';
 
-const tabs = [
+const barberTabs = [
   { icon: Home, label: 'HOME', path: '/' },
   { icon: Swords, label: 'BATTLES', path: '/creator-hub' },
+  { isFab: true },
+  { icon: BarChart3, label: 'RANKS', path: '/rankings' },
+  { icon: User, label: 'PROFILE', path: '/profile' },
+] as const;
+
+const fanTabs = [
+  { icon: Home, label: 'HOME', path: '/' },
+  { icon: Play, label: 'WATCH', path: '/watch' },
   { isFab: true },
   { icon: BarChart3, label: 'RANKS', path: '/rankings' },
   { icon: User, label: 'PROFILE', path: '/profile' },
@@ -17,6 +24,8 @@ export function BottomNavBar() {
   const navigate = useNavigate();
   const { isBarber } = useUserRole();
 
+  const tabs = isBarber ? barberTabs : fanTabs;
+
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
     return location.pathname.startsWith(path);
@@ -26,7 +35,7 @@ export function BottomNavBar() {
     if (isBarber) {
       navigate('/battles/create');
     } else {
-      toast('Battle creation is for barbers only');
+      navigate('/barbers');
     }
   };
 
@@ -35,12 +44,12 @@ export function BottomNavBar() {
       className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      {/* Glass background */}
       <div className="absolute inset-0 bg-card/95 backdrop-blur-xl border-t border-border/50" />
 
       <div className="relative flex items-end justify-around px-2 h-11">
         {tabs.map((tab, i) => {
           if ('isFab' in tab && tab.isFab) {
+            const FabIcon = isBarber ? Plus : Scissors;
             return (
               <button
                 key="fab"
@@ -51,9 +60,9 @@ export function BottomNavBar() {
                   'bg-primary shadow-lg shadow-primary/40',
                   'active:scale-95 transition-transform duration-100',
                 )}
-                aria-label="Create Battle"
+                aria-label={isBarber ? 'Create Battle' : 'Book a Barber'}
               >
-                <Plus className="w-5 h-5 text-primary-foreground" strokeWidth={2.5} />
+                <FabIcon className="w-5 h-5 text-primary-foreground" strokeWidth={2.5} />
               </button>
             );
           }
