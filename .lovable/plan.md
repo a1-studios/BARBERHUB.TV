@@ -1,61 +1,119 @@
 
 
-## Add iOS-Style Bottom Navigation Bar + Global Rankings Page
+## Particle Explosion Animation for VS/ENTER Cycle
 
-### Overview
-Add a persistent bottom tab bar (iOS-style) across all authenticated pages with 5 tabs: HOME, BATTLES, a protruding orange "+" FAB, RANKINGS, and PROFILE. Create a new Global Rankings page with a podium-style top 3 display, category filter chips, search bar, and "Top Challengers" list — matching the reference design's native iOS feel.
+### Concept
 
-### 1. Create Bottom Navigation Bar Component
-**New file: `src/components/BottomNavBar.tsx`**
+Replace the current simple cross-fade between "VS" and "ENTER" (Swords) with a **particle explosion effect**. Every 3 seconds when the text transitions:
 
-- Fixed bottom bar with dark background, visible only on mobile (hidden on `md:` and up)
-- 5 tab slots: HOME (`/`), BATTLES (`/creator-hub`), center "+" button, RANKINGS (`/rankings`), PROFILE (`/profile`)
-- Icons: `Home`, `Swords`, `Plus`, `BarChart3`, `User` from lucide-react
-- The "+" button is a large (56px) orange circle that protrudes ~50% above the bar, navigates to `/battles/create` (barbers) or shows a toast for fans
-- Active tab highlighted in orange/primary, inactive in muted-foreground
-- Uses `useLocation()` to determine active state
-- `pb-safe` / `env(safe-area-inset-bottom)` for notched devices
+1. The current text ("VS" or "ENTER") **explodes outward** into ~20 particles (tiny orange and cyan dots) that scatter in all directions
+2. The particles dissipate over ~400ms
+3. The new text ("ENTER" or "VS") **implodes inward** -- particles rush from the edges to the center and coalesce into the new text
 
-### 2. Create Global Rankings Page
-**New file: `src/pages/Rankings.tsx`**
+This creates a dramatic energy-burst feel where the text appears to shatter and reform.
 
-- Header + BottomNavBar layout
-- Title: "GLOBAL RANKINGS" with trophy icon
-- Tabs: Rankings | Community (start with Rankings active)
-- Search bar with filter icon
-- Category filter chips (horizontal scroll): Global, Fades, Artistic, Beard, Classic — using the existing `CATEGORIES` config
-- **Podium Section** (top 3):
-  - Center (#1 "KING") larger avatar with orange border, elevated
-  - Left (#2) and Right (#3) smaller, with rank badges
-  - Name + star rating below each
-- **Top Challengers List** (ranks 4+):
-  - Numbered rows with avatar, name, specialty, rating, battle count
-  - Dark card backgrounds with orange accents
-- Data from `public_barber_profiles` view, sorted by rating
+### Animation Sequence
 
-### 3. Add Route for Rankings
-**Modified: `src/App.tsx`**
-- Add `/rankings` route pointing to the new Rankings page (AuthGuard wrapped)
+```text
+[VS visible for 5s with subtle idle glow pulse]
+         |
+   VS EXPLODES --> 20 particles scatter outward (400ms)
+         |
+   Particles converge inward --> ENTER forms (400ms)
+         |
+[ENTER visible for 3s with Swords icon pulse]
+         |
+   ENTER EXPLODES --> 20 particles scatter outward (400ms)
+         |
+   Particles converge inward --> VS reforms (400ms)
+         |
+   (repeat)
+```
 
-### 4. Integrate Bottom Nav Globally
-**Modified: `src/pages/Index.tsx`, `src/pages/Portal.tsx`, and other authenticated pages**
-- Add `<BottomNavBar />` to each authenticated page layout
-- Add bottom padding (`pb-20`) to main content so the nav bar doesn't overlap content
-- Hide the Footer on mobile since the bottom nav replaces it for primary navigation
+### Changes
 
-### 5. Adjust Existing Layout
-- Pages that use Footer: add `pb-20 md:pb-0` to the main content area
-- The existing Header stays untouched — this bottom nav is additive
+#### File: `src/components/DynamicBattleHero.tsx`
 
-### Files Summary
-| File | Action |
-|------|--------|
-| `src/components/BottomNavBar.tsx` | **Create** — iOS-style bottom tab bar |
-| `src/pages/Rankings.tsx` | **Create** — Global Rankings page with podium + challengers |
-| `src/App.tsx` | **Modify** — Add `/rankings` route |
-| `src/pages/Index.tsx` | **Modify** — Add BottomNavBar, bottom padding |
-| `src/pages/Portal.tsx` | **Modify** — Add BottomNavBar, bottom padding |
-| `src/pages/Profile.tsx` | **Modify** — Add BottomNavBar |
-| `src/pages/CreatorHub.tsx` | **Modify** — Add BottomNavBar |
-| `src/pages/BattlesPage.tsx` | **Modify** — Add BottomNavBar |
+**Modify the AnimatePresence transitions (lines 375-426):**
+
+Replace the current simple opacity/scale fade with particle explosion animations:
+
+- **Exit animation** (`exit` prop): The text scales down to 0 while spawning ~20 absolutely-positioned particle dots around it. Each particle flies outward in a random direction (random angle, random distance 20-50px) and fades to 0. Particles alternate between orange (`hsl(var(--primary))`) and cyan (`hsl(187 100% 50%)`) colors with matching glow shadows.
+
+- **Enter animation** (`initial` + `animate`): The text starts at scale 0 with particles positioned at random outer positions. Particles animate inward to center (0,0) and fade, while the text scales from 0 to 1 with a slight overshoot (scale to 1.1 then settle to 1).
+
+**Implementation approach -- inline particle generation:**
+
+Rather than a separate component, generate particles directly in the motion variants using an array of `motion.div` elements rendered alongside the text inside each AnimatePresence child:
+
+```text
+<motion.div key="vs" ...>
+  {/* Particle array */}
+  {Array.from({ length: 20 }).map((_, i) => (
+    <motion.div
+      key={i}
+      className="absolute w-1 h-1 rounded-full"
+      style={{ backgroundColor: i % 2 === 0 ? orange : cyan }}
+      initial={{ x: 0, y: 0, opacity: 1 }}
+      animate={{ x: 0, y: 0, opacity: 0 }}  // idle: invisible
+      exit={{
+        x: Math.cos(angle) * distance,
+        y: Math.sin(angle) * distance,
+        opacity: [1, 0],
+        scale: [1, 0]
+      }}
+    />
+  ))}
+  {/* VS text */}
+  <span>VS</span>
+</motion.div>
+```
+
+Each particle gets a pre-calculated random angle (evenly distributed around 360 degrees) and random distance (20-50px), with a staggered delay for a natural burst feel.
+
+**Apply to both barber and fan VS elements:**
+
+- **Barber VS** (lines 389-406): Add particles to the VS motion.span and the Swords motion.div
+- **Fan VS** (lines 411-425): For fans, since there is no cycle, add a subtle idle particle effect -- 4-6 particles that slowly orbit or float around the VS text on a loop, giving a constant "energy radiating" feel without the explosion
+
+**Cycle timing unchanged:**
+- The existing `useEffect` at lines 166-173 stays as-is (5s VS, 3s Swords for barbers)
+- The explosion/implosion animation takes ~400ms for exit + ~400ms for enter, fitting within the transition window
+
+**Rings unchanged:**
+- The rotating dashed ring and inner cyan ring remain as they are (lines 344-366)
+
+### Particle Specs
+
+| Property | Value |
+|----------|-------|
+| Count per explosion | 20 particles |
+| Size | 1-2px (w-1 h-1 or w-0.5 h-0.5) |
+| Colors | Alternating orange (primary) and cyan |
+| Scatter distance | 20-50px random per particle |
+| Scatter direction | Evenly distributed angles (360/20 = 18 degree increments + slight random offset) |
+| Glow | box-shadow matching particle color, 4px blur |
+| Exit duration | 400ms ease-out |
+| Enter duration | 400ms ease-out with overshoot |
+| Stagger | 20ms between particles for natural burst feel |
+
+### What Changes
+
+| Element | Before | After |
+|---------|--------|-------|
+| VS to ENTER transition | Simple opacity/scale fade | Particle explosion outward, then implosion inward |
+| ENTER to VS transition | Simple opacity/scale fade | Same particle explosion/implosion |
+| Fan VS | Static with glow pulse | Static with 4-6 subtle floating particles |
+| Rings | Unchanged | Unchanged |
+| Drawer | Unchanged | Unchanged |
+| Cycle timing | Unchanged (5s/3s) | Unchanged |
+
+### What Is NOT Changing
+
+- The 5s VS / 3s Swords timing cycle
+- Arena Drawer contents and navigation
+- Rotating ring animations
+- MobileVoteCenter replacement during active battles
+- Video layout, action bars, name overlays
+- Open challenges badge count query
 

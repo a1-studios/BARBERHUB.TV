@@ -22,6 +22,7 @@ import { FanProfileHeader } from '@/components/fan/FanProfileHeader';
 import { SponsorBoardPurchaseModal } from '@/components/fan/SponsorBoardPurchaseModal';
 import { TransactionHistory } from '@/components/analytics/TransactionHistory';
 import { toast } from 'sonner';
+import { BottomNavBar } from '@/components/BottomNavBar';
 
 const Profile = () => {
   const { user, signOut } = useAuth();
@@ -284,6 +285,7 @@ const Profile = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <BottomNavBar />
     </div>
   );
 };

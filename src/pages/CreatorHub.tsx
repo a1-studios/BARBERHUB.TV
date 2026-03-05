@@ -24,6 +24,7 @@ import {
   Scissors,
   User
 } from 'lucide-react';
+import { BottomNavBar } from '@/components/BottomNavBar';
 
 export default function CreatorHub() {
   const { user, loading } = useAuth();
@@ -304,6 +305,7 @@ export default function CreatorHub() {
           </div>
         </div>
       </div>
+      <BottomNavBar />
     </>
   );
 }

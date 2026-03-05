@@ -17,6 +17,7 @@ import { ImmersiveFactionBanners } from "@/components/factions/ImmersiveFactionB
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { BottomNavBar } from "@/components/BottomNavBar";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -117,6 +118,7 @@ const Index = () => {
       )}
       
       <Footer />
+      {user && <BottomNavBar />}
     </div>
   );
 };

@@ -23,6 +23,7 @@ import { OpenChallengeQueue } from "@/components/battles/OpenChallengeQueue";
 import { ImmersiveFactionBanners } from "@/components/factions/ImmersiveFactionBanners";
 import { CountryLeaderboard } from "@/components/portal/CountryLeaderboard";
 import { HowItWorks } from "@/components/onboarding/HowItWorks";
+import { BottomNavBar } from "@/components/BottomNavBar";
 
 interface Battle {
   id: string;
@@ -325,6 +326,7 @@ const Portal = () => {
         </div>
       </main>
       <Footer />
+      <BottomNavBar />
     </div>;
 };
 export default Portal;
