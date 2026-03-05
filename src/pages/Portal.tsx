@@ -195,7 +195,7 @@ const Portal = () => {
           )}
 
           {/* Barber Quick Stats */}
-          {isBarber && barberStats && (
+          {isBarber && barberStats && (<>
             <div className="mb-8 grid grid-cols-2 sm:grid-cols-4 gap-3">
               <Card className="bg-muted/50">
                 <CardContent className="p-4 text-center">
@@ -228,7 +228,7 @@ const Portal = () => {
             </div>
 
             {/* Camera Studio Quick Access */}
-            <Card className="bg-muted/50 col-span-2 sm:col-span-4 cursor-pointer hover:border-primary/30 transition-colors" onClick={() => navigate('/studio')}>
+            <Card className="mb-8 bg-muted/50 cursor-pointer hover:border-primary/30 transition-colors" onClick={() => navigate('/studio')}>
               <CardContent className="p-4 flex items-center gap-4">
                 <Camera className="h-6 w-6 text-primary shrink-0" />
                 <div className="flex-1">
@@ -238,8 +238,7 @@ const Portal = () => {
                 <Play className="h-4 w-4 text-muted-foreground" />
               </CardContent>
             </Card>
-          </div>
-          )}
+          </>)}
 
           {/* Fan Hub - Show only for fans */}
           {isFan && (
