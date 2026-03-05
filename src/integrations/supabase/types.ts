@@ -44,6 +44,47 @@ export type Database = {
         }
         Relationships: []
       }
+      appointment_reviews: {
+        Row: {
+          appointment_id: string
+          comment: string | null
+          created_at: string | null
+          id: string
+          is_internal_only: boolean
+          reviewee_id: string
+          reviewer_id: string
+          star_rating: number
+        }
+        Insert: {
+          appointment_id: string
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          is_internal_only?: boolean
+          reviewee_id: string
+          reviewer_id: string
+          star_rating: number
+        }
+        Update: {
+          appointment_id?: string
+          comment?: string | null
+          created_at?: string | null
+          id?: string
+          is_internal_only?: boolean
+          reviewee_id?: string
+          reviewer_id?: string
+          star_rating?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_reviews_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           appointment_type: Database["public"]["Enums"]["appointment_type"]
@@ -2736,6 +2777,71 @@ export type Database = {
           },
         ]
       }
+      reputation_scores: {
+        Row: {
+          avg_star_rating: number | null
+          id: string
+          internal_top_tags: Json | null
+          last_computed_at: string | null
+          risk_flags: Json | null
+          top_tags: Json | null
+          total_reviews: number | null
+          user_id: string
+        }
+        Insert: {
+          avg_star_rating?: number | null
+          id?: string
+          internal_top_tags?: Json | null
+          last_computed_at?: string | null
+          risk_flags?: Json | null
+          top_tags?: Json | null
+          total_reviews?: number | null
+          user_id: string
+        }
+        Update: {
+          avg_star_rating?: number | null
+          id?: string
+          internal_top_tags?: Json | null
+          last_computed_at?: string | null
+          risk_flags?: Json | null
+          top_tags?: Json | null
+          total_reviews?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      review_tags: {
+        Row: {
+          id: string
+          is_internal_only: boolean
+          is_negative: boolean
+          review_id: string
+          tag_slug: string
+        }
+        Insert: {
+          id?: string
+          is_internal_only?: boolean
+          is_negative?: boolean
+          review_id: string
+          tag_slug: string
+        }
+        Update: {
+          id?: string
+          is_internal_only?: boolean
+          is_negative?: boolean
+          review_id?: string
+          tag_slug?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "review_tags_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_reviews"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sovereign_audit_log: {
         Row: {
           action_category: string
@@ -3573,6 +3679,16 @@ export type Database = {
         Returns: {
           submission_id: string
           weighted_votes: number
+        }[]
+      }
+      get_client_reputation: {
+        Args: { target_user_id: string }
+        Returns: {
+          avg_star_rating: number
+          internal_top_tags: Json
+          risk_flags: Json
+          top_tags: Json
+          total_reviews: number
         }[]
       }
       get_creator_summary: {

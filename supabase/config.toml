@@ -23,6 +23,9 @@ major_version = 15
 [functions.analyze-haircut]
 verify_jwt = false
 
+[functions.submit-review]
+verify_jwt = false
+
 [functions.auto-close-voting]
 verify_jwt = false
 

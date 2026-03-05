@@ -1,157 +1,119 @@
 
 
-## Pioneer Mutual Reputation System (Anti-Gravity Native)
+## Particle Explosion Animation for VS/ENTER Cycle
 
-### Clarification Applied
-All backend workflows run through **Anti-Gravity** -- Supabase DB triggers, functions, and edge functions. No n8n dependency. Anti-Gravity autonomously detects completed appointments and manages reputation computation.
+### Concept
 
----
+Replace the current simple cross-fade between "VS" and "ENTER" (Swords) with a **particle explosion effect**. Every 3 seconds when the text transitions:
 
-### Database Migration
+1. The current text ("VS" or "ENTER") **explodes outward** into ~20 particles (tiny orange and cyan dots) that scatter in all directions
+2. The particles dissipate over ~400ms
+3. The new text ("ENTER" or "VS") **implodes inward** -- particles rush from the edges to the center and coalesce into the new text
 
-**Tables:**
+This creates a dramatic energy-burst feel where the text appears to shatter and reform.
 
-```sql
-CREATE TABLE appointment_reviews (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  appointment_id UUID NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
-  reviewer_id UUID NOT NULL,
-  reviewee_id UUID NOT NULL,
-  star_rating INTEGER NOT NULL CHECK (star_rating BETWEEN 1 AND 5),
-  comment TEXT,
-  is_internal_only BOOLEAN NOT NULL DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE(appointment_id, reviewer_id)
-);
+### Animation Sequence
 
-CREATE TABLE review_tags (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  review_id UUID NOT NULL REFERENCES appointment_reviews(id) ON DELETE CASCADE,
-  tag_slug TEXT NOT NULL,
-  is_negative BOOLEAN NOT NULL DEFAULT false,
-  is_internal_only BOOLEAN NOT NULL DEFAULT false
-);
-
-CREATE TABLE reputation_scores (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL UNIQUE,
-  avg_star_rating NUMERIC(3,2) DEFAULT 0,
-  total_reviews INTEGER DEFAULT 0,
-  top_tags JSONB DEFAULT '[]',
-  internal_top_tags JSONB DEFAULT '[]',
-  risk_flags JSONB DEFAULT '{}',
-  last_computed_at TIMESTAMPTZ DEFAULT NOW()
-);
+```text
+[VS visible for 5s with subtle idle glow pulse]
+         |
+   VS EXPLODES --> 20 particles scatter outward (400ms)
+         |
+   Particles converge inward --> ENTER forms (400ms)
+         |
+[ENTER visible for 3s with Swords icon pulse]
+         |
+   ENTER EXPLODES --> 20 particles scatter outward (400ms)
+         |
+   Particles converge inward --> VS reforms (400ms)
+         |
+   (repeat)
 ```
 
-**RLS:** Public reviews visible to all authenticated. Internal reviews/tags (`is_internal_only = true`) visible only via `has_role(auth.uid(), 'barber')`. `reputation_scores` readable by all for public fields; `internal_top_tags` and `risk_flags` exposed only through a security definer function for barbers.
+### Changes
 
-**Anti-Gravity DB Trigger (replaces n8n):**
+#### File: `src/components/DynamicBattleHero.tsx`
 
-```sql
--- Auto-notify users when appointment completes
-CREATE FUNCTION notify_review_prompt() RETURNS trigger
-LANGUAGE plpgsql SECURITY DEFINER AS $$
-BEGIN
-  IF NEW.status = 'completed' AND OLD.status != 'completed' THEN
-    -- Notify client
-    PERFORM create_battle_notification(
-      NEW.client_id, 'review_prompt',
-      'How was your cut? ✂️', 'Rate your barber!',
-      jsonb_build_object('appointment_id', NEW.id, 'reviewee_id', NEW.barber_id)
-    );
-    -- Notify barber (via barber_profiles user_id lookup)
-    PERFORM create_battle_notification(
-      (SELECT user_id FROM barber_profiles WHERE id = NEW.barber_id),
-      'review_prompt',
-      'Rate your client', 'Leave internal feedback',
-      jsonb_build_object('appointment_id', NEW.id, 'reviewee_id', NEW.client_id)
-    );
-  END IF;
-  RETURN NEW;
-END;
-$$;
+**Modify the AnimatePresence transitions (lines 375-426):**
 
-CREATE TRIGGER trg_review_prompt
-  AFTER UPDATE ON appointments
-  FOR EACH ROW EXECUTE FUNCTION notify_review_prompt();
+Replace the current simple opacity/scale fade with particle explosion animations:
+
+- **Exit animation** (`exit` prop): The text scales down to 0 while spawning ~20 absolutely-positioned particle dots around it. Each particle flies outward in a random direction (random angle, random distance 20-50px) and fades to 0. Particles alternate between orange (`hsl(var(--primary))`) and cyan (`hsl(187 100% 50%)`) colors with matching glow shadows.
+
+- **Enter animation** (`initial` + `animate`): The text starts at scale 0 with particles positioned at random outer positions. Particles animate inward to center (0,0) and fade, while the text scales from 0 to 1 with a slight overshoot (scale to 1.1 then settle to 1).
+
+**Implementation approach -- inline particle generation:**
+
+Rather than a separate component, generate particles directly in the motion variants using an array of `motion.div` elements rendered alongside the text inside each AnimatePresence child:
+
+```text
+<motion.div key="vs" ...>
+  {/* Particle array */}
+  {Array.from({ length: 20 }).map((_, i) => (
+    <motion.div
+      key={i}
+      className="absolute w-1 h-1 rounded-full"
+      style={{ backgroundColor: i % 2 === 0 ? orange : cyan }}
+      initial={{ x: 0, y: 0, opacity: 1 }}
+      animate={{ x: 0, y: 0, opacity: 0 }}  // idle: invisible
+      exit={{
+        x: Math.cos(angle) * distance,
+        y: Math.sin(angle) * distance,
+        opacity: [1, 0],
+        scale: [1, 0]
+      }}
+    />
+  ))}
+  {/* VS text */}
+  <span>VS</span>
+</motion.div>
 ```
 
-**Anti-Gravity Reputation Recompute Trigger:**
+Each particle gets a pre-calculated random angle (evenly distributed around 360 degrees) and random distance (20-50px), with a staggered delay for a natural burst feel.
 
-```sql
-CREATE FUNCTION recompute_reputation() RETURNS trigger
-LANGUAGE plpgsql SECURITY DEFINER AS $$
-BEGIN
-  -- Recompute for the reviewee after each review insert
-  INSERT INTO reputation_scores (user_id, avg_star_rating, total_reviews, top_tags, internal_top_tags, risk_flags, last_computed_at)
-  SELECT
-    NEW.reviewee_id,
-    (SELECT AVG(star_rating)::NUMERIC(3,2) FROM appointment_reviews WHERE reviewee_id = NEW.reviewee_id),
-    (SELECT COUNT(*) FROM appointment_reviews WHERE reviewee_id = NEW.reviewee_id),
-    (SELECT COALESCE(jsonb_agg(t), '[]') FROM (
-      SELECT tag_slug as slug, count(*) as count, is_negative
-      FROM review_tags rt JOIN appointment_reviews ar ON ar.id = rt.review_id
-      WHERE ar.reviewee_id = NEW.reviewee_id AND rt.is_internal_only = false
-      GROUP BY tag_slug, is_negative ORDER BY count DESC LIMIT 5
-    ) t),
-    (SELECT COALESCE(jsonb_agg(t), '[]') FROM (
-      SELECT tag_slug as slug, count(*) as count, is_negative
-      FROM review_tags rt JOIN appointment_reviews ar ON ar.id = rt.review_id
-      WHERE ar.reviewee_id = NEW.reviewee_id AND rt.is_internal_only = true
-      GROUP BY tag_slug, is_negative ORDER BY count DESC LIMIT 5
-    ) t),
-    (SELECT COALESCE(jsonb_object_agg(tag_slug, cnt), '{}') FROM (
-      SELECT tag_slug, count(*) as cnt
-      FROM review_tags rt JOIN appointment_reviews ar ON ar.id = rt.review_id
-      WHERE ar.reviewee_id = NEW.reviewee_id AND rt.is_internal_only = true AND rt.is_negative = true
-      GROUP BY tag_slug
-    ) rf),
-    NOW()
-  ON CONFLICT (user_id) DO UPDATE SET
-    avg_star_rating = EXCLUDED.avg_star_rating,
-    total_reviews = EXCLUDED.total_reviews,
-    top_tags = EXCLUDED.top_tags,
-    internal_top_tags = EXCLUDED.internal_top_tags,
-    risk_flags = EXCLUDED.risk_flags,
-    last_computed_at = NOW();
-  RETURN NEW;
-END;
-$$;
+**Apply to both barber and fan VS elements:**
 
-CREATE TRIGGER trg_recompute_reputation
-  AFTER INSERT ON appointment_reviews
-  FOR EACH ROW EXECUTE FUNCTION recompute_reputation();
-```
+- **Barber VS** (lines 389-406): Add particles to the VS motion.span and the Swords motion.div
+- **Fan VS** (lines 411-425): For fans, since there is no cycle, add a subtle idle particle effect -- 4-6 particles that slowly orbit or float around the VS text on a loop, giving a constant "energy radiating" feel without the explosion
 
----
+**Cycle timing unchanged:**
+- The existing `useEffect` at lines 166-173 stays as-is (5s VS, 3s Swords for barbers)
+- The explosion/implosion animation takes ~400ms for exit + ~400ms for enter, fitting within the transition window
 
-### Edge Function: `submit-review`
+**Rings unchanged:**
+- The rotating dashed ring and inner cyan ring remain as they are (lines 344-366)
 
-Server-side validation and atomic insert. Sets `is_internal_only` automatically based on reviewer's role. Inserts `appointment_reviews` + bulk `review_tags`. The DB trigger handles reputation recompute.
+### Particle Specs
 
----
+| Property | Value |
+|----------|-------|
+| Count per explosion | 20 particles |
+| Size | 1-2px (w-1 h-1 or w-0.5 h-0.5) |
+| Colors | Alternating orange (primary) and cyan |
+| Scatter distance | 20-50px random per particle |
+| Scatter direction | Evenly distributed angles (360/20 = 18 degree increments + slight random offset) |
+| Glow | box-shadow matching particle color, 4px blur |
+| Exit duration | 400ms ease-out |
+| Enter duration | 400ms ease-out with overshoot |
+| Stagger | 20ms between particles for natural burst feel |
 
-### Frontend Components
+### What Changes
 
-| File | Action |
-|------|--------|
-| `src/config/reviewTags.ts` | **Create** -- Tag taxonomy arrays (barber tags + client tags with slugs, emojis, is_negative, is_internal) |
-| `src/components/reviews/TagSelector.tsx` | **Create** -- Pill toggle grid component |
-| `src/components/reviews/PostAppointmentReviewModal.tsx` | **Create** -- Star rating + pills + optional comment. Calls `submit-review` edge function |
-| `src/components/reviews/ClientSnapshotWidget.tsx` | **Create** -- Reads `reputation_scores` for barber-only client insight |
-| `src/components/fan/MyAppointments.tsx` | **Modify** -- Add "Review" button on completed past appointments |
-| `src/components/booking/BarberAppointmentManager.tsx` | **Modify** -- Add "Review Client" button + `ClientSnapshotWidget` on pending cards |
+| Element | Before | After |
+|---------|--------|-------|
+| VS to ENTER transition | Simple opacity/scale fade | Particle explosion outward, then implosion inward |
+| ENTER to VS transition | Simple opacity/scale fade | Same particle explosion/implosion |
+| Fan VS | Static with glow pulse | Static with 4-6 subtle floating particles |
+| Rings | Unchanged | Unchanged |
+| Drawer | Unchanged | Unchanged |
+| Cycle timing | Unchanged (5s/3s) | Unchanged |
 
----
+### What Is NOT Changing
 
-### Anti-Gravity Touchpoints (All Supabase-Native)
-
-| Capability | Mechanism |
-|------------|-----------|
-| Review prompt trigger | DB trigger on `appointments` status change to `completed` |
-| Reputation recompute | DB trigger on `appointment_reviews` INSERT |
-| Risk flag surfacing | `ClientSnapshotWidget` reads `reputation_scores.risk_flags` |
-| Barber rating sync | Recompute trigger can also update `barber_profiles.rating` |
-| Abuse detection | Future: security definer function scanning review patterns |
+- The 5s VS / 3s Swords timing cycle
+- Arena Drawer contents and navigation
+- Rotating ring animations
+- MobileVoteCenter replacement during active battles
+- Video layout, action bars, name overlays
+- Open challenges badge count query
 
