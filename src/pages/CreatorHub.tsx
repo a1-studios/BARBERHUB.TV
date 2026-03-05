@@ -78,14 +78,17 @@ export default function CreatorHub() {
     <>
       <Header />
       <div className="min-h-screen pt-16 pb-20 bg-gradient-to-b from-background to-muted/10">
-        {/* Centered Title — 20% larger */}
-        <div className="flex flex-col items-center justify-center pt-6 pb-4">
-          <Crown className="h-8 w-8 text-primary mb-2" />
-          <h1 className="text-4xl font-black tracking-tight text-center">
+        {/* Centered Title — 20% larger with accent */}
+        <div className="flex flex-col items-center justify-center pt-10 md:pt-14 pb-5">
+          <div className="relative">
+            <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full scale-150" />
+            <Crown className="h-9 w-9 text-primary mb-2 relative" />
+          </div>
+          <h1 className="text-[2.8rem] font-black tracking-tight text-center leading-none">
             <span className="text-foreground">CREATOR</span>
             <span className="text-primary">-HUB</span>
           </h1>
-          <p className="text-xs text-muted-foreground mt-1">Your content command center</p>
+          <p className="text-xs text-muted-foreground mt-2">Your content command center</p>
         </div>
 
         {/* Action Pills */}

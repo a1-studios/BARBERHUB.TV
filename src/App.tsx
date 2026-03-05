@@ -14,7 +14,6 @@ import { useFollowedBarbersNotifications } from "@/hooks/useFollowedBarbersNotif
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
 import BattlesPage from "./pages/BattlesPage";
-import CreateBattle from "./pages/CreateBattle";
 import BattleDetails from "./pages/BattleDetails";
 
 import Analytics from "./pages/Analytics";
@@ -67,13 +66,7 @@ const AppContent = () => {
             />
             <Route 
               path="/battles/create" 
-              element={
-                <AuthGuard>
-                  <BarberGuard>
-                    <CreateBattle />
-                  </BarberGuard>
-                </AuthGuard>
-              } 
+              element={<Navigate to="/creator-hub" replace />}
             />
             <Route 
               path="/battles/:id" 
