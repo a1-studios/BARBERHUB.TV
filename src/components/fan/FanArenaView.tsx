@@ -7,9 +7,6 @@ import { useCategoryPrizePools } from '@/hooks/useCategoryPrizePools';
 
 export const FanArenaView = () => {
   const navigate = useNavigate();
-  const [showAddFunds, setShowAddFunds] = useState(false);
-  const { barberBucks } = useBarberBucks();
-  const { profile } = useUserProfile();
   const { prizePools } = useCategoryPrizePools();
 
   return (
