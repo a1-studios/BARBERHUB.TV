@@ -112,12 +112,10 @@ export default function CreatorHub() {
       <CreateBattleDrawer isOpen={showBattle} onClose={() => setShowBattle(false)} />
       <DealsDrawer isOpen={showDeals} onClose={() => setShowDeals(false)} />
       <CreatorStatsDrawer isOpen={showStats} onClose={() => setShowStats(false)} />
-      {showChallenge && (
-        <ChallengeModal
-          isOpen={showChallenge}
-          onClose={() => setShowChallenge(false)}
-        />
-      )}
+      <ChallengeModal
+        open={showChallenge}
+        onClose={() => setShowChallenge(false)}
+      />
 
       <BottomNavBar />
     </>
