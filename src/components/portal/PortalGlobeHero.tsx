@@ -32,7 +32,7 @@ export const PortalGlobeHero = () => {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setTickerIndex((prev) => (prev + 1) % tickerItems.length);
+      setTickerIndex((prev) => (prev + 1) % dynamicTickerItems.length);
     }, 4000);
     return () => clearInterval(interval);
   }, []);
