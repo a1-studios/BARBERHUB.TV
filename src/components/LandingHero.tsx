@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { triggerCountryCelebration } from "@/utils/countryCelebration";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
+import { SpinWheelOverlay } from "@/components/SpinWheelOverlay";
 
 const LandingHero = () => {
   const { signUp, signIn, user } = useAuth();
