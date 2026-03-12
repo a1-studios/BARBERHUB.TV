@@ -16,68 +16,30 @@ interface TierRingProps {
 }
 
 const SIZE_MAP = {
-  sm: { container: 'w-14 h-14', padding: 'p-[3px]', svgSize: 68, strokeWidth: 5 },
-  md: { container: 'w-24 h-24', padding: 'p-[4px]', svgSize: 108, strokeWidth: 6 },
-  lg: { container: 'w-36 h-36', padding: 'p-[5px]', svgSize: 158, strokeWidth: 7 },
+  sm: { gap: 'p-[3px]' },
+  md: { gap: 'p-[4px]' },
+  lg: { gap: 'p-[5px]' },
 };
 
-function GhostRankRing({ svgSize, strokeWidth }: { svgSize: number; strokeWidth: number }) {
-  const center = svgSize / 2;
-  const r = (svgSize - strokeWidth * 2) / 2;
-  const circumference = 2 * Math.PI * r;
-  const arcLen = circumference / 3;
-  const gap = 8;
+/* Each tier has a unique border + glow combo */
+const TIER_BORDER = {
+  free: 'border-2 border-border/40',
+  bronze: 'border-[3px] border-orange-500 animate-tier-glow-bronze',
+  silver: 'border-[3px] border-slate-300 animate-tier-glow-silver',
+  gold: 'border-4 border-yellow-400 animate-tier-glow-gold',
+} as const;
 
-  const arcs = [
-    { color: 'hsl(24, 100%, 52%)', opacity: 0.4, rotation: 0, className: 'animate-tier-ghost-bronze', filterId: 'ghost-bronze' },
-    { color: 'hsl(210, 20%, 80%)', opacity: 0.35, rotation: 120, className: 'animate-tier-ghost-silver', filterId: 'ghost-silver' },
-    { color: 'hsl(45, 100%, 55%)', opacity: 0.3, rotation: 240, className: 'animate-tier-ghost-gold', filterId: 'ghost-gold' },
-  ];
-
-  return (
-    <svg
-      width={svgSize}
-      height={svgSize}
-      className="absolute inset-0 m-auto pointer-events-none"
-      style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}
-    >
-      <defs>
-        <filter id="ghost-bronze"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-        <filter id="ghost-silver"><feGaussianBlur stdDeviation="2.5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-        <filter id="ghost-gold"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
-      </defs>
-      {arcs.map((arc, i) => (
-        <circle
-          key={i}
-          cx={center}
-          cy={center}
-          r={r}
-          fill="none"
-          stroke={arc.color}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          opacity={arc.opacity}
-          className={arc.className}
-          filter={`url(#${arc.filterId})`}
-          strokeDasharray={`${arcLen - gap} ${circumference - arcLen + gap}`}
-          strokeDashoffset={-(arc.rotation / 360) * circumference}
-          style={{ transformOrigin: 'center' }}
-        />
-      ))}
-    </svg>
-  );
-}
-
-export const TierRing = ({ tier, size = 'md', interactive = false, showGhostPreview = true, children, className }: TierRingProps) => {
+export const TierRing = ({ tier, size = 'md', interactive = false, children, className }: TierRingProps) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showAddFunds, setShowAddFunds] = useState(false);
   const { barberBucks, isLoading: bbLoading } = useBarberBucks();
 
-  const tierKey = (tier?.toLowerCase() || 'free') as 'free' | 'bronze' | 'silver' | 'gold';
+  const tierKey = (tier?.toLowerCase() || 'free') as keyof typeof TIER_BORDER;
+  const validTier = TIER_BORDER[tierKey] ? tierKey : 'free';
   const sizeConfig = SIZE_MAP[size];
 
   const handleClick = () => {
-    if (interactive && tierKey !== 'free') return;
+    if (interactive && validTier !== 'free') return;
     if (interactive) setDrawerOpen(true);
   };
 
@@ -86,49 +48,31 @@ export const TierRing = ({ tier, size = 'md', interactive = false, showGhostPrev
     setShowAddFunds(true);
   };
 
-  const isFree = tierKey === 'free';
-  const showGhost = isFree && showGhostPreview;
-
-  // Border + glow styles per tier
-  const tierBorderClass = cn(
-    'absolute inset-0 rounded-full',
-    tierKey === 'free' && !showGhost && 'border-2 border-border/50',
-    tierKey === 'bronze' && 'border-[3px] border-orange-500 animate-tier-glow-bronze',
-    tierKey === 'silver' && 'border-[3.5px] border-slate-300 animate-tier-glow-silver',
-    tierKey === 'gold' && 'border-[4px] border-yellow-400 animate-tier-glow-gold',
-  );
-
   return (
     <>
+      {/* Outer ring = border + glow, inner padding separates from avatar */}
       <div
         className={cn(
           'relative inline-flex items-center justify-center rounded-full',
-          sizeConfig.padding,
+          TIER_BORDER[validTier],
+          sizeConfig.gap,
           interactive && 'cursor-pointer',
           className
         )}
         onClick={handleClick}
       >
-        {/* Ghost 3-segment rank ring for free tier */}
-        {showGhost && (
-          <GhostRankRing svgSize={sizeConfig.svgSize} strokeWidth={sizeConfig.strokeWidth} />
-        )}
-
-        {/* Active tier border frame */}
-        {!isFree && <div className={tierBorderClass} />}
-
-        {/* Shimmer sweep for silver/gold */}
-        {(tierKey === 'silver' || tierKey === 'gold') && (
-          <div className="absolute inset-0 rounded-full animate-tier-shimmer overflow-hidden pointer-events-none">
+        {/* Shimmer sweep overlay for silver/gold */}
+        {(validTier === 'silver' || validTier === 'gold') && (
+          <div className="absolute inset-[-1px] rounded-full animate-tier-shimmer overflow-hidden pointer-events-none z-0">
             <div className={cn(
               'absolute inset-0 rounded-full',
-              tierKey === 'silver' && 'bg-gradient-conic from-transparent via-slate-200/25 to-transparent',
-              tierKey === 'gold' && 'bg-gradient-conic from-transparent via-yellow-300/35 to-transparent',
+              validTier === 'silver' && 'bg-gradient-conic from-transparent via-slate-200/30 to-transparent',
+              validTier === 'gold' && 'bg-gradient-conic from-transparent via-yellow-300/40 to-transparent',
             )} />
           </div>
         )}
 
-        {/* Avatar container */}
+        {/* Avatar */}
         <div className="relative z-10 rounded-full overflow-hidden">
           {children}
         </div>
