@@ -281,13 +281,34 @@ const Profile = () => {
           displayName={profile?.display_name || undefined}
         />
       )}
-      {/* Delete Account Confirmation */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      {/* Delete Account - Step 1 Confirmation */}
+      <AlertDialog open={showDeleteConfirm && deleteStep === 1} onOpenChange={(open) => { if (!open) { setShowDeleteConfirm(false); setDeleteStep(1); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Account Permanently?</AlertDialogTitle>
+            <AlertDialogTitle className="text-red-500">Are you sure you want to delete your account?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action is permanent and cannot be undone. All your data, battles, votes, and credits will be permanently deleted.
+              This will permanently remove all your data including battles, votes, credits, and profile information. This action cannot be reversed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => setDeleteStep(2)}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Yes, Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Account - Step 2 FINAL Confirmation */}
+      <AlertDialog open={showDeleteConfirm && deleteStep === 2} onOpenChange={(open) => { if (!open) { setShowDeleteConfirm(false); setDeleteStep(1); } }}>
+        <AlertDialogContent className="border-red-600/50">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-500 text-xl">⚠️ FINAL WARNING</AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              This is your <span className="font-bold text-red-400">LAST chance</span> to cancel. Once deleted, your account and all associated data will be gone forever. There is absolutely no way to recover it.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -295,9 +316,9 @@ const Profile = () => {
             <AlertDialogAction
               onClick={handleDeleteAccount}
               disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
-              {isDeleting ? 'Deleting...' : 'Yes, Delete My Account'}
+              {isDeleting ? 'Deleting...' : 'Permanently Delete My Account'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
