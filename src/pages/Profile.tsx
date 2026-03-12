@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-import { Scissors, Loader2, X } from 'lucide-react';
+import { Scissors, Loader2, X, Trash2 } from 'lucide-react';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { AddFundsModal } from '@/components/AddFundsModal';
 import { useNavigate } from 'react-router-dom';
@@ -35,6 +35,7 @@ const Profile = () => {
   const [showBarberSettings, setShowBarberSettings] = useState(false);
   const [showSponsorModal, setShowSponsorModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
@@ -64,6 +65,7 @@ const Profile = () => {
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
+      setDeleteStep(1);
     }
   };
 
@@ -188,7 +190,6 @@ const Profile = () => {
                 onSettingsClick={() => setShowBarberSettings(true)}
                 onAddFundsClick={() => setShowAddFundsModal(true)}
                 onSignOutClick={async () => { await signOut(); navigate('/'); }}
-                onDeleteAccountClick={() => setShowDeleteConfirm(true)}
                 showActions={true}
                 m4m_certified={(barberProfile as any).m4m_certified || false}
                 m4m_paid={(barberProfile as any).m4m_paid || false}
@@ -223,8 +224,7 @@ const Profile = () => {
                 onAddFundsClick={() => setShowAddFundsModal(true)}
                 onBecomeSponsorClick={() => setShowSponsorModal(true)}
                 onSignOutClick={async () => { await signOut(); navigate('/'); }}
-                onDeleteAccountClick={() => setShowDeleteConfirm(true)}
-              />
+               />
             </div>
           )}
 
@@ -233,6 +233,19 @@ const Profile = () => {
 
           {/* Transaction History */}
           <TransactionHistory />
+
+          {/* Delete Account - Bottom of Page */}
+          <div className="mt-12 mb-8 flex justify-center">
+            <Button
+              variant="destructive"
+              size="lg"
+              className="bg-red-600 hover:bg-red-700 text-white border-none font-semibold px-8"
+              onClick={() => { setDeleteStep(1); setShowDeleteConfirm(true); }}
+            >
+              <Trash2 className="w-5 h-5 mr-2" />
+              Delete Account
+            </Button>
+          </div>
 
           {/* Creation Upload Modal */}
           {showCreationUpload && isBarber && barberProfile && (
@@ -268,13 +281,34 @@ const Profile = () => {
           displayName={profile?.display_name || undefined}
         />
       )}
-      {/* Delete Account Confirmation */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+      {/* Delete Account - Step 1 Confirmation */}
+      <AlertDialog open={showDeleteConfirm && deleteStep === 1} onOpenChange={(open) => { if (!open) { setShowDeleteConfirm(false); setDeleteStep(1); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Account Permanently?</AlertDialogTitle>
+            <AlertDialogTitle className="text-red-500">Are you sure you want to delete your account?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action is permanent and cannot be undone. All your data, battles, votes, and credits will be permanently deleted.
+              This will permanently remove all your data including battles, votes, credits, and profile information. This action cannot be reversed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => setDeleteStep(2)}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Yes, Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Account - Step 2 FINAL Confirmation */}
+      <AlertDialog open={showDeleteConfirm && deleteStep === 2} onOpenChange={(open) => { if (!open) { setShowDeleteConfirm(false); setDeleteStep(1); } }}>
+        <AlertDialogContent className="border-red-600/50">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-500 text-xl">⚠️ FINAL WARNING</AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              This is your <span className="font-bold text-red-400">LAST chance</span> to cancel. Once deleted, your account and all associated data will be gone forever. There is absolutely no way to recover it.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -282,9 +316,9 @@ const Profile = () => {
             <AlertDialogAction
               onClick={handleDeleteAccount}
               disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
-              {isDeleting ? 'Deleting...' : 'Yes, Delete My Account'}
+              {isDeleting ? 'Deleting...' : 'Permanently Delete My Account'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
