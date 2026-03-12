@@ -31,6 +31,7 @@ const Index = () => {
   const [introComplete, setIntroComplete] = useState(() =>
     sessionStorage.getItem('fan_intro_seen') === 'true'
   );
+  const [showSpinWheel, setShowSpinWheel] = useState(false);
 
   // Recover any pending BB purchase that wasn't verified (e.g. user closed Stripe success tab)
   useEffect(() => {
