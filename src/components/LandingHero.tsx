@@ -401,22 +401,6 @@ const LandingHero = () => {
                 </Tabs>
               </Card>
 
-              {/* Spin to Win CTA */}
-              <button
-                onClick={() => setShowSpinWheel(true)}
-                className="block w-full max-w-md mx-auto mt-3 py-3 rounded-xl text-center font-black text-sm tracking-wider text-black animate-pulse hover:animate-none transition-all"
-                style={{
-                  background: 'linear-gradient(135deg, #FF5F1F, #FF8C00)',
-                  boxShadow: '0 0 20px rgba(255,95,31,0.4)',
-                }}
-              >
-                <span className="flex items-center justify-center gap-2">
-                  <Sparkles className="w-4 h-4" />
-                  SPIN TO WIN FREE REWARDS
-                  <Sparkles className="w-4 h-4" />
-                </span>
-              </button>
-              <SpinWheelOverlay open={showSpinWheel} onClose={() => setShowSpinWheel(false)} />
             </div>
 
             {/* Branding section - Below prize counter */}
