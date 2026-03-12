@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
 import { RoleBadge } from '@/components/RoleBadge';
+import { TierRing } from '@/components/TierRing';
 import { SubCategoryBadge } from '@/components/SubCategoryBadge';
 import { Plus, Edit3, Check, X, Award, Lock, Users, Vote, LogOut, Trash2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -117,12 +118,14 @@ export function FanProfileHeader({
 
       <CardContent className="relative p-4 md:p-8 z-10">
         <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start">
-          <Avatar className="w-20 h-20 md:w-32 md:h-32 border-4 border-primary/30">
-            <AvatarImage src={avatar_url || undefined} />
-            <AvatarFallback className="bg-primary/20 text-primary text-3xl md:text-4xl font-bold">
-              {(display_name || 'F').charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
+          <TierRing tier="free" size="lg" interactive>
+            <Avatar className="w-20 h-20 md:w-32 md:h-32 border-4 border-primary/30">
+              <AvatarImage src={avatar_url || undefined} />
+              <AvatarFallback className="bg-primary/20 text-primary text-3xl md:text-4xl font-bold">
+                {(display_name || 'F').charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+          </TierRing>
 
           <div className="flex-1 space-y-3 w-full">
             {/* Name + Badges */}

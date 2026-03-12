@@ -43,6 +43,22 @@ const Index = () => {
     sessionStorage.setItem('spin_wheel_shown', 'true');
   };
 
+  // Welcome-back toast for returning authenticated users (once per session)
+  useEffect(() => {
+    if (!user || loading) return;
+    const hasSeenWelcome = localStorage.getItem('barberhub_welcome_seen');
+    const toastShown = sessionStorage.getItem('welcome_back_toast');
+    if (hasSeenWelcome && !toastShown) {
+      const name = user.user_metadata?.display_name || user.user_metadata?.full_name || '';
+      if (name) {
+        toast(`Welcome back, ${name}! 🔥`);
+      } else {
+        toast('Welcome back! 🔥');
+      }
+      sessionStorage.setItem('welcome_back_toast', 'true');
+    }
+  }, [user, loading]);
+
   // Recover any pending BB purchase that wasn't verified
   useEffect(() => {
     if (!user || loading || recoveryAttempted.current) return;
