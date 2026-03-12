@@ -24,6 +24,7 @@ const LandingHero = () => {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("signin");
   const [prizeBanner, setPrizeBanner] = useState<string | null>(null);
+  const [showSpinWheel, setShowSpinWheel] = useState(false);
 
   // Arena Gate state for barbers
   const [showArenaGate, setShowArenaGate] = useState(false);
