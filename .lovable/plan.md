@@ -1,29 +1,66 @@
-## Full Appointment Engine — Anti-Gravity (COMPLETED)
 
-### What Was Built
 
-#### Database
-- `barber_services`: Added `deposit_bb` (INTEGER) and `is_free_intro` (BOOLEAN)
-- `appointments`: Added `is_deposit_only` (BOOLEAN) and `remainder_bb` (INTEGER)
-- `house_call_bounties`: New table with RLS, status tracking, expiry
-- `handle_bounty_status_change` trigger: Auto-refunds expired bounties, notifies on claim
-- `expire_bounties_batch()`: Callable function for pg_cron to expire stale bounties
+## Auto-Show Spin Wheel on Landing + Role-Specific Prizes
 
-#### Edge Functions
-- `post-bounty`: Client posts house call bounty, BB escrowed
-- `claim-bounty`: Barber atomically claims bounty, auto-creates appointment
-- `book-appointment`: Rewritten — deposit support, free intro, no tier-gating
-- `manage-appointment`: Rewritten — remainder collection on complete, no tier-gating
+### What Changes
 
-#### Frontend
-- `BookingConsole.tsx`: Deposit/free-intro aware, tier-gating removed
-- `ServiceSelector.tsx`: FREE badge, deposit display
-- `EscrowConfirmDialog.tsx`: Deposit vs remainder breakdown, free booking support
-- `HouseCallBountyWidget.tsx`: New — client posts house call bounties
-- `BountyBoard.tsx`: New — barber-facing feed of open bounties
-- `MyAppointments.tsx`: Added "Bounties" tab with post widget + active/past bounties
-- `BarberAppointmentManager.tsx`: Added "Bounties" tab with BountyBoard, deposit/free fields in Add Service, tier-gating removed
-- `BountyPresetPicker.tsx`: Added 500 BB preset
+1. **Auto-open on site load** -- The spin wheel overlay appears automatically when a user lands on the site (both new and authenticated users). Uses `sessionStorage` so it only shows once per session. Users can skip/close it.
 
-### Pending
-- Set up pg_cron job to call `expire_bounties_batch()` every 5 minutes
+2. **Remove permanent trigger buttons** -- Delete the "SPIN TO WIN FREE REWARDS" button from `LandingHero.tsx` and the floating 🎰 button from `Index.tsx`. The wheel is now auto-triggered only.
+
+3. **Role-specific prize pools** -- Completely different prizes for Barbers vs Fans:
+
+**New Fan Prizes (free spin):**
+| Prize | Weight |
+|-------|--------|
+| 15 BB Welcome | 40% |
+| 25 BB Starter | 25% |
+| 1 Month Free Cut | 20% |
+| 3 Month Free Cuts | 10% |
+| 6 Month Free Cuts | 4% |
+| 1 Year Free Cuts (JACKPOT) | 1% |
+
+**Existing Fan Prizes (5 BB cost):**
+| Prize | Weight |
+|-------|--------|
+| 10 BB | 30% |
+| 25 BB | 20% |
+| 1 Month Free Cut | 25% |
+| 3 Month Free Cuts | 15% |
+| 6 Month Free Cuts | 8% |
+| 1 Year Free Cuts (JACKPOT) | 2% |
+
+**New Barber Prizes (free spin):**
+| Prize | Weight |
+|-------|--------|
+| 15 BB Welcome | 40% |
+| 25 BB Starter | 25% |
+| 1 Week Premium Features | 20% |
+| 1 Month Visibility Boost | 10% |
+| 1 Month Premium Unlock | 4% |
+| 3 Month Premium (JACKPOT) | 1% |
+
+**Existing Barber Prizes (5 BB cost):**
+| Prize | Weight |
+|-------|--------|
+| 10 BB | 30% |
+| 25 BB | 20% |
+| 1 Week Premium Features | 20% |
+| 1 Month Visibility Boost | 15% |
+| 1 Month Premium Unlock | 10% |
+| 3 Month Premium (JACKPOT) | 5% |
+
+### Flow Change
+
+Current: User clicks button → role select → spin
+New: Page loads → overlay auto-appears → user picks Barber/Fan → spin immediately (free for new, 5 BB confirm for existing) → result → signup prompt or collect
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/vault/VaultSpinWheel.tsx` | Replace all 3 prize arrays with 4 new ones (`new_fan`, `new_barber`, `existing_fan`, `existing_barber`). Add non-BB prize types with descriptive labels. Update `PrizeSet` type. |
+| `src/components/SpinWheelOverlay.tsx` | Update `getPrizeSet()` to use 4 prize sets based on auth + role. Flow stays the same (role-select first, then spin). No changes to state machine. |
+| `src/pages/Index.tsx` | Auto-open spin wheel on mount (once per session via `sessionStorage`). Remove floating 🎰 button. Show for both authenticated and unauthenticated users. |
+| `src/components/LandingHero.tsx` | Remove the "SPIN TO WIN FREE REWARDS" button and its `SpinWheelOverlay` instance (lines 404-419). The overlay is now only in `Index.tsx`. |
+
