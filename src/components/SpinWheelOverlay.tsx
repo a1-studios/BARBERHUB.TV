@@ -79,8 +79,8 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
   };
 
   const handleClose = () => {
-    setStep('role-select');
-    setSelectedRole(null);
+    setStep(isAuthenticated ? 'confirm-spin' : 'role-select');
+    setSelectedRole(isAuthenticated ? detectedRole : null);
     setWonPrize(null);
     setSpinning(false);
     onClose();
