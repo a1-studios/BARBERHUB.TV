@@ -8,34 +8,53 @@ export interface Prize {
   weight: number;
   color: string;
   bb_value?: number;
+  prize_type?: 'bb' | 'free_cut' | 'premium_feature' | 'visibility_boost' | 'premium_unlock';
+  duration_months?: number;
 }
 
-const NEW_USER_PRIZES: Prize[] = [
-  { id: 'bb_15', label: '15 BB Welcome Bonus', weight: 70, color: '#FF5F1F', bb_value: 15 },
-  { id: 'bb_25', label: '25 BB Starter Pack', weight: 25, color: '#FF8C00', bb_value: 25 },
-  { id: 'bb_50', label: '50 BB Lucky Break', weight: 5, color: '#FFD700', bb_value: 50 },
-];
-
-const EXISTING_BARBER_PRIZES: Prize[] = [
-  { id: 'bb_10', label: '10 BB', weight: 50, color: '#CD7F32', bb_value: 10 },
-  { id: 'bb_25', label: '25 BB', weight: 30, color: '#FF5F1F', bb_value: 25 },
-  { id: 'bb_50', label: '50 BB', weight: 15, color: '#C0C0C0', bb_value: 50 },
-  { id: 'bb_100', label: '100 BB Jackpot', weight: 5, color: '#FFD700', bb_value: 100 },
+const NEW_FAN_PRIZES: Prize[] = [
+  { id: 'bb_15', label: '15 BB Welcome', weight: 40, color: '#FF5F1F', bb_value: 15, prize_type: 'bb' },
+  { id: 'bb_25', label: '25 BB Starter', weight: 25, color: '#FF8C00', bb_value: 25, prize_type: 'bb' },
+  { id: 'cut_1m', label: '1 Month Free Cut', weight: 20, color: '#002D62', prize_type: 'free_cut', duration_months: 1 },
+  { id: 'cut_3m', label: '3 Month Free Cuts', weight: 10, color: '#C0C0C0', prize_type: 'free_cut', duration_months: 3 },
+  { id: 'cut_6m', label: '6 Month Free Cuts', weight: 4, color: '#8B5CF6', prize_type: 'free_cut', duration_months: 6 },
+  { id: 'cut_1y', label: '1 Year Free Cuts', weight: 1, color: '#FFD700', prize_type: 'free_cut', duration_months: 12 },
 ];
 
 const EXISTING_FAN_PRIZES: Prize[] = [
-  { id: 'bb_10', label: '10 BB', weight: 50, color: '#FF5F1F', bb_value: 10 },
-  { id: 'bb_25', label: '25 BB', weight: 30, color: '#FF8C00', bb_value: 25 },
-  { id: 'bb_50', label: '50 BB', weight: 15, color: '#002D62', bb_value: 50 },
-  { id: 'bb_100', label: '100 BB Jackpot', weight: 5, color: '#FFD700', bb_value: 100 },
+  { id: 'bb_10', label: '10 BB', weight: 30, color: '#CD7F32', bb_value: 10, prize_type: 'bb' },
+  { id: 'bb_25', label: '25 BB', weight: 20, color: '#FF5F1F', bb_value: 25, prize_type: 'bb' },
+  { id: 'cut_1m', label: '1 Month Free Cut', weight: 25, color: '#002D62', prize_type: 'free_cut', duration_months: 1 },
+  { id: 'cut_3m', label: '3 Month Free Cuts', weight: 15, color: '#C0C0C0', prize_type: 'free_cut', duration_months: 3 },
+  { id: 'cut_6m', label: '6 Month Free Cuts', weight: 8, color: '#8B5CF6', prize_type: 'free_cut', duration_months: 6 },
+  { id: 'cut_1y', label: '1 Year Free Cuts', weight: 2, color: '#FFD700', prize_type: 'free_cut', duration_months: 12 },
 ];
 
-export type PrizeSet = 'new_user' | 'existing_barber' | 'existing_fan';
+const NEW_BARBER_PRIZES: Prize[] = [
+  { id: 'bb_15', label: '15 BB Welcome', weight: 40, color: '#FF5F1F', bb_value: 15, prize_type: 'bb' },
+  { id: 'bb_25', label: '25 BB Starter', weight: 25, color: '#FF8C00', bb_value: 25, prize_type: 'bb' },
+  { id: 'prem_1w', label: '1 Week Premium', weight: 20, color: '#002D62', prize_type: 'premium_feature', duration_months: 0.25 },
+  { id: 'vis_1m', label: '1 Month Visibility', weight: 10, color: '#C0C0C0', prize_type: 'visibility_boost', duration_months: 1 },
+  { id: 'prem_1m', label: '1 Month Premium', weight: 4, color: '#8B5CF6', prize_type: 'premium_unlock', duration_months: 1 },
+  { id: 'prem_3m', label: '3 Month Premium', weight: 1, color: '#FFD700', prize_type: 'premium_unlock', duration_months: 3 },
+];
+
+const EXISTING_BARBER_PRIZES: Prize[] = [
+  { id: 'bb_10', label: '10 BB', weight: 30, color: '#CD7F32', bb_value: 10, prize_type: 'bb' },
+  { id: 'bb_25', label: '25 BB', weight: 20, color: '#FF5F1F', bb_value: 25, prize_type: 'bb' },
+  { id: 'prem_1w', label: '1 Week Premium', weight: 20, color: '#002D62', prize_type: 'premium_feature', duration_months: 0.25 },
+  { id: 'vis_1m', label: '1 Month Visibility', weight: 15, color: '#C0C0C0', prize_type: 'visibility_boost', duration_months: 1 },
+  { id: 'prem_1m', label: '1 Month Premium', weight: 10, color: '#8B5CF6', prize_type: 'premium_unlock', duration_months: 1 },
+  { id: 'prem_3m', label: '3 Month Premium', weight: 5, color: '#FFD700', prize_type: 'premium_unlock', duration_months: 3 },
+];
+
+export type PrizeSet = 'new_fan' | 'new_barber' | 'existing_fan' | 'existing_barber';
 
 const PRIZE_SETS: Record<PrizeSet, Prize[]> = {
-  new_user: NEW_USER_PRIZES,
-  existing_barber: EXISTING_BARBER_PRIZES,
+  new_fan: NEW_FAN_PRIZES,
+  new_barber: NEW_BARBER_PRIZES,
   existing_fan: EXISTING_FAN_PRIZES,
+  existing_barber: EXISTING_BARBER_PRIZES,
 };
 
 function pickPrize(prizes: Prize[]): { prize: Prize; index: number } {
@@ -49,21 +68,14 @@ function pickPrize(prizes: Prize[]): { prize: Prize; index: number } {
 }
 
 interface VaultSpinWheelProps {
-  prizeSet?: PrizeSet;
-  /** @deprecated use prizeSet instead */
-  role?: 'barber' | 'fan';
+  prizeSet: PrizeSet;
   onResult: (prize: Prize) => void;
   disabled?: boolean;
   spinLabel?: string;
 }
 
-const VaultSpinWheel = ({ prizeSet, role, onResult, disabled, spinLabel }: VaultSpinWheelProps) => {
-  // Resolve prize array
-  const prizes = prizeSet
-    ? PRIZE_SETS[prizeSet]
-    : role === 'barber'
-      ? EXISTING_BARBER_PRIZES
-      : EXISTING_FAN_PRIZES;
+const VaultSpinWheel = ({ prizeSet, onResult, disabled, spinLabel }: VaultSpinWheelProps) => {
+  const prizes = PRIZE_SETS[prizeSet];
 
   const [spinning, setSpinning] = useState(false);
   const [finalRotation, setFinalRotation] = useState(0);
@@ -125,12 +137,12 @@ const VaultSpinWheel = ({ prizeSet, role, onResult, disabled, spinLabel }: Vault
                   }}
                 />
                 <div
-                  className="absolute text-xs font-bold text-white drop-shadow-lg"
+                  className="absolute text-[10px] font-bold text-white drop-shadow-lg"
                   style={{
                     left: `calc(50% + ${Math.cos(midAngle - Math.PI / 2) * textRadius}px)`,
                     top: `calc(50% + ${Math.sin(midAngle - Math.PI / 2) * textRadius}px)`,
                     transform: `translate(-50%, -50%) rotate(${startAngle + segmentAngle / 2}deg)`,
-                    maxWidth: '70px',
+                    maxWidth: '60px',
                     textAlign: 'center',
                     lineHeight: '1.1',
                   }}

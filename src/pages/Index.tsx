@@ -31,9 +31,19 @@ const Index = () => {
   const [introComplete, setIntroComplete] = useState(() =>
     sessionStorage.getItem('fan_intro_seen') === 'true'
   );
-  const [showSpinWheel, setShowSpinWheel] = useState(false);
 
-  // Recover any pending BB purchase that wasn't verified (e.g. user closed Stripe success tab)
+  // Auto-show spin wheel once per session
+  const [showSpinWheel, setShowSpinWheel] = useState(() => {
+    if (sessionStorage.getItem('spin_wheel_shown') === 'true') return false;
+    return true;
+  });
+
+  const handleSpinClose = () => {
+    setShowSpinWheel(false);
+    sessionStorage.setItem('spin_wheel_shown', 'true');
+  };
+
+  // Recover any pending BB purchase that wasn't verified
   useEffect(() => {
     if (!user || loading || recoveryAttempted.current) return;
     recoveryAttempted.current = true;
@@ -45,13 +55,11 @@ const Index = () => {
       const pending = JSON.parse(raw);
       const ageMs = Date.now() - (pending.timestamp || 0);
 
-      // Expire after 24 hours
       if (ageMs > 24 * 60 * 60 * 1000) {
         localStorage.removeItem('pending_bb_purchase');
         return;
       }
 
-      // Attempt verification
       supabase.functions.invoke('verify-bb-purchase', {
         body: { session_id: pending.session_id }
       }).then(({ data, error }) => {
@@ -61,7 +69,6 @@ const Index = () => {
           queryClient.invalidateQueries({ queryKey: ['barber_bucks_transactions'] });
           toast.success(`+${data.bb_credited} BB credited to your account!`);
         } else if (error || !data?.success) {
-          // If payment wasn't actually completed on Stripe, just clear silently
           console.log('[BB Recovery] Verification unsuccessful, clearing pending:', data?.error || error);
           localStorage.removeItem('pending_bb_purchase');
         }
@@ -139,22 +146,9 @@ const Index = () => {
       
       <Footer />
       {user && <BottomNavBar />}
-      {user && (
-        <>
-          <button
-            onClick={() => setShowSpinWheel(true)}
-            className="fixed bottom-20 right-4 z-40 w-14 h-14 rounded-full flex items-center justify-center font-black text-lg text-black shadow-lg animate-bounce"
-            style={{
-              background: 'linear-gradient(135deg, #FF5F1F, #FF8C00)',
-              boxShadow: '0 0 20px rgba(255,95,31,0.5)',
-            }}
-            title="Spin to Win"
-          >
-            🎰
-          </button>
-          <SpinWheelOverlay open={showSpinWheel} onClose={() => setShowSpinWheel(false)} />
-        </>
-      )}
+
+      {/* Auto-show spin wheel overlay */}
+      <SpinWheelOverlay open={showSpinWheel} onClose={handleSpinClose} />
     </div>
   );
 };
