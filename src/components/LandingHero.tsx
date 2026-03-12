@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { triggerCountryCelebration } from "@/utils/countryCelebration";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
+import { SpinWheelOverlay } from "@/components/SpinWheelOverlay";
 
 const LandingHero = () => {
   const { signUp, signIn, user } = useAuth();
@@ -23,6 +24,7 @@ const LandingHero = () => {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("signin");
   const [prizeBanner, setPrizeBanner] = useState<string | null>(null);
+  const [showSpinWheel, setShowSpinWheel] = useState(false);
 
   // Arena Gate state for barbers
   const [showArenaGate, setShowArenaGate] = useState(false);
@@ -399,9 +401,9 @@ const LandingHero = () => {
                 </Tabs>
               </Card>
 
-              {/* Vault CTA */}
-              <Link
-                to="/vault"
+              {/* Spin to Win CTA */}
+              <button
+                onClick={() => setShowSpinWheel(true)}
                 className="block w-full max-w-md mx-auto mt-3 py-3 rounded-xl text-center font-black text-sm tracking-wider text-black animate-pulse hover:animate-none transition-all"
                 style={{
                   background: 'linear-gradient(135deg, #FF5F1F, #FF8C00)',
@@ -413,7 +415,8 @@ const LandingHero = () => {
                   SPIN TO WIN FREE REWARDS
                   <Sparkles className="w-4 h-4" />
                 </span>
-              </Link>
+              </button>
+              <SpinWheelOverlay open={showSpinWheel} onClose={() => setShowSpinWheel(false)} />
             </div>
 
             {/* Branding section - Below prize counter */}
