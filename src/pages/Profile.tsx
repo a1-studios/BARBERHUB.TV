@@ -8,7 +8,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-import { Scissors, Loader2, X } from 'lucide-react';
+import { Scissors, Loader2, X, Trash2 } from 'lucide-react';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { AddFundsModal } from '@/components/AddFundsModal';
 import { useNavigate } from 'react-router-dom';
