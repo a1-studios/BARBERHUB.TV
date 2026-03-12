@@ -198,7 +198,7 @@ const VaultOfHonor = () => {
               exit={{ opacity: 0, scale: 0.8 }}
               className="w-full max-w-md h-full"
             >
-              <VaultSpinWheel role={role} onResult={handleSpinResult} />
+              <VaultSpinWheel prizeSet={role === 'barber' ? 'existing_barber' : 'existing_fan'} onResult={handleSpinResult} />
             </motion.div>
           )}
 
