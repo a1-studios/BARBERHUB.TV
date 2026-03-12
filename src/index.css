@@ -497,43 +497,34 @@
 
   /* ===== Tier Ring Animations ===== */
 
-  /* Orbiting LED dots */
-  @keyframes tierOrbit {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-  .animate-tier-orbit {
-    animation: tierOrbit 6s linear infinite;
-  }
-
-  /* Bronze glow pulse */
+  /* Bronze glow pulse — warm copper */
   @keyframes tierGlowBronze {
-    0%, 100% { box-shadow: 0 0 8px hsl(24 100% 52% / 0.3), inset 0 0 4px hsl(24 100% 52% / 0.1); }
-    50% { box-shadow: 0 0 18px hsl(24 100% 52% / 0.6), inset 0 0 8px hsl(24 100% 52% / 0.2); }
+    0%, 100% { box-shadow: 0 0 12px hsl(24 100% 52% / 0.4), inset 0 0 6px hsl(24 100% 52% / 0.15); }
+    50% { box-shadow: 0 0 24px hsl(24 100% 52% / 0.7), inset 0 0 10px hsl(24 100% 52% / 0.25); }
   }
   .animate-tier-glow-bronze {
     animation: tierGlowBronze 2.5s ease-in-out infinite;
   }
 
-  /* Silver glow pulse */
+  /* Silver glow pulse — cool metallic */
   @keyframes tierGlowSilver {
-    0%, 100% { box-shadow: 0 0 10px hsl(210 20% 80% / 0.3), 0 0 20px hsl(210 20% 80% / 0.15); }
-    50% { box-shadow: 0 0 22px hsl(210 20% 80% / 0.6), 0 0 40px hsl(210 20% 80% / 0.25); }
+    0%, 100% { box-shadow: 0 0 14px hsl(210 20% 80% / 0.4), 0 0 28px hsl(210 20% 80% / 0.2); }
+    50% { box-shadow: 0 0 30px hsl(210 20% 80% / 0.7), 0 0 50px hsl(210 20% 80% / 0.3); }
   }
   .animate-tier-glow-silver {
     animation: tierGlowSilver 2s ease-in-out infinite;
   }
 
-  /* Gold glow pulse */
+  /* Gold glow pulse — intense elite */
   @keyframes tierGlowGold {
-    0%, 100% { box-shadow: 0 0 12px hsl(45 100% 55% / 0.4), 0 0 25px hsl(45 100% 55% / 0.2); }
-    50% { box-shadow: 0 0 30px hsl(45 100% 55% / 0.7), 0 0 60px hsl(45 100% 55% / 0.35), 0 0 90px hsl(45 100% 55% / 0.15); }
+    0%, 100% { box-shadow: 0 0 16px hsl(45 100% 55% / 0.5), 0 0 35px hsl(45 100% 55% / 0.25), inset 0 0 8px hsl(45 100% 55% / 0.15); }
+    50% { box-shadow: 0 0 40px hsl(45 100% 55% / 0.8), 0 0 70px hsl(45 100% 55% / 0.4), 0 0 100px hsl(45 100% 55% / 0.2), inset 0 0 14px hsl(45 100% 55% / 0.25); }
   }
   .animate-tier-glow-gold {
     animation: tierGlowGold 1.8s ease-in-out infinite;
   }
 
-  /* Shimmer sweep */
+  /* Shimmer sweep for silver/gold */
   @keyframes tierShimmer {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
@@ -542,26 +533,26 @@
     animation: tierShimmer 3s linear infinite;
   }
 
-  /* Ghost rank arc animations — each segment pulses independently */
+  /* Ghost rank arc animations — thicker, more visible pulses */
   @keyframes tierGhostBronze {
-    0%, 70%, 100% { opacity: 0.25; }
-    30% { opacity: 0.55; }
+    0%, 70%, 100% { opacity: 0.35; }
+    30% { opacity: 0.65; }
   }
   .animate-tier-ghost-bronze {
     animation: tierGhostBronze 4s ease-in-out infinite;
   }
 
   @keyframes tierGhostSilver {
-    0%, 10%, 80%, 100% { opacity: 0.2; }
-    45% { opacity: 0.5; }
+    0%, 10%, 80%, 100% { opacity: 0.3; }
+    45% { opacity: 0.6; }
   }
   .animate-tier-ghost-silver {
     animation: tierGhostSilver 4s ease-in-out infinite 1.3s;
   }
 
   @keyframes tierGhostGold {
-    0%, 20%, 90%, 100% { opacity: 0.18; }
-    60% { opacity: 0.48; }
+    0%, 20%, 90%, 100% { opacity: 0.25; }
+    60% { opacity: 0.55; }
   }
   .animate-tier-ghost-gold {
     animation: tierGhostGold 4s ease-in-out infinite 2.6s;
