@@ -35,6 +35,7 @@ const Profile = () => {
   const [showBarberSettings, setShowBarberSettings] = useState(false);
   const [showSponsorModal, setShowSponsorModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
