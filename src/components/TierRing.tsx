@@ -15,51 +15,23 @@ interface TierRingProps {
   className?: string;
 }
 
-const TIER_STYLES = {
-  free: {
-    ring: 'border-border/50',
-    glow: '',
-    leds: 0,
-    animation: '',
-  },
-  bronze: {
-    ring: 'border-orange-500/70',
-    glow: 'tier-ring-bronze',
-    leds: 2,
-    animation: 'animate-tier-glow-bronze',
-  },
-  silver: {
-    ring: 'border-slate-300/70',
-    glow: 'tier-ring-silver',
-    leds: 4,
-    animation: 'animate-tier-glow-silver',
-  },
-  gold: {
-    ring: 'border-yellow-400/80',
-    glow: 'tier-ring-gold',
-    leds: 6,
-    animation: 'animate-tier-glow-gold',
-  },
-};
-
 const SIZE_MAP = {
-  sm: { container: 'w-14 h-14', padding: 2, ledSize: 'w-1.5 h-1.5', radius: 28, svgSize: 64, strokeWidth: 3 },
-  md: { container: 'w-24 h-24', padding: 3, ledSize: 'w-2 h-2', radius: 48, svgSize: 106, strokeWidth: 3.5 },
-  lg: { container: 'w-36 h-36', padding: 4, ledSize: 'w-2.5 h-2.5', radius: 72, svgSize: 154, strokeWidth: 4 },
+  sm: { container: 'w-14 h-14', padding: 'p-[3px]', svgSize: 68, strokeWidth: 5 },
+  md: { container: 'w-24 h-24', padding: 'p-[4px]', svgSize: 108, strokeWidth: 6 },
+  lg: { container: 'w-36 h-36', padding: 'p-[5px]', svgSize: 158, strokeWidth: 7 },
 };
 
-// SVG arc segments for the ghost preview — 3 equal arcs for bronze/silver/gold
 function GhostRankRing({ svgSize, strokeWidth }: { svgSize: number; strokeWidth: number }) {
   const center = svgSize / 2;
   const r = (svgSize - strokeWidth * 2) / 2;
   const circumference = 2 * Math.PI * r;
   const arcLen = circumference / 3;
-  const gap = 6; // gap between arcs in px
+  const gap = 8;
 
   const arcs = [
-    { color: 'hsl(24, 100%, 52%)', opacity: 0.35, glowColor: 'hsl(24, 100%, 52%)', rotation: 0, className: 'animate-tier-ghost-bronze' },       // Bronze — starts at right
-    { color: 'hsl(210, 20%, 80%)', opacity: 0.28, glowColor: 'hsl(210, 20%, 80%)', rotation: 120, className: 'animate-tier-ghost-silver' },    // Silver
-    { color: 'hsl(45, 100%, 55%)', opacity: 0.25, glowColor: 'hsl(45, 100%, 55%)', rotation: 240, className: 'animate-tier-ghost-gold' },      // Gold
+    { color: 'hsl(24, 100%, 52%)', opacity: 0.4, rotation: 0, className: 'animate-tier-ghost-bronze', filterId: 'ghost-bronze' },
+    { color: 'hsl(210, 20%, 80%)', opacity: 0.35, rotation: 120, className: 'animate-tier-ghost-silver', filterId: 'ghost-silver' },
+    { color: 'hsl(45, 100%, 55%)', opacity: 0.3, rotation: 240, className: 'animate-tier-ghost-gold', filterId: 'ghost-gold' },
   ];
 
   return (
@@ -70,18 +42,9 @@ function GhostRankRing({ svgSize, strokeWidth }: { svgSize: number; strokeWidth:
       style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}
     >
       <defs>
-        <filter id="ghost-bronze-glow">
-          <feGaussianBlur stdDeviation="2.5" result="blur" />
-          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-        <filter id="ghost-silver-glow">
-          <feGaussianBlur stdDeviation="2" result="blur" />
-          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-        <filter id="ghost-gold-glow">
-          <feGaussianBlur stdDeviation="3" result="blur" />
-          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
+        <filter id="ghost-bronze"><feGaussianBlur stdDeviation="3" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+        <filter id="ghost-silver"><feGaussianBlur stdDeviation="2.5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
+        <filter id="ghost-gold"><feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter>
       </defs>
       {arcs.map((arc, i) => (
         <circle
@@ -95,7 +58,7 @@ function GhostRankRing({ svgSize, strokeWidth }: { svgSize: number; strokeWidth:
           strokeLinecap="round"
           opacity={arc.opacity}
           className={arc.className}
-          filter={`url(#ghost-${['bronze', 'silver', 'gold'][i]}-glow)`}
+          filter={`url(#${arc.filterId})`}
           strokeDasharray={`${arcLen - gap} ${circumference - arcLen + gap}`}
           strokeDashoffset={-(arc.rotation / 360) * circumference}
           style={{ transformOrigin: 'center' }}
@@ -110,8 +73,7 @@ export const TierRing = ({ tier, size = 'md', interactive = false, showGhostPrev
   const [showAddFunds, setShowAddFunds] = useState(false);
   const { barberBucks, isLoading: bbLoading } = useBarberBucks();
 
-  const tierKey = (tier?.toLowerCase() || 'free') as keyof typeof TIER_STYLES;
-  const config = TIER_STYLES[tierKey] || TIER_STYLES.free;
+  const tierKey = (tier?.toLowerCase() || 'free') as 'free' | 'bronze' | 'silver' | 'gold';
   const sizeConfig = SIZE_MAP[size];
 
   const handleClick = () => {
@@ -127,78 +89,41 @@ export const TierRing = ({ tier, size = 'md', interactive = false, showGhostPrev
   const isFree = tierKey === 'free';
   const showGhost = isFree && showGhostPreview;
 
-  // Ghost mode uses SVG arcs; active mode uses LED dots
-  const ledCount = showGhost ? 0 : config.leds;
-  const ledDots: number[] = [];
-  for (let i = 0; i < ledCount; i++) {
-    const angle = (360 / ledCount) * i;
-    ledDots.push(angle);
-  }
+  // Border + glow styles per tier
+  const tierBorderClass = cn(
+    'absolute inset-0 rounded-full',
+    tierKey === 'free' && !showGhost && 'border-2 border-border/50',
+    tierKey === 'bronze' && 'border-[3px] border-orange-500 animate-tier-glow-bronze',
+    tierKey === 'silver' && 'border-[3.5px] border-slate-300 animate-tier-glow-silver',
+    tierKey === 'gold' && 'border-[4px] border-yellow-400 animate-tier-glow-gold',
+  );
 
   return (
     <>
       <div
         className={cn(
           'relative inline-flex items-center justify-center rounded-full',
+          sizeConfig.padding,
           interactive && 'cursor-pointer',
           className
         )}
         onClick={handleClick}
       >
-        {/* Ghost Overwatch-style 3-segment rank ring */}
+        {/* Ghost 3-segment rank ring for free tier */}
         {showGhost && (
           <GhostRankRing svgSize={sizeConfig.svgSize} strokeWidth={sizeConfig.strokeWidth} />
         )}
 
-        {/* Active outer glow ring */}
-        {!isFree && (
-          <div
-            className={cn(
-              'absolute inset-[-3px] rounded-full border-2',
-              config.ring,
-              config.animation
-            )}
-          />
-        )}
+        {/* Active tier border frame */}
+        {!isFree && <div className={tierBorderClass} />}
 
-        {/* LED orbit container — active tiers only */}
-        {ledCount > 0 && (
-          <div className={cn(
-            "absolute inset-[-5px] rounded-full",
-            "animate-tier-orbit"
-          )}>
-            {ledDots.map((angle, i) => {
-              const rad = (angle * Math.PI) / 180;
-              const r = sizeConfig.radius + 2;
-              const x = Math.cos(rad) * r;
-              const y = Math.sin(rad) * r;
-              return (
-                <div
-                  key={i}
-                  className={cn(
-                    'absolute rounded-full',
-                    sizeConfig.ledSize,
-                    tierKey === 'bronze' && 'bg-orange-400 shadow-[0_0_6px_hsl(24_100%_52%/0.8)]',
-                    tierKey === 'silver' && 'bg-slate-200 shadow-[0_0_6px_hsl(210_20%_80%/0.8)]',
-                    tierKey === 'gold' && 'bg-yellow-300 shadow-[0_0_8px_hsl(45_100%_60%/0.9)]',
-                  )}
-                  style={{
-                    left: `calc(50% + ${x}px - ${size === 'sm' ? 3 : size === 'md' ? 4 : 5}px)`,
-                    top: `calc(50% + ${y}px - ${size === 'sm' ? 3 : size === 'md' ? 4 : 5}px)`,
-                  }}
-                />
-              );
-            })}
-          </div>
-        )}
-
-        {/* Shimmer overlay for silver/gold */}
+        {/* Shimmer sweep for silver/gold */}
         {(tierKey === 'silver' || tierKey === 'gold') && (
-          <div className="absolute inset-[-3px] rounded-full animate-tier-shimmer overflow-hidden pointer-events-none">
+          <div className="absolute inset-0 rounded-full animate-tier-shimmer overflow-hidden pointer-events-none">
             <div className={cn(
               'absolute inset-0 rounded-full',
-              tierKey === 'silver' && 'bg-gradient-conic from-transparent via-slate-200/20 to-transparent',
-              tierKey === 'gold' && 'bg-gradient-conic from-transparent via-yellow-300/30 to-transparent',
+              tierKey === 'silver' && 'bg-gradient-conic from-transparent via-slate-200/25 to-transparent',
+              tierKey === 'gold' && 'bg-gradient-conic from-transparent via-yellow-300/35 to-transparent',
             )} />
           </div>
         )}
