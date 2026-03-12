@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Scissors, Users } from 'lucide-react';
 import VaultSpinWheel, { Prize, PrizeSet } from '@/components/vault/VaultSpinWheel';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -20,13 +21,16 @@ const SPIN_COST = 5;
 
 export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
   const { user } = useAuth();
+  const { isBarber } = useUserRole();
   const { barberBucks } = useBarberBucks();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const isAuthenticated = !!user;
 
-  const [step, setStep] = useState<Step>('role-select');
-  const [selectedRole, setSelectedRole] = useState<'barber' | 'fan' | null>(null);
+  const detectedRole: 'barber' | 'fan' = isBarber ? 'barber' : 'fan';
+
+  const [step, setStep] = useState<Step>(isAuthenticated ? 'confirm-spin' : 'role-select');
+  const [selectedRole, setSelectedRole] = useState<'barber' | 'fan' | null>(isAuthenticated ? detectedRole : null);
   const [wonPrize, setWonPrize] = useState<Prize | null>(null);
   const [spinning, setSpinning] = useState(false);
 
@@ -75,8 +79,8 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
   };
 
   const handleClose = () => {
-    setStep('role-select');
-    setSelectedRole(null);
+    setStep(isAuthenticated ? 'confirm-spin' : 'role-select');
+    setSelectedRole(isAuthenticated ? detectedRole : null);
     setWonPrize(null);
     setSpinning(false);
     onClose();
