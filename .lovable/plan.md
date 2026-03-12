@@ -1,32 +1,29 @@
+## Full Appointment Engine — Anti-Gravity (COMPLETED)
 
+### What Was Built
 
-## Ghost Tier Ring: Barber-Only + Overwatch-Style Rank Borders
+#### Database
+- `barber_services`: Added `deposit_bb` (INTEGER) and `is_free_intro` (BOOLEAN)
+- `appointments`: Added `is_deposit_only` (BOOLEAN) and `remainder_bb` (INTEGER)
+- `house_call_bounties`: New table with RLS, status tracking, expiry
+- `handle_bounty_status_change` trigger: Auto-refunds expired bounties, notifies on claim
+- `expire_bounties_batch()`: Callable function for pg_cron to expire stale bounties
 
-### Changes
+#### Edge Functions
+- `post-bounty`: Client posts house call bounty, BB escrowed
+- `claim-bounty`: Barber atomically claims bounty, auto-creates appointment
+- `book-appointment`: Rewritten — deposit support, free intro, no tier-gating
+- `manage-appointment`: Rewritten — remainder collection on complete, no tier-gating
 
-**1. Remove ghost ring from fans** — `FanProfileHeader.tsx` currently wraps the avatar in `<TierRing tier="free">`. Remove the `TierRing` wrapper entirely so fans get a plain avatar with no tier ring system.
+#### Frontend
+- `BookingConsole.tsx`: Deposit/free-intro aware, tier-gating removed
+- `ServiceSelector.tsx`: FREE badge, deposit display
+- `EscrowConfirmDialog.tsx`: Deposit vs remainder breakdown, free booking support
+- `HouseCallBountyWidget.tsx`: New — client posts house call bounties
+- `BountyBoard.tsx`: New — barber-facing feed of open bounties
+- `MyAppointments.tsx`: Added "Bounties" tab with post widget + active/past bounties
+- `BarberAppointmentManager.tsx`: Added "Bounties" tab with BountyBoard, deposit/free fields in Add Service, tier-gating removed
+- `BountyPresetPicker.tsx`: Added 500 BB preset
 
-**2. Make ghost ring much more visible with Overwatch-style ranked borders** — Instead of a barely-visible `border-orange-500/15`, redesign the free-tier ghost to show all 3 rank levels as distinct border segments around the avatar, like Overwatch's rank emblems:
-
-**`TierRing.tsx`** — When `tier === 'free'` and `showGhostPreview`:
-- Render 3 concentric border segments (arcs) around the avatar using SVG or CSS conic-gradient, each representing a tier:
-  - **Bronze arc** (bottom-left third): orange-500 at ~20% opacity, thin solid border segment
-  - **Silver arc** (top third): slate-300 at ~15% opacity, thin solid border segment  
-  - **Gold arc** (bottom-right third): yellow-400 at ~12% opacity, thin solid border segment
-- Each arc edge pulses faintly with its tier color glow
-- The overall effect: user sees a segmented ring showing 3 "locked" rank tiers, clearly distinguishable
-- Use an SVG circle with 3 `stroke-dasharray` arcs, each colored per tier, with a subtle glow filter
-
-**`src/index.css`** — Update `tierGlowGhost` animation to be brighter/more visible. Add a `animate-tier-ghost-pulse` that cycles through highlighting each segment briefly (bronze → silver → gold) to draw attention.
-
-### Active tier rings stay the same
-Bronze/Silver/Gold active rings remain unchanged — full opacity, LEDs, shimmer etc.
-
-### Files Changed
-
-| File | Change |
-|------|--------|
-| `src/components/TierRing.tsx` | Replace ghost ring from simple border to SVG-based 3-segment Overwatch-style rank border with bronze/silver/gold arcs. Each arc has its tier color at low opacity with edge glow. |
-| `src/components/fan/FanProfileHeader.tsx` | Remove `TierRing` wrapper from avatar — fans don't get tier rings. |
-| `src/index.css` | Update ghost animation to be more visible. Add `animate-tier-ghost-segment` that sequentially highlights each tier arc. |
-
+### Pending
+- Set up pg_cron job to call `expire_bounties_batch()` every 5 minutes

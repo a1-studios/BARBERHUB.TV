@@ -43,10 +43,67 @@ const TIER_STYLES = {
 };
 
 const SIZE_MAP = {
-  sm: { container: 'w-14 h-14', padding: 2, ledSize: 'w-1.5 h-1.5', radius: 28 },
-  md: { container: 'w-24 h-24', padding: 3, ledSize: 'w-2 h-2', radius: 48 },
-  lg: { container: 'w-36 h-36', padding: 4, ledSize: 'w-2.5 h-2.5', radius: 72 },
+  sm: { container: 'w-14 h-14', padding: 2, ledSize: 'w-1.5 h-1.5', radius: 28, svgSize: 64, strokeWidth: 3 },
+  md: { container: 'w-24 h-24', padding: 3, ledSize: 'w-2 h-2', radius: 48, svgSize: 106, strokeWidth: 3.5 },
+  lg: { container: 'w-36 h-36', padding: 4, ledSize: 'w-2.5 h-2.5', radius: 72, svgSize: 154, strokeWidth: 4 },
 };
+
+// SVG arc segments for the ghost preview — 3 equal arcs for bronze/silver/gold
+function GhostRankRing({ svgSize, strokeWidth }: { svgSize: number; strokeWidth: number }) {
+  const center = svgSize / 2;
+  const r = (svgSize - strokeWidth * 2) / 2;
+  const circumference = 2 * Math.PI * r;
+  const arcLen = circumference / 3;
+  const gap = 6; // gap between arcs in px
+
+  const arcs = [
+    { color: 'hsl(24, 100%, 52%)', opacity: 0.35, glowColor: 'hsl(24, 100%, 52%)', rotation: 0, className: 'animate-tier-ghost-bronze' },       // Bronze — starts at right
+    { color: 'hsl(210, 20%, 80%)', opacity: 0.28, glowColor: 'hsl(210, 20%, 80%)', rotation: 120, className: 'animate-tier-ghost-silver' },    // Silver
+    { color: 'hsl(45, 100%, 55%)', opacity: 0.25, glowColor: 'hsl(45, 100%, 55%)', rotation: 240, className: 'animate-tier-ghost-gold' },      // Gold
+  ];
+
+  return (
+    <svg
+      width={svgSize}
+      height={svgSize}
+      className="absolute inset-0 m-auto pointer-events-none"
+      style={{ left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}
+    >
+      <defs>
+        <filter id="ghost-bronze-glow">
+          <feGaussianBlur stdDeviation="2.5" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <filter id="ghost-silver-glow">
+          <feGaussianBlur stdDeviation="2" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <filter id="ghost-gold-glow">
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+      {arcs.map((arc, i) => (
+        <circle
+          key={i}
+          cx={center}
+          cy={center}
+          r={r}
+          fill="none"
+          stroke={arc.color}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+          opacity={arc.opacity}
+          className={arc.className}
+          filter={`url(#ghost-${['bronze', 'silver', 'gold'][i]}-glow)`}
+          strokeDasharray={`${arcLen - gap} ${circumference - arcLen + gap}`}
+          strokeDashoffset={-(arc.rotation / 360) * circumference}
+          style={{ transformOrigin: 'center' }}
+        />
+      ))}
+    </svg>
+  );
+}
 
 export const TierRing = ({ tier, size = 'md', interactive = false, showGhostPreview = true, children, className }: TierRingProps) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -70,9 +127,9 @@ export const TierRing = ({ tier, size = 'md', interactive = false, showGhostPrev
   const isFree = tierKey === 'free';
   const showGhost = isFree && showGhostPreview;
 
-  // Ghost mode: 2 faint LEDs; active mode: tier LEDs
-  const ledCount = showGhost ? 2 : config.leds;
-  const ledDots = [];
+  // Ghost mode uses SVG arcs; active mode uses LED dots
+  const ledCount = showGhost ? 0 : config.leds;
+  const ledDots: number[] = [];
   for (let i = 0; i < ledCount; i++) {
     const angle = (360 / ledCount) * i;
     ledDots.push(angle);
@@ -88,11 +145,9 @@ export const TierRing = ({ tier, size = 'md', interactive = false, showGhostPrev
         )}
         onClick={handleClick}
       >
-        {/* Ghost ring for free tier */}
+        {/* Ghost Overwatch-style 3-segment rank ring */}
         {showGhost && (
-          <div
-            className="absolute inset-[-3px] rounded-full border-2 border-orange-500/15 animate-tier-glow-ghost"
-          />
+          <GhostRankRing svgSize={sizeConfig.svgSize} strokeWidth={sizeConfig.strokeWidth} />
         )}
 
         {/* Active outer glow ring */}
@@ -106,11 +161,11 @@ export const TierRing = ({ tier, size = 'md', interactive = false, showGhostPrev
           />
         )}
 
-        {/* LED orbit container — ghost or active */}
+        {/* LED orbit container — active tiers only */}
         {ledCount > 0 && (
           <div className={cn(
             "absolute inset-[-5px] rounded-full",
-            !isFree && "animate-tier-orbit"
+            "animate-tier-orbit"
           )}>
             {ledDots.map((angle, i) => {
               const rad = (angle * Math.PI) / 180;
@@ -123,11 +178,9 @@ export const TierRing = ({ tier, size = 'md', interactive = false, showGhostPrev
                   className={cn(
                     'absolute rounded-full',
                     sizeConfig.ledSize,
-                    showGhost
-                      ? 'bg-orange-400/10 shadow-[0_0_4px_hsl(24_100%_52%/0.08)]'
-                      : tierKey === 'bronze' && 'bg-orange-400 shadow-[0_0_6px_hsl(24_100%_52%/0.8)]',
-                    !showGhost && tierKey === 'silver' && 'bg-slate-200 shadow-[0_0_6px_hsl(210_20%_80%/0.8)]',
-                    !showGhost && tierKey === 'gold' && 'bg-yellow-300 shadow-[0_0_8px_hsl(45_100%_60%/0.9)]',
+                    tierKey === 'bronze' && 'bg-orange-400 shadow-[0_0_6px_hsl(24_100%_52%/0.8)]',
+                    tierKey === 'silver' && 'bg-slate-200 shadow-[0_0_6px_hsl(210_20%_80%/0.8)]',
+                    tierKey === 'gold' && 'bg-yellow-300 shadow-[0_0_8px_hsl(45_100%_60%/0.9)]',
                   )}
                   style={{
                     left: `calc(50% + ${x}px - ${size === 'sm' ? 3 : size === 'md' ? 4 : 5}px)`,
