@@ -139,6 +139,22 @@ const Index = () => {
       
       <Footer />
       {user && <BottomNavBar />}
+      {user && (
+        <>
+          <button
+            onClick={() => setShowSpinWheel(true)}
+            className="fixed bottom-20 right-4 z-40 w-14 h-14 rounded-full flex items-center justify-center font-black text-lg text-black shadow-lg animate-bounce"
+            style={{
+              background: 'linear-gradient(135deg, #FF5F1F, #FF8C00)',
+              boxShadow: '0 0 20px rgba(255,95,31,0.5)',
+            }}
+            title="Spin to Win"
+          >
+            🎰
+          </button>
+          <SpinWheelOverlay open={showSpinWheel} onClose={() => setShowSpinWheel(false)} />
+        </>
+      )}
     </div>
   );
 };
