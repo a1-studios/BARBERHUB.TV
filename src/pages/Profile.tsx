@@ -234,6 +234,19 @@ const Profile = () => {
           {/* Transaction History */}
           <TransactionHistory />
 
+          {/* Delete Account - Bottom of Page */}
+          <div className="mt-12 mb-8 flex justify-center">
+            <Button
+              variant="destructive"
+              size="lg"
+              className="bg-red-600 hover:bg-red-700 text-white border-none font-semibold px-8"
+              onClick={() => { setDeleteStep(1); setShowDeleteConfirm(true); }}
+            >
+              <Trash2 className="w-5 h-5 mr-2" />
+              Delete Account
+            </Button>
+          </div>
+
           {/* Creation Upload Modal */}
           {showCreationUpload && isBarber && barberProfile && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
