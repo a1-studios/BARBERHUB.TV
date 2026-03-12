@@ -65,6 +65,7 @@ const Profile = () => {
     } finally {
       setIsDeleting(false);
       setShowDeleteConfirm(false);
+      setDeleteStep(1);
     }
   };
 
