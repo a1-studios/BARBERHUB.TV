@@ -190,7 +190,6 @@ const Profile = () => {
                 onSettingsClick={() => setShowBarberSettings(true)}
                 onAddFundsClick={() => setShowAddFundsModal(true)}
                 onSignOutClick={async () => { await signOut(); navigate('/'); }}
-                onDeleteAccountClick={() => setShowDeleteConfirm(true)}
                 showActions={true}
                 m4m_certified={(barberProfile as any).m4m_certified || false}
                 m4m_paid={(barberProfile as any).m4m_paid || false}
