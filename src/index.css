@@ -542,6 +542,15 @@
     animation: tierShimmer 3s linear infinite;
   }
 
+  /* Ghost glow for free-tier ring */
+  @keyframes tierGlowGhost {
+    0%, 100% { box-shadow: 0 0 4px hsl(24 100% 52% / 0.08); }
+    50% { box-shadow: 0 0 8px hsl(24 100% 52% / 0.15); }
+  }
+  .animate-tier-glow-ghost {
+    animation: tierGlowGhost 3s ease-in-out infinite;
+  }
+
   /* Conic gradient utility */
   .bg-gradient-conic {
     background: conic-gradient(from 0deg, transparent, var(--tw-gradient-via), transparent, var(--tw-gradient-via), transparent);

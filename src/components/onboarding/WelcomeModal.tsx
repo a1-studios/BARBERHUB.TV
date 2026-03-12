@@ -2,20 +2,29 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { useNavigate } from "react-router-dom";
-import { Scissors, Eye, Vote, Trophy, Play, DollarSign, Users } from "lucide-react";
+import { Scissors, Eye, Vote, Trophy, Play, DollarSign } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const STORAGE_KEY = "barberhub_welcome_seen";
 
+const getCountryFlag = (code: string) => {
+  const codePoints = code.toUpperCase().split('').map(char => 127397 + char.charCodeAt(0));
+  return String.fromCodePoint(...codePoints);
+};
+
 export const WelcomeModal = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { isBarber, isFan, isLoading } = useUserRole();
+  const { profile } = useUserProfile();
   const navigate = useNavigate();
+
+  const displayName = profile?.display_name || 'Champion';
+  const countryCode = profile?.country_code;
 
   useEffect(() => {
     if (isLoading) return;
-    
     const hasSeenWelcome = localStorage.getItem(STORAGE_KEY);
     if (!hasSeenWelcome) {
       setIsOpen(true);
@@ -48,6 +57,10 @@ export const WelcomeModal = () => {
 
   const steps = isBarber ? barberSteps : fanSteps;
 
+  const subtitle = isBarber
+    ? "Time to show the world what you've got. 💈"
+    : "The front row awaits. Let's go! 🎬";
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogContent className="sm:max-w-md bg-card border-border/50">
@@ -56,13 +69,15 @@ export const WelcomeModal = () => {
             <Trophy className="h-8 w-8 text-primary-foreground" />
           </div>
           <DialogTitle className="text-2xl font-bold">
-            Welcome to BarberHub!
+            <span>Welcome to the Arena, </span>
+            <span className="text-primary">{displayName}</span>
+            <span>! 🔥</span>
+            {countryCode && (
+              <span className="ml-2 text-3xl">{getCountryFlag(countryCode)}</span>
+            )}
           </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            {isBarber 
-              ? "Ready to compete? Here's how to get started as a barber."
-              : "Join the community! Here's how to enjoy the action."
-            }
+          <DialogDescription className="text-muted-foreground text-base">
+            {subtitle}
           </DialogDescription>
         </DialogHeader>
 
@@ -94,42 +109,28 @@ export const WelcomeModal = () => {
         <div className="flex flex-col gap-2">
           {isBarber ? (
             <>
-              <Button 
-                onClick={() => handleAction("/portal")}
-                className="w-full bg-primary hover:bg-primary/90"
-              >
+              <Button onClick={() => handleAction("/portal")} className="w-full bg-primary hover:bg-primary/90">
                 <Scissors className="mr-2 h-4 w-4" />
                 Go to Battle Portal
               </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleDismiss}
-                className="w-full"
-              >
+              <Button variant="outline" onClick={handleDismiss} className="w-full">
                 Explore First
               </Button>
             </>
           ) : (
             <>
-              <Button 
-                onClick={() => handleAction("/battles")}
-                className="w-full bg-primary hover:bg-primary/90"
-              >
+              <Button onClick={() => handleAction("/battles")} className="w-full bg-primary hover:bg-primary/90">
                 <Eye className="mr-2 h-4 w-4" />
                 Watch Battles
               </Button>
-              <Button 
-                variant="outline" 
-                onClick={handleDismiss}
-                className="w-full"
-              >
+              <Button variant="outline" onClick={handleDismiss} className="w-full">
                 Explore First
               </Button>
             </>
           )}
         </div>
 
-        <button 
+        <button
           onClick={handleDismiss}
           className="text-xs text-muted-foreground hover:text-foreground text-center mt-2"
         >

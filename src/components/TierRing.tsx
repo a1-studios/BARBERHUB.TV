@@ -10,6 +10,7 @@ interface TierRingProps {
   tier: string | null | undefined;
   size?: 'sm' | 'md' | 'lg';
   interactive?: boolean;
+  showGhostPreview?: boolean;
   children: ReactNode;
   className?: string;
 }
@@ -47,7 +48,7 @@ const SIZE_MAP = {
   lg: { container: 'w-36 h-36', padding: 4, ledSize: 'w-2.5 h-2.5', radius: 72 },
 };
 
-export const TierRing = ({ tier, size = 'md', interactive = false, children, className }: TierRingProps) => {
+export const TierRing = ({ tier, size = 'md', interactive = false, showGhostPreview = true, children, className }: TierRingProps) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showAddFunds, setShowAddFunds] = useState(false);
   const { barberBucks, isLoading: bbLoading } = useBarberBucks();
@@ -57,7 +58,7 @@ export const TierRing = ({ tier, size = 'md', interactive = false, children, cla
   const sizeConfig = SIZE_MAP[size];
 
   const handleClick = () => {
-    if (interactive && tierKey !== 'free') return; // already subscribed, no drawer
+    if (interactive && tierKey !== 'free') return;
     if (interactive) setDrawerOpen(true);
   };
 
@@ -66,14 +67,16 @@ export const TierRing = ({ tier, size = 'md', interactive = false, children, cla
     setShowAddFunds(true);
   };
 
-  // Generate LED dot positions around the circle
+  const isFree = tierKey === 'free';
+  const showGhost = isFree && showGhostPreview;
+
+  // Ghost mode: 2 faint LEDs; active mode: tier LEDs
+  const ledCount = showGhost ? 2 : config.leds;
   const ledDots = [];
-  for (let i = 0; i < config.leds; i++) {
-    const angle = (360 / config.leds) * i;
+  for (let i = 0; i < ledCount; i++) {
+    const angle = (360 / ledCount) * i;
     ledDots.push(angle);
   }
-
-  const isFree = tierKey === 'free';
 
   return (
     <>
@@ -85,7 +88,14 @@ export const TierRing = ({ tier, size = 'md', interactive = false, children, cla
         )}
         onClick={handleClick}
       >
-        {/* Outer glow ring */}
+        {/* Ghost ring for free tier */}
+        {showGhost && (
+          <div
+            className="absolute inset-[-3px] rounded-full border-2 border-orange-500/15 animate-tier-glow-ghost"
+          />
+        )}
+
+        {/* Active outer glow ring */}
         {!isFree && (
           <div
             className={cn(
@@ -96,9 +106,12 @@ export const TierRing = ({ tier, size = 'md', interactive = false, children, cla
           />
         )}
 
-        {/* LED orbit container */}
-        {!isFree && config.leds > 0 && (
-          <div className="absolute inset-[-5px] rounded-full animate-tier-orbit">
+        {/* LED orbit container — ghost or active */}
+        {ledCount > 0 && (
+          <div className={cn(
+            "absolute inset-[-5px] rounded-full",
+            !isFree && "animate-tier-orbit"
+          )}>
             {ledDots.map((angle, i) => {
               const rad = (angle * Math.PI) / 180;
               const r = sizeConfig.radius + 2;
@@ -110,9 +123,11 @@ export const TierRing = ({ tier, size = 'md', interactive = false, children, cla
                   className={cn(
                     'absolute rounded-full',
                     sizeConfig.ledSize,
-                    tierKey === 'bronze' && 'bg-orange-400 shadow-[0_0_6px_hsl(24_100%_52%/0.8)]',
-                    tierKey === 'silver' && 'bg-slate-200 shadow-[0_0_6px_hsl(210_20%_80%/0.8)]',
-                    tierKey === 'gold' && 'bg-yellow-300 shadow-[0_0_8px_hsl(45_100%_60%/0.9)]',
+                    showGhost
+                      ? 'bg-orange-400/10 shadow-[0_0_4px_hsl(24_100%_52%/0.08)]'
+                      : tierKey === 'bronze' && 'bg-orange-400 shadow-[0_0_6px_hsl(24_100%_52%/0.8)]',
+                    !showGhost && tierKey === 'silver' && 'bg-slate-200 shadow-[0_0_6px_hsl(210_20%_80%/0.8)]',
+                    !showGhost && tierKey === 'gold' && 'bg-yellow-300 shadow-[0_0_8px_hsl(45_100%_60%/0.9)]',
                   )}
                   style={{
                     left: `calc(50% + ${x}px - ${size === 'sm' ? 3 : size === 'md' ? 4 : 5}px)`,
