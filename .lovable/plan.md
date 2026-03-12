@@ -1,29 +1,29 @@
-## Full Appointment Engine — Anti-Gravity (COMPLETED)
 
-### What Was Built
 
-#### Database
-- `barber_services`: Added `deposit_bb` (INTEGER) and `is_free_intro` (BOOLEAN)
-- `appointments`: Added `is_deposit_only` (BOOLEAN) and `remainder_bb` (INTEGER)
-- `house_call_bounties`: New table with RLS, status tracking, expiry
-- `handle_bounty_status_change` trigger: Auto-refunds expired bounties, notifies on claim
-- `expire_bounties_batch()`: Callable function for pg_cron to expire stale bounties
+## Move Delete Account to Page Bottom + Double Confirmation
 
-#### Edge Functions
-- `post-bounty`: Client posts house call bounty, BB escrowed
-- `claim-bounty`: Barber atomically claims bounty, auto-creates appointment
-- `book-appointment`: Rewritten — deposit support, free intro, no tier-gating
-- `manage-appointment`: Rewritten — remainder collection on complete, no tier-gating
+### Changes
 
-#### Frontend
-- `BookingConsole.tsx`: Deposit/free-intro aware, tier-gating removed
-- `ServiceSelector.tsx`: FREE badge, deposit display
-- `EscrowConfirmDialog.tsx`: Deposit vs remainder breakdown, free booking support
-- `HouseCallBountyWidget.tsx`: New — client posts house call bounties
-- `BountyBoard.tsx`: New — barber-facing feed of open bounties
-- `MyAppointments.tsx`: Added "Bounties" tab with post widget + active/past bounties
-- `BarberAppointmentManager.tsx`: Added "Bounties" tab with BountyBoard, deposit/free fields in Add Service, tier-gating removed
-- `BountyPresetPicker.tsx`: Added 500 BB preset
+**1. Remove "Delete Account" button from both header components**
+- `BarberProfileHeader.tsx`: Remove the Delete Account button from the action buttons section (line 219-224). Keep Sign Out.
+- `FanProfileHeader.tsx`: Remove the Delete Account button from the action buttons section (line 227-232). Keep Sign Out.
 
-### Pending
-- Set up pg_cron job to call `expire_bounties_batch()` every 5 minutes
+**2. Add standalone Delete Account button at the very bottom of the Profile page**
+- In `Profile.tsx`, add a bright red "Delete Account" button after `<TransactionHistory />` and before the closing `</div>` of the main content area.
+- Style: full-width or centered, `bg-red-600 hover:bg-red-700 text-white`, with a `Trash2` icon. Clearly dangerous-looking.
+
+**3. Implement double confirmation dialog**
+- Replace the single `AlertDialog` with a two-step flow:
+  - **Step 1**: "Are you sure you want to delete your account?" with Cancel / "Yes, Continue"
+  - **Step 2**: "This is your FINAL warning. This cannot be undone." with Cancel / "Permanently Delete My Account"
+- Use a `deleteStep` state (`0 | 1 | 2`) to track which confirmation the user is on.
+- Only call `handleDeleteAccount` after the user confirms step 2.
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/barber/BarberProfileHeader.tsx` | Remove Delete Account button from action buttons |
+| `src/components/fan/FanProfileHeader.tsx` | Remove Delete Account button from action buttons |
+| `src/pages/Profile.tsx` | Add bright red Delete Account button at page bottom. Replace single AlertDialog with two-step confirmation flow. |
+
