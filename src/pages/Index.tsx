@@ -5,6 +5,7 @@ import CommunitySection from "@/components/CommunitySection";
 import { DynamicBattleHero } from "@/components/DynamicBattleHero";
 import BattlesSection from "@/components/BattlesSection";
 import Footer from "@/components/Footer";
+import { SpinWheelOverlay } from "@/components/SpinWheelOverlay";
 
 import GrantsSection from "@/components/GrantsSection";
 import { GlobalLeagueDashboard } from "@/components/GlobalLeagueDashboard";
