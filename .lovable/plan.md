@@ -1,29 +1,33 @@
-## Full Appointment Engine — Anti-Gravity (COMPLETED)
 
-### What Was Built
 
-#### Database
-- `barber_services`: Added `deposit_bb` (INTEGER) and `is_free_intro` (BOOLEAN)
-- `appointments`: Added `is_deposit_only` (BOOLEAN) and `remainder_bb` (INTEGER)
-- `house_call_bounties`: New table with RLS, status tracking, expiry
-- `handle_bounty_status_change` trigger: Auto-refunds expired bounties, notifies on claim
-- `expire_bounties_batch()`: Callable function for pg_cron to expire stale bounties
+## Fix: Skip Role Selection for Authenticated Users in Spin Wheel
 
-#### Edge Functions
-- `post-bounty`: Client posts house call bounty, BB escrowed
-- `claim-bounty`: Barber atomically claims bounty, auto-creates appointment
-- `book-appointment`: Rewritten — deposit support, free intro, no tier-gating
-- `manage-appointment`: Rewritten — remainder collection on complete, no tier-gating
+### Problem
+When an already signed-up user sees the spin wheel overlay, it still asks them to pick "Barber" or "Fan" — but the app already knows their role from `user_roles`. Authenticated users should skip the role-select step entirely and go straight to the BB cost confirmation screen.
 
-#### Frontend
-- `BookingConsole.tsx`: Deposit/free-intro aware, tier-gating removed
-- `ServiceSelector.tsx`: FREE badge, deposit display
-- `EscrowConfirmDialog.tsx`: Deposit vs remainder breakdown, free booking support
-- `HouseCallBountyWidget.tsx`: New — client posts house call bounties
-- `BountyBoard.tsx`: New — barber-facing feed of open bounties
-- `MyAppointments.tsx`: Added "Bounties" tab with post widget + active/past bounties
-- `BarberAppointmentManager.tsx`: Added "Bounties" tab with BountyBoard, deposit/free fields in Add Service, tier-gating removed
-- `BountyPresetPicker.tsx`: Added 500 BB preset
+### Changes
 
-### Pending
-- Set up pg_cron job to call `expire_bounties_batch()` every 5 minutes
+**`src/components/SpinWheelOverlay.tsx`**:
+
+1. Import `useUserRole` hook to get the user's existing role
+2. For authenticated users:
+   - Auto-detect role from `useUserRole()` (`isBarber` → `'barber'`, else `'fan'`)
+   - Set initial step to `'confirm-spin'` instead of `'role-select'` 
+   - Pre-set `selectedRole` from their actual role on mount
+   - Skip the "I am a..." role selection screen entirely
+3. For unauthenticated users: keep the current flow (role-select → free spin → create account CTA)
+4. Update `handleClose` reset logic to respect auth state (reset to `'confirm-spin'` for auth users, `'role-select'` for guests)
+
+### Flow After Fix
+
+| User State | Flow |
+|-----------|------|
+| **Not signed in** | Role select → Free spin → Win → "Create Account" CTA |
+| **Signed in** | Confirm spin (shows 5 BB cost + balance) → Spin → Win → Collect |
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/SpinWheelOverlay.tsx` | Import `useUserRole`, auto-detect role for auth users, skip to `confirm-spin` step, pre-set `selectedRole` |
+
