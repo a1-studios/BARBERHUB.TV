@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
 import { RoleBadge } from '@/components/RoleBadge';
+import { TierRing } from '@/components/TierRing';
 import { SubCategoryBadge } from '@/components/SubCategoryBadge';
 import { Plus, Edit3, Check, X, Award, Lock, Users, Vote, LogOut, Trash2 } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
