@@ -45,7 +45,6 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
       return;
     }
     setSpinning(true);
-    // Deduct happens server-side when result comes in
     setStep('spinning');
   };
 
@@ -54,7 +53,6 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
     setStep('result');
 
     if (isAuthenticated && user) {
-      // Call edge function to process the spin server-side
       try {
         const { data, error } = await supabase.functions.invoke('spin-wheel', {
           body: {
@@ -90,7 +88,9 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
   };
 
   const getPrizeSet = (): PrizeSet => {
-    if (!isAuthenticated) return 'new_user';
+    if (!isAuthenticated) {
+      return selectedRole === 'barber' ? 'new_barber' : 'new_fan';
+    }
     return selectedRole === 'barber' ? 'existing_barber' : 'existing_fan';
   };
 
@@ -105,7 +105,6 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm"
         onClick={(e) => e.target === e.currentTarget && handleClose()}
       >
-        {/* Close button */}
         <button
           onClick={handleClose}
           className="absolute top-4 right-4 z-50 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
@@ -119,15 +118,14 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
           exit={{ scale: 0.9, opacity: 0 }}
           className="w-full max-w-md mx-4"
         >
-          {/* Step: Role Select */}
           {step === 'role-select' && (
             <div className="flex flex-col items-center space-y-8">
               <div className="text-center space-y-2">
                 <h2 className="text-2xl font-black text-white tracking-wide">🎰 SPIN TO WIN</h2>
                 <p className="text-sm text-gray-400">
                   {isAuthenticated
-                    ? `Costs ${SPIN_COST} BB per spin — win up to 100 BB!`
-                    : 'Free spin! Win Barber Bucks to get started.'}
+                    ? `Costs ${SPIN_COST} BB per spin — win big prizes!`
+                    : 'Free spin! Win prizes to get started.'}
                 </p>
               </div>
 
@@ -160,10 +158,16 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
                   Your balance: <span className="text-primary font-bold">{barberBucks} BB</span>
                 </p>
               )}
+
+              <button
+                onClick={handleClose}
+                className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+              >
+                Skip for now
+              </button>
             </div>
           )}
 
-          {/* Step: Confirm Spin (authenticated only) */}
           {step === 'confirm-spin' && isAuthenticated && (
             <div className="flex flex-col items-center space-y-6">
               <h2 className="text-xl font-black text-white">Ready to Spin?</h2>
@@ -171,11 +175,11 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
                 This spin costs <span className="text-primary font-bold">{SPIN_COST} BB</span>.
                 <br />Your balance: <span className="text-white font-bold">{barberBucks} BB</span>
               </p>
-              {barberBucks < SPIN_COST ? (
+              {barberBucks < SPIN_COST && (
                 <p className="text-red-400 text-sm font-semibold">
                   Insufficient BB. You need at least {SPIN_COST} BB.
                 </p>
-              ) : null}
+              )}
               <div className="flex gap-3">
                 <motion.button
                   whileHover={{ scale: 1.03 }}
@@ -202,7 +206,6 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
             </div>
           )}
 
-          {/* Step: Spinning */}
           {step === 'spinning' && (
             <VaultSpinWheel
               prizeSet={getPrizeSet()}
@@ -211,7 +214,6 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
             />
           )}
 
-          {/* Step: Result */}
           {step === 'result' && wonPrize && (
             <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
@@ -246,7 +248,7 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
               ) : (
                 <div className="space-y-3 w-full max-w-xs">
                   <p className="text-sm text-gray-400">
-                    Create an account to claim your <span className="text-primary font-bold">{wonPrize.bb_value} BB</span>!
+                    Create an account to claim your <span className="text-primary font-bold">{wonPrize.label}</span>!
                   </p>
                   <motion.button
                     whileHover={{ scale: 1.03 }}
