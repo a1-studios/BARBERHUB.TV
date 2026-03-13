@@ -163,7 +163,7 @@ const Index = () => {
         </>
       ) : (
         <>
-          <LandingHero />
+          <LandingHero onOpenArenaGate={() => setShowArenaGate(true)} />
         </>
       )}
       
