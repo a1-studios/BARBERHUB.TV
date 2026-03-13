@@ -18,7 +18,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 
 
-const LandingHero = () => {
+interface LandingHeroProps {
+  onOpenArenaGate?: () => void;
+}
+
+const LandingHero = ({ onOpenArenaGate }: LandingHeroProps) => {
   const { signUp, signIn, user } = useAuth();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
