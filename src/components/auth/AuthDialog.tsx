@@ -15,6 +15,7 @@ interface AuthDialogProps {
   children: React.ReactNode;
   initialRole?: 'barber' | 'fan';
   prefilledCountry?: string;
+  prefilledEmail?: string;
   autoOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
@@ -23,6 +24,7 @@ export function AuthDialog({
   children, 
   initialRole = 'fan', 
   prefilledCountry,
+  prefilledEmail,
   autoOpen = false,
   onOpenChange,
 }: AuthDialogProps) {
@@ -40,7 +42,7 @@ export function AuthDialog({
   });
 
   const [signUpData, setSignUpData] = useState({
-    email: '',
+    email: prefilledEmail || '',
     password: '',
     displayName: '',
     userType: initialRole,
@@ -110,10 +112,16 @@ export function AuthDialog({
       return;
     }
     
+    // Country is mandatory for all users
+    if (!signUpData.countryCode) {
+      toast.error('Please select your country');
+      return;
+    }
+    
     // Only fans reach here - simple signup flow
     setLoading(true);
     
-    const { error } = await signUp(signUpData.email, signUpData.password, signUpData.displayName, signUpData.userType, signUpData.countryCode || undefined);
+    const { error } = await signUp(signUpData.email, signUpData.password, signUpData.displayName, signUpData.userType, signUpData.countryCode);
     
     if (!error) {
       handleOpenChange(false);
@@ -247,15 +255,7 @@ export function AuthDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Country</Label>
-                    {arenaGateVerified && (
-                      <Badge className="text-xs bg-green-500/20 text-green-400 border border-green-500/30">
-                        <Lock className="h-3 w-3 mr-1" />
-                        Verified
-                      </Badge>
-                    )}
-                  </div>
+                  <Label>Country</Label>
                   <CountrySelector
                     value={signUpData.countryCode}
                     onChange={(countryCode) => {
@@ -263,20 +263,9 @@ export function AuthDialog({
                         setSignUpData(prev => ({ ...prev, countryCode }));
                       }
                     }}
-                    placeholder={arenaGateVerified ? "Nationality locked" : "Select your country"}
+                    placeholder="Select your country"
                     disabled={arenaGateVerified}
                   />
-                  {signUpData.userType === 'barber' && arenaGateVerified && (
-                    <p className="text-xs text-amber-500/80 flex items-center gap-1">
-                      <Lock className="h-3 w-3" />
-                      Nationality cannot be changed after sign-up
-                    </p>
-                  )}
-                  {signUpData.userType === 'fan' && (
-                    <p className="text-xs text-muted-foreground">
-                      Optional - helps connect with local barbers
-                    </p>
-                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-email">Email</Label>

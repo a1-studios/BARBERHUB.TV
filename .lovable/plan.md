@@ -1,55 +1,29 @@
+## Full Appointment Engine — Anti-Gravity (COMPLETED)
 
+### What Was Built
 
-## Vault-to-Signup: Direct Profile Creation Flow + Mandatory Country
+#### Database
+- `barber_services`: Added `deposit_bb` (INTEGER) and `is_free_intro` (BOOLEAN)
+- `appointments`: Added `is_deposit_only` (BOOLEAN) and `remainder_bb` (INTEGER)
+- `house_call_bounties`: New table with RLS, status tracking, expiry
+- `handle_bounty_status_change` trigger: Auto-refunds expired bounties, notifies on claim
+- `expire_bounties_batch()`: Callable function for pg_cron to expire stale bounties
 
-### Problem
-1. After winning a prize, VaultVictory shows a "CLAIM YOUR BOUNTY" button that navigates to `/?tab=signup` with URL params — user lands on a generic signup form and has to fill everything manually.
-2. Country is labeled "Optional" for fans — it should be **mandatory for all users** with no mention of it being locked.
+#### Edge Functions
+- `post-bounty`: Client posts house call bounty, BB escrowed
+- `claim-bounty`: Barber atomically claims bounty, auto-creates appointment
+- `book-appointment`: Rewritten — deposit support, free intro, no tier-gating
+- `manage-appointment`: Rewritten — remainder collection on complete, no tier-gating
 
-### Changes
+#### Frontend
+- `BookingConsole.tsx`: Deposit/free-intro aware, tier-gating removed
+- `ServiceSelector.tsx`: FREE badge, deposit display
+- `EscrowConfirmDialog.tsx`: Deposit vs remainder breakdown, free booking support
+- `HouseCallBountyWidget.tsx`: New — client posts house call bounties
+- `BountyBoard.tsx`: New — barber-facing feed of open bounties
+- `MyAppointments.tsx`: Added "Bounties" tab with post widget + active/past bounties
+- `BarberAppointmentManager.tsx`: Added "Bounties" tab with BountyBoard, deposit/free fields in Add Service, tier-gating removed
+- `BountyPresetPicker.tsx`: Added 500 BB preset
 
-**1. `src/components/vault/VaultVictory.tsx`** — Replace navigate-to-homepage with inline signup trigger
-- For **barbers**: auto-open the `ArenaGateModal` directly inside VaultVictory (email pre-filled from vault entry).
-- For **fans**: auto-open the `AuthDialog` with email, role, and prize pre-filled, tab set to signup.
-- The "CLAIM YOUR BOUNTY" button triggers the modal/dialog instead of navigating away. The user stays in the vault context until account creation completes.
-- After successful auth, navigate to `/profile` (or let auth state handle redirect).
-
-**2. `src/pages/VaultOfHonor.tsx`** — Pass email to VaultVictory for pre-filling
-- Already passing `email` and `role` — no change needed here.
-
-**3. `src/components/LandingHero.tsx`** — Make country mandatory for fans
-- Remove the "Optional" text under the country selector for fans.
-- Add validation: block fan signup if `countryCode` is null (show toast "Please select your country").
-- Remove the "Nationality locked" placeholder and "cannot be changed" warning — just show a normal "Select your country" placeholder for all users.
-
-**4. `src/components/auth/AuthDialog.tsx`** — Same country changes
-- Remove "Optional" label for fans.
-- Add country validation for fan signup (`if (!signUpData.countryCode)` toast error).
-- Remove "Verified" badge and "Nationality cannot be changed" warning. Just show the selector normally.
-
-**5. `src/components/auth/SignUpForm.tsx`** — Already validates country (line 57-59), no change needed.
-
-### Technical Details
-
-**VaultVictory modal approach:**
-```tsx
-// VaultVictory.tsx — barber path
-const [showArenaGate, setShowArenaGate] = useState(false);
-
-// On "CLAIM YOUR BOUNTY" click:
-if (role === 'barber') {
-  setShowArenaGate(true); // ArenaGateModal opens
-} else {
-  // Open AuthDialog with autoOpen, pre-filled email/role
-}
-```
-
-The ArenaGateModal already handles full account creation internally (credentials step pre-fills email). The AuthDialog for fans also handles signup. Both already exist — we just trigger them from VaultVictory instead of navigating to the landing page.
-
-### Files Changed
-| File | Action |
-|------|--------|
-| `src/components/vault/VaultVictory.tsx` | Add ArenaGateModal (barbers) and AuthDialog (fans) inline instead of navigate |
-| `src/components/LandingHero.tsx` | Make country required for fans, remove "Optional"/"locked" text |
-| `src/components/auth/AuthDialog.tsx` | Make country required for fans, remove lock messaging |
-
+### Pending
+- Set up pg_cron job to call `expire_bounties_batch()` every 5 minutes
