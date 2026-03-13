@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import LandingHero from "@/components/LandingHero";
 import CommunitySection from "@/components/CommunitySection";
@@ -22,6 +23,7 @@ import { BottomNavBar } from "@/components/BottomNavBar";
 import { useUserRole } from "@/hooks/useUserRole";
 import { FanIntroSequence } from "@/components/fan/FanIntroSequence";
 import { FanArenaView } from "@/components/fan/FanArenaView";
+import { ArenaGateModal } from "@/components/auth/ArenaGateModal";
 
 const Index = () => {
   const { user, loading } = useAuth();
