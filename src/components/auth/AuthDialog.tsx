@@ -15,6 +15,7 @@ interface AuthDialogProps {
   children: React.ReactNode;
   initialRole?: 'barber' | 'fan';
   prefilledCountry?: string;
+  prefilledEmail?: string;
   autoOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
 }
