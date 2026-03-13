@@ -42,7 +42,7 @@ export function AuthDialog({
   });
 
   const [signUpData, setSignUpData] = useState({
-    email: '',
+    email: prefilledEmail || '',
     password: '',
     displayName: '',
     userType: initialRole,
