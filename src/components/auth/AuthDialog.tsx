@@ -112,10 +112,16 @@ export function AuthDialog({
       return;
     }
     
+    // Country is mandatory for all users
+    if (!signUpData.countryCode) {
+      toast.error('Please select your country');
+      return;
+    }
+    
     // Only fans reach here - simple signup flow
     setLoading(true);
     
-    const { error } = await signUp(signUpData.email, signUpData.password, signUpData.displayName, signUpData.userType, signUpData.countryCode || undefined);
+    const { error } = await signUp(signUpData.email, signUpData.password, signUpData.displayName, signUpData.userType, signUpData.countryCode);
     
     if (!error) {
       handleOpenChange(false);
