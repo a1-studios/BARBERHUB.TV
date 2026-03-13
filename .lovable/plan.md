@@ -1,29 +1,22 @@
-## Full Appointment Engine — Anti-Gravity (COMPLETED)
 
-### What Was Built
 
-#### Database
-- `barber_services`: Added `deposit_bb` (INTEGER) and `is_free_intro` (BOOLEAN)
-- `appointments`: Added `is_deposit_only` (BOOLEAN) and `remainder_bb` (INTEGER)
-- `house_call_bounties`: New table with RLS, status tracking, expiry
-- `handle_bounty_status_change` trigger: Auto-refunds expired bounties, notifies on claim
-- `expire_bounties_batch()`: Callable function for pg_cron to expire stale bounties
+## Rename "Arena Gate" to "Path to Victory" + Verify Vault Flow
 
-#### Edge Functions
-- `post-bounty`: Client posts house call bounty, BB escrowed
-- `claim-bounty`: Barber atomically claims bounty, auto-creates appointment
-- `book-appointment`: Rewritten — deposit support, free intro, no tier-gating
-- `manage-appointment`: Rewritten — remainder collection on complete, no tier-gating
+### Changes
 
-#### Frontend
-- `BookingConsole.tsx`: Deposit/free-intro aware, tier-gating removed
-- `ServiceSelector.tsx`: FREE badge, deposit display
-- `EscrowConfirmDialog.tsx`: Deposit vs remainder breakdown, free booking support
-- `HouseCallBountyWidget.tsx`: New — client posts house call bounties
-- `BountyBoard.tsx`: New — barber-facing feed of open bounties
-- `MyAppointments.tsx`: Added "Bounties" tab with post widget + active/past bounties
-- `BarberAppointmentManager.tsx`: Added "Bounties" tab with BountyBoard, deposit/free fields in Add Service, tier-gating removed
-- `BountyPresetPicker.tsx`: Added 500 BB preset
+**1. `src/components/auth/ArenaGateModal.tsx`** — Rename header
+- Line 181: Change `"ARENA GATE"` text to `PATH TO ` + `<span className="text-primary">VICTORY</span>`
+- Center the header title instead of left-aligning it (remove the justify-between layout for the title row, keep X button absolute top-right)
 
-### Pending
-- Set up pg_cron job to call `expire_bounties_batch()` every 5 minutes
+**2. `src/components/vault/VaultVictory.tsx`** — Already correct
+- Barbers already open `ArenaGateModal` on claim click
+- Fans already open `AuthDialog` on claim click
+- No changes needed here — the flow is already wired correctly from previous fixes
+
+**Note:** The same unmounting issue from `Index.tsx` does NOT apply to VaultVictory because the Vault page (`VaultOfHonor.tsx`) doesn't conditionally unmount based on auth state the way Index does. The ArenaGateModal rendered inside VaultVictory will persist through the signup flow.
+
+### Files Changed
+| File | Action |
+|------|--------|
+| `src/components/auth/ArenaGateModal.tsx` | Rename title to "PATH TO VICTORY" (orange "VICTORY"), center it |
+
