@@ -15,7 +15,6 @@ import { AvatarCrest } from '@/components/AvatarCrest';
 import { useState } from 'react';
 import { DonationModal } from '@/components/DonationModal';
 import { BookingConsole } from '@/components/booking/BookingConsole';
-import { BookingConsole } from '@/components/booking/BookingConsole';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 
