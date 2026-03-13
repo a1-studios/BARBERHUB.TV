@@ -22,6 +22,7 @@ import { BarberSettings } from '@/components/profiles/BarberSettings';
 import { SponsorBoardPurchaseModal } from '@/components/fan/SponsorBoardPurchaseModal';
 import { TransactionHistory } from '@/components/analytics/TransactionHistory';
 import { MyAppointments } from '@/components/fan/MyAppointments';
+import { BarberAppointmentManager } from '@/components/booking/BarberAppointmentManager';
 import { AvatarCrest } from '@/components/AvatarCrest';
 import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
 import { SubCategoryBadge } from '@/components/SubCategoryBadge';
