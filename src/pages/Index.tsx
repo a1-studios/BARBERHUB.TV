@@ -182,5 +182,7 @@ const Index = () => {
           navigate('/profile');
         }}
       />
+    </div>
+  );
 };
 export default Index;
