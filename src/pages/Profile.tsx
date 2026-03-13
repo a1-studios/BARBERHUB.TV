@@ -371,6 +371,26 @@ const Profile = () => {
                 <span className="text-sm text-destructive/70">Delete Account</span>
               </button>
             </div>
+
+            {/* BB Pill — centered at bottom */}
+            <div className="flex justify-center pt-4 pb-2">
+              <div className="flex items-center gap-2 bg-card/80 backdrop-blur-sm px-4 py-2 rounded-full border border-border/40">
+                <RotatingBBCoin
+                  avatarUrl={profile?.avatar_url}
+                  displayName={displayName}
+                  size="xs"
+                  animate={true}
+                />
+                <span className="text-sm font-bold text-foreground">{barberBucks.toLocaleString()}</span>
+                <span className="text-[10px] text-cyan-400 font-medium">BB</span>
+                <button
+                  onClick={() => setShowAddFundsModal(true)}
+                  className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center hover:bg-primary/30 transition-colors"
+                >
+                  <Plus className="h-3 w-3 text-primary" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </main>
