@@ -29,6 +29,11 @@ const Index = () => {
   const { user, loading } = useAuth();
   const { isFan, isLoading: roleLoading } = useUserRole();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const recoveryAttempted = useRef(false);
+
+  // Arena Gate state — lifted here so modal persists after auth state change
+  const [showArenaGate, setShowArenaGate] = useState(false);
   const recoveryAttempted = useRef(false);
   const [introComplete, setIntroComplete] = useState(() =>
     sessionStorage.getItem('fan_intro_seen') === 'true'
