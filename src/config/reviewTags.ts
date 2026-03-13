@@ -15,8 +15,12 @@ export const BARBER_REVIEW_TAGS: ReviewTag[] = [
   { slug: 'creative-stylist', label: 'Creative Stylist', emoji: '🎨', is_negative: false, is_internal: false },
   { slug: 'patient-listener', label: 'Patient Listener', emoji: '👂', is_negative: false, is_internal: false },
   { slug: 'on-time', label: 'On Time', emoji: '⏰', is_negative: false, is_internal: false },
+  { slug: 'pro-service', label: 'Pro Service', emoji: '🤝', is_negative: false, is_internal: false },
   { slug: 'ran-late', label: 'Ran Late', emoji: '🕐', is_negative: true, is_internal: false },
   { slug: 'rushed-cut', label: 'Rushed Cut', emoji: '💨', is_negative: true, is_internal: false },
+  { slug: 'messy-station', label: 'Messy Station', emoji: '🧹', is_negative: true, is_internal: false },
+  { slug: 'bad-communication', label: 'Bad Communication', emoji: '🔇', is_negative: true, is_internal: false },
+  { slug: 'rough-handling', label: 'Rough Handling', emoji: '🔪', is_negative: true, is_internal: false },
 ];
 
 // Tags barbers use to review clients (internal only)
@@ -26,8 +30,11 @@ export const CLIENT_REVIEW_TAGS: ReviewTag[] = [
   { slug: 'good-tipper', label: 'Good Tipper', emoji: '💰', is_negative: false, is_internal: true },
   { slug: 'easy-going', label: 'Easy Going', emoji: '😎', is_negative: false, is_internal: true },
   { slug: 'repeat-client', label: 'Repeat Client', emoji: '🔄', is_negative: false, is_internal: true },
+  { slug: 'frequent-flyer', label: 'Frequent Flyer', emoji: '🚶‍♂️', is_negative: false, is_internal: true },
+  { slug: 'peaceful-client', label: 'Peaceful Client', emoji: '🕊️', is_negative: false, is_internal: true },
   { slug: 'no-show-risk', label: 'No-Show Risk', emoji: '🚩', is_negative: true, is_internal: true },
   { slug: 'chronic-lateness', label: 'Chronic Lateness', emoji: '⏳', is_negative: true, is_internal: true },
-  { slug: 'difficult-client', label: 'Difficult', emoji: '😤', is_negative: true, is_internal: true },
+  { slug: 'aggressive', label: 'Aggressive', emoji: '😤', is_negative: true, is_internal: true },
   { slug: 'unrealistic-expectations', label: 'Unrealistic Expects', emoji: '🌙', is_negative: true, is_internal: true },
+  { slug: 'high-maintenance', label: 'High Maintenance', emoji: '🧐', is_negative: true, is_internal: true },
 ];
