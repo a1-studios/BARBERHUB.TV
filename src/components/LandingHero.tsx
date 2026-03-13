@@ -11,7 +11,7 @@ import { Scissors, Users, Loader2, Lock, Sparkles } from "lucide-react";
 import Globe3D from "@/components/Globe3D";
 import { CountrySelector } from "@/components/CountrySelector";
 import WorldCupPrizeCounter from "@/components/WorldCupPrizeCounter";
-import { ArenaGateModal, ArenaGateResult } from "@/components/auth/ArenaGateModal";
+import type { ArenaGateResult } from "@/components/auth/ArenaGateModal";
 import { toast } from "sonner";
 import { triggerCountryCelebration } from "@/utils/countryCelebration";
 import { supabase } from "@/integrations/supabase/client";
