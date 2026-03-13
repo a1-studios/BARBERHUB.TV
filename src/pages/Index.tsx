@@ -55,15 +55,20 @@ const Index = () => {
     const hasSeenWelcome = localStorage.getItem('barberhub_welcome_seen');
     const toastShown = sessionStorage.getItem('welcome_back_toast');
     if (hasSeenWelcome && !toastShown) {
-      const name = user.user_metadata?.display_name || user.user_metadata?.full_name || '';
+      const name = profile?.display_name || user.user_metadata?.display_name || user.user_metadata?.full_name || '';
+      if (!name && !profile) return; // Wait for profile to load
       if (name) {
-        toast(`Welcome back, ${name}! 🔥`);
+        toast(
+          <span>
+            Welcome back, <span className="text-cyan-400 font-bold animate-pulse">{name}</span>! 🔥
+          </span>
+        );
       } else {
         toast('Welcome back! 🔥');
       }
       sessionStorage.setItem('welcome_back_toast', 'true');
     }
-  }, [user, loading]);
+  }, [user, loading, profile]);
 
   // Recover any pending BB purchase that wasn't verified
   useEffect(() => {
