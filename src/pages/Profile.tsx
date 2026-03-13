@@ -174,7 +174,7 @@ const Profile = () => {
     ? (profile?.display_name || barberProfile?.name || 'Barber')
     : (profile?.display_name || 'Fan');
   const specialty = barberProfile?.specialty;
-  const countryCode = isBarber ? barberProfile?.country_code : profile?.country_code;
+  const countryCode = isBarber ? barberProfile?.country_code : (profile?.country_code || (clientProfile as any)?.country_code);
   const subscriptionTier = barberProfile?.active_subscription_tier;
   const m4mCertified = (barberProfile as any)?.m4m_certified || false;
   const m4mPaid = (barberProfile as any)?.m4m_paid || false;
