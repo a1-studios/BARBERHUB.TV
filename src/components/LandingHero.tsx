@@ -107,7 +107,7 @@ const LandingHero = ({ onOpenArenaGate }: LandingHeroProps) => {
     
     // Barbers use Arena Gate for complete signup - redirect them there
     if (signUpData.userType === 'barber') {
-      setShowArenaGate(true);
+      onOpenArenaGate?.();
       return;
     }
     
