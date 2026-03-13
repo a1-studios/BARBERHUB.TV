@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Scissors, Users } from 'lucide-react';
 import VaultSpinWheel, { Prize, PrizeSet } from '@/components/vault/VaultSpinWheel';
