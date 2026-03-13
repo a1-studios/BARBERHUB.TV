@@ -48,13 +48,6 @@ const LandingHero = ({ onOpenArenaGate }: LandingHeroProps) => {
     countryCode: null as string | null
   });
 
-  const handleArenaGateComplete = (result: ArenaGateResult) => {
-    // Account is already created inside Arena Gate!
-    // Just close the modal and let auth state change handle redirect
-    setShowArenaGate(false);
-    setArenaGateVerified(true);
-    // No need to set form data - account is already created
-  };
 
   // Pre-fill from vault redirect params
   useEffect(() => {
