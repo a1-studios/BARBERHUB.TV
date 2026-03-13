@@ -562,6 +562,39 @@
   .bg-gradient-conic {
     background: conic-gradient(from 0deg, transparent, var(--tw-gradient-via), transparent, var(--tw-gradient-via), transparent);
   }
+
+  /* ===== Avatar Crest Wing Animations ===== */
+  @keyframes crestWingBronze {
+    0%, 100% { filter: drop-shadow(0 0 4px hsl(24 80% 45% / 0.3)); }
+    50% { filter: drop-shadow(0 0 10px hsl(24 80% 45% / 0.6)); }
+  }
+  .animate-crest-wing-bronze {
+    animation: crestWingBronze 2.5s ease-in-out infinite;
+  }
+
+  @keyframes crestWingSilver {
+    0%, 100% { filter: drop-shadow(0 0 6px hsl(210 20% 80% / 0.3)); }
+    50% { filter: drop-shadow(0 0 14px hsl(210 20% 80% / 0.6)); }
+  }
+  .animate-crest-wing-silver {
+    animation: crestWingSilver 2s ease-in-out infinite;
+  }
+
+  @keyframes crestWingGold {
+    0%, 100% { filter: drop-shadow(0 0 8px hsl(45 100% 55% / 0.4)); }
+    50% { filter: drop-shadow(0 0 20px hsl(45 100% 55% / 0.7)); }
+  }
+  .animate-crest-wing-gold {
+    animation: crestWingGold 1.8s ease-in-out infinite;
+  }
+
+  @keyframes crestStarTwinkle {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+  .animate-crest-star-twinkle {
+    animation: crestStarTwinkle 2s ease-in-out infinite;
+  }
 }
 
 @layer base {

@@ -93,7 +93,7 @@ function AppointmentCard({ appointment, barberName, hasReview, onReview }: {
   );
 }
 
-export function MyAppointments() {
+export function MyAppointments({ compact = false }: { compact?: boolean } = {}) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [reviewTarget, setReviewTarget] = useState<{ appointmentId: string; revieweeId: string } | null>(null);
@@ -185,6 +185,122 @@ export function MyAppointments() {
   const activeBounties = bounties?.filter(b => b.status === 'open') || [];
   const pastBounties = bounties?.filter(b => b.status !== 'open') || [];
 
+  const limitedUpcoming = compact ? upcoming.slice(0, 3) : upcoming;
+  const limitedPast = compact ? past.slice(0, 3) : past;
+
+  const tabsContent = (
+    <Tabs defaultValue="upcoming">
+      <TabsList className="w-full mb-3">
+        <TabsTrigger value="upcoming" className="flex-1">
+          Upcoming {upcoming.length > 0 && `(${upcoming.length})`}
+        </TabsTrigger>
+        <TabsTrigger value="past" className="flex-1">Past</TabsTrigger>
+        {!compact && (
+          <TabsTrigger value="bounties" className="flex-1">
+            <Home className="h-3 w-3 mr-1" />
+            Bounties {activeBounties.length > 0 && `(${activeBounties.length})`}
+          </TabsTrigger>
+        )}
+      </TabsList>
+
+      <TabsContent value="upcoming">
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground text-center py-6">Loading...</p>
+        ) : limitedUpcoming.length > 0 ? (
+          limitedUpcoming.sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
+            .map(apt => (
+              <AppointmentCard
+                key={apt.id}
+                appointment={apt}
+                barberName={data?.barberNames[apt.barber_id] || 'Barber'}
+                hasReview={false}
+                onReview={() => {}}
+              />
+            ))
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-6">No upcoming appointments</p>
+        )}
+      </TabsContent>
+
+      <TabsContent value="past">
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground text-center py-6">Loading...</p>
+        ) : limitedPast.length > 0 ? (
+          limitedPast.map(apt => (
+            <AppointmentCard
+              key={apt.id}
+              appointment={apt}
+              barberName={data?.barberNames[apt.barber_id] || 'Barber'}
+              hasReview={data?.reviewedIds.has(apt.id) || false}
+              onReview={() => setReviewTarget({ appointmentId: apt.id, revieweeId: apt.barber_user_id })}
+            />
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-6">No past appointments</p>
+        )}
+      </TabsContent>
+
+      {!compact && (
+        <TabsContent value="bounties" className="space-y-4">
+          <HouseCallBountyWidget />
+
+          {activeBounties.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Active Bounties</p>
+              {activeBounties.map(b => (
+                <Card key={b.id} className="border-accent/20">
+                  <CardContent className="p-3 space-y-2">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">📍 {b.location_text}</p>
+                        {b.service_description && <p className="text-xs text-muted-foreground">{b.service_description}</p>}
+                        <p className="text-[10px] text-muted-foreground">
+                          Expires {formatDistanceToNow(new Date(b.expires_at), { addSuffix: true })}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-black text-primary">{b.bounty_amount_bb} BB</p>
+                        <Badge variant="outline" className={`text-[10px] ${statusColors[b.status]}`}>{b.status}</Badge>
+                      </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="w-full text-xs text-destructive hover:text-destructive"
+                      onClick={() => cancelBounty.mutate(b.id)}
+                      disabled={cancelBounty.isPending}
+                    >
+                      <X className="h-3 w-3 mr-1" /> Cancel & Refund
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {pastBounties.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Past Bounties</p>
+              {pastBounties.slice(0, 5).map(b => (
+                <Card key={b.id} className="opacity-60">
+                  <CardContent className="p-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm">📍 {b.location_text}</p>
+                      <p className="text-xs text-muted-foreground">{b.bounty_amount_bb} BB</p>
+                    </div>
+                    <Badge variant="outline" className={`text-[10px] ${statusColors[b.status]}`}>{b.status}</Badge>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+      )}
+    </Tabs>
+  );
+
+  if (compact) return <>{tabsContent}</>;
+
   return (
     <>
       <Card className="mb-4">
@@ -192,110 +308,7 @@ export function MyAppointments() {
           <CardTitle className="text-lg">My Appointments</CardTitle>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="upcoming">
-            <TabsList className="w-full mb-3">
-              <TabsTrigger value="upcoming" className="flex-1">
-                Upcoming {upcoming.length > 0 && `(${upcoming.length})`}
-              </TabsTrigger>
-              <TabsTrigger value="past" className="flex-1">Past</TabsTrigger>
-              <TabsTrigger value="bounties" className="flex-1">
-                <Home className="h-3 w-3 mr-1" />
-                Bounties {activeBounties.length > 0 && `(${activeBounties.length})`}
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="upcoming">
-              {isLoading ? (
-                <p className="text-sm text-muted-foreground text-center py-6">Loading...</p>
-              ) : upcoming.length > 0 ? (
-                upcoming.sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime())
-                  .map(apt => (
-                    <AppointmentCard
-                      key={apt.id}
-                      appointment={apt}
-                      barberName={data?.barberNames[apt.barber_id] || 'Barber'}
-                      hasReview={false}
-                      onReview={() => {}}
-                    />
-                  ))
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-6">No upcoming appointments</p>
-              )}
-            </TabsContent>
-
-            <TabsContent value="past">
-              {isLoading ? (
-                <p className="text-sm text-muted-foreground text-center py-6">Loading...</p>
-              ) : past.length > 0 ? (
-                past.map(apt => (
-                  <AppointmentCard
-                    key={apt.id}
-                    appointment={apt}
-                    barberName={data?.barberNames[apt.barber_id] || 'Barber'}
-                    hasReview={data?.reviewedIds.has(apt.id) || false}
-                    onReview={() => setReviewTarget({ appointmentId: apt.id, revieweeId: apt.barber_user_id })}
-                  />
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-6">No past appointments</p>
-              )}
-            </TabsContent>
-
-            <TabsContent value="bounties" className="space-y-4">
-              <HouseCallBountyWidget />
-
-              {activeBounties.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Active Bounties</p>
-                  {activeBounties.map(b => (
-                    <Card key={b.id} className="border-accent/20">
-                      <CardContent className="p-3 space-y-2">
-                        <div className="flex items-start justify-between">
-                          <div className="space-y-1">
-                            <p className="text-sm font-medium">📍 {b.location_text}</p>
-                            {b.service_description && <p className="text-xs text-muted-foreground">{b.service_description}</p>}
-                            <p className="text-[10px] text-muted-foreground">
-                              Expires {formatDistanceToNow(new Date(b.expires_at), { addSuffix: true })}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-black text-primary">{b.bounty_amount_bb} BB</p>
-                            <Badge variant="outline" className={`text-[10px] ${statusColors[b.status]}`}>{b.status}</Badge>
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="w-full text-xs text-destructive hover:text-destructive"
-                          onClick={() => cancelBounty.mutate(b.id)}
-                          disabled={cancelBounty.isPending}
-                        >
-                          <X className="h-3 w-3 mr-1" /> Cancel & Refund
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-
-              {pastBounties.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Past Bounties</p>
-                  {pastBounties.slice(0, 5).map(b => (
-                    <Card key={b.id} className="opacity-60">
-                      <CardContent className="p-3 flex items-center justify-between">
-                        <div>
-                          <p className="text-sm">📍 {b.location_text}</p>
-                          <p className="text-xs text-muted-foreground">{b.bounty_amount_bb} BB</p>
-                        </div>
-                        <Badge variant="outline" className={`text-[10px] ${statusColors[b.status]}`}>{b.status}</Badge>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+          {tabsContent}
         </CardContent>
       </Card>
 
