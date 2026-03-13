@@ -127,13 +127,17 @@ const LandingHero = () => {
     }
     
     // Only fans reach here - simple signup flow
+    if (!signUpData.countryCode) {
+      toast.error('Please select your country');
+      return;
+    }
     setLoading(true);
     const { error } = await signUp(
       signUpData.email, 
       signUpData.password, 
       signUpData.displayName, 
       signUpData.userType, 
-      signUpData.countryCode || undefined
+      signUpData.countryCode
     );
     setLoading(false);
     
