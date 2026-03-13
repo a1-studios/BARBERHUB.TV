@@ -5,9 +5,10 @@ import { ArrowLeft, Play, GraduationCap, Flame } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useState, useRef, useEffect, useCallback } from "react";
+import SplitScreenBattle from "@/components/battles/SplitScreenBattle";
 
 interface FeedItem {
-  type: "video" | "sponsor" | "educator" | "platform";
+  type: "video" | "sponsor" | "educator" | "platform" | "battle";
   id: string;
   media_url?: string;
   title?: string;
@@ -19,6 +20,14 @@ interface FeedItem {
   message?: string;
   logo_url?: string | null;
   link?: string | null;
+  // Battle-specific fields
+  battle_id?: string;
+  barber1_video?: string;
+  barber2_video?: string;
+  barber1_name?: string;
+  barber1_location?: string;
+  barber2_name?: string;
+  barber2_location?: string;
 }
 
 const PLATFORM_PROMOS: FeedItem[] = [
@@ -113,16 +122,65 @@ const WatchFeed = () => {
     },
   });
 
+  const { data: battleItems = [] } = useQuery({
+    queryKey: ["watch-feed-battles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("battles")
+        .select("id, barber_1_video_url, barber_2_video_url, barber1_id, barber2_id, title, category")
+        .not("barber_1_video_url", "is", null)
+        .not("barber_2_video_url", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      if (!data || data.length === 0) return [];
+
+      // Collect barber profile IDs to resolve names/locations
+      const barberProfileIds = [
+        ...new Set(
+          data.flatMap((b) => [b.barber1_id, b.barber2_id].filter(Boolean))
+        ),
+      ] as string[];
+
+      let profileMap: Record<string, { name: string; location: string }> = {};
+      if (barberProfileIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("barber_profiles")
+          .select("id, name, location, country_code")
+          .in("id", barberProfileIds);
+        profiles?.forEach((p) => {
+          profileMap[p.id] = {
+            name: p.name || "Barber",
+            location: p.location || p.country_code || "",
+          };
+        });
+      }
+
+      return data.map((b) => ({
+        type: "battle" as const,
+        id: `battle-${b.id}`,
+        battle_id: b.id,
+        title: b.title,
+        barber1_video: b.barber_1_video_url!,
+        barber2_video: b.barber_2_video_url!,
+        barber1_name: profileMap[b.barber1_id!]?.name || "Barber 1",
+        barber1_location: profileMap[b.barber1_id!]?.location || "",
+        barber2_name: profileMap[b.barber2_id!]?.name || "Barber 2",
+        barber2_location: profileMap[b.barber2_id!]?.location || "",
+      }));
+    },
+  });
+
   const { data: sponsors = [] } = useSponsorAds(true);
 
-  // Build feed with interleaving: videos, educators, platforms, sponsors
+  // Build feed with interleaving
   const feed: FeedItem[] = [];
   let sponsorIdx = 0;
   let educatorIdx = 0;
   let platformIdx = 0;
+  let battleIdx = 0;
 
   if (videos.length === 0) {
-    // Empty DB: loop platform promos as backbone with educator/sponsor interleaves
     for (let i = 0; i < 20; i++) {
       feed.push({ ...PLATFORM_PROMOS[platformIdx % PLATFORM_PROMOS.length], id: `platform-loop-${i}` });
       platformIdx++;
@@ -142,6 +200,11 @@ const WatchFeed = () => {
         });
         sponsorIdx++;
       }
+      // Interleave battles every 5 items
+      if ((i + 1) % 5 === 0 && battleItems.length > 0) {
+        feed.push(battleItems[battleIdx % battleItems.length]);
+        battleIdx++;
+      }
     }
   } else {
     videos.forEach((video, i) => {
@@ -150,7 +213,6 @@ const WatchFeed = () => {
         feed.push(educatorContent[educatorIdx % educatorContent.length]);
         educatorIdx++;
       }
-      // Inject platform promo every 4 videos
       if ((i + 1) % 4 === 0) {
         feed.push({ ...PLATFORM_PROMOS[platformIdx % PLATFORM_PROMOS.length], id: `platform-${platformIdx}` });
         platformIdx++;
@@ -166,6 +228,11 @@ const WatchFeed = () => {
           link: sponsor.link,
         });
         sponsorIdx++;
+      }
+      // Interleave battles every 5 videos
+      if ((i + 1) % 5 === 0 && battleItems.length > 0) {
+        feed.push(battleItems[battleIdx % battleItems.length]);
+        battleIdx++;
       }
     });
   }
@@ -241,7 +308,6 @@ const WatchFeed = () => {
         </div>
       )}
 
-      {/* Type badge */}
       {item.type === "educator" && (
         <div className="absolute top-16 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/80 backdrop-blur-sm">
           <GraduationCap className="w-3 h-3 text-primary-foreground" />
@@ -255,7 +321,6 @@ const WatchFeed = () => {
         </div>
       )}
 
-      {/* Bottom overlay */}
       <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
         <p className="text-white font-semibold text-sm">{item.barber_name}</p>
         {item.title && (
@@ -289,7 +354,18 @@ const WatchFeed = () => {
             data-index={idx}
             className="h-screen w-full snap-start snap-always relative flex items-center justify-center"
           >
-            {item.type === "video" || item.type === "educator" || item.type === "platform" ? (
+            {item.type === "battle" ? (
+              <SplitScreenBattle
+                barber1_video={item.barber1_video!}
+                barber2_video={item.barber2_video!}
+                barber1_name={item.barber1_name!}
+                barber1_location={item.barber1_location!}
+                barber2_name={item.barber2_name!}
+                barber2_location={item.barber2_location!}
+                isActive={activeIndex === idx}
+                battleId={item.battle_id!}
+              />
+            ) : item.type === "video" || item.type === "educator" || item.type === "platform" ? (
               renderVideoItem(item, idx)
             ) : item.type === "sponsor" ? (
               <div className="w-full h-full flex items-center justify-center bg-card p-6">
