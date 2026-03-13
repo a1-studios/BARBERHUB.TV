@@ -230,23 +230,39 @@ const Stars = ({ cx, cy, count, scale, color, active }: { cx: number; cy: number
 
 // M4M Heart at bottom of crest
 const M4MHeart = ({ cx, cy, scale, glowState }: { cx: number; cy: number; scale: number; glowState: 'ghost' | 'certified' | 'complete' }) => {
-  const s = scale * 0.35;
+  const s = scale * 0.45;
+  const color = glowState === 'ghost' ? 'hsl(180 100% 70%)' : M4M_CYAN;
   return (
     <g
-      opacity={glowState === 'ghost' ? 0.15 : glowState === 'certified' ? 0.6 : 1}
-      style={glowState === 'complete' ? { filter: `drop-shadow(0 0 6px ${ZION_BLUE}) drop-shadow(0 0 12px ${ZION_BLUE}80)` } : glowState === 'certified' ? { filter: `drop-shadow(0 0 3px ${ZION_BLUE}60)` } : {}}
+      opacity={glowState === 'ghost' ? 0.3 : glowState === 'certified' ? 0.8 : 1}
+      style={
+        glowState === 'complete'
+          ? { filter: `drop-shadow(0 0 6px ${M4M_CYAN}) drop-shadow(0 0 14px ${M4M_CYAN}80)` }
+          : glowState === 'certified'
+          ? { filter: `drop-shadow(0 0 4px ${M4M_CYAN}80)` }
+          : {}
+      }
     >
+      {/* Invisible hit-area for click */}
+      <rect
+        x={cx - 18 * s}
+        y={cy - 16 * s}
+        width={36 * s}
+        height={34 * s}
+        fill="transparent"
+        style={{ pointerEvents: 'all' }}
+      />
       {/* Heart outline */}
       <path
         d={`M${cx} ${cy + 16 * s} C${cx} ${cy + 16 * s} ${cx - 16 * s} ${cy + 4 * s} ${cx - 16 * s} ${cy - 5 * s} C${cx - 16 * s} ${cy - 11 * s} ${cx - 11 * s} ${cy - 14 * s} ${cx - 6 * s} ${cy - 14 * s} C${cx - 3 * s} ${cy - 14 * s} ${cx - 1 * s} ${cy - 11 * s} ${cx} ${cy - 9 * s} C${cx + 1 * s} ${cy - 11 * s} ${cx + 3 * s} ${cy - 14 * s} ${cx + 6 * s} ${cy - 14 * s} C${cx + 11 * s} ${cy - 14 * s} ${cx + 16 * s} ${cy - 11 * s} ${cx + 16 * s} ${cy - 5 * s} C${cx + 16 * s} ${cy + 4 * s} ${cx} ${cy + 16 * s} ${cx} ${cy + 16 * s} Z`}
-        stroke={glowState === 'ghost' ? 'currentColor' : ZION_BLUE}
+        stroke={color}
         strokeWidth={1.5 * s}
-        fill={glowState === 'complete' ? `${ZION_BLUE}30` : 'none'}
+        fill={glowState === 'complete' ? `${M4M_CYAN}30` : 'none'}
       />
       {/* Shield */}
       <path
         d={`M${cx} ${cy - 8 * s} L${cx - 5.5 * s} ${cy - 4 * s} L${cx - 5.5 * s} ${cy + 3 * s} C${cx - 5.5 * s} ${cy + 7 * s} ${cx - 3 * s} ${cy + 10 * s} ${cx} ${cy + 12 * s} C${cx + 3 * s} ${cy + 10 * s} ${cx + 5.5 * s} ${cy + 7 * s} ${cx + 5.5 * s} ${cy + 3 * s} L${cx + 5.5 * s} ${cy - 4 * s} Z`}
-        stroke={glowState === 'ghost' ? 'currentColor' : ZION_BLUE}
+        stroke={color}
         strokeWidth={1 * s}
         fill="none"
       />
@@ -254,7 +270,7 @@ const M4MHeart = ({ cx, cy, scale, glowState }: { cx: number; cy: number; scale:
       {glowState !== 'ghost' && (
         <path
           d={`M${cx - 2.5 * s} ${cy + 2 * s} L${cx - 0.5 * s} ${cy + 4.5 * s} L${cx + 3 * s} ${cy - 1 * s}`}
-      stroke={ZION_BLUE}
+          stroke={M4M_CYAN}
           strokeWidth={1.2 * s}
           strokeLinecap="round"
           strokeLinejoin="round"
