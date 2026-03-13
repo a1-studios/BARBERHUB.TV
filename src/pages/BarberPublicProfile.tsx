@@ -14,7 +14,7 @@ import { BarberActionButtons } from '@/components/barber/BarberActionButtons';
 import { AvatarCrest } from '@/components/AvatarCrest';
 import { useState } from 'react';
 import { DonationModal } from '@/components/DonationModal';
-import { M4MHeartbeat } from '@/components/m4m/M4MHeartbeat';
+import { BookingConsole } from '@/components/booking/BookingConsole';
 import { BookingConsole } from '@/components/booking/BookingConsole';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
