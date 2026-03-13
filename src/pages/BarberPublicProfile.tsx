@@ -376,16 +376,18 @@ export default function BarberPublicProfile() {
                       onDonateClick={() => setIsDonationModalOpen(true)}
                     />
                     
-                    {/* Book Appointment */}
-                    <Button 
-                      variant="default" 
-                      size="default"
-                      className="bg-cyan-500 hover:bg-cyan-600 text-black font-semibold"
-                      onClick={() => setIsBookingOpen(true)}
-                    >
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Book Appointment
-                    </Button>
+                    {/* Book Appointment - Only for clients/fans */}
+                    {!isVisitorBarber && (
+                      <Button 
+                        variant="default" 
+                        size="default"
+                        className="bg-cyan-500 hover:bg-cyan-600 text-black font-semibold"
+                        onClick={() => setIsBookingOpen(true)}
+                      >
+                        <Calendar className="w-4 h-4 mr-2" />
+                        Book Appointment
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
