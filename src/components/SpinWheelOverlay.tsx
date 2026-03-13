@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Scissors, Users } from 'lucide-react';
 import VaultSpinWheel, { Prize, PrizeSet } from '@/components/vault/VaultSpinWheel';
@@ -26,13 +26,20 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const isAuthenticated = !!user;
-
   const detectedRole: 'barber' | 'fan' = isBarber ? 'barber' : 'fan';
 
-  const [step, setStep] = useState<Step>(isAuthenticated ? 'confirm-spin' : 'role-select');
-  const [selectedRole, setSelectedRole] = useState<'barber' | 'fan' | null>(isAuthenticated ? detectedRole : null);
+  const [step, setStep] = useState<Step>('role-select');
+  const [selectedRole, setSelectedRole] = useState<'barber' | 'fan' | null>(null);
   const [wonPrize, setWonPrize] = useState<Prize | null>(null);
   const [spinning, setSpinning] = useState(false);
+
+  // When auth loads, skip role-select for authenticated users
+  useEffect(() => {
+    if (isAuthenticated && step === 'role-select') {
+      setSelectedRole(detectedRole);
+      setStep('confirm-spin');
+    }
+  }, [isAuthenticated, detectedRole]);
 
   const handleRoleSelect = (role: 'barber' | 'fan') => {
     setSelectedRole(role);

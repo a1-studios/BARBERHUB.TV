@@ -21,6 +21,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { BottomNavBar } from "@/components/BottomNavBar";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { FanIntroSequence } from "@/components/fan/FanIntroSequence";
 import { FanArenaView } from "@/components/fan/FanArenaView";
 import { ArenaGateModal } from "@/components/auth/ArenaGateModal";
@@ -28,6 +29,7 @@ import { ArenaGateModal } from "@/components/auth/ArenaGateModal";
 const Index = () => {
   const { user, loading } = useAuth();
   const { isFan, isLoading: roleLoading } = useUserRole();
+  const { profile } = useUserProfile();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const recoveryAttempted = useRef(false);
@@ -55,15 +57,20 @@ const Index = () => {
     const hasSeenWelcome = localStorage.getItem('barberhub_welcome_seen');
     const toastShown = sessionStorage.getItem('welcome_back_toast');
     if (hasSeenWelcome && !toastShown) {
-      const name = user.user_metadata?.display_name || user.user_metadata?.full_name || '';
+      const name = profile?.display_name || user.user_metadata?.display_name || user.user_metadata?.full_name || '';
+      if (!name && !profile) return; // Wait for profile to load
       if (name) {
-        toast(`Welcome back, ${name}! 🔥`);
+        toast(
+          <span>
+            Welcome back, <span className="text-cyan-400 font-bold animate-pulse">{name}</span>! 🔥
+          </span>
+        );
       } else {
         toast('Welcome back! 🔥');
       }
       sessionStorage.setItem('welcome_back_toast', 'true');
     }
-  }, [user, loading]);
+  }, [user, loading, profile]);
 
   // Recover any pending BB purchase that wasn't verified
   useEffect(() => {
