@@ -175,16 +175,16 @@ export const ArenaGateModal = ({ isOpen, onClose, onComplete }: ArenaGateModalPr
           </div>
 
           <div className="relative z-10 p-6 flex flex-col" style={{ height: '650px', maxHeight: '85vh' }}>
-            <div className="flex items-center justify-between mb-2">
+            <div className="relative flex items-center justify-center mb-2">
               <div className="flex items-center gap-2">
                 <Trophy className="w-6 h-6 text-primary" />
-                <span className="font-bold text-lg text-foreground">ARENA GATE</span>
+                <span className="font-bold text-lg text-foreground">PATH TO <span className="text-primary">VICTORY</span></span>
               </div>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={onClose}
-                className="text-muted-foreground hover:text-foreground"
+                className="absolute right-0 text-muted-foreground hover:text-foreground"
               >
                 <X className="w-5 h-5" />
               </Button>
