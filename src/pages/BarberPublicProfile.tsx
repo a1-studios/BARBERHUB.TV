@@ -16,6 +16,7 @@ import { useState } from 'react';
 import { DonationModal } from '@/components/DonationModal';
 import { BookingConsole } from '@/components/booking/BookingConsole';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { toast } from 'sonner';
 
 export default function BarberPublicProfile() {
