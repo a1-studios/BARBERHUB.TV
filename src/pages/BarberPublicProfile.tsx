@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, MapPin, Award, Upload, Image as ImageIcon, Video, Trash2, Calendar, Instagram, Twitter, Youtube, Facebook } from 'lucide-react';
 import { BarberVideoSection } from '@/components/barber/BarberVideoSection';
 import { BarberActionButtons } from '@/components/barber/BarberActionButtons';
-import { TierRing } from '@/components/TierRing';
+import { AvatarCrest } from '@/components/AvatarCrest';
 import { useState } from 'react';
 import { DonationModal } from '@/components/DonationModal';
 import { M4MHeartbeat } from '@/components/m4m/M4MHeartbeat';
