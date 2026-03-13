@@ -141,10 +141,10 @@ const LandingHero = ({ onOpenArenaGate }: LandingHeroProps) => {
           onClick={() => {
             // For barbers, open Arena Gate if not yet verified
             if (!arenaGateVerified) {
-              setShowArenaGate(true);
+              onOpenArenaGate?.();
             }
             setSignUpData(prev => ({ ...prev, userType: "barber" }));
-          }} 
+          }}
           className={`relative p-4 border transition-all duration-300 ${
             signUpData.userType === "barber" 
               ? "border-primary/50 bg-primary/5 shadow-[0_0_20px_hsl(var(--primary)/0.3),inset_0_0_15px_hsl(var(--primary)/0.1)]" 
