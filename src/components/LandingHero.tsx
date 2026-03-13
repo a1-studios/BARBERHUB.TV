@@ -30,8 +30,7 @@ const LandingHero = ({ onOpenArenaGate }: LandingHeroProps) => {
   const [prizeBanner, setPrizeBanner] = useState<string | null>(null);
   
 
-  // Arena Gate state for barbers
-  const [showArenaGate, setShowArenaGate] = useState(false);
+  // Arena Gate verified state (gate itself is rendered in Index.tsx)
   const [arenaGateVerified, setArenaGateVerified] = useState(false);
 
   // Sign In Form State
