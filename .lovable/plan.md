@@ -1,21 +1,29 @@
+## Full Appointment Engine — Anti-Gravity (COMPLETED)
 
+### What Was Built
 
-## Fix Fan Profile: Remove Crest, Ensure Flag Background
+#### Database
+- `barber_services`: Added `deposit_bb` (INTEGER) and `is_free_intro` (BOOLEAN)
+- `appointments`: Added `is_deposit_only` (BOOLEAN) and `remainder_bb` (INTEGER)
+- `house_call_bounties`: New table with RLS, status tracking, expiry
+- `handle_bounty_status_change` trigger: Auto-refunds expired bounties, notifies on claim
+- `expire_bounties_batch()`: Callable function for pg_cron to expire stale bounties
 
-### Issues
-1. **Fan users see the AvatarCrest** (ghost wings, tier ring, stars) — this is barber-only. Fans should have a plain avatar.
-2. **Flag background not showing for fans** — likely `profile?.country_code` is null/undefined for the fan user. Need to also check `clientProfile?.country_code` as a fallback.
+#### Edge Functions
+- `post-bounty`: Client posts house call bounty, BB escrowed
+- `claim-bounty`: Barber atomically claims bounty, auto-creates appointment
+- `book-appointment`: Rewritten — deposit support, free intro, no tier-gating
+- `manage-appointment`: Rewritten — remainder collection on complete, no tier-gating
 
-### Changes — `src/pages/Profile.tsx`
+#### Frontend
+- `BookingConsole.tsx`: Deposit/free-intro aware, tier-gating removed
+- `ServiceSelector.tsx`: FREE badge, deposit display
+- `EscrowConfirmDialog.tsx`: Deposit vs remainder breakdown, free booking support
+- `HouseCallBountyWidget.tsx`: New — client posts house call bounties
+- `BountyBoard.tsx`: New — barber-facing feed of open bounties
+- `MyAppointments.tsx`: Added "Bounties" tab with post widget + active/past bounties
+- `BarberAppointmentManager.tsx`: Added "Bounties" tab with BountyBoard, deposit/free fields in Add Service, tier-gating removed
+- `BountyPresetPicker.tsx`: Added 500 BB preset
 
-**A) Replace AvatarCrest with plain Avatar for fans**
-- Wrap the hero section in a conditional: barbers get `<AvatarCrest>`, fans get a simple `<Avatar>` with no crest/wings/ring.
-
-**B) Fix flag background for fans**
-- Line 177: `countryCode` for fans uses `profile?.country_code`. Also check `clientProfile?.country_code` as fallback since the country may be stored on the client profile table instead.
-
-### Files Changed
-| File | Action |
-|------|--------|
-| `src/pages/Profile.tsx` | Conditional avatar rendering; fix fan countryCode fallback |
-
+### Pending
+- Set up pg_cron job to call `expire_bounties_batch()` every 5 minutes

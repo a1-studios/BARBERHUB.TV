@@ -174,7 +174,7 @@ const Profile = () => {
     ? (profile?.display_name || barberProfile?.name || 'Barber')
     : (profile?.display_name || 'Fan');
   const specialty = barberProfile?.specialty;
-  const countryCode = isBarber ? barberProfile?.country_code : profile?.country_code;
+  const countryCode = isBarber ? barberProfile?.country_code : (profile?.country_code || (clientProfile as any)?.country_code);
   const subscriptionTier = barberProfile?.active_subscription_tier;
   const m4mCertified = (barberProfile as any)?.m4m_certified || false;
   const m4mPaid = (barberProfile as any)?.m4m_paid || false;
@@ -208,29 +208,37 @@ const Profile = () => {
       <main className="relative z-10 flex-1 pt-16 pb-20 px-4">
         <div className="max-w-md mx-auto min-h-[calc(100dvh-4rem-5rem)] flex flex-col">
 
-          {/* ===== HERO: Avatar Crest ===== */}
+          {/* ===== HERO: Avatar ===== */}
           <div className="relative flex flex-col items-center pt-4 pb-2">
 
-            {/* Avatar Crest */}
-            <AvatarCrest
-              tier={isBarber ? subscriptionTier : null}
-              size="lg"
-              interactive={isBarber}
-              showM4M={isBarber}
-              m4mCertified={m4mCertified}
-              m4mPaid={m4mPaid}
-              m4mLivesTouched={m4mLivesTouched}
-              barberName={displayName}
-              barberUserId={user?.id || ''}
-              isOwnProfile={true}
-            >
-              <Avatar className="w-full h-full">
+            {isBarber ? (
+              <AvatarCrest
+                tier={subscriptionTier}
+                size="lg"
+                interactive
+                showM4M
+                m4mCertified={m4mCertified}
+                m4mPaid={m4mPaid}
+                m4mLivesTouched={m4mLivesTouched}
+                barberName={displayName}
+                barberUserId={user?.id || ''}
+                isOwnProfile={true}
+              >
+                <Avatar className="w-full h-full">
+                  <AvatarImage src={profile?.avatar_url || undefined} />
+                  <AvatarFallback className="bg-primary/20 text-primary text-3xl font-bold">
+                    {displayName.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </AvatarCrest>
+            ) : (
+              <Avatar className="h-28 w-28 border-4 border-background shadow-lg">
                 <AvatarImage src={profile?.avatar_url || undefined} />
                 <AvatarFallback className="bg-primary/20 text-primary text-3xl font-bold">
                   {displayName.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-            </AvatarCrest>
+            )}
 
             {/* Name + meta */}
             <h1 className="text-xl font-bold text-foreground mt-2 text-center">{displayName}</h1>
