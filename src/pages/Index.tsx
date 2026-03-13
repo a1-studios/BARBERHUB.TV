@@ -34,7 +34,6 @@ const Index = () => {
 
   // Arena Gate state — lifted here so modal persists after auth state change
   const [showArenaGate, setShowArenaGate] = useState(false);
-  const recoveryAttempted = useRef(false);
   const [introComplete, setIntroComplete] = useState(() =>
     sessionStorage.getItem('fan_intro_seen') === 'true'
   );
