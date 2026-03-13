@@ -21,6 +21,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { BottomNavBar } from "@/components/BottomNavBar";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import { FanIntroSequence } from "@/components/fan/FanIntroSequence";
 import { FanArenaView } from "@/components/fan/FanArenaView";
 import { ArenaGateModal } from "@/components/auth/ArenaGateModal";
@@ -28,6 +29,7 @@ import { ArenaGateModal } from "@/components/auth/ArenaGateModal";
 const Index = () => {
   const { user, loading } = useAuth();
   const { isFan, isLoading: roleLoading } = useUserRole();
+  const { profile } = useUserProfile();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const recoveryAttempted = useRef(false);
