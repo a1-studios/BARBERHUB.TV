@@ -24,6 +24,7 @@ export function AuthDialog({
   children, 
   initialRole = 'fan', 
   prefilledCountry,
+  prefilledEmail,
   autoOpen = false,
   onOpenChange,
 }: AuthDialogProps) {

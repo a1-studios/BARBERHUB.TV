@@ -1,6 +1,10 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { ArenaGateModal, ArenaGateResult } from '@/components/auth/ArenaGateModal';
+import { AuthDialog } from '@/components/auth/AuthDialog';
+import { Button } from '@/components/ui/button';
 import type { Prize } from './VaultSpinWheel';
 
 interface VaultVictoryProps {
@@ -11,15 +15,28 @@ interface VaultVictoryProps {
 
 const VaultVictory = ({ prize, email, role }: VaultVictoryProps) => {
   const navigate = useNavigate();
+  const [showArenaGate, setShowArenaGate] = useState(false);
+  const [showFanAuth, setShowFanAuth] = useState(false);
 
   const handleClaim = () => {
-    const params = new URLSearchParams({
-      tab: 'signup',
-      email,
-      role,
-      prize_id: prize.id,
-    });
-    navigate(`/?${params.toString()}`);
+    if (role === 'barber') {
+      setShowArenaGate(true);
+    } else {
+      setShowFanAuth(true);
+    }
+  };
+
+  const handleArenaGateComplete = (result: ArenaGateResult) => {
+    setShowArenaGate(false);
+    navigate('/profile', { replace: true });
+  };
+
+  const handleFanAuthClose = (open: boolean) => {
+    setShowFanAuth(open);
+    // If dialog closed after successful auth, redirect
+    if (!open) {
+      // Auth state change will handle redirect
+    }
   };
 
   return (
@@ -98,6 +115,24 @@ const VaultVictory = ({ prize, email, role }: VaultVictoryProps) => {
       <p className="text-xs text-gray-600 text-center">
         Prize is escrowed until profile completion
       </p>
+
+      {/* Arena Gate for Barbers */}
+      <ArenaGateModal
+        isOpen={showArenaGate}
+        onClose={() => setShowArenaGate(false)}
+        onComplete={handleArenaGateComplete}
+        prefilledEmail={email}
+      />
+
+      {/* Auth Dialog for Fans */}
+      <AuthDialog
+        initialRole="fan"
+        autoOpen={showFanAuth}
+        onOpenChange={handleFanAuthClose}
+        prefilledEmail={email}
+      >
+        <span className="hidden" />
+      </AuthDialog>
     </div>
   );
 };
