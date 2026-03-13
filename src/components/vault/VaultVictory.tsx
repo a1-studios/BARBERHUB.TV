@@ -121,7 +121,6 @@ const VaultVictory = ({ prize, email, role }: VaultVictoryProps) => {
         isOpen={showArenaGate}
         onClose={() => setShowArenaGate(false)}
         onComplete={handleArenaGateComplete}
-        prefilledEmail={email}
       />
 
       {/* Auth Dialog for Fans */}
