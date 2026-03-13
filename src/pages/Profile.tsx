@@ -189,12 +189,26 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* ===== FLAG BANNER BACKGROUND ===== */}
+      {countryCode && (
+        <>
+          <div className="fixed inset-0 z-0 opacity-[0.35]">
+            <img
+              src={`https://flagcdn.com/w1280/${countryCode.toLowerCase()}.png`}
+              alt=""
+              className="w-full h-full object-cover rotate-90 scale-150"
+            />
+          </div>
+          <div className="fixed inset-0 z-0 bg-gradient-to-b from-background/60 via-background/40 to-background/80" />
+        </>
+      )}
+
       <Header />
 
-      <main className="flex-1 pt-16 pb-20 px-4">
+      <main className="relative z-10 flex-1 pt-16 pb-20 px-4">
         <div className="max-w-md mx-auto min-h-[calc(100dvh-4rem-5rem)] flex flex-col">
 
-          {/* ===== HERO: Avatar Crest + BB Pill ===== */}
+          {/* ===== HERO: Avatar Crest ===== */}
           <div className="relative flex flex-col items-center pt-4 pb-2">
 
             {/* Avatar Crest */}
@@ -282,42 +296,11 @@ const Profile = () => {
             )}
           </div>
 
-          {/* ===== ACTION PILLS ===== */}
-          <div className="flex justify-center gap-2 pb-3">
-            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setShowEditDrawer(true)}>
-              <Edit3 className="w-3 h-3 mr-1" /> Edit
-            </Button>
-            {isBarber && (
-              <>
-                <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setShowBarberSettings(true)}>
-                  <Settings className="w-3 h-3 mr-1" /> Settings
-                </Button>
-                {barberProfile?.id && (
-                  <Link to={`/barbers/${barberProfile.id}`}>
-                    <Button variant="outline" size="sm" className="h-8 text-xs">
-                      <ExternalLink className="w-3 h-3 mr-1" /> Public
-                    </Button>
-                  </Link>
-                )}
-              </>
-            )}
-            {!isBarber && (profile as any)?.sub_category !== 'official_sponsor' && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs text-amber-400 border-amber-500/20 hover:bg-amber-500/10"
-                onClick={() => setShowSponsorModal(true)}
-              >
-                <Award className="w-3 h-3 mr-1" /> Sponsor
-              </Button>
-            )}
-          </div>
-
           {/* ===== iOS GROUPED LIST ===== */}
           <div className="flex-1 space-y-1">
             {/* TOOLS section */}
             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-3 pb-1">Tools</p>
-            <div className="bg-card rounded-xl border border-border/30 overflow-hidden divide-y divide-border/20">
+            <div className="bg-card/80 backdrop-blur-sm rounded-xl border border-border/30 overflow-hidden divide-y divide-border/20">
               {/* Transactions */}
               <Collapsible open={txOpen} onOpenChange={setTxOpen}>
                 <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
@@ -355,7 +338,62 @@ const Profile = () => {
 
             {/* ACCOUNT section */}
             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-4 pb-1">Account</p>
-            <div className="bg-card rounded-xl border border-border/30 overflow-hidden divide-y divide-border/20">
+            <div className="bg-card/80 backdrop-blur-sm rounded-xl border border-border/30 overflow-hidden divide-y divide-border/20">
+              {/* Edit Profile */}
+              <button
+                onClick={() => setShowEditDrawer(true)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Edit3 className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium text-foreground">Edit Profile</span>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </button>
+
+              {/* Settings (barbers) */}
+              {isBarber && (
+                <button
+                  onClick={() => setShowBarberSettings(true)}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Settings className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">Settings</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              )}
+
+              {/* Public Profile (barbers) */}
+              {isBarber && barberProfile?.id && (
+                <Link
+                  to={`/barbers/${barberProfile.id}`}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <ExternalLink className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">Public Profile</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </Link>
+              )}
+
+              {/* Become Sponsor (fans) */}
+              {!isBarber && (profile as any)?.sub_category !== 'official_sponsor' && (
+                <button
+                  onClick={() => setShowSponsorModal(true)}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Award className="h-4 w-4 text-amber-400" />
+                    <span className="text-sm font-medium text-amber-400">Become Sponsor</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              )}
+
+              {/* Sign Out */}
               <button
                 onClick={async () => { await signOut(); navigate('/'); }}
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors"
@@ -363,6 +401,8 @@ const Profile = () => {
                 <LogOut className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Sign Out</span>
               </button>
+
+              {/* Delete Account */}
               <button
                 onClick={() => { setDeleteStep(1); setShowDeleteConfirm(true); }}
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-destructive/10 transition-colors"
