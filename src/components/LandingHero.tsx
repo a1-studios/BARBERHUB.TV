@@ -404,12 +404,6 @@ const LandingHero = ({ onOpenArenaGate }: LandingHeroProps) => {
         </div>
       </div>
 
-      {/* Arena Gate Modal for Barbers */}
-      <ArenaGateModal
-        isOpen={showArenaGate}
-        onClose={handleArenaGateClose}
-        onComplete={handleArenaGateComplete}
-      />
     </section>
   );
 };
