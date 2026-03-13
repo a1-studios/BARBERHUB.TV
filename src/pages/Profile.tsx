@@ -22,6 +22,7 @@ import { BarberSettings } from '@/components/profiles/BarberSettings';
 import { SponsorBoardPurchaseModal } from '@/components/fan/SponsorBoardPurchaseModal';
 import { TransactionHistory } from '@/components/analytics/TransactionHistory';
 import { MyAppointments } from '@/components/fan/MyAppointments';
+import { BarberAppointmentManager } from '@/components/booking/BarberAppointmentManager';
 import { AvatarCrest } from '@/components/AvatarCrest';
 import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
 import { SubCategoryBadge } from '@/components/SubCategoryBadge';
@@ -43,6 +44,7 @@ const Profile = () => {
   const [showEditDrawer, setShowEditDrawer] = useState(false);
   const [txOpen, setTxOpen] = useState(false);
   const [apptOpen, setApptOpen] = useState(false);
+  const [barberApptOpen, setBarberApptOpen] = useState(false);
 
   const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
 
@@ -338,6 +340,24 @@ const Profile = () => {
                   <CollapsibleContent>
                     <div className="px-2 pb-3">
                       <MyAppointments compact />
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              )}
+
+              {/* Manage Appointments & Bounties (barbers) */}
+              {isBarber && (
+                <Collapsible open={barberApptOpen} onOpenChange={setBarberApptOpen}>
+                  <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <CalendarDays className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium text-foreground">Manage Appointments</span>
+                    </div>
+                    <ChevronRight className={cn('h-4 w-4 text-muted-foreground transition-transform', barberApptOpen && 'rotate-90')} />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="px-2 pb-3">
+                      <BarberAppointmentManager />
                     </div>
                   </CollapsibleContent>
                 </Collapsible>

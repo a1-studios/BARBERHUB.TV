@@ -16,12 +16,14 @@ import { useState } from 'react';
 import { DonationModal } from '@/components/DonationModal';
 import { BookingConsole } from '@/components/booking/BookingConsole';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { toast } from 'sonner';
 
 export default function BarberPublicProfile() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isBarber: isVisitorBarber } = useUserRole();
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -374,16 +376,18 @@ export default function BarberPublicProfile() {
                       onDonateClick={() => setIsDonationModalOpen(true)}
                     />
                     
-                    {/* Book Appointment */}
-                    <Button 
-                      variant="default" 
-                      size="default"
-                      className="bg-cyan-500 hover:bg-cyan-600 text-black font-semibold"
-                      onClick={() => setIsBookingOpen(true)}
-                    >
-                      <Calendar className="w-4 h-4 mr-2" />
-                      Book Appointment
-                    </Button>
+                    {/* Book Appointment - Only for clients/fans */}
+                    {!isVisitorBarber && (
+                      <Button 
+                        variant="default" 
+                        size="default"
+                        className="bg-cyan-500 hover:bg-cyan-600 text-black font-semibold"
+                        onClick={() => setIsBookingOpen(true)}
+                      >
+                        <Calendar className="w-4 h-4 mr-2" />
+                        Book Appointment
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
