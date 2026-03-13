@@ -1,28 +1,29 @@
+## Full Appointment Engine — Anti-Gravity (COMPLETED)
 
+### What Was Built
 
-## Fix: ArenaGate Unmounts Mid-Flow When Account Is Created
+#### Database
+- `barber_services`: Added `deposit_bb` (INTEGER) and `is_free_intro` (BOOLEAN)
+- `appointments`: Added `is_deposit_only` (BOOLEAN) and `remainder_bb` (INTEGER)
+- `house_call_bounties`: New table with RLS, status tracking, expiry
+- `handle_bounty_status_change` trigger: Auto-refunds expired bounties, notifies on claim
+- `expire_bounties_batch()`: Callable function for pg_cron to expire stale bounties
 
-### Root Cause
-In `Index.tsx` line 113, the page conditionally renders `<LandingHero>` only when `user` is null. The `<ArenaGateModal>` lives inside `<LandingHero>`. When step 5 of the ArenaGate calls `supabase.auth.signUp` and succeeds, `onAuthStateChange` fires, `user` becomes non-null, `<LandingHero>` unmounts — taking the ArenaGateModal with it. The user gets dumped into the authenticated dashboard before finishing the onboarding steps (choose-tier, choose-categories).
+#### Edge Functions
+- `post-bounty`: Client posts house call bounty, BB escrowed
+- `claim-bounty`: Barber atomically claims bounty, auto-creates appointment
+- `book-appointment`: Rewritten — deposit support, free intro, no tier-gating
+- `manage-appointment`: Rewritten — remainder collection on complete, no tier-gating
 
-### Fix
+#### Frontend
+- `BookingConsole.tsx`: Deposit/free-intro aware, tier-gating removed
+- `ServiceSelector.tsx`: FREE badge, deposit display
+- `EscrowConfirmDialog.tsx`: Deposit vs remainder breakdown, free booking support
+- `HouseCallBountyWidget.tsx`: New — client posts house call bounties
+- `BountyBoard.tsx`: New — barber-facing feed of open bounties
+- `MyAppointments.tsx`: Added "Bounties" tab with post widget + active/past bounties
+- `BarberAppointmentManager.tsx`: Added "Bounties" tab with BountyBoard, deposit/free fields in Add Service, tier-gating removed
+- `BountyPresetPicker.tsx`: Added 500 BB preset
 
-**`src/pages/Index.tsx`** — Lift ArenaGate state out of LandingHero
-
-1. Add state for `showArenaGate` and `arenaGateComplete` at the `Index` level.
-2. Pass a callback prop to `<LandingHero>` so when a barber clicks "Create Account", the Index-level `showArenaGate` is set to `true`.
-3. Render `<ArenaGateModal>` at the **Index level**, outside the `user ? ... : ...` conditional, so it persists even after auth state changes.
-4. After ArenaGateModal `onComplete` fires, navigate to `/profile`.
-
-**`src/components/LandingHero.tsx`** — Remove internal ArenaGateModal
-
-1. Remove the `<ArenaGateModal>` render from LandingHero.
-2. Instead of setting local `showArenaGate` state, call the new `onOpenArenaGate` callback prop passed from Index.
-3. Keep all other signup logic (fan flow) as-is.
-
-### Files Changed
-| File | Action |
-|------|--------|
-| `src/pages/Index.tsx` | Add ArenaGate state, render modal outside auth conditional |
-| `src/components/LandingHero.tsx` | Remove ArenaGateModal, accept `onOpenArenaGate` prop |
-
+### Pending
+- Set up pg_cron job to call `expire_bounties_batch()` every 5 minutes

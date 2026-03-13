@@ -11,14 +11,18 @@ import { Scissors, Users, Loader2, Lock, Sparkles } from "lucide-react";
 import Globe3D from "@/components/Globe3D";
 import { CountrySelector } from "@/components/CountrySelector";
 import WorldCupPrizeCounter from "@/components/WorldCupPrizeCounter";
-import { ArenaGateModal, ArenaGateResult } from "@/components/auth/ArenaGateModal";
+import type { ArenaGateResult } from "@/components/auth/ArenaGateModal";
 import { toast } from "sonner";
 import { triggerCountryCelebration } from "@/utils/countryCelebration";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
 
 
-const LandingHero = () => {
+interface LandingHeroProps {
+  onOpenArenaGate?: () => void;
+}
+
+const LandingHero = ({ onOpenArenaGate }: LandingHeroProps) => {
   const { signUp, signIn, user } = useAuth();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
@@ -26,8 +30,7 @@ const LandingHero = () => {
   const [prizeBanner, setPrizeBanner] = useState<string | null>(null);
   
 
-  // Arena Gate state for barbers
-  const [showArenaGate, setShowArenaGate] = useState(false);
+  // Arena Gate verified state (gate itself is rendered in Index.tsx)
   const [arenaGateVerified, setArenaGateVerified] = useState(false);
 
   // Sign In Form State
@@ -45,13 +48,6 @@ const LandingHero = () => {
     countryCode: null as string | null
   });
 
-  const handleArenaGateComplete = (result: ArenaGateResult) => {
-    // Account is already created inside Arena Gate!
-    // Just close the modal and let auth state change handle redirect
-    setShowArenaGate(false);
-    setArenaGateVerified(true);
-    // No need to set form data - account is already created
-  };
 
   // Pre-fill from vault redirect params
   useEffect(() => {
@@ -95,17 +91,6 @@ const LandingHero = () => {
     }
   }, [user, prizeBanner, searchParams]);
 
-  const handleArenaGateClose = () => {
-    setShowArenaGate(false);
-    // If they close without completing, reset to fan
-    if (!arenaGateVerified) {
-      setSignUpData(prev => ({
-        ...prev,
-        userType: 'fan',
-        countryCode: null
-      }));
-    }
-  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,7 +107,7 @@ const LandingHero = () => {
     
     // Barbers use Arena Gate for complete signup - redirect them there
     if (signUpData.userType === 'barber') {
-      setShowArenaGate(true);
+      onOpenArenaGate?.();
       return;
     }
     
@@ -156,10 +141,10 @@ const LandingHero = () => {
           onClick={() => {
             // For barbers, open Arena Gate if not yet verified
             if (!arenaGateVerified) {
-              setShowArenaGate(true);
+              onOpenArenaGate?.();
             }
             setSignUpData(prev => ({ ...prev, userType: "barber" }));
-          }} 
+          }}
           className={`relative p-4 border transition-all duration-300 ${
             signUpData.userType === "barber" 
               ? "border-primary/50 bg-primary/5 shadow-[0_0_20px_hsl(var(--primary)/0.3),inset_0_0_15px_hsl(var(--primary)/0.1)]" 
@@ -419,12 +404,6 @@ const LandingHero = () => {
         </div>
       </div>
 
-      {/* Arena Gate Modal for Barbers */}
-      <ArenaGateModal
-        isOpen={showArenaGate}
-        onClose={handleArenaGateClose}
-        onComplete={handleArenaGateComplete}
-      />
     </section>
   );
 };

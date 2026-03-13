@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import LandingHero from "@/components/LandingHero";
 import CommunitySection from "@/components/CommunitySection";
@@ -22,12 +23,17 @@ import { BottomNavBar } from "@/components/BottomNavBar";
 import { useUserRole } from "@/hooks/useUserRole";
 import { FanIntroSequence } from "@/components/fan/FanIntroSequence";
 import { FanArenaView } from "@/components/fan/FanArenaView";
+import { ArenaGateModal } from "@/components/auth/ArenaGateModal";
 
 const Index = () => {
   const { user, loading } = useAuth();
   const { isFan, isLoading: roleLoading } = useUserRole();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const recoveryAttempted = useRef(false);
+
+  // Arena Gate state — lifted here so modal persists after auth state change
+  const [showArenaGate, setShowArenaGate] = useState(false);
   const [introComplete, setIntroComplete] = useState(() =>
     sessionStorage.getItem('fan_intro_seen') === 'true'
   );
@@ -156,7 +162,7 @@ const Index = () => {
         </>
       ) : (
         <>
-          <LandingHero />
+          <LandingHero onOpenArenaGate={() => setShowArenaGate(true)} />
         </>
       )}
       
@@ -165,6 +171,16 @@ const Index = () => {
 
       {/* Auto-show spin wheel overlay */}
       <SpinWheelOverlay open={showSpinWheel} onClose={handleSpinClose} />
+
+      {/* Arena Gate Modal — rendered outside auth conditional so it persists */}
+      <ArenaGateModal
+        isOpen={showArenaGate}
+        onClose={() => setShowArenaGate(false)}
+        onComplete={() => {
+          setShowArenaGate(false);
+          navigate('/profile');
+        }}
+      />
     </div>
   );
 };
