@@ -23,6 +23,7 @@ export default function BarberPublicProfile() {
   const { userId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isBarber: isVisitorBarber } = useUserRole();
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
