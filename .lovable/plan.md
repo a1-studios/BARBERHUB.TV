@@ -1,29 +1,43 @@
-## Full Appointment Engine — Anti-Gravity (COMPLETED)
 
-### What Was Built
 
-#### Database
-- `barber_services`: Added `deposit_bb` (INTEGER) and `is_free_intro` (BOOLEAN)
-- `appointments`: Added `is_deposit_only` (BOOLEAN) and `remainder_bb` (INTEGER)
-- `house_call_bounties`: New table with RLS, status tracking, expiry
-- `handle_bounty_status_change` trigger: Auto-refunds expired bounties, notifies on claim
-- `expire_bounties_batch()`: Callable function for pg_cron to expire stale bounties
+## Fix Book Appointment Visibility + Surface Bounty System on Profiles
 
-#### Edge Functions
-- `post-bounty`: Client posts house call bounty, BB escrowed
-- `claim-bounty`: Barber atomically claims bounty, auto-creates appointment
-- `book-appointment`: Rewritten — deposit support, free intro, no tier-gating
-- `manage-appointment`: Rewritten — remainder collection on complete, no tier-gating
+### Issue 1: Book Appointment button visible to other barbers
+Currently the "Book Appointment" button on `BarberPublicProfile.tsx` shows for all non-owner visitors, including other barbers. Only fans/clients should see it.
 
-#### Frontend
-- `BookingConsole.tsx`: Deposit/free-intro aware, tier-gating removed
-- `ServiceSelector.tsx`: FREE badge, deposit display
-- `EscrowConfirmDialog.tsx`: Deposit vs remainder breakdown, free booking support
-- `HouseCallBountyWidget.tsx`: New — client posts house call bounties
-- `BountyBoard.tsx`: New — barber-facing feed of open bounties
-- `MyAppointments.tsx`: Added "Bounties" tab with post widget + active/past bounties
-- `BarberAppointmentManager.tsx`: Added "Bounties" tab with BountyBoard, deposit/free fields in Add Service, tier-gating removed
-- `BountyPresetPicker.tsx`: Added 500 BB preset
+**Fix:** Import `useUserRole` and gate the button behind `!isBarber` in addition to `!isOwner`.
 
-### Pending
-- Set up pg_cron job to call `expire_bounties_batch()` every 5 minutes
+### Issue 2: Bounty system not accessible from either profile
+- **Fan profile:** `MyAppointments` (which contains `HouseCallBountyWidget`) is rendered inside a collapsible under "My Appointments" — but only for non-barbers. This works, but bounties are buried inside a tab within that collapsible. It's there but hard to find.
+- **Barber profile:** `BarberAppointmentManager` (which contains `BountyBoard`) is **never rendered anywhere**. It's defined but not imported or mounted on any page.
+
+**Fix:** Add `BarberAppointmentManager` as a collapsible section on the barber's Profile page, similar to how "My Appointments" exists for fans. This gives barbers access to their appointment management + the bounty board directly from their profile.
+
+### Changes
+
+| File | Action |
+|------|--------|
+| `src/pages/BarberPublicProfile.tsx` | Import `useUserRole`, gate Book Appointment behind `!isBarber && !isOwner` |
+| `src/pages/Profile.tsx` | Add `BarberAppointmentManager` collapsible for barber profiles under Tools section |
+
+### Detail
+
+**`BarberPublicProfile.tsx`**
+- Import `useUserRole` hook
+- Destructure `isBarber` from it
+- Change line 369 condition from `{!isOwner && (` to `{!isOwner && !isBarber && (` — this hides Follow/Like/Donate/Book from barbers viewing other barbers (per existing convention), OR just wrap the Book Appointment button specifically in `!isBarber`
+
+Actually, looking more carefully: `BarberActionButtons` (Follow, Like, Subscribe, Donate) should remain visible to fans AND barbers visiting other barbers. Only the **Book Appointment** button should be client-exclusive. So we gate just that button:
+
+```tsx
+{!isOwner && !isBarber && (
+  <Button ...>Book Appointment</Button>
+)}
+```
+
+Keep the `BarberActionButtons` under `{!isOwner && ...}` as-is.
+
+**`Profile.tsx`**
+- Import `BarberAppointmentManager` and add a new collapsible row for barbers (mirroring the appointments collapsible for fans), with a `CalendarDays` icon and "Manage Appointments" label
+- Add state `const [barberApptOpen, setBarberApptOpen] = useState(false)`
+
