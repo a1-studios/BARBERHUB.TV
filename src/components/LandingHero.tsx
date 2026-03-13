@@ -91,17 +91,6 @@ const LandingHero = ({ onOpenArenaGate }: LandingHeroProps) => {
     }
   }, [user, prizeBanner, searchParams]);
 
-  const handleArenaGateClose = () => {
-    setShowArenaGate(false);
-    // If they close without completing, reset to fan
-    if (!arenaGateVerified) {
-      setSignUpData(prev => ({
-        ...prev,
-        userType: 'fan',
-        countryCode: null
-      }));
-    }
-  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
