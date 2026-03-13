@@ -403,9 +403,14 @@ export const AvatarCrest = ({
 
             {/* M4M Heart at bottom */}
             {showM4M && (
-              <g
+              <motion.g
                 onClick={handleM4MClick}
                 className="cursor-pointer"
+                style={{ pointerEvents: 'all' }}
+                {...(m4mState === 'certified' ? {
+                  animate: { opacity: [0.4, 1, 1, 0.4] },
+                  transition: { duration: 3, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1 },
+                } : {})}
               >
                 <M4MHeart
                   cx={svgW / 2}
@@ -413,7 +418,7 @@ export const AvatarCrest = ({
                   scale={config.wingScale}
                   glowState={m4mState}
                 />
-              </g>
+              </motion.g>
             )}
           </svg>
 
