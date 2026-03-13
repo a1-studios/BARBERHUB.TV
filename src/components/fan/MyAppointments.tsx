@@ -93,7 +93,7 @@ function AppointmentCard({ appointment, barberName, hasReview, onReview }: {
   );
 }
 
-export function MyAppointments() {
+export function MyAppointments({ compact = false }: { compact?: boolean } = {}) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [reviewTarget, setReviewTarget] = useState<{ appointmentId: string; revieweeId: string } | null>(null);

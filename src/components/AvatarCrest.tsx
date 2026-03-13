@@ -253,7 +253,7 @@ const M4MHeart = ({ cx, cy, scale, glowState }: { cx: number; cy: number; scale:
       {glowState !== 'ghost' && (
         <path
           d={`M${cx - 2.5 * s} ${cy + 2 * s} L${cx - 0.5 * s} ${cy + 4.5 * s} L${cx + 3 * s} ${cy - 1 * s}`}
-          stroke={glowState === 'ghost' ? 'currentColor' : ZION_BLUE}
+      stroke={ZION_BLUE}
           strokeWidth={1.2 * s}
           strokeLinecap="round"
           strokeLinejoin="round"
