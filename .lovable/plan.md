@@ -1,29 +1,30 @@
-## Full Appointment Engine — Anti-Gravity (COMPLETED)
 
-### What Was Built
 
-#### Database
-- `barber_services`: Added `deposit_bb` (INTEGER) and `is_free_intro` (BOOLEAN)
-- `appointments`: Added `is_deposit_only` (BOOLEAN) and `remainder_bb` (INTEGER)
-- `house_call_bounties`: New table with RLS, status tracking, expiry
-- `handle_bounty_status_change` trigger: Auto-refunds expired bounties, notifies on claim
-- `expire_bounties_batch()`: Callable function for pg_cron to expire stale bounties
+## Fix Welcome-Back Name Display + Spin Wheel Auth Logic
 
-#### Edge Functions
-- `post-bounty`: Client posts house call bounty, BB escrowed
-- `claim-bounty`: Barber atomically claims bounty, auto-creates appointment
-- `book-appointment`: Rewritten — deposit support, free intro, no tier-gating
-- `manage-appointment`: Rewritten — remainder collection on complete, no tier-gating
+### Problem 1: Welcome-back toast shows no name
+The toast reads from `user.user_metadata?.display_name` which is often empty. The actual name lives in the `profiles` table (or `barber_profiles`). Also needs cyan neon styling for the name and a brief highlight effect.
 
-#### Frontend
-- `BookingConsole.tsx`: Deposit/free-intro aware, tier-gating removed
-- `ServiceSelector.tsx`: FREE badge, deposit display
-- `EscrowConfirmDialog.tsx`: Deposit vs remainder breakdown, free booking support
-- `HouseCallBountyWidget.tsx`: New — client posts house call bounties
-- `BountyBoard.tsx`: New — barber-facing feed of open bounties
-- `MyAppointments.tsx`: Added "Bounties" tab with post widget + active/past bounties
-- `BarberAppointmentManager.tsx`: Added "Bounties" tab with BountyBoard, deposit/free fields in Add Service, tier-gating removed
-- `BountyPresetPicker.tsx`: Added 500 BB preset
+### Problem 2: Spin wheel prompts role selection for signed-in users
+`SpinWheelOverlay` initializes `step` via `useState(isAuthenticated ? 'confirm-spin' : 'role-select')`. Since `user` is often `null` during the first render (auth is loading), the step locks to `'role-select'` and never updates — so authenticated users see the "I am a..." role picker.
 
-### Pending
-- Set up pg_cron job to call `expire_bounties_batch()` every 5 minutes
+### Changes
+
+**1. `src/pages/Index.tsx`** — Fix welcome-back toast with profile name
+- Import `useUserProfile` hook
+- Replace `user.user_metadata?.display_name` lookup with `profile?.display_name` from the profiles table
+- Use `toast()` with a custom JSX message: render the name in cyan neon (`text-cyan-400 font-bold`) with a brief glow effect
+- Add `profile` to the useEffect dependency so it fires once the profile loads
+- After toast, prompt spin by not auto-dismissing the spin wheel (already shows once per session — just ensure it appears after the toast)
+
+**2. `src/components/SpinWheelOverlay.tsx`** — Fix auth-aware step logic
+- Add a `useEffect` that watches `user` and `isBarber`: when user becomes authenticated, auto-set `selectedRole` to the detected role and set `step` to `'confirm-spin'`, skipping the role picker entirely
+- Remove the role-select initialization from `useState` — always start at `'role-select'`, let the effect correct it
+- This ensures that even if auth loads after mount, authenticated users never see the role picker
+
+### Files Changed
+| File | Action |
+|------|--------|
+| `src/pages/Index.tsx` | Use profile name in styled welcome toast |
+| `src/components/SpinWheelOverlay.tsx` | Add useEffect to skip role-select for authenticated users |
+
