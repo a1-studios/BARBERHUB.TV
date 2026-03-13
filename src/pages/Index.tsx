@@ -172,7 +172,15 @@ const Index = () => {
 
       {/* Auto-show spin wheel overlay */}
       <SpinWheelOverlay open={showSpinWheel} onClose={handleSpinClose} />
-    </div>
-  );
+
+      {/* Arena Gate Modal — rendered outside auth conditional so it persists */}
+      <ArenaGateModal
+        isOpen={showArenaGate}
+        onClose={() => setShowArenaGate(false)}
+        onComplete={() => {
+          setShowArenaGate(false);
+          navigate('/profile');
+        }}
+      />
 };
 export default Index;
