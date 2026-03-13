@@ -27,6 +27,7 @@ interface AvatarCrestProps {
 }
 
 const ZION_BLUE = '#002D62';
+const M4M_CYAN = '#00E5FF';
 
 const SIZE_CONFIG = {
   sm: { svgSize: 80, avatarSize: 52, ringR: 30, wingScale: 0.65, starSize: 3 },
