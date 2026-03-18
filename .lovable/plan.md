@@ -1,33 +1,59 @@
-## Anti-Gravity System Audit — Implementation Status
 
-### Phase 1 — Economy Integrity ✅ COMPLETED
-1. ✅ `donate-to-battle` — rewritten to delegate to `process_battle_donation` RPC (80/15/5 split)
-2. ✅ `process-bb-donation` — added 5% fee (3% M4M + 2% platform) on direct tips
-3. ✅ `spin-wheel` — added optimistic lock (`eq('barber_bucks', currentBalance)`) to prevent race conditions
-4. ✅ `distribute-pot` — rewired with 3% M4M + 2% platform fee, M4M fund ledger deposits
-5. ✅ `useBarberBucks.tsx` — removed insecure client-side `deductBucks` mutation
-6. ✅ `auto-close-voting` — added inline pot distribution when battle completes (auto-distribute-pot agent)
-7. ✅ `get_m4m_fund_summary()` — new RPC for Sovereign HQ M4M reporting
 
-### Phase 2 — Battle Lifecycle Fixes ✅ COMPLETED
-1. ✅ `submit-battle-video` — removed YouTube-only regex, accepts any valid video URL (HLS, S3, MP4)
-2. ✅ `start-live-stream` — fixed status from `'voting'` → `'active'`
-3. ✅ `tournament-matchmaker` — fixed FK mismatch: now uses `barber_profile_id` instead of `user_id` for `barber1_id`/`barber2_id`
-4. ✅ `complete-match` — switched from `SUPABASE_ANON_KEY` to `SUPABASE_SERVICE_ROLE_KEY`
+## Voice-First Booking Portal: Camera + Mic Capture Flow
 
-### Phase 3 — AWS IVS Integration (Pending)
-- Needs `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` secrets
-- Build `create-ivs-channel`, `ivs-webhook-handler`, rewrite `sync-battle-viewers`
-- Remove `check-youtube-live` obsolete function
+### Concept
+Transform the booking console into a portal-like experience. After the client takes a photo (camera button), a matching-size microphone button appears. The client speaks naturally — "I want a mid fade with a line-up, keep the top long" — and the voice transcript + photo are sent together to Gemini for a comprehensive style brief that auto-populates the appointment notes.
 
-### Phase 4 — Missing Agents ✅ COMPLETED
-1. ✅ `battle-reminders` — new edge function sends notifications 24h + 1h before scheduled battles
-2. ✅ `subscription-expiry` — new edge function finds expired subscriptions, downgrades tier, notifies barber
-3. ✅ `strike-enforcement` — new edge function DQs barbers with 3+ no-shows from tournaments
-4. ✅ `M4MFundPanel` — new Sovereign HQ component showing total fund balance, source breakdown, recent deposits
+### What Exists
+- `analyze-haircut` edge function already calls Gemini via `ai.gateway.lovable.dev` with image analysis
+- `useCameraPermission` hook handles camera access + stream management
+- `LOVABLE_API_KEY` secret is configured for the AI gateway
+- No `StyleCaptureButton` component exists yet — the previous plan was approved but not implemented
 
-### Phase 5 — Cleanup ✅ COMPLETED
-1. ✅ Deleted `check-youtube-live` edge function (obsolete YouTube dependency)
-2. ✅ Rewrote `sync-battle-viewers` to use Twilio participant API instead of YouTube Data API
-3. ✅ Removed YouTube config from `config.toml`
-4. ⏳ `expire_bounties_batch` pg_cron — needs cron schedule set via SQL Editor (not migration)
+### Changes
+
+#### 1. Create `StyleCaptureButton.tsx` — Camera + Voice Capture Portal
+A new component with two phases:
+
+**Phase 1 — Camera**: Large circular camera button (64px, cyan accent). On tap, opens a fullscreen camera viewfinder overlay inside the dialog. Client taps a shutter button to capture. Photo is stored as base64 in state.
+
+**Phase 2 — Microphone**: After photo capture, the camera button shrinks to show the captured thumbnail, and a matching-size mic button (64px, cyan) appears next to it with a pulsing animation. Client taps and holds (or taps to toggle) to record voice via `MediaRecorder` API. While recording, show a waveform-style pulse animation. On stop, the audio is transcribed by sending it to Gemini as a text prompt (we send the audio transcript request to the AI gateway).
+
+**Transcription approach**: Use the Web Speech API (`webkitSpeechRecognition` / `SpeechRecognition`) for real-time speech-to-text directly in the browser — no extra API calls needed. The transcript text is displayed below the buttons as editable text so the client can review/fix.
+
+**Combined analysis**: Once both photo + transcript are captured, auto-call the `analyze-haircut` edge function with the image AND append the voice transcript to the preferences body. The edge function prompt will be updated to incorporate client-spoken preferences.
+
+**Result display**: Show a compact summary pill: `"Mid fade · Line-up · Keep top long · Oval face · Wavy"` in cyan text.
+
+#### 2. Update `analyze-haircut` edge function — Accept voice transcript
+Add an optional `voice_transcript` field to the request body. When present, include it in the Gemini analysis prompt so the AI combines what it sees (photo) with what the client said (voice) into a unified style brief.
+
+Updated prompt will say: *"The client described what they want: '{voice_transcript}'. Combine this with your visual analysis to produce a comprehensive style brief."*
+
+Add a new field to the response: `client_brief` — a 1-2 sentence natural language summary combining visual analysis + spoken preferences.
+
+#### 3. Update `BookingConsole.tsx` — Minimal Portal Layout
+- Add `StyleCaptureButton` between the barber header and service selector
+- When the AI analysis returns, auto-populate `notes` with the `client_brief`
+- Replace the manual notes input with a compact "Edit notes" text link that expands only when tapped
+- The camera+mic section is the visual hero of the booking dialog — large, centered, portal-like
+
+#### 4. Simplify `BookingConsole.tsx` — Minimal Flow
+- Hide SOS/House Call behind a small "More options" link at the bottom
+- Default view: Camera/Mic portal → Service pills → 3 Quick Picks → Book button
+- Remove wallet bar from default view (show only in escrow confirm)
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/booking/StyleCaptureButton.tsx` | **New** — Camera capture + voice recording with Web Speech API transcription |
+| `supabase/functions/analyze-haircut/index.ts` | Accept `voice_transcript`, combine with image analysis, return `client_brief` |
+| `src/components/booking/BookingConsole.tsx` | Minimal portal layout, integrate StyleCaptureButton, auto-populate notes |
+
+### Technical Notes
+- Web Speech API (`SpeechRecognition`) works in Chrome, Edge, Safari — covers ~90% of mobile users. Falls back to a manual text input if unsupported.
+- No additional secrets needed — uses existing `LOVABLE_API_KEY` for Gemini gateway.
+- Camera uses `navigator.mediaDevices.getUserMedia` with `facingMode: 'environment'` (rear camera for selfie-style capture, switchable).
+
