@@ -200,6 +200,68 @@ const GoldWings = ({ cx, cy, scale, active }: { cx: number; cy: number; scale: n
   </g>
 );
 
+// Diamond: crystalline faceted wings — most elaborate
+const DiamondWings = ({ cx, cy, scale, active }: { cx: number; cy: number; scale: number; active: boolean }) => (
+  <g opacity={active ? 1 : 0.15} className={active ? 'animate-crest-wing-diamond' : ''}>
+    {/* Left wing - crystalline facets */}
+    <path
+      d={`M${cx - 34 * scale} ${cy - 5 * scale}
+          L${cx - 52 * scale} ${cy - 32 * scale}
+          L${cx - 58 * scale} ${cy - 18 * scale}
+          L${cx - 70 * scale} ${cy - 22 * scale}
+          L${cx - 64 * scale} ${cy - 6 * scale}
+          L${cx - 72 * scale} ${cy + 4 * scale}
+          L${cx - 56 * scale} ${cy + 8 * scale}
+          L${cx - 48 * scale} ${cy + 18 * scale}
+          L${cx - 34 * scale} ${cy + 10 * scale} Z`}
+      stroke={TIER_COLORS.diamond.stroke}
+      strokeWidth={2}
+      fill={active ? TIER_COLORS.diamond.fill : 'none'}
+      fillOpacity={active ? 0.12 : 0}
+      style={active ? { filter: TIER_COLORS.diamond.glow } : {}}
+    />
+    <path
+      d={`M${cx - 52 * scale} ${cy - 32 * scale} L${cx - 50 * scale} ${cy - 4 * scale} L${cx - 70 * scale} ${cy - 22 * scale}`}
+      stroke={TIER_COLORS.diamond.stroke} strokeWidth={0.8} fill="none" opacity={active ? 0.4 : 0.06}
+    />
+    <path
+      d={`M${cx - 50 * scale} ${cy - 4 * scale} L${cx - 48 * scale} ${cy + 18 * scale}`}
+      stroke={TIER_COLORS.diamond.stroke} strokeWidth={0.8} fill="none" opacity={active ? 0.3 : 0.06}
+    />
+    <circle cx={cx - 70 * scale} cy={cy - 22 * scale} r={2.5 * scale}
+      stroke={TIER_COLORS.diamond.stroke} strokeWidth={1}
+      fill={active ? TIER_COLORS.diamond.fill : 'none'} fillOpacity={active ? 0.5 : 0} />
+    {/* Right wing - mirrored */}
+    <path
+      d={`M${cx + 34 * scale} ${cy - 5 * scale}
+          L${cx + 52 * scale} ${cy - 32 * scale}
+          L${cx + 58 * scale} ${cy - 18 * scale}
+          L${cx + 70 * scale} ${cy - 22 * scale}
+          L${cx + 64 * scale} ${cy - 6 * scale}
+          L${cx + 72 * scale} ${cy + 4 * scale}
+          L${cx + 56 * scale} ${cy + 8 * scale}
+          L${cx + 48 * scale} ${cy + 18 * scale}
+          L${cx + 34 * scale} ${cy + 10 * scale} Z`}
+      stroke={TIER_COLORS.diamond.stroke}
+      strokeWidth={2}
+      fill={active ? TIER_COLORS.diamond.fill : 'none'}
+      fillOpacity={active ? 0.12 : 0}
+      style={active ? { filter: TIER_COLORS.diamond.glow } : {}}
+    />
+    <path
+      d={`M${cx + 52 * scale} ${cy - 32 * scale} L${cx + 50 * scale} ${cy - 4 * scale} L${cx + 70 * scale} ${cy - 22 * scale}`}
+      stroke={TIER_COLORS.diamond.stroke} strokeWidth={0.8} fill="none" opacity={active ? 0.4 : 0.06}
+    />
+    <path
+      d={`M${cx + 50 * scale} ${cy - 4 * scale} L${cx + 48 * scale} ${cy + 18 * scale}`}
+      stroke={TIER_COLORS.diamond.stroke} strokeWidth={0.8} fill="none" opacity={active ? 0.3 : 0.06}
+    />
+    <circle cx={cx + 70 * scale} cy={cy - 22 * scale} r={2.5 * scale}
+      stroke={TIER_COLORS.diamond.stroke} strokeWidth={1}
+      fill={active ? TIER_COLORS.diamond.fill : 'none'} fillOpacity={active ? 0.5 : 0} />
+  </g>
+);
+
 // Stars row
 const Stars = ({ cx, cy, count, scale, color, active }: { cx: number; cy: number; count: number; scale: number; color: string; active: boolean }) => {
   const spacing = 10 * scale;
