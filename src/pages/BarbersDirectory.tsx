@@ -62,7 +62,6 @@ export default function BarbersDirectory() {
   const tierMap = new Map(subscriptionTiers?.map(t => [t.user_id, t.active_subscription_tier]) || []);
 
   // Get unique specialties and countries
-  const specialties = [...new Set(barbers?.map(b => b.specialty).filter(Boolean))] as string[];
   const countries = [...new Set(barbers?.map(b => b.country_code).filter(Boolean))] as string[];
 
   // Filter and sort barbers
