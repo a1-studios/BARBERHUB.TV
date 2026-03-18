@@ -14,6 +14,9 @@ export interface SponsorAd {
   created_at: string;
   updated_at: string;
   product_image_url: string | null;
+  product_image_url_2: string | null;
+  promo_text: string | null;
+  product_link: string | null;
   starts_at: string | null;
   ends_at: string | null;
 }

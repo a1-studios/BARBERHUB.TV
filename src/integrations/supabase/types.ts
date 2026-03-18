@@ -3059,6 +3059,9 @@ export type Database = {
           message: string
           name: string
           product_image_url: string | null
+          product_image_url_2: string | null
+          product_link: string | null
+          promo_text: string | null
           starts_at: string | null
           updated_at: string
         }
@@ -3075,6 +3078,9 @@ export type Database = {
           message: string
           name: string
           product_image_url?: string | null
+          product_image_url_2?: string | null
+          product_link?: string | null
+          promo_text?: string | null
           starts_at?: string | null
           updated_at?: string
         }
@@ -3091,6 +3097,9 @@ export type Database = {
           message?: string
           name?: string
           product_image_url?: string | null
+          product_image_url_2?: string | null
+          product_link?: string | null
+          promo_text?: string | null
           starts_at?: string | null
           updated_at?: string
         }
