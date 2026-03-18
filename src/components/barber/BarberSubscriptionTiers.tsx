@@ -184,8 +184,8 @@ export const BarberSubscriptionTiers = ({ onShowAddFunds }: BarberSubscriptionTi
               <div className="space-y-3">
                 {features.map((feature: string, idx: number) => (
                   <div key={idx} className="flex items-start gap-2">
-                    <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                    <span className="text-sm">{feature}</span>
+                    <Check className="h-5 w-5 text-white shrink-0 mt-0.5" />
+                    <span className="text-sm text-cyan-400">{feature}</span>
                   </div>
                 ))}
               </div>

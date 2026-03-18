@@ -288,7 +288,7 @@ export default function BarberPublicProfile() {
               <AvatarCrest
                 tier={subscriptionData?.active_subscription_tier}
                 size="lg"
-                interactive={!isOwner}
+                interactive={isOwner}
                 showM4M={true}
                 m4mCertified={subscriptionData?.m4m_certified ?? false}
                 m4mPaid={subscriptionData?.m4m_paid ?? false}
