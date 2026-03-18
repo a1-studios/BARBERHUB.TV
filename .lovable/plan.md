@@ -1,33 +1,23 @@
-## Anti-Gravity System Audit — Implementation Status
 
-### Phase 1 — Economy Integrity ✅ COMPLETED
-1. ✅ `donate-to-battle` — rewritten to delegate to `process_battle_donation` RPC (80/15/5 split)
-2. ✅ `process-bb-donation` — added 5% fee (3% M4M + 2% platform) on direct tips
-3. ✅ `spin-wheel` — added optimistic lock (`eq('barber_bucks', currentBalance)`) to prevent race conditions
-4. ✅ `distribute-pot` — rewired with 3% M4M + 2% platform fee, M4M fund ledger deposits
-5. ✅ `useBarberBucks.tsx` — removed insecure client-side `deductBucks` mutation
-6. ✅ `auto-close-voting` — added inline pot distribution when battle completes (auto-distribute-pot agent)
-7. ✅ `get_m4m_fund_summary()` — new RPC for Sovereign HQ M4M reporting
 
-### Phase 2 — Battle Lifecycle Fixes ✅ COMPLETED
-1. ✅ `submit-battle-video` — removed YouTube-only regex, accepts any valid video URL (HLS, S3, MP4)
-2. ✅ `start-live-stream` — fixed status from `'voting'` → `'active'`
-3. ✅ `tournament-matchmaker` — fixed FK mismatch: now uses `barber_profile_id` instead of `user_id` for `barber1_id`/`barber2_id`
-4. ✅ `complete-match` — switched from `SUPABASE_ANON_KEY` to `SUPABASE_SERVICE_ROLE_KEY`
+## Fix: Hide Membership Plans from Fans + Update Pill Colors
 
-### Phase 3 — AWS IVS Integration (Pending)
-- Needs `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` secrets
-- Build `create-ivs-channel`, `ivs-webhook-handler`, rewrite `sync-battle-viewers`
-- Remove `check-youtube-live` obsolete function
+### Problem
+1. **Fans can see the "Membership Plans" drawer** when visiting a barber's public profile. The `AvatarCrest` has `interactive={!isOwner}`, meaning it opens for visitors (including fans) but not for the profile owner — the exact opposite of what's needed.
+2. **Feature pill text** in `BarberSubscriptionTiers` uses default foreground color instead of cyan blue and white.
 
-### Phase 4 — Missing Agents ✅ COMPLETED
-1. ✅ `battle-reminders` — new edge function sends notifications 24h + 1h before scheduled battles
-2. ✅ `subscription-expiry` — new edge function finds expired subscriptions, downgrades tier, notifies barber
-3. ✅ `strike-enforcement` — new edge function DQs barbers with 3+ no-shows from tournaments
-4. ✅ `M4MFundPanel` — new Sovereign HQ component showing total fund balance, source breakdown, recent deposits
+### Changes
 
-### Phase 5 — Cleanup ✅ COMPLETED
-1. ✅ Deleted `check-youtube-live` edge function (obsolete YouTube dependency)
-2. ✅ Rewrote `sync-battle-viewers` to use Twilio participant API instead of YouTube Data API
-3. ✅ Removed YouTube config from `config.toml`
-4. ⏳ `expire_bounties_batch` pg_cron — needs cron schedule set via SQL Editor (not migration)
+#### 1. Fix `interactive` prop on `AvatarCrest` in `BarberPublicProfile.tsx` (line 292)
+Change from `interactive={!isOwner}` to `interactive={isOwner}`. This way only the barber who owns the profile sees the upgrade drawer when tapping their avatar. Fans and other visitors just see the static crest.
+
+#### 2. Update feature pill colors in `BarberSubscriptionTiers.tsx` (line ~185-189)
+Change the feature list text from default `text-sm` to `text-sm text-cyan-400` for the feature text, and keep the check icon as white (`text-white`) instead of `text-primary`.
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/pages/BarberPublicProfile.tsx` | Flip `interactive` prop: `interactive={isOwner}` |
+| `src/components/barber/BarberSubscriptionTiers.tsx` | Feature text → `text-cyan-400`, check icon → `text-white` |
+
