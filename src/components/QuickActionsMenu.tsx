@@ -67,7 +67,7 @@ export function QuickActionsMenu() {
       id: 'battles',
       label: 'Watch Battles',
       icon: <Swords className="w-5 h-5" />,
-      path: '/battles',
+      path: '/watch',
       requiresAuth: true
     },
     {

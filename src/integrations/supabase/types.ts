@@ -3558,6 +3558,45 @@ export type Database = {
         }
         Relationships: []
       }
+      user_prizes: {
+        Row: {
+          bb_value: number | null
+          claimed_at: string | null
+          created_at: string | null
+          duration_months: number | null
+          expires_at: string | null
+          id: string
+          prize_label: string
+          prize_type: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          bb_value?: number | null
+          claimed_at?: string | null
+          created_at?: string | null
+          duration_months?: number | null
+          expires_at?: string | null
+          id?: string
+          prize_label: string
+          prize_type: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          bb_value?: number | null
+          claimed_at?: string | null
+          created_at?: string | null
+          duration_months?: number | null
+          expires_at?: string | null
+          id?: string
+          prize_label?: string
+          prize_type?: string
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
