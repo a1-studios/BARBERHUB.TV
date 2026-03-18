@@ -70,6 +70,9 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
             role: selectedRole,
             prize_id: prize.id,
             prize_bb: prize.bb_value || 0,
+            prize_type: prize.type || 'bb',
+            prize_label: prize.label,
+            duration_months: prize.duration_months || 0,
           },
         });
         if (error) throw error;
@@ -80,6 +83,21 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
       } catch (err) {
         console.error('Spin-wheel error:', err);
         toast.error('Failed to process spin. Please contact support.');
+      }
+    } else {
+      // Guest user — save prize to localStorage for auto-claim after signup
+      try {
+        localStorage.setItem('pending_spin_prize', JSON.stringify({
+          prize_id: prize.id,
+          prize_bb: prize.bb_value || 0,
+          prize_type: prize.type || 'bb',
+          prize_label: prize.label,
+          role: selectedRole,
+          duration_months: prize.duration_months || 0,
+          timestamp: Date.now(),
+        }));
+      } catch {
+        // localStorage unavailable, silently fail
       }
     }
     setSpinning(false);
