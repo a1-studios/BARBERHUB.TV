@@ -1,33 +1,36 @@
-## Anti-Gravity System Audit — Implementation Status
 
-### Phase 1 — Economy Integrity ✅ COMPLETED
-1. ✅ `donate-to-battle` — rewritten to delegate to `process_battle_donation` RPC (80/15/5 split)
-2. ✅ `process-bb-donation` — added 5% fee (3% M4M + 2% platform) on direct tips
-3. ✅ `spin-wheel` — added optimistic lock (`eq('barber_bucks', currentBalance)`) to prevent race conditions
-4. ✅ `distribute-pot` — rewired with 3% M4M + 2% platform fee, M4M fund ledger deposits
-5. ✅ `useBarberBucks.tsx` — removed insecure client-side `deductBucks` mutation
-6. ✅ `auto-close-voting` — added inline pot distribution when battle completes (auto-distribute-pot agent)
-7. ✅ `get_m4m_fund_summary()` — new RPC for Sovereign HQ M4M reporting
 
-### Phase 2 — Battle Lifecycle Fixes ✅ COMPLETED
-1. ✅ `submit-battle-video` — removed YouTube-only regex, accepts any valid video URL (HLS, S3, MP4)
-2. ✅ `start-live-stream` — fixed status from `'voting'` → `'active'`
-3. ✅ `tournament-matchmaker` — fixed FK mismatch: now uses `barber_profile_id` instead of `user_id` for `barber1_id`/`barber2_id`
-4. ✅ `complete-match` — switched from `SUPABASE_ANON_KEY` to `SUPABASE_SERVICE_ROLE_KEY`
+## Remove BB Awards from Voting & Ensure Proper Transaction Logging
 
-### Phase 3 — AWS IVS Integration (Pending)
-- Needs `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` secrets
-- Build `create-ivs-channel`, `ivs-webhook-handler`, rewrite `sync-battle-viewers`
-- Remove `check-youtube-live` obsolete function
+### Problem
+The `useVoteCombo` hook directly mutates `profiles.barber_bucks` on the client side when users hit vote combo milestones (2x, 5x, 10x, 20x). This is incorrect — voting should never award BB. BB should only come from:
+1. **Purchasing** (Stripe → `purchase-barber-bucks`)
+2. **Receiving donations/tips** (`process-bb-donation`, `process_battle_donation`)
+3. **Winning spin wheel prizes** (`spin-wheel`)
+4. **Admin awards** (`admin-award-barber-bucks`)
 
-### Phase 4 — Missing Agents ✅ COMPLETED
-1. ✅ `battle-reminders` — new edge function sends notifications 24h + 1h before scheduled battles
-2. ✅ `subscription-expiry` — new edge function finds expired subscriptions, downgrades tier, notifies barber
-3. ✅ `strike-enforcement` — new edge function DQs barbers with 3+ no-shows from tournaments
-4. ✅ `M4MFundPanel` — new Sovereign HQ component showing total fund balance, source breakdown, recent deposits
+The combo system also writes directly to `profiles.barber_bucks` from the client, violating the economy integrity rule.
 
-### Phase 5 — Cleanup ✅ COMPLETED
-1. ✅ Deleted `check-youtube-live` edge function (obsolete YouTube dependency)
-2. ✅ Rewrote `sync-battle-viewers` to use Twilio participant API instead of YouTube Data API
-3. ✅ Removed YouTube config from `config.toml`
-4. ⏳ `expire_bounties_batch` pg_cron — needs cron schedule set via SQL Editor (not migration)
+### Fix
+
+#### 1. Strip BB rewards from vote combos
+- In `src/hooks/useVoteCombo.tsx`: Remove the entire BB award block (lines 75-91) that updates `profiles.barber_bucks`
+- Remove the `bonus_bb_earned` field from the upsert to `user_vote_combos`
+- Remove all `bonusEarned` state tracking
+- Keep the combo counter as a fun engagement mechanic (visual only — no BB)
+- Update `COMBO_REWARDS` to show hype messages only, no `bb` values
+
+#### 2. Update VoteComboIndicator UI
+- In `src/components/battles/VoteComboIndicator.tsx`: Remove the "BB earned" display since combos no longer award BB
+- Show only the combo streak count as a visual indicator
+
+#### 3. No other changes needed
+The legitimate BB flows (purchases, donations, spin wheel, admin awards) already use edge functions with proper transaction logging via `barber_bucks_transactions`. Those will correctly reflect in the profile and economy panels.
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/hooks/useVoteCombo.tsx` | Remove BB award logic from combo milestones, keep combo as visual-only |
+| `src/components/battles/VoteComboIndicator.tsx` | Remove BB earned display, show combo streak only |
+
