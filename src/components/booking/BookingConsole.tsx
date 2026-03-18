@@ -44,7 +44,7 @@ export function BookingConsole({
   const [locationText, setLocationText] = useState('');
   const [notes, setNotes] = useState('');
   const [showEscrow, setShowEscrow] = useState(false);
-  const [showMoreOptions, setShowMoreOptions] = useState(false);
+  const [_unused] = useState(false); // placeholder removed
   const [showNotes, setShowNotes] = useState(false);
 
   const { services, getAvailableSlots, isLoading } = useBarberAvailability(barberId);
