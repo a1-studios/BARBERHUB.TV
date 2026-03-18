@@ -3828,6 +3828,17 @@ export type Database = {
         }[]
       }
       get_fee_structure: { Args: never; Returns: Json }
+      get_m4m_fund_summary: {
+        Args: never
+        Returns: {
+          deposit_count: number
+          recent_deposits: Json
+          total_balance_bb: number
+          total_from_donations: number
+          total_from_pot_distribution: number
+          total_from_tip_fees: number
+        }[]
+      }
       get_multiple_public_profiles: {
         Args: { user_ids: string[] }
         Returns: {
