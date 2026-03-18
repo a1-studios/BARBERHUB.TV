@@ -4,11 +4,11 @@ import { cn } from '@/lib/utils';
 
 interface VoteComboIndicatorProps {
   comboCount: number;
-  bonusEarned: number;
+  bonusEarned?: number;
   className?: string;
 }
 
-export const VoteComboIndicator = ({ comboCount, bonusEarned, className }: VoteComboIndicatorProps) => {
+export const VoteComboIndicator = ({ comboCount, className }: VoteComboIndicatorProps) => {
   if (comboCount < 2) return null;
 
   const getComboColor = (count: number) => {
@@ -31,21 +31,11 @@ export const VoteComboIndicator = ({ comboCount, bonusEarned, className }: VoteC
         initial={{ scale: 0, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0, opacity: 0 }}
-        className={cn(
-          "fixed top-20 left-1/2 -translate-x-1/2 z-50",
-          className
-        )}
+        className={cn("fixed top-20 left-1/2 -translate-x-1/2 z-50", className)}
       >
         <motion.div
-          animate={{
-            scale: [1, 1.1, 1],
-            rotate: [0, -5, 5, 0]
-          }}
-          transition={{
-            duration: 0.5,
-            repeat: Infinity,
-            repeatDelay: 1
-          }}
+          animate={{ scale: [1, 1.1, 1], rotate: [0, -5, 5, 0] }}
+          transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 1 }}
           className={cn(
             "bg-background/90 backdrop-blur-lg rounded-full px-6 py-3 shadow-2xl border-2",
             getComboColor(comboCount),
@@ -54,20 +44,13 @@ export const VoteComboIndicator = ({ comboCount, bonusEarned, className }: VoteC
         >
           <div className="flex items-center gap-3">
             <Zap className={cn("h-6 w-6", getComboColor(comboCount))} fill="currentColor" />
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <span className={cn("text-2xl font-bold", getComboColor(comboCount))}>
-                  {comboCount}x
-                </span>
-                <span className="text-sm font-semibold text-foreground">
-                  COMBO!
-                </span>
-              </div>
-              {bonusEarned > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  +{bonusEarned} BB Earned
-                </span>
-              )}
+            <div className="flex items-center gap-2">
+              <span className={cn("text-2xl font-bold", getComboColor(comboCount))}>
+                {comboCount}x
+              </span>
+              <span className="text-sm font-semibold text-foreground">
+                COMBO!
+              </span>
             </div>
           </div>
         </motion.div>
