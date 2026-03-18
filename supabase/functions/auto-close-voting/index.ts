@@ -19,10 +19,9 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
-    // Find all battles that are in 'voting' status and have expired voting periods
     const { data: expiredBattles, error: fetchError } = await supabaseClient
       .from('battles')
-      .select('id, title, voting_ends_at, tournament_id, forfeit_reason')
+      .select('id, title, voting_ends_at, tournament_id, forfeit_reason, winner_id')
       .eq('status', 'voting')
       .lt('voting_ends_at', new Date().toISOString());
 
@@ -34,15 +33,8 @@ serve(async (req) => {
     if (!expiredBattles || expiredBattles.length === 0) {
       console.log('[AUTO-CLOSE-VOTING] No expired battles found');
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'No expired battles to close',
-          processed: 0
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        }
+        JSON.stringify({ success: true, message: 'No expired battles to close', processed: 0 }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -54,132 +46,188 @@ serve(async (req) => {
       try {
         console.log(`[AUTO-CLOSE-VOTING] Processing battle: ${battle.id} - ${battle.title}`);
 
-        // Skip if battle was forfeit (already processed by check-battle-submissions)
         if (battle.forfeit_reason) {
-          console.log(`[AUTO-CLOSE-VOTING] Battle ${battle.id} was forfeit, skipping vote calculation`);
+          console.log(`[AUTO-CLOSE-VOTING] Battle ${battle.id} was forfeit, skipping`);
           continue;
         }
 
-        // Update battle status to completed
+        let winnerId: string | null = null;
+        let winnerDisplayName: string | null = null;
+
+        // Calculate match result to determine winner
+        const { data: result, error: resultError } = await supabaseClient
+          .rpc('calculate_match_result', { battle_id_param: battle.id });
+
+        if (!resultError && result && result.length > 0 && result[0].winner_id) {
+          winnerId = result[0].winner_id;
+          
+          const { data: winnerProfile } = await supabaseClient
+            .rpc('get_public_profile', { profile_user_id: winnerId });
+          
+          if (winnerProfile && winnerProfile.length > 0) {
+            winnerDisplayName = winnerProfile[0].display_name;
+          }
+        }
+
+        // Update battle status to completed with winner
         const { error: updateError } = await supabaseClient
           .from('battles')
-          .update({ status: 'completed' })
+          .update({ 
+            status: 'completed',
+            winner_id: winnerId,
+          })
           .eq('id', battle.id);
 
         if (updateError) {
           console.error(`[AUTO-CLOSE-VOTING] Update error for battle ${battle.id}:`, updateError);
-          results.push({
-            battleId: battle.id,
-            success: false,
-            error: updateError.message
-          });
+          results.push({ battleId: battle.id, success: false, error: updateError.message });
           continue;
         }
 
-        let winnerDisplayName = null;
-
-        // If tournament match, calculate results and update standings
+        // Tournament standings update
         if (battle.tournament_id) {
-          console.log(`[AUTO-CLOSE-VOTING] Tournament match - calculating results for ${battle.id}`);
+          console.log(`[AUTO-CLOSE-VOTING] Tournament match - updating standings for ${battle.id}`);
 
-          // Calculate match result
-          const { data: result, error: resultError } = await supabaseClient
-            .rpc('calculate_match_result', { battle_id_param: battle.id });
-
-          if (resultError) {
-            console.error(`[AUTO-CLOSE-VOTING] Result calculation error for battle ${battle.id}:`, resultError);
-          } else {
-            console.log(`[AUTO-CLOSE-VOTING] Match result calculated for ${battle.id}:`, result);
-            
-            // Get winner profile for notification
-            if (result && result.length > 0 && result[0].winner_id) {
-              const { data: winnerProfile } = await supabaseClient
-                .rpc('get_public_profile', { profile_user_id: result[0].winner_id });
-              
-              if (winnerProfile && winnerProfile.length > 0) {
-                winnerDisplayName = winnerProfile[0].display_name;
-              }
-            }
-          }
-
-          // Update tournament standings
           const { error: standingsError } = await supabaseClient
             .rpc('update_tournament_standings', { battle_id_param: battle.id });
 
           if (standingsError) {
-            console.error(`[AUTO-CLOSE-VOTING] Standings update error for battle ${battle.id}:`, standingsError);
-          } else {
-            console.log(`[AUTO-CLOSE-VOTING] Tournament standings updated for ${battle.id}`);
+            console.error(`[AUTO-CLOSE-VOTING] Standings error:`, standingsError);
           }
 
-          // Update bracket match
           if (result && result.length > 0) {
-            const matchResult = result[0];
-            const { error: bracketError } = await supabaseClient
+            await supabaseClient
               .from('bracket_matches')
               .update({
-                winner_id: matchResult.winner_id,
+                winner_id: result[0].winner_id,
                 status: 'completed',
                 completed_at: new Date().toISOString(),
               })
               .eq('battle_id', battle.id);
-
-            if (bracketError) {
-              console.error(`[AUTO-CLOSE-VOTING] Bracket update error for battle ${battle.id}:`, bracketError);
-            } else {
-              console.log(`[AUTO-CLOSE-VOTING] Bracket updated for ${battle.id}`);
-            }
           }
         }
 
-        // Send notifications to participants
-        const participantsNotifyResult = await supabaseClient
-          .rpc('notify_battle_participants', {
-            p_battle_id: battle.id,
-            p_title: '🏆 Battle Results',
-            p_message: `Voting has ended for "${battle.title}". ${winnerDisplayName ? `${winnerDisplayName} won!` : 'Check the results now!'}`,
-            p_type: 'battle_completed',
-            p_data: { winner_name: winnerDisplayName }
-          });
+        // 🏦 AUTO-DISTRIBUTE POT — pay out winner from challenge/donation pot
+        if (winnerId) {
+          try {
+            // Check if there's a challenge with a pot
+            const { data: challenge } = await supabaseClient
+              .from('open_challenges')
+              .select('id, pot_total, status')
+              .eq('battle_id', battle.id)
+              .eq('status', 'active')
+              .maybeSingle();
 
-        if (participantsNotifyResult.error) {
-          console.error(`[AUTO-CLOSE-VOTING] Participant notification error:`, participantsNotifyResult.error);
-        } else {
-          console.log(`[AUTO-CLOSE-VOTING] Notified ${participantsNotifyResult.data} participants`);
+            if (challenge && challenge.pot_total > 0) {
+              console.log(`[AUTO-CLOSE-VOTING] Distributing challenge pot: ${challenge.pot_total} BB to winner ${winnerId}`);
+
+              // Inline pot distribution with 5% fee (3% M4M + 2% platform)
+              const potTotal = challenge.pot_total;
+              const m4mFee = Math.floor(potTotal * 0.03);
+              const platformFee = Math.floor(potTotal * 0.02);
+              const winnerPayout = potTotal - m4mFee - platformFee;
+
+              // Get winner balance
+              const { data: winnerProfile } = await supabaseClient
+                .from('profiles')
+                .select('barber_bucks')
+                .eq('user_id', winnerId)
+                .single();
+
+              if (winnerProfile) {
+                const newBalance = (winnerProfile.barber_bucks || 0) + winnerPayout;
+
+                await supabaseClient
+                  .from('profiles')
+                  .update({ barber_bucks: newBalance })
+                  .eq('user_id', winnerId);
+
+                await supabaseClient
+                  .from('barber_bucks_transactions')
+                  .insert({
+                    user_id: winnerId,
+                    amount: winnerPayout,
+                    balance_after: newBalance,
+                    transaction_type: 'challenge_win',
+                    description: `Won "${battle.title}" - Pot: ${potTotal} BB`,
+                    reference_id: battle.id
+                  });
+
+                // M4M fund deposit
+                if (m4mFee > 0) {
+                  await supabaseClient
+                    .from('m4m_fund_ledger')
+                    .insert({ amount_bb: m4mFee, source_type: 'pot_distribution', reference_id: battle.id });
+                }
+
+                // Platform fee
+                if (platformFee > 0) {
+                  await supabaseClient
+                    .from('platform_transactions')
+                    .insert({
+                      amount_cents: platformFee * 20,
+                      transaction_type: 'challenge_fee',
+                      description: `Auto-distribute from "${battle.title}"`,
+                      reference_id: battle.id,
+                      source_user_id: winnerId
+                    });
+                }
+
+                // Notify winner
+                await supabaseClient
+                  .from('notifications')
+                  .insert({
+                    user_id: winnerId,
+                    type: 'challenge_won',
+                    title: '🏆 You Won!',
+                    message: `You won ${winnerPayout} BB from "${battle.title}"!`,
+                    data: { battle_id: battle.id, payout: winnerPayout }
+                  });
+
+                console.log(`[AUTO-CLOSE-VOTING] Pot distributed: ${winnerPayout} BB to winner`);
+              }
+
+              // Mark challenge completed
+              await supabaseClient
+                .from('open_challenges')
+                .update({ status: 'completed', winner_id: winnerId })
+                .eq('id', challenge.id);
+            }
+          } catch (potError) {
+            console.error(`[AUTO-CLOSE-VOTING] Pot distribution error for battle ${battle.id}:`, potError);
+          }
         }
 
-        // Send notifications to voters
-        const votersNotifyResult = await supabaseClient
-          .rpc('notify_battle_voters', {
-            p_battle_id: battle.id,
-            p_title: '🎉 Battle Results Are In!',
-            p_message: `The battle "${battle.title}" has ended. ${winnerDisplayName ? `${winnerDisplayName} won!` : 'See who won!'}`,
-            p_type: 'battle_result',
-            p_data: { winner_name: winnerDisplayName }
-          });
+        // Send notifications
+        await supabaseClient.rpc('notify_battle_participants', {
+          p_battle_id: battle.id,
+          p_title: '🏆 Battle Results',
+          p_message: `Voting has ended for "${battle.title}". ${winnerDisplayName ? `${winnerDisplayName} won!` : 'Check the results now!'}`,
+          p_type: 'battle_completed',
+          p_data: { winner_name: winnerDisplayName }
+        });
 
-        if (votersNotifyResult.error) {
-          console.error(`[AUTO-CLOSE-VOTING] Voter notification error:`, votersNotifyResult.error);
-        } else {
-          console.log(`[AUTO-CLOSE-VOTING] Notified ${votersNotifyResult.data} voters`);
-        }
+        await supabaseClient.rpc('notify_battle_voters', {
+          p_battle_id: battle.id,
+          p_title: '🎉 Battle Results Are In!',
+          p_message: `The battle "${battle.title}" has ended. ${winnerDisplayName ? `${winnerDisplayName} won!` : 'See who won!'}`,
+          p_type: 'battle_result',
+          p_data: { winner_name: winnerDisplayName }
+        });
 
         results.push({
           battleId: battle.id,
           title: battle.title,
           success: true,
           isTournamentMatch: !!battle.tournament_id,
-          winnerName: winnerDisplayName
+          winnerName: winnerDisplayName,
+          potDistributed: true,
         });
 
         console.log(`[AUTO-CLOSE-VOTING] Successfully closed battle ${battle.id}`);
       } catch (battleError) {
         console.error(`[AUTO-CLOSE-VOTING] Error processing battle ${battle.id}:`, battleError);
-        results.push({
-          battleId: battle.id,
-          success: false,
-          error: battleError.message
-        });
+        results.push({ battleId: battle.id, success: false, error: battleError.message });
       }
     }
 
@@ -197,19 +245,13 @@ serve(async (req) => {
         failed: failureCount,
         results
       }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
     console.error('[AUTO-CLOSE-VOTING] Error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
