@@ -32,7 +32,13 @@ verify_jwt = false
 [functions.check-battle-submissions]
 verify_jwt = false
 
-[functions.check-youtube-live]
+[functions.battle-reminders]
+verify_jwt = false
+
+[functions.subscription-expiry]
+verify_jwt = false
+
+[functions.strike-enforcement]
 verify_jwt = false
 
 [functions.close-voting]

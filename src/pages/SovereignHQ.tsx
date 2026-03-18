@@ -103,6 +103,9 @@ const SovereignHQ = () => {
         {/* Sponsor Board Control */}
         <SponsorControlPanel onRefresh={refresh} />
 
+        {/* M4M Fund */}
+        <M4MFundPanel />
+
         {/* Vault of Honor Metrics */}
         <VaultMetricsPanel />
 
