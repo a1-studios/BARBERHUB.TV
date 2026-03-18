@@ -1,20 +1,62 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { AuthDialog } from '@/components/auth/AuthDialog';
 import { Button } from '@/components/ui/button';
 import { Scissors, ArrowLeft } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 export default function Auth() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const claimAttempted = useRef(false);
 
   useEffect(() => {
-    // Redirect authenticated users to home
-    if (user && !loading) {
-      navigate('/');
+    if (!user || loading) return;
+
+    // Auto-claim pending spin prize from guest session
+    if (!claimAttempted.current) {
+      claimAttempted.current = true;
+      try {
+        const raw = localStorage.getItem('pending_spin_prize');
+        if (raw) {
+          const pending = JSON.parse(raw);
+          const ageMs = Date.now() - (pending.timestamp || 0);
+          if (ageMs < 24 * 60 * 60 * 1000) {
+            supabase.functions.invoke('spin-wheel', {
+              body: {
+                role: pending.role || 'fan',
+                prize_id: pending.prize_id,
+                prize_bb: pending.prize_bb || 0,
+                prize_type: pending.prize_type || 'bb',
+                prize_label: pending.prize_label || 'Spin Prize',
+                duration_months: pending.duration_months || 0,
+                is_free_spin: true,
+              },
+            }).then(({ data, error }) => {
+              if (!error && data?.success) {
+                localStorage.removeItem('pending_spin_prize');
+                queryClient.invalidateQueries({ queryKey: ['barber_bucks'] });
+                queryClient.invalidateQueries({ queryKey: ['user_prizes'] });
+                toast.success(`🎰 Prize claimed: ${pending.prize_label}!`);
+              } else {
+                localStorage.removeItem('pending_spin_prize');
+              }
+            });
+          } else {
+            localStorage.removeItem('pending_spin_prize');
+          }
+        }
+      } catch {
+        localStorage.removeItem('pending_spin_prize');
+      }
     }
-  }, [user, loading, navigate]);
+
+    navigate('/');
+  }, [user, loading, navigate, queryClient]);
 
   if (loading) {
     return (

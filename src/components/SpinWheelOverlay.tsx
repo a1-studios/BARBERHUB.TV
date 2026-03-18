@@ -79,6 +79,8 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
         if (data?.success) {
           queryClient.invalidateQueries({ queryKey: ['barber_bucks'] });
           queryClient.invalidateQueries({ queryKey: ['barber_bucks_transactions'] });
+          queryClient.invalidateQueries({ queryKey: ['user_prizes'] });
+          toast.success(`🎉 Prize awarded: ${prize.label}`);
         }
       } catch (err) {
         console.error('Spin-wheel error:', err);
