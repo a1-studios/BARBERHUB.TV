@@ -22,12 +22,14 @@ const tierIcons = {
   bronze: Star,
   silver: Sparkles,
   gold: Crown,
+  diamond: Sparkles,
 };
 
 const tierColors = {
   bronze: "text-orange-600",
   silver: "text-slate-400",
   gold: "text-yellow-500",
+  diamond: "text-cyan-400",
 };
 
 interface BarberSubscriptionTiersProps {

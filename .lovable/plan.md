@@ -1,36 +1,33 @@
+## Anti-Gravity System Audit — Implementation Status
 
+### Phase 1 — Economy Integrity ✅ COMPLETED
+1. ✅ `donate-to-battle` — rewritten to delegate to `process_battle_donation` RPC (80/15/5 split)
+2. ✅ `process-bb-donation` — added 5% fee (3% M4M + 2% platform) on direct tips
+3. ✅ `spin-wheel` — added optimistic lock (`eq('barber_bucks', currentBalance)`) to prevent race conditions
+4. ✅ `distribute-pot` — rewired with 3% M4M + 2% platform fee, M4M fund ledger deposits
+5. ✅ `useBarberBucks.tsx` — removed insecure client-side `deductBucks` mutation
+6. ✅ `auto-close-voting` — added inline pot distribution when battle completes (auto-distribute-pot agent)
+7. ✅ `get_m4m_fund_summary()` — new RPC for Sovereign HQ M4M reporting
 
-## Fix: Align Subscription Tier Names Across Sovereign Panel, Database, and Visuals
+### Phase 2 — Battle Lifecycle Fixes ✅ COMPLETED
+1. ✅ `submit-battle-video` — removed YouTube-only regex, accepts any valid video URL (HLS, S3, MP4)
+2. ✅ `start-live-stream` — fixed status from `'voting'` → `'active'`
+3. ✅ `tournament-matchmaker` — fixed FK mismatch: now uses `barber_profile_id` instead of `user_id` for `barber1_id`/`barber2_id`
+4. ✅ `complete-match` — switched from `SUPABASE_ANON_KEY` to `SUPABASE_SERVICE_ROLE_KEY`
 
-### Root Cause
-Three separate naming systems exist — none align:
-1. **Sovereign User Control Panel dropdown**: offers `starter`, `contender`, `champion`
-2. **Database `barber_subscription_tiers` table**: stores `bronze`, `silver`, `gold`
-3. **Visual components** (`AvatarCrest`, `TierRing`): expect `free`, `bronze`, `silver`, `gold`, `diamond`
+### Phase 3 — AWS IVS Integration (Pending)
+- Needs `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` secrets
+- Build `create-ivs-channel`, `ivs-webhook-handler`, rewrite `sync-battle-viewers`
+- Remove `check-youtube-live` obsolete function
 
-When you set a user to "diamond" via Sovereign, the dropdown doesn't even have that option. And any tier set via the current dropdown (`starter`/`contender`/`champion`) doesn't match the visual keys, so the crest always falls back to `free`.
+### Phase 4 — Missing Agents ✅ COMPLETED
+1. ✅ `battle-reminders` — new edge function sends notifications 24h + 1h before scheduled battles
+2. ✅ `subscription-expiry` — new edge function finds expired subscriptions, downgrades tier, notifies barber
+3. ✅ `strike-enforcement` — new edge function DQs barbers with 3+ no-shows from tournaments
+4. ✅ `M4MFundPanel` — new Sovereign HQ component showing total fund balance, source breakdown, recent deposits
 
-Additionally, querying the database confirms **no barber profile currently has a tier set** — the Sovereign save likely wrote a value that didn't persist or wrote a non-matching key.
-
-### Fix
-
-#### 1. Update Sovereign User Control Panel dropdown
-Replace the `starter`/`contender`/`champion` options with the actual tier keys used by the visual system: `bronze`, `silver`, `gold`, `diamond`. Add a "None" option to clear the tier.
-
-**File**: `src/components/sovereign/UserControlPanel.tsx`
-
-#### 2. Add Diamond tier to the subscription tiers component
-Add diamond to the `tierIcons` and `tierColors` maps in `BarberSubscriptionTiers.tsx` so it renders correctly in the membership drawer.
-
-**File**: `src/components/barber/BarberSubscriptionTiers.tsx`
-
-#### 3. No changes needed to `AvatarCrest.tsx` or `TierRing.tsx`
-Both already support `diamond` from the previous edit.
-
-### Files Changed
-
-| File | Change |
-|------|--------|
-| `src/components/sovereign/UserControlPanel.tsx` | Replace `starter`/`contender`/`champion` with `bronze`/`silver`/`gold`/`diamond` + "None" option |
-| `src/components/barber/BarberSubscriptionTiers.tsx` | Add `diamond` to `tierIcons` and `tierColors` maps |
-
+### Phase 5 — Cleanup ✅ COMPLETED
+1. ✅ Deleted `check-youtube-live` edge function (obsolete YouTube dependency)
+2. ✅ Rewrote `sync-battle-viewers` to use Twilio participant API instead of YouTube Data API
+3. ✅ Removed YouTube config from `config.toml`
+4. ⏳ `expire_bounties_batch` pg_cron — needs cron schedule set via SQL Editor (not migration)
