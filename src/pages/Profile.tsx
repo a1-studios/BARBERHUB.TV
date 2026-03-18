@@ -11,7 +11,8 @@ import { useProfileSetup } from '@/hooks/useProfileSetup';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Settings, ExternalLink, Edit3, LogOut, Trash2, ChevronRight, Receipt, CalendarDays, Award, Instagram, Twitter, Youtube, Facebook, Plus } from 'lucide-react';
+import { Loader2, Settings, ExternalLink, Edit3, LogOut, Trash2, ChevronRight, Receipt, CalendarDays, Award, Instagram, Twitter, Youtube, Facebook, Plus, Gift } from 'lucide-react';
+import { MyPrizesSection } from '@/components/profile/MyPrizesSection';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { AddFundsModal } from '@/components/AddFundsModal';
 import { useNavigate } from 'react-router-dom';
@@ -45,6 +46,7 @@ const Profile = () => {
   const [txOpen, setTxOpen] = useState(false);
   const [apptOpen, setApptOpen] = useState(false);
   const [barberApptOpen, setBarberApptOpen] = useState(false);
+  const [prizesOpen, setPrizesOpen] = useState(false);
 
   const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
 
@@ -362,6 +364,20 @@ const Profile = () => {
                   </CollapsibleContent>
                 </Collapsible>
               )}
+
+              {/* My Rewards */}
+              <Collapsible open={prizesOpen} onOpenChange={setPrizesOpen}>
+                <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <Gift className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">My Rewards</span>
+                  </div>
+                  <ChevronRight className={cn('h-4 w-4 text-muted-foreground transition-transform', prizesOpen && 'rotate-90')} />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <MyPrizesSection />
+                </CollapsibleContent>
+              </Collapsible>
             </div>
 
             {/* ACCOUNT section */}

@@ -1,42 +1,33 @@
+## Anti-Gravity System Audit — Implementation Status
 
+### Phase 1 — Economy Integrity ✅ COMPLETED
+1. ✅ `donate-to-battle` — rewritten to delegate to `process_battle_donation` RPC (80/15/5 split)
+2. ✅ `process-bb-donation` — added 5% fee (3% M4M + 2% platform) on direct tips
+3. ✅ `spin-wheel` — added optimistic lock (`eq('barber_bucks', currentBalance)`) to prevent race conditions
+4. ✅ `distribute-pot` — rewired with 3% M4M + 2% platform fee, M4M fund ledger deposits
+5. ✅ `useBarberBucks.tsx` — removed insecure client-side `deductBucks` mutation
+6. ✅ `auto-close-voting` — added inline pot distribution when battle completes (auto-distribute-pot agent)
+7. ✅ `get_m4m_fund_summary()` — new RPC for Sovereign HQ M4M reporting
 
-## Fix Spin Wheel Award System + Display Prizes on Profile
+### Phase 2 — Battle Lifecycle Fixes ✅ COMPLETED
+1. ✅ `submit-battle-video` — removed YouTube-only regex, accepts any valid video URL (HLS, S3, MP4)
+2. ✅ `start-live-stream` — fixed status from `'voting'` → `'active'`
+3. ✅ `tournament-matchmaker` — fixed FK mismatch: now uses `barber_profile_id` instead of `user_id` for `barber1_id`/`barber2_id`
+4. ✅ `complete-match` — switched from `SUPABASE_ANON_KEY` to `SUPABASE_SERVICE_ROLE_KEY`
 
-### Problems Identified
+### Phase 3 — AWS IVS Integration (Pending)
+- Needs `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` secrets
+- Build `create-ivs-channel`, `ivs-webhook-handler`, rewrite `sync-battle-viewers`
+- Remove `check-youtube-live` obsolete function
 
-1. **RLS blocks service-role inserts on `user_prizes`**: The migration created a policy `FOR ALL USING (false)` which blocks ALL operations including inserts from the service role client. The `spin-wheel` edge function uses `SUPABASE_SERVICE_ROLE_KEY` which bypasses RLS, so this should work — but if the service role client has `.auth.admin` mode off, inserts could fail silently. Need to verify and fix to use a permissive INSERT policy for service role.
+### Phase 4 — Missing Agents ✅ COMPLETED
+1. ✅ `battle-reminders` — new edge function sends notifications 24h + 1h before scheduled battles
+2. ✅ `subscription-expiry` — new edge function finds expired subscriptions, downgrades tier, notifies barber
+3. ✅ `strike-enforcement` — new edge function DQs barbers with 3+ no-shows from tournaments
+4. ✅ `M4MFundPanel` — new Sovereign HQ component showing total fund balance, source breakdown, recent deposits
 
-2. **Authenticated users get awarded correctly** (BB via `spin-wheel` edge function), but there's **no success toast** confirming the award on the result screen for authenticated users — they just see "COLLECT & CLOSE" with no confirmation the backend succeeded.
-
-3. **Guest flow works** (localStorage save + auto-claim on Index.tsx), but if the user navigates directly to `/auth` instead of going back to `/`, the auto-claim never fires because the claim logic only lives in `Index.tsx`.
-
-4. **No prizes section on Profile page**: Users have no way to see their won prizes (free cuts, premium features, visibility boosts). The `user_prizes` table exists but nothing reads from it.
-
-### Plan
-
-#### 1. Fix RLS on `user_prizes` (migration)
-- Drop the `FOR ALL USING (false)` policy (it's meant to block client-side writes but the service role bypasses RLS anyway)
-- Add a proper INSERT policy: `FOR INSERT WITH CHECK (false)` to block client inserts while service role bypasses
-- Keep the SELECT policy for users to read own prizes
-
-#### 2. Add auto-claim to Auth page redirect
-- In `Auth.tsx`, when user is authenticated and redirecting to `/`, the `Index.tsx` claim logic will handle it. But also add the claim logic to `Auth.tsx`'s redirect effect so it fires immediately after signup.
-
-#### 3. Show success feedback in SpinWheelOverlay
-- After the `spin-wheel` edge function succeeds for authenticated users, show a toast confirming the prize was credited.
-
-#### 4. Create `MyPrizes` section on Profile page
-- Add a collapsible "My Rewards" section in the Profile Tools area
-- Query `user_prizes` for the current user, show active prizes with labels, type badges, and expiry dates
-- Show a "No prizes yet" empty state
-
-#### Files Changed
-
-| File | Change |
-|------|--------|
-| `supabase/migrations/new` | Fix `user_prizes` RLS — replace the `FOR ALL USING(false)` with proper INSERT/UPDATE blocking |
-| `src/components/SpinWheelOverlay.tsx` | Add success toast after authenticated spin completes |
-| `src/pages/Auth.tsx` | Add pending spin prize auto-claim on redirect |
-| `src/components/profile/MyPrizesSection.tsx` | New component — queries and displays `user_prizes` |
-| `src/pages/Profile.tsx` | Add MyPrizesSection collapsible in the Tools section |
-
+### Phase 5 — Cleanup ✅ COMPLETED
+1. ✅ Deleted `check-youtube-live` edge function (obsolete YouTube dependency)
+2. ✅ Rewrote `sync-battle-viewers` to use Twilio participant API instead of YouTube Data API
+3. ✅ Removed YouTube config from `config.toml`
+4. ⏳ `expire_bounties_batch` pg_cron — needs cron schedule set via SQL Editor (not migration)
