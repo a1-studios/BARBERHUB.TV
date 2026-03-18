@@ -72,7 +72,7 @@ export default function BarbersDirectory() {
       barber.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       barber.specialty?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesSpecialty = specialtyFilter === 'all' || barber.specialty === specialtyFilter;
+    const matchesSpecialty = specialtyFilter === 'all' || parseSpecialties(barber.specialty).includes(specialtyFilter);
     const matchesCountry = countryFilter === 'all' || barber.country_code === countryFilter;
     const matchesLive = liveFilter === 'all' || 
       (liveFilter === 'live' && barber.is_live) ||
