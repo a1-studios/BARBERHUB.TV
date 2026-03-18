@@ -646,6 +646,8 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
                       placeholder="e.g., Please arrive 5 minutes early. No refunds within 2 hours of appointment."
                       rows={2}
                     />
+                  </div>
+
                   <div>
                     <Label htmlFor="slot_duration">Time Slot Duration</Label>
                     <p className="text-xs text-muted-foreground mb-1">How long each bookable slot should be</p>
