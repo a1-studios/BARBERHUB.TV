@@ -91,6 +91,7 @@ export default function BarbersDirectory() {
     // Helper to get tier priority (Gold > Silver > Bronze > Free)
     const getTierPriority = (userId: string) => {
       const tier = tierMap.get(userId)?.toLowerCase();
+      if (tier === 'diamond') return 5;
       if (tier === 'gold') return 4;
       if (tier === 'silver') return 3;
       if (tier === 'bronze') return 2;
