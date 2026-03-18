@@ -75,12 +75,10 @@ const LivePulseMonitor = ({ refreshTrigger }: LivePulseMonitorProps) => {
 
         <div className="bg-[#0f0f1a] p-3 rounded-lg border border-gray-800 text-center">
           <div className="flex items-center justify-center gap-1 mb-1">
-            <Coins className="h-4 w-4 text-yellow-400" />
+            <Users className="h-4 w-4 text-yellow-400" />
           </div>
-          <div className="text-xl font-mono text-yellow-400">
-            {stats.total_bb_circulation.toLocaleString()}
-          </div>
-          <div className="text-xs text-gray-500">Total BB</div>
+          <div className="text-xl font-mono text-yellow-400">{stats.active_streams}</div>
+          <div className="text-xs text-gray-500">Active Streams</div>
         </div>
 
         <div className="bg-[#0f0f1a] p-3 rounded-lg border border-gray-800 text-center">
