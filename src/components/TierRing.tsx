@@ -63,7 +63,7 @@ export const TierRing = ({ tier, size = 'md', interactive = false, children, cla
         onClick={handleClick}
       >
         {/* Shimmer sweep overlay for silver/gold */}
-        {(validTier === 'silver' || validTier === 'gold') && (
+        {(validTier === 'silver' || validTier === 'gold' || validTier === 'diamond') && (
           <div className="absolute inset-[-1px] rounded-full animate-tier-shimmer overflow-hidden pointer-events-none z-0">
             <div className={cn(
               'absolute inset-0 rounded-full',
