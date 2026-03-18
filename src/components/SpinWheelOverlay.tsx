@@ -70,7 +70,7 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
             role: selectedRole,
             prize_id: prize.id,
             prize_bb: prize.bb_value || 0,
-            prize_type: prize.type || 'bb',
+            prize_type: prize.prize_type || 'bb',
             prize_label: prize.label,
             duration_months: prize.duration_months || 0,
           },
