@@ -27,6 +27,7 @@ const TIER_BORDER = {
   bronze: 'border-[3px] border-orange-500 animate-tier-glow-bronze',
   silver: 'border-[3px] border-slate-300 animate-tier-glow-silver',
   gold: 'border-4 border-yellow-400 animate-tier-glow-gold',
+  diamond: 'border-4 border-cyan-300 animate-tier-glow-diamond',
 } as const;
 
 export const TierRing = ({ tier, size = 'md', interactive = false, children, className }: TierRingProps) => {
@@ -62,12 +63,13 @@ export const TierRing = ({ tier, size = 'md', interactive = false, children, cla
         onClick={handleClick}
       >
         {/* Shimmer sweep overlay for silver/gold */}
-        {(validTier === 'silver' || validTier === 'gold') && (
+        {(validTier === 'silver' || validTier === 'gold' || validTier === 'diamond') && (
           <div className="absolute inset-[-1px] rounded-full animate-tier-shimmer overflow-hidden pointer-events-none z-0">
             <div className={cn(
               'absolute inset-0 rounded-full',
               validTier === 'silver' && 'bg-gradient-conic from-transparent via-slate-200/30 to-transparent',
               validTier === 'gold' && 'bg-gradient-conic from-transparent via-yellow-300/40 to-transparent',
+              validTier === 'diamond' && 'bg-gradient-conic from-transparent via-cyan-300/50 to-transparent',
             )} />
           </div>
         )}

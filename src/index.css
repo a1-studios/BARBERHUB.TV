@@ -524,6 +524,15 @@
     animation: tierGlowGold 1.8s ease-in-out infinite;
   }
 
+  /* Diamond glow pulse — crystalline cyan */
+  @keyframes tierGlowDiamond {
+    0%, 100% { box-shadow: 0 0 18px hsl(200 80% 75% / 0.5), 0 0 40px hsl(200 80% 75% / 0.25), inset 0 0 10px hsl(200 80% 75% / 0.15); }
+    50% { box-shadow: 0 0 45px hsl(200 80% 75% / 0.8), 0 0 80px hsl(200 80% 75% / 0.4), 0 0 120px hsl(200 80% 75% / 0.2), inset 0 0 16px hsl(200 80% 75% / 0.3); }
+  }
+  .animate-tier-glow-diamond {
+    animation: tierGlowDiamond 1.6s ease-in-out infinite;
+  }
+
   /* Shimmer sweep for silver/gold */
   @keyframes tierShimmer {
     from { transform: rotate(0deg); }
@@ -586,6 +595,14 @@
   }
   .animate-crest-wing-gold {
     animation: crestWingGold 1.8s ease-in-out infinite;
+  }
+
+  @keyframes crestWingDiamond {
+    0%, 100% { filter: drop-shadow(0 0 10px hsl(200 80% 75% / 0.5)); }
+    50% { filter: drop-shadow(0 0 24px hsl(200 80% 75% / 0.8)); }
+  }
+  .animate-crest-wing-diamond {
+    animation: crestWingDiamond 1.6s ease-in-out infinite;
   }
 
   @keyframes crestStarTwinkle {

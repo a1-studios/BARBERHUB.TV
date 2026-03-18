@@ -40,6 +40,7 @@ const TIER_COLORS = {
   bronze: { stroke: 'hsl(24 80% 45%)', fill: 'hsl(24 80% 45%)', glow: '0 0 12px hsl(24 80% 45% / 0.5)', starFill: 'hsl(24 80% 50%)' },
   silver: { stroke: 'hsl(210 20% 80%)', fill: 'hsl(210 20% 80%)', glow: '0 0 16px hsl(210 20% 80% / 0.5)', starFill: 'hsl(210 20% 85%)' },
   gold: { stroke: 'hsl(45 100% 55%)', fill: 'hsl(45 100% 55%)', glow: '0 0 20px hsl(45 100% 55% / 0.5)', starFill: 'hsl(45 100% 60%)' },
+  diamond: { stroke: 'hsl(200 80% 75%)', fill: 'hsl(200 80% 75%)', glow: '0 0 24px hsl(200 80% 75% / 0.6)', starFill: 'hsl(200 80% 80%)' },
 };
 
 // Bronze: angular chevron wings
@@ -199,6 +200,68 @@ const GoldWings = ({ cx, cy, scale, active }: { cx: number; cy: number; scale: n
   </g>
 );
 
+// Diamond: crystalline faceted wings — most elaborate
+const DiamondWings = ({ cx, cy, scale, active }: { cx: number; cy: number; scale: number; active: boolean }) => (
+  <g opacity={active ? 1 : 0.15} className={active ? 'animate-crest-wing-diamond' : ''}>
+    {/* Left wing - crystalline facets */}
+    <path
+      d={`M${cx - 34 * scale} ${cy - 5 * scale}
+          L${cx - 52 * scale} ${cy - 32 * scale}
+          L${cx - 58 * scale} ${cy - 18 * scale}
+          L${cx - 70 * scale} ${cy - 22 * scale}
+          L${cx - 64 * scale} ${cy - 6 * scale}
+          L${cx - 72 * scale} ${cy + 4 * scale}
+          L${cx - 56 * scale} ${cy + 8 * scale}
+          L${cx - 48 * scale} ${cy + 18 * scale}
+          L${cx - 34 * scale} ${cy + 10 * scale} Z`}
+      stroke={TIER_COLORS.diamond.stroke}
+      strokeWidth={2}
+      fill={active ? TIER_COLORS.diamond.fill : 'none'}
+      fillOpacity={active ? 0.12 : 0}
+      style={active ? { filter: TIER_COLORS.diamond.glow } : {}}
+    />
+    <path
+      d={`M${cx - 52 * scale} ${cy - 32 * scale} L${cx - 50 * scale} ${cy - 4 * scale} L${cx - 70 * scale} ${cy - 22 * scale}`}
+      stroke={TIER_COLORS.diamond.stroke} strokeWidth={0.8} fill="none" opacity={active ? 0.4 : 0.06}
+    />
+    <path
+      d={`M${cx - 50 * scale} ${cy - 4 * scale} L${cx - 48 * scale} ${cy + 18 * scale}`}
+      stroke={TIER_COLORS.diamond.stroke} strokeWidth={0.8} fill="none" opacity={active ? 0.3 : 0.06}
+    />
+    <circle cx={cx - 70 * scale} cy={cy - 22 * scale} r={2.5 * scale}
+      stroke={TIER_COLORS.diamond.stroke} strokeWidth={1}
+      fill={active ? TIER_COLORS.diamond.fill : 'none'} fillOpacity={active ? 0.5 : 0} />
+    {/* Right wing - mirrored */}
+    <path
+      d={`M${cx + 34 * scale} ${cy - 5 * scale}
+          L${cx + 52 * scale} ${cy - 32 * scale}
+          L${cx + 58 * scale} ${cy - 18 * scale}
+          L${cx + 70 * scale} ${cy - 22 * scale}
+          L${cx + 64 * scale} ${cy - 6 * scale}
+          L${cx + 72 * scale} ${cy + 4 * scale}
+          L${cx + 56 * scale} ${cy + 8 * scale}
+          L${cx + 48 * scale} ${cy + 18 * scale}
+          L${cx + 34 * scale} ${cy + 10 * scale} Z`}
+      stroke={TIER_COLORS.diamond.stroke}
+      strokeWidth={2}
+      fill={active ? TIER_COLORS.diamond.fill : 'none'}
+      fillOpacity={active ? 0.12 : 0}
+      style={active ? { filter: TIER_COLORS.diamond.glow } : {}}
+    />
+    <path
+      d={`M${cx + 52 * scale} ${cy - 32 * scale} L${cx + 50 * scale} ${cy - 4 * scale} L${cx + 70 * scale} ${cy - 22 * scale}`}
+      stroke={TIER_COLORS.diamond.stroke} strokeWidth={0.8} fill="none" opacity={active ? 0.4 : 0.06}
+    />
+    <path
+      d={`M${cx + 50 * scale} ${cy - 4 * scale} L${cx + 48 * scale} ${cy + 18 * scale}`}
+      stroke={TIER_COLORS.diamond.stroke} strokeWidth={0.8} fill="none" opacity={active ? 0.3 : 0.06}
+    />
+    <circle cx={cx + 70 * scale} cy={cy - 22 * scale} r={2.5 * scale}
+      stroke={TIER_COLORS.diamond.stroke} strokeWidth={1}
+      fill={active ? TIER_COLORS.diamond.fill : 'none'} fillOpacity={active ? 0.5 : 0} />
+  </g>
+);
+
 // Stars row
 const Stars = ({ cx, cy, count, scale, color, active }: { cx: number; cy: number; count: number; scale: number; color: string; active: boolean }) => {
   const spacing = 10 * scale;
@@ -309,7 +372,7 @@ export const AvatarCrest = ({
 
   const cx = config.svgSize / 2;
   const cy = config.svgSize / 2 - (showM4M ? 6 * config.wingScale : 0);
-  const starCount = validTier === 'bronze' ? 3 : validTier === 'silver' ? 4 : validTier === 'gold' ? 5 : 0;
+  const starCount = validTier === 'diamond' ? 6 : validTier === 'gold' ? 5 : validTier === 'silver' ? 4 : validTier === 'bronze' ? 3 : 0;
   const tierColors = TIER_COLORS[validTier];
 
   const m4mState: 'ghost' | 'certified' | 'complete' =
@@ -365,6 +428,7 @@ export const AvatarCrest = ({
             {validTier === 'bronze' && <BronzeWings cx={svgW / 2} cy={cy + (svgH - config.svgSize) / 2} scale={config.wingScale} active={true} />}
             {validTier === 'silver' && <SilverWings cx={svgW / 2} cy={cy + (svgH - config.svgSize) / 2} scale={config.wingScale} active={true} />}
             {validTier === 'gold' && <GoldWings cx={svgW / 2} cy={cy + (svgH - config.svgSize) / 2} scale={config.wingScale} active={true} />}
+            {validTier === 'diamond' && <DiamondWings cx={svgW / 2} cy={cy + (svgH - config.svgSize) / 2} scale={config.wingScale} active={true} />}
 
             {/* Inner ring */}
             <circle
