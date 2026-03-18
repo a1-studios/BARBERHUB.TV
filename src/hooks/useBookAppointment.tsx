@@ -61,6 +61,7 @@ export function useBookAppointment() {
         denied: 'Appointment denied. Client refunded.',
         completed: `Appointment completed! Earned ${data.payout} BB`,
         cancelled: `Appointment cancelled. ${data.refund} BB refunded.`,
+        no_show: `Client marked as no-show. ${data.fee_collected || 0} BB fee collected.`,
       };
       toast.success(msgs[data.status] || 'Appointment updated');
     },
