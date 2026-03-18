@@ -11,7 +11,7 @@ const LivePulseMonitor = ({ refreshTrigger }: LivePulseMonitorProps) => {
   const [stats, setStats] = useState({
     active_battles: 0,
     recent_vote_activity: 0,
-    total_bb_circulation: 0,
+    active_streams: 0,
     transactions_last_hour: 0
   });
   const [loading, setLoading] = useState(false);

@@ -67,7 +67,7 @@ const EconomyControlPanel = ({ stats, onRefresh, refreshTrigger }: EconomyContro
         {/* Stats Row */}
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="bg-[#0f0f1a] p-3 rounded-lg border border-gray-800">
-            <div className="text-xs text-gray-500 uppercase tracking-wide">Total Supply</div>
+            <div className="text-xs text-gray-500 uppercase tracking-wide">Total BB in Circulation</div>
             <div className="text-2xl font-mono text-yellow-400">
               {stats?.total_supply?.toLocaleString() || '0'}
             </div>
