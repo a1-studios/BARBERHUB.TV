@@ -253,23 +253,14 @@ export function BookingConsole({
               </p>
             </div>
 
-            {/* More Options — SOS / House Call */}
-            {bookingType === 'standard' && !showMoreOptions && (
-              <button
-                onClick={() => setShowMoreOptions(true)}
-                className="w-full flex items-center justify-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors pt-1"
-              >
-                More options <ChevronDown className="h-3 w-3" />
-              </button>
-            )}
-
-            {showMoreOptions && bookingType === 'standard' && (
+            {/* SOS / House Call — always visible */}
+            {bookingType === 'standard' && (
               <div className="flex gap-2 pt-1">
                 <Button
                   variant="outline"
                   size="sm"
                   className="flex-1 h-8 text-[11px] font-bold border-destructive/30 text-destructive hover:bg-destructive/10"
-                  onClick={() => { setBookingType('sos'); setShowMoreOptions(false); }}
+                  onClick={() => setBookingType('sos')}
                 >
                   <Zap className="h-3.5 w-3.5 mr-1" /> SOS Cut
                 </Button>
@@ -277,7 +268,7 @@ export function BookingConsole({
                   variant="outline"
                   size="sm"
                   className="flex-1 h-8 text-[11px] font-bold border-accent/30 text-accent-foreground hover:bg-accent/10"
-                  onClick={() => { setBookingType('house_call'); setShowMoreOptions(false); }}
+                  onClick={() => setBookingType('house_call')}
                 >
                   <Home className="h-3.5 w-3.5 mr-1" /> House Call
                 </Button>

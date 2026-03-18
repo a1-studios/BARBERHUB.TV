@@ -18,7 +18,6 @@ interface StyleCaptureButtonProps {
 }
 
 export function StyleCaptureButton({ onAnalysisComplete }: StyleCaptureButtonProps) {
-  // Camera state
   const [showCamera, setShowCamera] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
@@ -37,22 +36,61 @@ export function StyleCaptureButton({ onAnalysisComplete }: StyleCaptureButtonPro
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysis, setAnalysis] = useState<StyleAnalysis | null>(null);
 
+  // Track if we need to re-acquire camera after facingMode change
+  const [needsReacquire, setNeedsReacquire] = useState(false);
+
   useEffect(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) setSpeechSupported(false);
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) setSpeechSupported(false);
+  }, []);
+
+  // Attach stream to video element once it's mounted
+  useEffect(() => {
+    if (showCamera && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(console.error);
+    }
+  }, [showCamera]);
+
+  // Re-acquire camera when facingMode changes (triggered by flip)
+  useEffect(() => {
+    if (!needsReacquire) return;
+    setNeedsReacquire(false);
+
+    const reacquire = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode, width: { ideal: 1280 }, height: { ideal: 1280 } },
+          audio: false,
+        });
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(console.error);
+        }
+      } catch {
+        toast.error('Could not switch camera');
+      }
+    };
+    reacquire();
+  }, [needsReacquire, facingMode]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      streamRef.current?.getTracks().forEach(t => t.stop());
+    };
   }, []);
 
   const startCamera = useCallback(async () => {
     try {
+      // Get stream first (must be in click handler for user-gesture)
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode, width: { ideal: 720 }, height: { ideal: 720 } },
+        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 1280 } },
         audio: false,
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
+      // Show the camera UI — useEffect will attach stream to videoRef
       setShowCamera(true);
     } catch {
       toast.error('Camera access denied');
@@ -78,6 +116,15 @@ export function StyleCaptureButton({ onAnalysisComplete }: StyleCaptureButtonPro
     stopCamera();
   }, [stopCamera]);
 
+  const flipCamera = useCallback(() => {
+    // Stop current tracks
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+    // Toggle facing mode and trigger re-acquire
+    setFacingMode(f => f === 'user' ? 'environment' : 'user');
+    setNeedsReacquire(true);
+  }, []);
+
   const toggleListening = useCallback(() => {
     if (isListening) {
       recognitionRef.current?.stop();
@@ -85,10 +132,10 @@ export function StyleCaptureButton({ onAnalysisComplete }: StyleCaptureButtonPro
       return;
     }
 
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) return;
 
-    const recognition = new SpeechRecognition();
+    const recognition = new SR();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
@@ -110,10 +157,7 @@ export function StyleCaptureButton({ onAnalysisComplete }: StyleCaptureButtonPro
       setEditableTranscript(combined.trim());
     };
 
-    recognition.onerror = () => {
-      setIsListening(false);
-    };
-
+    recognition.onerror = () => setIsListening(false);
     recognition.onend = () => {
       setIsListening(false);
       setTranscript(finalTranscript);
@@ -128,7 +172,6 @@ export function StyleCaptureButton({ onAnalysisComplete }: StyleCaptureButtonPro
   const runAnalysis = useCallback(async () => {
     if (!capturedPhoto) return;
     setIsAnalyzing(true);
-
     try {
       const { data, error } = await supabase.functions.invoke('analyze-haircut', {
         body: {
@@ -137,16 +180,13 @@ export function StyleCaptureButton({ onAnalysisComplete }: StyleCaptureButtonPro
           preferences: {},
         },
       });
-
       if (error) throw error;
-
       const result: StyleAnalysis = {
         current_style_detected: data.current_style_detected || '',
         face_shape: data.face_shape || '',
         hair_texture: data.hair_texture || '',
         client_brief: data.client_brief || `${data.current_style_detected} · ${data.face_shape} face · ${data.hair_texture}`,
       };
-
       setAnalysis(result);
       onAnalysisComplete(result.client_brief, result);
       toast.success('Style analysis complete');
@@ -157,11 +197,6 @@ export function StyleCaptureButton({ onAnalysisComplete }: StyleCaptureButtonPro
     }
   }, [capturedPhoto, editableTranscript, onAnalysisComplete]);
 
-  // Auto-analyze when photo captured and no transcript (user can still add voice)
-  const handleAnalyzeClick = () => {
-    runAnalysis();
-  };
-
   const reset = () => {
     setCapturedPhoto(null);
     setTranscript('');
@@ -170,7 +205,6 @@ export function StyleCaptureButton({ onAnalysisComplete }: StyleCaptureButtonPro
     stopCamera();
   };
 
-  // Canvas for photo capture (hidden)
   const hiddenCanvas = <canvas ref={canvasRef} className="hidden" />;
 
   // Already analyzed — show summary
@@ -180,10 +214,10 @@ export function StyleCaptureButton({ onAnalysisComplete }: StyleCaptureButtonPro
         {hiddenCanvas}
         <div className="flex items-center gap-3">
           {capturedPhoto && (
-            <img src={capturedPhoto} alt="Style" className="h-12 w-12 rounded-full object-cover border-2 border-cyan-500/40" />
+            <img src={capturedPhoto} alt="Style" className="h-12 w-12 rounded-full object-cover border-2 border-primary/40" />
           )}
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-cyan-400 flex items-center gap-1">
+            <p className="text-xs font-bold text-primary flex items-center gap-1">
               <Sparkles className="h-3 w-3" /> Style Brief
             </p>
             <p className="text-xs text-muted-foreground truncate">{analysis.client_brief}</p>
@@ -196,34 +230,44 @@ export function StyleCaptureButton({ onAnalysisComplete }: StyleCaptureButtonPro
     );
   }
 
-  // Camera viewfinder open
+  // Full-screen camera viewfinder
   if (showCamera) {
     return (
-      <div className="relative rounded-xl overflow-hidden bg-black aspect-square max-h-[280px]">
+      <>
         {hiddenCanvas}
-        <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-        <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-4 p-4 bg-gradient-to-t from-black/60">
-          <Button variant="ghost" size="icon" className="h-10 w-10 text-white" onClick={stopCamera}>
-            <X className="h-5 w-5" />
-          </Button>
-          <button
-            onClick={capturePhoto}
-            className="h-16 w-16 rounded-full border-4 border-white bg-white/20 backdrop-blur-sm active:scale-90 transition-transform"
+        <div className="fixed inset-0 z-50 bg-black flex flex-col">
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="flex-1 w-full object-cover"
           />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-10 w-10 text-white"
-            onClick={() => {
-              stopCamera();
-              setFacingMode(f => f === 'user' ? 'environment' : 'user');
-              setTimeout(startCamera, 100);
-            }}
-          >
-            <RotateCcw className="h-5 w-5" />
-          </Button>
+          {/* Controls overlay */}
+          <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-6 p-6 pb-10 bg-gradient-to-t from-black/70 via-black/30 to-transparent">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-12 w-12 rounded-full text-white bg-white/10 backdrop-blur-sm"
+              onClick={stopCamera}
+            >
+              <X className="h-6 w-6" />
+            </Button>
+            <button
+              onClick={capturePhoto}
+              className="h-20 w-20 rounded-full border-4 border-white bg-white/20 backdrop-blur-sm active:scale-90 transition-transform"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-12 w-12 rounded-full text-white bg-white/10 backdrop-blur-sm"
+              onClick={flipCamera}
+            >
+              <RotateCcw className="h-6 w-6" />
+            </Button>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -233,9 +277,8 @@ export function StyleCaptureButton({ onAnalysisComplete }: StyleCaptureButtonPro
       <div className="space-y-3">
         {hiddenCanvas}
         <div className="flex items-center justify-center gap-4">
-          {/* Photo thumbnail */}
           <div className="relative">
-            <img src={capturedPhoto} alt="Captured" className="h-16 w-16 rounded-full object-cover border-2 border-cyan-500/40" />
+            <img src={capturedPhoto} alt="Captured" className="h-16 w-16 rounded-full object-cover border-2 border-primary/40" />
             <Button
               variant="ghost"
               size="icon"
@@ -246,54 +289,49 @@ export function StyleCaptureButton({ onAnalysisComplete }: StyleCaptureButtonPro
             </Button>
           </div>
 
-          {/* Mic button */}
-          {speechSupported ? (
+          {speechSupported && (
             <button
               onClick={toggleListening}
               className={cn(
                 'h-16 w-16 rounded-full flex items-center justify-center transition-all border-2',
                 isListening
                   ? 'bg-destructive/20 border-destructive text-destructive animate-pulse'
-                  : 'bg-cyan-500/10 border-cyan-500/40 text-cyan-400 hover:bg-cyan-500/20'
+                  : 'bg-primary/10 border-primary/40 text-primary hover:bg-primary/20'
               )}
             >
               {isListening ? <MicOff className="h-7 w-7" /> : <Mic className="h-7 w-7" />}
             </button>
-          ) : null}
+          )}
         </div>
 
-        {/* Listening indicator */}
         {isListening && (
-          <p className="text-xs text-center text-cyan-400 animate-pulse font-medium">
+          <p className="text-xs text-center text-primary animate-pulse font-medium">
             Listening… tell us what you want
           </p>
         )}
 
-        {/* Transcript (editable) */}
         {editableTranscript && !isListening && (
           <Input
             value={editableTranscript}
             onChange={(e) => setEditableTranscript(e.target.value)}
             placeholder="Describe the style you want..."
-            className="text-xs border-cyan-500/30"
+            className="text-xs border-primary/30"
           />
         )}
 
-        {/* Manual text input fallback */}
         {!speechSupported && !editableTranscript && (
           <Input
             value={editableTranscript}
             onChange={(e) => setEditableTranscript(e.target.value)}
             placeholder="Describe the style you want..."
-            className="text-xs border-cyan-500/30"
+            className="text-xs border-primary/30"
           />
         )}
 
-        {/* Analyze button */}
         <Button
-          onClick={handleAnalyzeClick}
+          onClick={runAnalysis}
           disabled={isAnalyzing}
-          className="w-full h-9 text-xs font-bold bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 hover:bg-cyan-500/30"
+          className="w-full h-9 text-xs font-bold bg-primary/20 text-primary border border-primary/40 hover:bg-primary/30"
           variant="outline"
         >
           {isAnalyzing ? (
@@ -318,7 +356,7 @@ export function StyleCaptureButton({ onAnalysisComplete }: StyleCaptureButtonPro
       {hiddenCanvas}
       <button
         onClick={startCamera}
-        className="h-16 w-16 rounded-full bg-cyan-500/10 border-2 border-cyan-500/40 text-cyan-400 flex items-center justify-center hover:bg-cyan-500/20 transition-colors active:scale-95"
+        className="h-16 w-16 rounded-full bg-primary/10 border-2 border-primary/40 text-primary flex items-center justify-center hover:bg-primary/20 transition-colors active:scale-95"
       >
         <Camera className="h-7 w-7" />
       </button>
