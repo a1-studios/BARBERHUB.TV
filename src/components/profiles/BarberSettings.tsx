@@ -646,6 +646,20 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
                       placeholder="e.g., Please arrive 5 minutes early. No refunds within 2 hours of appointment."
                       rows={2}
                     />
+                  <div>
+                    <Label htmlFor="slot_duration">Time Slot Duration</Label>
+                    <p className="text-xs text-muted-foreground mb-1">How long each bookable slot should be</p>
+                    <Select value={barberForm.slot_duration_minutes} onValueChange={(value) => setBarberForm(prev => ({ ...prev, slot_duration_minutes: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select slot duration" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="15">15 minutes</SelectItem>
+                        <SelectItem value="30">30 minutes</SelectItem>
+                        <SelectItem value="45">45 minutes</SelectItem>
+                        <SelectItem value="60">60 minutes</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>
