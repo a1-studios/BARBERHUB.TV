@@ -108,7 +108,11 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
     accepting_clients: true,
     available_for_battles: true,
     pricing_range: '',
-    business_hours: ''
+    business_hours: '',
+    // Booking economy
+    require_deposit: true,
+    default_no_show_fee_bb: 50,
+    booking_message: ''
   });
 
   const [businessSettings, setBusinessSettings] = useState({
@@ -160,7 +164,10 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
         accepting_clients: true,
         available_for_battles: true,
         pricing_range: '',
-        business_hours: ''
+        business_hours: '',
+        require_deposit: (barberProfile as any).require_deposit ?? true,
+        default_no_show_fee_bb: (barberProfile as any).default_no_show_fee_bb ?? 50,
+        booking_message: (barberProfile as any).booking_message || ''
       });
     }
   }, [barberProfile]);
@@ -205,7 +212,7 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
       if (!user?.id) throw new Error('No user');
       
       // country_code is intentionally excluded (permanently locked)
-      const barberData = {
+      const barberData: Record<string, any> = {
         user_id: user.id,
         name: data.name,
         nickname: data.nickname,
@@ -217,12 +224,15 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
         instagram_handle: data.instagram || null,
         facebook_handle: data.facebook || null,
         twitter_handle: data.twitter || null,
-        youtube_handle: data.youtube || null
+        youtube_handle: data.youtube || null,
+        require_deposit: data.require_deposit,
+        default_no_show_fee_bb: data.default_no_show_fee_bb,
+        booking_message: data.booking_message || null
       };
 
       const { error } = await supabase
         .from('barber_profiles')
-        .upsert(barberData, { onConflict: 'user_id' });
+        .upsert(barberData as any, { onConflict: 'user_id' });
       
       if (error) throw error;
     },
@@ -583,6 +593,54 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
 
               <Separator />
 
+              {/* Booking Economy */}
+              <div>
+                <h4 className="font-semibold mb-4 flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Booking Economy
+                </h4>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="require_deposit">Require Deposit</Label>
+                      <p className="text-sm text-muted-foreground">Clients must pay BB deposit to book</p>
+                    </div>
+                    <Switch
+                      id="require_deposit"
+                      checked={barberForm.require_deposit}
+                      onCheckedChange={(checked) => setBarberForm(prev => ({ ...prev, require_deposit: checked }))}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="no_show_fee">No-Show Fee (BB)</Label>
+                    <p className="text-xs text-muted-foreground mb-1">Amount deducted from client if they miss the appointment</p>
+                    <Input
+                      id="no_show_fee"
+                      type="number"
+                      min={0}
+                      max={1000}
+                      value={barberForm.default_no_show_fee_bb}
+                      onChange={(e) => setBarberForm(prev => ({ ...prev, default_no_show_fee_bb: parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="booking_message">Custom Booking Message</Label>
+                    <p className="text-xs text-muted-foreground mb-1">Shown to clients when they book</p>
+                    <Textarea
+                      id="booking_message"
+                      value={barberForm.booking_message}
+                      onChange={(e) => setBarberForm(prev => ({ ...prev, booking_message: e.target.value }))}
+                      placeholder="e.g., Please arrive 5 minutes early. No refunds within 2 hours of appointment."
+                      rows={2}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
               {/* Pricing */}
               <div>
                 <h4 className="font-semibold mb-4 flex items-center gap-2">
@@ -620,6 +678,16 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
                   rows={3}
                 />
               </div>
+
+              <Button 
+                onClick={handleBarberSubmit} 
+                disabled={updateBarberMutation.isPending}
+                className="w-full"
+              >
+                {updateBarberMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                <Save className="w-4 h-4 mr-2" />
+                Save Business Settings
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

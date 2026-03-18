@@ -393,10 +393,12 @@ export type Database = {
           active_subscription_tier: string | null
           battles_created_this_month: number
           bio: string | null
+          booking_message: string | null
           can_stream: boolean | null
           competition_categories: string[] | null
           country_code: string | null
           created_at: string
+          default_no_show_fee_bb: number
           facebook_handle: string | null
           featured_video_id: string | null
           id: string
@@ -414,6 +416,7 @@ export type Database = {
           phone_number: string | null
           portfolio_url: string | null
           rating: number | null
+          require_deposit: boolean
           specialty: string | null
           subscription_expires_at: string | null
           tier_level: number
@@ -430,10 +433,12 @@ export type Database = {
           active_subscription_tier?: string | null
           battles_created_this_month?: number
           bio?: string | null
+          booking_message?: string | null
           can_stream?: boolean | null
           competition_categories?: string[] | null
           country_code?: string | null
           created_at?: string
+          default_no_show_fee_bb?: number
           facebook_handle?: string | null
           featured_video_id?: string | null
           id?: string
@@ -451,6 +456,7 @@ export type Database = {
           phone_number?: string | null
           portfolio_url?: string | null
           rating?: number | null
+          require_deposit?: boolean
           specialty?: string | null
           subscription_expires_at?: string | null
           tier_level?: number
@@ -467,10 +473,12 @@ export type Database = {
           active_subscription_tier?: string | null
           battles_created_this_month?: number
           bio?: string | null
+          booking_message?: string | null
           can_stream?: boolean | null
           competition_categories?: string[] | null
           country_code?: string | null
           created_at?: string
+          default_no_show_fee_bb?: number
           facebook_handle?: string | null
           featured_video_id?: string | null
           id?: string
@@ -488,6 +496,7 @@ export type Database = {
           phone_number?: string | null
           portfolio_url?: string | null
           rating?: number | null
+          require_deposit?: boolean
           specialty?: string | null
           subscription_expires_at?: string | null
           tier_level?: number
@@ -1562,6 +1571,8 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           id: string
+          no_show_count: number
+          total_appointments: number
           total_votes_cast: number | null
           updated_at: string
           user_id: string
@@ -1572,6 +1583,8 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           id?: string
+          no_show_count?: number
+          total_appointments?: number
           total_votes_cast?: number | null
           updated_at?: string
           user_id: string
@@ -1582,6 +1595,8 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           id?: string
+          no_show_count?: number
+          total_appointments?: number
           total_votes_cast?: number | null
           updated_at?: string
           user_id?: string
@@ -3961,6 +3976,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      increment_client_appointments: {
+        Args: { p_client_id: string; p_is_no_show?: boolean }
+        Returns: undefined
       }
       increment_no_show_count: {
         Args: { barber_user_id: string }

@@ -252,14 +252,25 @@ export function BarberAppointmentManager() {
                     )}
 
                     {(appt.status === 'confirmed' || appt.status === 'in_transit') && (
-                      <Button
-                        size="sm"
-                        className="w-full mt-4 bg-primary"
-                        onClick={() => manageMutation.mutate({ appointment_id: appt.id, action: 'complete' }, { onSuccess: () => refetchAppointments() })}
-                        disabled={manageMutation.isPending}
-                      >
-                        Mark Complete ✂️
-                      </Button>
+                      <div className="flex gap-2 mt-4">
+                        <Button
+                          size="sm"
+                          className="flex-1 bg-primary"
+                          onClick={() => manageMutation.mutate({ appointment_id: appt.id, action: 'complete' }, { onSuccess: () => refetchAppointments() })}
+                          disabled={manageMutation.isPending}
+                        >
+                          Mark Complete ✂️
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="flex-1"
+                          onClick={() => manageMutation.mutate({ appointment_id: appt.id, action: 'no_show' }, { onSuccess: () => refetchAppointments() })}
+                          disabled={manageMutation.isPending}
+                        >
+                          No-Show 🚫
+                        </Button>
+                      </div>
                     )}
                   </CardContent>
                 </Card>
