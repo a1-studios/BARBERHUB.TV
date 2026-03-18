@@ -40,6 +40,7 @@ const TIER_COLORS = {
   bronze: { stroke: 'hsl(24 80% 45%)', fill: 'hsl(24 80% 45%)', glow: '0 0 12px hsl(24 80% 45% / 0.5)', starFill: 'hsl(24 80% 50%)' },
   silver: { stroke: 'hsl(210 20% 80%)', fill: 'hsl(210 20% 80%)', glow: '0 0 16px hsl(210 20% 80% / 0.5)', starFill: 'hsl(210 20% 85%)' },
   gold: { stroke: 'hsl(45 100% 55%)', fill: 'hsl(45 100% 55%)', glow: '0 0 20px hsl(45 100% 55% / 0.5)', starFill: 'hsl(45 100% 60%)' },
+  diamond: { stroke: 'hsl(200 80% 75%)', fill: 'hsl(200 80% 75%)', glow: '0 0 24px hsl(200 80% 75% / 0.6)', starFill: 'hsl(200 80% 80%)' },
 };
 
 // Bronze: angular chevron wings
