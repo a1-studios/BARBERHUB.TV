@@ -112,7 +112,8 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
     // Booking economy
     require_deposit: true,
     default_no_show_fee_bb: 50,
-    booking_message: ''
+    booking_message: '',
+    slot_duration_minutes: '30'
   });
 
   const [businessSettings, setBusinessSettings] = useState({
