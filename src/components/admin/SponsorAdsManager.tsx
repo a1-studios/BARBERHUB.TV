@@ -32,6 +32,9 @@ interface SponsorFormData {
   highlight_end: number;
   logo_url: string;
   product_image_url: string;
+  product_image_url_2: string;
+  promo_text: string;
+  product_link: string;
   link: string;
   display_order: number;
   is_active: boolean;
@@ -45,6 +48,9 @@ const DEFAULT_FORM: SponsorFormData = {
   highlight_end: 15,
   logo_url: "",
   product_image_url: "",
+  product_image_url_2: "",
+  promo_text: "15% off with BB",
+  product_link: "",
   link: "",
   display_order: 0,
   is_active: true,
