@@ -553,6 +553,42 @@ export default function SponsorControlPanel({ onRefresh }: Props) {
                 className="bg-[#0f0f1a] border-gray-700 text-white"
               />
             </div>
+            <div>
+              <Label className="text-gray-400">Product Image 1 URL</Label>
+              <Input
+                value={form.product_image_url}
+                onChange={(e) => setForm((p) => ({ ...p, product_image_url: e.target.value }))}
+                placeholder="https://example.com/product1.png"
+                className="bg-[#0f0f1a] border-gray-700 text-white"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-400">Product Image 2 URL</Label>
+              <Input
+                value={form.product_image_url_2}
+                onChange={(e) => setForm((p) => ({ ...p, product_image_url_2: e.target.value }))}
+                placeholder="https://example.com/product2.png"
+                className="bg-[#0f0f1a] border-gray-700 text-white"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-400">Promo Text (on Product 2)</Label>
+              <Input
+                value={form.promo_text}
+                onChange={(e) => setForm((p) => ({ ...p, promo_text: e.target.value }))}
+                placeholder="15% off with BB"
+                className="bg-[#0f0f1a] border-gray-700 text-white"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-400">Product Link URL</Label>
+              <Input
+                value={form.product_link}
+                onChange={(e) => setForm((p) => ({ ...p, product_link: e.target.value }))}
+                placeholder="https://shop.example.com/product"
+                className="bg-[#0f0f1a] border-gray-700 text-white"
+              />
+            </div>
             <div className="flex items-center gap-4">
               <div className="flex-1">
                 <Label className="text-gray-400">Display Order</Label>
