@@ -1,29 +1,31 @@
-## Full Appointment Engine — Anti-Gravity (COMPLETED)
+## Anti-Gravity System Audit — Implementation Status
 
-### What Was Built
+### Phase 1 — Economy Integrity ✅ COMPLETED
+1. ✅ `donate-to-battle` — rewritten to delegate to `process_battle_donation` RPC (80/15/5 split)
+2. ✅ `process-bb-donation` — added 5% fee (3% M4M + 2% platform) on direct tips
+3. ✅ `spin-wheel` — added optimistic lock (`eq('barber_bucks', currentBalance)`) to prevent race conditions
+4. ✅ `distribute-pot` — rewired with 3% M4M + 2% platform fee, M4M fund ledger deposits
+5. ✅ `useBarberBucks.tsx` — removed insecure client-side `deductBucks` mutation
+6. ✅ `auto-close-voting` — added inline pot distribution when battle completes (auto-distribute-pot agent)
+7. ✅ `get_m4m_fund_summary()` — new RPC for Sovereign HQ M4M reporting
 
-#### Database
-- `barber_services`: Added `deposit_bb` (INTEGER) and `is_free_intro` (BOOLEAN)
-- `appointments`: Added `is_deposit_only` (BOOLEAN) and `remainder_bb` (INTEGER)
-- `house_call_bounties`: New table with RLS, status tracking, expiry
-- `handle_bounty_status_change` trigger: Auto-refunds expired bounties, notifies on claim
-- `expire_bounties_batch()`: Callable function for pg_cron to expire stale bounties
+### Phase 2 — Battle Lifecycle Fixes ✅ COMPLETED
+1. ✅ `submit-battle-video` — removed YouTube-only regex, accepts any valid video URL (HLS, S3, MP4)
+2. ✅ `start-live-stream` — fixed status from `'voting'` → `'active'`
+3. ✅ `tournament-matchmaker` — fixed FK mismatch: now uses `barber_profile_id` instead of `user_id` for `barber1_id`/`barber2_id`
+4. ✅ `complete-match` — switched from `SUPABASE_ANON_KEY` to `SUPABASE_SERVICE_ROLE_KEY`
 
-#### Edge Functions
-- `post-bounty`: Client posts house call bounty, BB escrowed
-- `claim-bounty`: Barber atomically claims bounty, auto-creates appointment
-- `book-appointment`: Rewritten — deposit support, free intro, no tier-gating
-- `manage-appointment`: Rewritten — remainder collection on complete, no tier-gating
+### Phase 3 — AWS IVS Integration (Pending)
+- Needs `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` secrets
+- Build `create-ivs-channel`, `ivs-webhook-handler`, rewrite `sync-battle-viewers`
+- Remove `check-youtube-live` obsolete function
 
-#### Frontend
-- `BookingConsole.tsx`: Deposit/free-intro aware, tier-gating removed
-- `ServiceSelector.tsx`: FREE badge, deposit display
-- `EscrowConfirmDialog.tsx`: Deposit vs remainder breakdown, free booking support
-- `HouseCallBountyWidget.tsx`: New — client posts house call bounties
-- `BountyBoard.tsx`: New — barber-facing feed of open bounties
-- `MyAppointments.tsx`: Added "Bounties" tab with post widget + active/past bounties
-- `BarberAppointmentManager.tsx`: Added "Bounties" tab with BountyBoard, deposit/free fields in Add Service, tier-gating removed
-- `BountyPresetPicker.tsx`: Added 500 BB preset
+### Phase 4 — Missing Agents (Pending)
+- Battle reminder notifications (24h + 1h before)
+- Subscription expiry handler
+- Strike enforcement (3 no-shows = DQ)
+- M4M fund reporting panel in Sovereign HQ UI
 
-### Pending
-- Set up pg_cron job to call `expire_bounties_batch()` every 5 minutes
+### Phase 5 — Cleanup (Pending)
+- Remove YouTube edge functions
+- Set up pg_cron for `expire_bounties_batch`
