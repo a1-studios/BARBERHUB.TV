@@ -150,6 +150,10 @@ export default function SponsorControlPanel({ onRefresh }: Props) {
       link: ad.link ?? "",
       display_order: ad.display_order,
       is_active: ad.is_active,
+      product_image_url: ad.product_image_url ?? "",
+      product_image_url_2: ad.product_image_url_2 ?? "",
+      promo_text: ad.promo_text ?? "15% off with BB",
+      product_link: ad.product_link ?? "",
     });
     setDialogOpen(true);
   };
