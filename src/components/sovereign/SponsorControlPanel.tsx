@@ -194,6 +194,10 @@ export default function SponsorControlPanel({ onRefresh }: Props) {
       link: form.link || null,
       display_order: form.display_order,
       is_active: form.is_active,
+      product_image_url: form.product_image_url || null,
+      product_image_url_2: form.product_image_url_2 || null,
+      promo_text: form.promo_text || null,
+      product_link: form.product_link || null,
     };
 
     if (editingId) {
