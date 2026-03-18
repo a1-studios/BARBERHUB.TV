@@ -257,7 +257,20 @@ const Profile = () => {
                 <SubCategoryBadge subCategory={(profile as any).sub_category} size="sm" />
               )}
             </div>
-            {specialty && <p className="text-sm text-muted-foreground text-center mt-0.5">{specialty}</p>}
+            {specialty && (
+              <div className="flex flex-wrap justify-center gap-1.5 mt-1">
+                {parseSpecialties(specialty).map(id => {
+                  const tag = getSpecialtyDisplay(id);
+                  return tag ? (
+                    <Badge key={id} variant="secondary" className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary border-primary/20">
+                      {tag.emoji} {tag.label}
+                    </Badge>
+                  ) : (
+                    <Badge key={id} variant="secondary" className="text-[10px] px-2 py-0.5">{id}</Badge>
+                  );
+                })}
+              </div>
+            )}
             {profile?.bio && <p className="text-xs text-muted-foreground text-center mt-0.5 max-w-[260px]">{profile.bio}</p>}
 
             {/* Social icons */}

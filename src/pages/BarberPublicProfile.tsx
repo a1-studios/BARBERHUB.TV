@@ -320,7 +320,18 @@ export default function BarberPublicProfile() {
                   </div>
                   
                   {barberData.specialty && (
-                    <p className="text-lg text-muted-foreground mt-2">{barberData.specialty}</p>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {parseSpecialties(barberData.specialty).map(id => {
+                        const tag = getSpecialtyDisplay(id);
+                        return tag ? (
+                          <Badge key={id} variant="secondary" className="text-xs px-2.5 py-1 bg-primary/10 text-primary border-primary/20">
+                            {tag.emoji} {tag.label}
+                          </Badge>
+                        ) : (
+                          <Badge key={id} variant="secondary" className="text-xs px-2.5 py-1">{id}</Badge>
+                        );
+                      })}
+                    </div>
                   )}
 
                   {/* Social Media Icons - Max 3 */}

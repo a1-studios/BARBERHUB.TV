@@ -193,20 +193,11 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
           </div>
 
           <div>
-            <Label htmlFor="specialty">Specialty</Label>
-            <Select value={formData.specialty} onValueChange={(value) => setFormData({ ...formData, specialty: value })}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select your specialty" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="fades">Fades</SelectItem>
-                <SelectItem value="cuts">Classic Cuts</SelectItem>
-                <SelectItem value="beard">Beard Styling</SelectItem>
-                <SelectItem value="color">Hair Color</SelectItem>
-                <SelectItem value="texture">Texture Work</SelectItem>
-                <SelectItem value="creative">Creative Styles</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label>Specialties</Label>
+            <SpecialtyPillSelector
+              value={formData.specialty}
+              onChange={(value) => setFormData({ ...formData, specialty: value })}
+            />
           </div>
 
           <div>

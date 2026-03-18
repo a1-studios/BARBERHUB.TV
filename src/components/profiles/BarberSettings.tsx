@@ -401,20 +401,11 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="specialty">Specialty</Label>
-                    <Select value={barberForm.specialty} onValueChange={(value) => setBarberForm(prev => ({ ...prev, specialty: value }))}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your specialty" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="fades">Fades</SelectItem>
-                        <SelectItem value="cuts">Classic Cuts</SelectItem>
-                        <SelectItem value="beard">Beard Styling</SelectItem>
-                        <SelectItem value="color">Hair Color</SelectItem>
-                        <SelectItem value="texture">Texture Work</SelectItem>
-                        <SelectItem value="creative">Creative Styles</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label>Specialties</Label>
+                    <SpecialtyPillSelector
+                      value={barberForm.specialty}
+                      onChange={(value) => setBarberForm(prev => ({ ...prev, specialty: value }))}
+                    />
                   </div>
                   
                   <div>
