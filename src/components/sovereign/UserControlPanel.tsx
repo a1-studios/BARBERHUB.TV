@@ -533,14 +533,16 @@ const UserControlPanel = ({ stats, onRefresh }: UserControlPanelProps) => {
                       {fieldInput('Battles This Month', 'battles_created_this_month', barberEdits, setBarberEdits, getBarberVal, 'number')}
                       <div className="space-y-1">
                         <Label className="text-xs text-gray-400">Subscription Tier</Label>
-                        <Select value={getBarberVal('active_subscription_tier') || ''} onValueChange={(v) => setBarberEdits({ ...barberEdits, active_subscription_tier: v })}>
+                        <Select value={getBarberVal('active_subscription_tier') || 'none'} onValueChange={(v) => setBarberEdits({ ...barberEdits, active_subscription_tier: v === 'none' ? null : v })}>
                           <SelectTrigger className="bg-[#0f0f1a] border-gray-700 text-white h-8 text-sm">
                             <SelectValue placeholder="None" />
                           </SelectTrigger>
                           <SelectContent className="bg-[#1a1a2e] border-gray-700">
-                            <SelectItem value="starter">Starter</SelectItem>
-                            <SelectItem value="contender">Contender</SelectItem>
-                            <SelectItem value="champion">Champion</SelectItem>
+                            <SelectItem value="none">None</SelectItem>
+                            <SelectItem value="bronze">Bronze</SelectItem>
+                            <SelectItem value="silver">Silver</SelectItem>
+                            <SelectItem value="gold">Gold</SelectItem>
+                            <SelectItem value="diamond">Diamond</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
