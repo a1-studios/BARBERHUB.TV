@@ -364,6 +364,20 @@ const Profile = () => {
                   </CollapsibleContent>
                 </Collapsible>
               )}
+
+              {/* My Rewards */}
+              <Collapsible open={prizesOpen} onOpenChange={setPrizesOpen}>
+                <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <Gift className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">My Rewards</span>
+                  </div>
+                  <ChevronRight className={cn('h-4 w-4 text-muted-foreground transition-transform', prizesOpen && 'rotate-90')} />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <MyPrizesSection />
+                </CollapsibleContent>
+              </Collapsible>
             </div>
 
             {/* ACCOUNT section */}
