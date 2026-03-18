@@ -49,6 +49,10 @@ interface SponsorFormData {
   link: string;
   display_order: number;
   is_active: boolean;
+  product_image_url: string;
+  product_image_url_2: string;
+  promo_text: string;
+  product_link: string;
 }
 
 const DEFAULT_FORM: SponsorFormData = {
@@ -59,6 +63,10 @@ const DEFAULT_FORM: SponsorFormData = {
   link: "",
   display_order: 0,
   is_active: true,
+  product_image_url: "",
+  product_image_url_2: "",
+  promo_text: "15% off with BB",
+  product_link: "",
 };
 
 interface Props {
@@ -142,6 +150,10 @@ export default function SponsorControlPanel({ onRefresh }: Props) {
       link: ad.link ?? "",
       display_order: ad.display_order,
       is_active: ad.is_active,
+      product_image_url: ad.product_image_url ?? "",
+      product_image_url_2: ad.product_image_url_2 ?? "",
+      promo_text: ad.promo_text ?? "15% off with BB",
+      product_link: ad.product_link ?? "",
     });
     setDialogOpen(true);
   };
@@ -182,6 +194,10 @@ export default function SponsorControlPanel({ onRefresh }: Props) {
       link: form.link || null,
       display_order: form.display_order,
       is_active: form.is_active,
+      product_image_url: form.product_image_url || null,
+      product_image_url_2: form.product_image_url_2 || null,
+      promo_text: form.promo_text || null,
+      product_link: form.product_link || null,
     };
 
     if (editingId) {
@@ -534,6 +550,42 @@ export default function SponsorControlPanel({ onRefresh }: Props) {
                 value={form.link}
                 onChange={(e) => setForm((p) => ({ ...p, link: e.target.value }))}
                 placeholder="https://sponsor-website.com"
+                className="bg-[#0f0f1a] border-gray-700 text-white"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-400">Product Image 1 URL</Label>
+              <Input
+                value={form.product_image_url}
+                onChange={(e) => setForm((p) => ({ ...p, product_image_url: e.target.value }))}
+                placeholder="https://example.com/product1.png"
+                className="bg-[#0f0f1a] border-gray-700 text-white"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-400">Product Image 2 URL</Label>
+              <Input
+                value={form.product_image_url_2}
+                onChange={(e) => setForm((p) => ({ ...p, product_image_url_2: e.target.value }))}
+                placeholder="https://example.com/product2.png"
+                className="bg-[#0f0f1a] border-gray-700 text-white"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-400">Promo Text (on Product 2)</Label>
+              <Input
+                value={form.promo_text}
+                onChange={(e) => setForm((p) => ({ ...p, promo_text: e.target.value }))}
+                placeholder="15% off with BB"
+                className="bg-[#0f0f1a] border-gray-700 text-white"
+              />
+            </div>
+            <div>
+              <Label className="text-gray-400">Product Link URL</Label>
+              <Input
+                value={form.product_link}
+                onChange={(e) => setForm((p) => ({ ...p, product_link: e.target.value }))}
+                placeholder="https://shop.example.com/product"
                 className="bg-[#0f0f1a] border-gray-700 text-white"
               />
             </div>

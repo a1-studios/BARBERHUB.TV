@@ -32,6 +32,9 @@ interface SponsorFormData {
   highlight_end: number;
   logo_url: string;
   product_image_url: string;
+  product_image_url_2: string;
+  promo_text: string;
+  product_link: string;
   link: string;
   display_order: number;
   is_active: boolean;
@@ -45,6 +48,9 @@ const DEFAULT_FORM: SponsorFormData = {
   highlight_end: 15,
   logo_url: "",
   product_image_url: "",
+  product_image_url_2: "",
+  promo_text: "15% off with BB",
+  product_link: "",
   link: "",
   display_order: 0,
   is_active: true,
@@ -78,6 +84,9 @@ export default function SponsorAdsManager() {
       highlight_end: ad.highlight_end,
       logo_url: ad.logo_url ?? "",
       product_image_url: ad.product_image_url ?? "",
+      product_image_url_2: ad.product_image_url_2 ?? "",
+      promo_text: ad.promo_text ?? "15% off with BB",
+      product_link: ad.product_link ?? "",
       link: ad.link ?? "",
       display_order: ad.display_order,
       is_active: ad.is_active,
@@ -141,6 +150,9 @@ export default function SponsorAdsManager() {
       highlight_end: form.highlight_end,
       logo_url: form.logo_url || null,
       product_image_url: form.product_image_url || null,
+      product_image_url_2: form.product_image_url_2 || null,
+      promo_text: form.promo_text || null,
+      product_link: form.product_link || null,
       link: form.link || null,
       display_order: form.display_order,
       is_active: form.is_active,
@@ -384,19 +396,19 @@ export default function SponsorAdsManager() {
                 placeholder="https://sponsor-website.com"
               />
             </div>
-            {/* Product Image Upload */}
+            {/* Product Image 1 */}
             <div>
-              <Label>Product Image (shown in battle theater)</Label>
+              <Label>Product Image 1 URL</Label>
               <div className="flex items-center gap-3 mt-1">
                 {form.product_image_url ? (
-                  <img src={form.product_image_url} alt="Product preview" className="h-10 w-10 rounded object-contain bg-muted border" />
+                  <img src={form.product_image_url} alt="Product 1" className="h-10 w-10 rounded object-contain bg-muted border" />
                 ) : (
                   <div className="h-10 w-10 rounded bg-muted flex items-center justify-center border">
                     <Sparkles className="w-4 h-4 text-muted-foreground" />
                   </div>
                 )}
                 <Input
-                  placeholder="Product image URL"
+                  placeholder="Product image 1 URL"
                   value={form.product_image_url}
                   onChange={(e) => setForm((p) => ({ ...p, product_image_url: e.target.value }))}
                 />
@@ -404,6 +416,45 @@ export default function SponsorAdsManager() {
                   <Button variant="ghost" size="sm" onClick={() => setForm((p) => ({ ...p, product_image_url: "" }))}>Remove</Button>
                 )}
               </div>
+            </div>
+            {/* Product Image 2 */}
+            <div>
+              <Label>Product Image 2 URL</Label>
+              <div className="flex items-center gap-3 mt-1">
+                {form.product_image_url_2 ? (
+                  <img src={form.product_image_url_2} alt="Product 2" className="h-10 w-10 rounded object-contain bg-muted border" />
+                ) : (
+                  <div className="h-10 w-10 rounded bg-muted flex items-center justify-center border">
+                    <Sparkles className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                )}
+                <Input
+                  placeholder="Product image 2 URL"
+                  value={form.product_image_url_2}
+                  onChange={(e) => setForm((p) => ({ ...p, product_image_url_2: e.target.value }))}
+                />
+                {form.product_image_url_2 && (
+                  <Button variant="ghost" size="sm" onClick={() => setForm((p) => ({ ...p, product_image_url_2: "" }))}>Remove</Button>
+                )}
+              </div>
+            </div>
+            {/* Promo Text */}
+            <div>
+              <Label>Promo Text (overlay on Product 2)</Label>
+              <Input
+                value={form.promo_text}
+                onChange={(e) => setForm((p) => ({ ...p, promo_text: e.target.value }))}
+                placeholder="15% off with BB"
+              />
+            </div>
+            {/* Product Link */}
+            <div>
+              <Label>Product Link URL</Label>
+              <Input
+                value={form.product_link}
+                onChange={(e) => setForm((p) => ({ ...p, product_link: e.target.value }))}
+                placeholder="https://shop.example.com/product"
+              />
             </div>
             {/* Scheduling */}
             <div className="grid grid-cols-2 gap-3">
