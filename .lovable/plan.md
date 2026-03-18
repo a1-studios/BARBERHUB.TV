@@ -20,12 +20,14 @@
 - Build `create-ivs-channel`, `ivs-webhook-handler`, rewrite `sync-battle-viewers`
 - Remove `check-youtube-live` obsolete function
 
-### Phase 4 — Missing Agents (Pending)
-- Battle reminder notifications (24h + 1h before)
-- Subscription expiry handler
-- Strike enforcement (3 no-shows = DQ)
-- M4M fund reporting panel in Sovereign HQ UI
+### Phase 4 — Missing Agents ✅ COMPLETED
+1. ✅ `battle-reminders` — new edge function sends notifications 24h + 1h before scheduled battles
+2. ✅ `subscription-expiry` — new edge function finds expired subscriptions, downgrades tier, notifies barber
+3. ✅ `strike-enforcement` — new edge function DQs barbers with 3+ no-shows from tournaments
+4. ✅ `M4MFundPanel` — new Sovereign HQ component showing total fund balance, source breakdown, recent deposits
 
-### Phase 5 — Cleanup (Pending)
-- Remove YouTube edge functions
-- Set up pg_cron for `expire_bounties_batch`
+### Phase 5 — Cleanup ✅ COMPLETED
+1. ✅ Deleted `check-youtube-live` edge function (obsolete YouTube dependency)
+2. ✅ Rewrote `sync-battle-viewers` to use Twilio participant API instead of YouTube Data API
+3. ✅ Removed YouTube config from `config.toml`
+4. ⏳ `expire_bounties_batch` pg_cron — needs cron schedule set via SQL Editor (not migration)
