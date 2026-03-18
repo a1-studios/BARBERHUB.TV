@@ -154,6 +154,12 @@ export default function BarbersDirectory() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Tiers</SelectItem>
+                  <SelectItem value="diamond">
+                    <div className="flex items-center gap-2">
+                      <Diamond className="w-4 h-4 text-cyan-400" />
+                      Diamond
+                    </div>
+                  </SelectItem>
                   <SelectItem value="gold">
                     <div className="flex items-center gap-2">
                       <Crown className="w-4 h-4 text-yellow-500" />
