@@ -140,24 +140,6 @@ export function BookingConsole({
             {/* Style Capture Portal — Hero Section */}
             <StyleCaptureButton onAnalysisComplete={handleStyleAnalysis} />
 
-            {/* Service Selector */}
-            {bookingType === 'standard' && (
-              <>
-                <ServiceSelector
-                  services={services}
-                  value={selectedService}
-                  onChange={setSelectedService}
-                  filterType="standard"
-                />
-                {isFreeBooking && (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/30">
-                    <Gift className="h-4 w-4 text-green-400" />
-                    <span className="text-sm text-green-400 font-bold">FREE First Cut!</span>
-                  </div>
-                )}
-              </>
-            )}
-
             {bookingType === 'sos' && (
               <div className="space-y-3">
                 <div className="p-4 rounded-lg border-2 border-destructive/30 bg-destructive/5 text-center space-y-2">
@@ -186,17 +168,34 @@ export function BookingConsole({
               </div>
             )}
 
-            {/* Time Slots */}
-            {bookingType !== 'sos' && (
-              isLoading ? (
-                <div className="animate-pulse h-24 bg-muted rounded-lg" />
-              ) : (
-                <DateSlotPicker
-                  getAvailableSlots={getAvailableSlots}
-                  selectedSlot={selectedSlot}
-                  onSelectSlot={setSelectedSlot}
+            {/* Standard flow: Date → Service → Time */}
+            {bookingType === 'standard' && (
+              <>
+                {/* 1. Date picker */}
+                {isLoading ? (
+                  <div className="animate-pulse h-24 bg-muted rounded-lg" />
+                ) : (
+                  <DateSlotPicker
+                    getAvailableSlots={getAvailableSlots}
+                    selectedSlot={selectedSlot}
+                    onSelectSlot={setSelectedSlot}
+                  />
+                )}
+
+                {/* 2. Service selector (between date and time) */}
+                <ServiceSelector
+                  services={services}
+                  value={selectedService}
+                  onChange={setSelectedService}
+                  filterType="standard"
                 />
-              )
+                {isFreeBooking && (
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                    <Gift className="h-4 w-4 text-green-400" />
+                    <span className="text-sm text-green-400 font-bold">FREE First Cut!</span>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Notes — collapsible */}

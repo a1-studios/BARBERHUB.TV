@@ -8,6 +8,8 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SpecialtyPillSelector } from './SpecialtyPillSelector';
+import { ServicesManager } from './ServicesManager';
+import { WeeklyAvailabilityManager } from './WeeklyAvailabilityManager';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { AvatarUpload } from './AvatarUpload';
@@ -685,43 +687,13 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
 
               <Separator />
 
-              {/* Pricing */}
-              <div>
-                <h4 className="font-semibold mb-4 flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
-                  Pricing Information
-                </h4>
-                <div>
-                  <Label htmlFor="pricing_range">Price Range</Label>
-                  <Select value={barberForm.pricing_range} onValueChange={(value) => setBarberForm(prev => ({ ...prev, pricing_range: value }))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your price range" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="budget">Budget ($15-25)</SelectItem>
-                      <SelectItem value="mid">Mid-range ($25-40)</SelectItem>
-                      <SelectItem value="premium">Premium ($40-60)</SelectItem>
-                      <SelectItem value="luxury">Luxury ($60+)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              {/* Services Manager */}
+              <ServicesManager barberId={barberProfile?.id} />
 
               <Separator />
 
-              {/* Business Hours */}
-              <div>
-                <h4 className="font-semibold mb-4 flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Business Hours
-                </h4>
-                <Textarea
-                  placeholder="e.g., Mon-Fri: 9AM-6PM, Sat: 9AM-4PM, Sun: Closed"
-                  value={barberForm.business_hours}
-                  onChange={(e) => setBarberForm(prev => ({ ...prev, business_hours: e.target.value }))}
-                  rows={3}
-                />
-              </div>
+              {/* Weekly Availability */}
+              <WeeklyAvailabilityManager barberId={barberProfile?.id} />
 
               <Button 
                 onClick={handleBarberSubmit} 
