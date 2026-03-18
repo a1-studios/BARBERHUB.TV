@@ -131,6 +131,7 @@ const Index = () => {
               localStorage.removeItem('pending_spin_prize');
               queryClient.invalidateQueries({ queryKey: ['barber_bucks'] });
               queryClient.invalidateQueries({ queryKey: ['barber_bucks_transactions'] });
+              queryClient.invalidateQueries({ queryKey: ['user_prizes'] });
               toast.success(`🎰 Your spin prize was claimed: ${pending.prize_label}!`);
             } else if (data?.already_claimed) {
               localStorage.removeItem('pending_spin_prize');
