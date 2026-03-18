@@ -237,6 +237,15 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
         .upsert(barberData as any, { onConflict: 'user_id' });
       
       if (error) throw error;
+
+      // Update slot_duration_minutes on all availability rows for this barber
+      const duration = parseInt(data.slot_duration_minutes) || 30;
+      const { error: availError } = await supabase
+        .from('barber_availability')
+        .update({ slot_duration_minutes: duration })
+        .eq('barber_user_id', user.id);
+      
+      if (availError) console.warn('Could not update slot duration:', availError.message);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['barberProfile', user?.id] });
