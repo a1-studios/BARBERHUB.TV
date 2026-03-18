@@ -78,6 +78,23 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
     enabled: !!user?.id
   });
 
+  // Fetch current slot duration from availability
+  const { data: availabilityData } = useQuery({
+    queryKey: ['barber-availability-settings', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('barber_availability')
+        .select('slot_duration_minutes')
+        .eq('barber_user_id', user.id)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id
+  });
+
   // Form states
   const [profileForm, setProfileForm] = useState({
     display_name: '',
@@ -112,7 +129,8 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
     // Booking economy
     require_deposit: true,
     default_no_show_fee_bb: 50,
-    booking_message: ''
+    booking_message: '',
+    slot_duration_minutes: '30'
   });
 
   const [businessSettings, setBusinessSettings] = useState({
@@ -167,10 +185,11 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
         business_hours: '',
         require_deposit: (barberProfile as any).require_deposit ?? true,
         default_no_show_fee_bb: (barberProfile as any).default_no_show_fee_bb ?? 50,
-        booking_message: (barberProfile as any).booking_message || ''
+        booking_message: (barberProfile as any).booking_message || '',
+        slot_duration_minutes: availabilityData?.slot_duration_minutes?.toString() || '30'
       });
     }
-  }, [barberProfile]);
+  }, [barberProfile, availabilityData]);
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
@@ -235,6 +254,15 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
         .upsert(barberData as any, { onConflict: 'user_id' });
       
       if (error) throw error;
+
+      // Update slot_duration_minutes on all availability rows for this barber
+      const duration = parseInt(data.slot_duration_minutes) || 30;
+      const { error: availError } = await supabase
+        .from('barber_availability')
+        .update({ slot_duration_minutes: duration })
+        .eq('barber_user_id', user.id);
+      
+      if (availError) console.warn('Could not update slot duration:', availError.message);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['barberProfile', user?.id] });
@@ -635,6 +663,22 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
                       placeholder="e.g., Please arrive 5 minutes early. No refunds within 2 hours of appointment."
                       rows={2}
                     />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="slot_duration">Time Slot Duration</Label>
+                    <p className="text-xs text-muted-foreground mb-1">How long each bookable slot should be</p>
+                    <Select value={barberForm.slot_duration_minutes} onValueChange={(value) => setBarberForm(prev => ({ ...prev, slot_duration_minutes: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select slot duration" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="15">15 minutes</SelectItem>
+                        <SelectItem value="30">30 minutes</SelectItem>
+                        <SelectItem value="45">45 minutes</SelectItem>
+                        <SelectItem value="60">60 minutes</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>
