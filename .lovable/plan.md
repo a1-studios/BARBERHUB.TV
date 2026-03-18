@@ -1,33 +1,33 @@
-## Anti-Gravity System Audit — Implementation Status
 
-### Phase 1 — Economy Integrity ✅ COMPLETED
-1. ✅ `donate-to-battle` — rewritten to delegate to `process_battle_donation` RPC (80/15/5 split)
-2. ✅ `process-bb-donation` — added 5% fee (3% M4M + 2% platform) on direct tips
-3. ✅ `spin-wheel` — added optimistic lock (`eq('barber_bucks', currentBalance)`) to prevent race conditions
-4. ✅ `distribute-pot` — rewired with 3% M4M + 2% platform fee, M4M fund ledger deposits
-5. ✅ `useBarberBucks.tsx` — removed insecure client-side `deductBucks` mutation
-6. ✅ `auto-close-voting` — added inline pot distribution when battle completes (auto-distribute-pot agent)
-7. ✅ `get_m4m_fund_summary()` — new RPC for Sovereign HQ M4M reporting
 
-### Phase 2 — Battle Lifecycle Fixes ✅ COMPLETED
-1. ✅ `submit-battle-video` — removed YouTube-only regex, accepts any valid video URL (HLS, S3, MP4)
-2. ✅ `start-live-stream` — fixed status from `'voting'` → `'active'`
-3. ✅ `tournament-matchmaker` — fixed FK mismatch: now uses `barber_profile_id` instead of `user_id` for `barber1_id`/`barber2_id`
-4. ✅ `complete-match` — switched from `SUPABASE_ANON_KEY` to `SUPABASE_SERVICE_ROLE_KEY`
+## Quick Time Picks + 30-Minute Slot Breakdown
 
-### Phase 3 — AWS IVS Integration (Pending)
-- Needs `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` secrets
-- Build `create-ivs-channel`, `ivs-webhook-handler`, rewrite `sync-battle-viewers`
-- Remove `check-youtube-live` obsolete function
+### Problem
+When a user picks a date, they see either all slots in a flat grid or "No available slots." There's no quick-pick UX to surface the best times, and barbers don't have a setting to configure their slot duration (it defaults to 30 min from the DB but isn't exposed in settings).
 
-### Phase 4 — Missing Agents ✅ COMPLETED
-1. ✅ `battle-reminders` — new edge function sends notifications 24h + 1h before scheduled battles
-2. ✅ `subscription-expiry` — new edge function finds expired subscriptions, downgrades tier, notifies barber
-3. ✅ `strike-enforcement` — new edge function DQs barbers with 3+ no-shows from tournaments
-4. ✅ `M4MFundPanel` — new Sovereign HQ component showing total fund balance, source breakdown, recent deposits
+### Changes
 
-### Phase 5 — Cleanup ✅ COMPLETED
-1. ✅ Deleted `check-youtube-live` edge function (obsolete YouTube dependency)
-2. ✅ Rewrote `sync-battle-viewers` to use Twilio participant API instead of YouTube Data API
-3. ✅ Removed YouTube config from `config.toml`
-4. ⏳ `expire_bounties_batch` pg_cron — needs cron schedule set via SQL Editor (not migration)
+#### 1. Update `DateSlotPicker.tsx` -- Add "Quick Picks" row
+After a date is selected, show a highlighted row of up to 4 recommended time slots before the full grid:
+- Pick the first 4 available slots spread across the day (morning, midday, afternoon, evening buckets if available; otherwise just the first 4)
+- Render them as larger, accent-styled buttons labeled "Quick Pick" above the full grid
+- Full slot grid remains below as "All Available Times" for manual selection
+- Both quick picks and grid slots call the same `onSelectSlot`
+
+#### 2. Update `DateSlotPicker.tsx` -- Visual polish
+- Quick picks section: 4 buttons in a single row with `bg-cyan-500/10 border-cyan-500/40` styling, slightly larger than grid slots
+- "All Times" grid stays as-is but gets a collapsible toggle ("Show all X slots") so the UI stays compact
+
+#### 3. Add slot duration setting to `BarberSettings.tsx` Business tab
+In the existing "Booking Economy" card, add a "Time Slot Duration" selector:
+- Options: 15 min, 30 min (default), 45 min, 60 min
+- Maps to `barber_availability.slot_duration_minutes` -- update all rows for this barber when saved
+- This controls how `useBarberAvailability` generates slots (already reads `slot_duration_minutes`)
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/booking/DateSlotPicker.tsx` | Add quick-pick row (first 4 spread slots), collapsible full grid |
+| `src/components/profiles/BarberSettings.tsx` | Add slot duration selector in Business tab |
+
