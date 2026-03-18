@@ -63,27 +63,6 @@ export const useBarberBucks = () => {
     return true;
   };
 
-  // Deduct barber bucks for donation
-  const deductBucks = useMutation({
-    mutationFn: async (amount: number) => {
-      if (!user) throw new Error("Not authenticated");
-      
-      const { error } = await supabase
-        .from('profiles')
-        .update({ barber_bucks: (barberBucks || 0) - amount })
-        .eq('user_id', user.id);
-      
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['barber_bucks', user?.id] });
-    },
-    onError: (error) => {
-      toast.error("Failed to process payment");
-      console.error("Deduct bucks error:", error);
-    }
-  });
-
   // Purchase barber bucks via Stripe — returns { url, session_id, bb_amount }
   // Caller is responsible for navigation (window.location.href)
   const purchaseBucks = useMutation({
@@ -110,7 +89,6 @@ export const useBarberBucks = () => {
     transactions: transactions || [],
     isLoading,
     checkFunds,
-    deductBucks,
     purchaseBucks,
     showAddFundsModal,
     setShowAddFundsModal

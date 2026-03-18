@@ -6,7 +6,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const PLATFORM_FEE_PERCENT = 5;
+// 5% fee: 3% M4M + 2% BarberHub platform
+const M4M_FEE_PERCENT = 3;
+const PLATFORM_FEE_PERCENT = 2;
+
+const OFFICIAL_CATEGORIES = ['fades', 'designs', 'traditional', 'freestyle', 'color'];
 
 interface DistributeRequest {
   challenge_id?: string;
@@ -29,7 +33,6 @@ serve(async (req) => {
       throw new Error('Missing authorization header');
     }
 
-    // Verify admin or system call (could be enhanced)
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     
@@ -39,7 +42,7 @@ serve(async (req) => {
 
     const { challenge_id, battle_id, winner_id }: DistributeRequest = await req.json();
 
-    console.log(`Distributing pot for challenge: ${challenge_id} to winner: ${winner_id}`);
+    console.log(`[DISTRIBUTE-POT] challenge: ${challenge_id}, battle: ${battle_id}, winner: ${winner_id}`);
 
     if (!winner_id) {
       throw new Error('Winner ID is required');
@@ -47,9 +50,9 @@ serve(async (req) => {
 
     let potTotal = 0;
     let title = '';
+    let category = 'open';
 
     if (challenge_id) {
-      // Get challenge details
       const { data: challenge, error: challengeError } = await supabase
         .from('open_challenges')
         .select('*')
@@ -66,21 +69,28 @@ serve(async (req) => {
 
       potTotal = challenge.pot_total || 0;
       title = challenge.title;
+      category = challenge.category || 'open';
 
-      // Mark challenge as completed
       await supabase
         .from('open_challenges')
         .update({ status: 'completed' })
         .eq('id', challenge_id);
     } else if (battle_id) {
-      // Get battle pot from battle_donations
+      const { data: battle } = await supabase
+        .from('battles')
+        .select('category, title')
+        .eq('id', battle_id)
+        .single();
+
+      category = battle?.category || 'open';
+      title = battle?.title || 'Battle';
+
       const { data: donations } = await supabase
         .from('battle_donations')
         .select('amount_bb')
         .eq('battle_id', battle_id);
       
       potTotal = donations?.reduce((sum, d) => sum + d.amount_bb, 0) || 0;
-      title = 'Battle';
     } else {
       throw new Error('Either challenge_id or battle_id is required');
     }
@@ -92,9 +102,26 @@ serve(async (req) => {
       );
     }
 
-    // Calculate platform fee and winner payout
-    const platformFee = Math.floor(potTotal * (PLATFORM_FEE_PERCENT / 100));
-    const winnerPayout = potTotal - platformFee;
+    const isOfficialCategory = OFFICIAL_CATEGORIES.includes(category.toLowerCase());
+
+    let m4mFee: number;
+    let platformFee: number;
+    let winnerPayout: number;
+    let categoryPoolAmount = 0;
+
+    if (isOfficialCategory) {
+      // Official categories: 80/15/5 split
+      // 80% stays in category pool (already accumulated via process_battle_donation)
+      // The pot here is from challenge stakes, not donations — apply 5% fee only
+      m4mFee = Math.floor(potTotal * (M4M_FEE_PERCENT / 100));
+      platformFee = Math.floor(potTotal * (PLATFORM_FEE_PERCENT / 100));
+      winnerPayout = potTotal - m4mFee - platformFee;
+    } else {
+      // Non-official: flat 5% fee (3% M4M + 2% platform)
+      m4mFee = Math.floor(potTotal * (M4M_FEE_PERCENT / 100));
+      platformFee = Math.floor(potTotal * (PLATFORM_FEE_PERCENT / 100));
+      winnerPayout = potTotal - m4mFee - platformFee;
+    }
 
     // Get winner's current balance
     const { data: winnerProfile, error: winnerError } = await supabase
@@ -128,20 +155,33 @@ serve(async (req) => {
         amount: winnerPayout,
         balance_after: newBalance,
         transaction_type: 'challenge_win',
-        description: `Won "${title}" - Pot: ${potTotal} BB, Fee: ${platformFee} BB`,
+        description: `Won "${title}" - Pot: ${potTotal} BB, Fees: ${m4mFee + platformFee} BB`,
         reference_id: challenge_id || battle_id
       });
 
-    // Record platform fee as platform transaction
-    await supabase
-      .from('platform_transactions')
-      .insert({
-        amount_cents: platformFee * 20, // Convert BB to cents
-        transaction_type: 'challenge_fee',
-        description: `Platform fee from "${title}"`,
-        reference_id: challenge_id || battle_id,
-        source_user_id: winner_id
-      });
+    // Route M4M fee to fund ledger (3%)
+    if (m4mFee > 0) {
+      await supabase
+        .from('m4m_fund_ledger')
+        .insert({
+          amount_bb: m4mFee,
+          source_type: 'pot_distribution',
+          reference_id: challenge_id || battle_id,
+        });
+    }
+
+    // Record platform fee (2%)
+    if (platformFee > 0) {
+      await supabase
+        .from('platform_transactions')
+        .insert({
+          amount_cents: platformFee * 20,
+          transaction_type: 'challenge_fee',
+          description: `2% platform fee from "${title}"`,
+          reference_id: challenge_id || battle_id,
+          source_user_id: winner_id
+        });
+    }
 
     // Notify winner
     await supabase
@@ -155,16 +195,18 @@ serve(async (req) => {
           challenge_id,
           battle_id,
           payout: winnerPayout,
+          m4m_fee: m4mFee,
           platform_fee: platformFee
         }
       });
 
-    console.log(`Pot distributed: ${winnerPayout} BB to winner, ${platformFee} BB platform fee`);
+    console.log(`[DISTRIBUTE-POT] Done: ${winnerPayout} BB winner, ${m4mFee} BB M4M, ${platformFee} BB platform`);
 
     return new Response(
       JSON.stringify({
         success: true,
         pot_total: potTotal,
+        m4m_fee: m4mFee,
         platform_fee: platformFee,
         winner_payout: winnerPayout,
         winner_new_balance: newBalance,
@@ -177,7 +219,7 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('Distribute pot error:', error);
+    console.error('[DISTRIBUTE-POT] Error:', error);
     return new Response(
       JSON.stringify({ error: error.message || 'Failed to distribute pot' }),
       { 

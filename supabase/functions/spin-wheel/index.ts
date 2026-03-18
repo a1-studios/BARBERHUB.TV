@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     // Cap max prize at 100 BB to prevent manipulation
     const clampedPrize = Math.min(Math.max(prize_bb || 0, 0), 100);
 
-    // Get current balance with lock
+    // Get current balance
     const { data: profile, error: profErr } = await supabase
       .from('profiles')
       .select('barber_bucks')
@@ -74,15 +74,18 @@ Deno.serve(async (req) => {
     const netChange = clampedPrize - SPIN_COST;
     const newBalance = currentBalance + netChange;
 
-    // Update balance
-    const { error: updateErr } = await supabase
+    // Update balance with optimistic lock to prevent race conditions
+    const { error: updateErr, data: updateResult } = await supabase
       .from('profiles')
       .update({ barber_bucks: newBalance })
-      .eq('user_id', user.id);
+      .eq('user_id', user.id)
+      .eq('barber_bucks', currentBalance) // Optimistic lock: only update if balance hasn't changed
+      .select('barber_bucks')
+      .single();
 
-    if (updateErr) {
-      return new Response(JSON.stringify({ error: 'Failed to update balance' }), {
-        status: 500,
+    if (updateErr || !updateResult) {
+      return new Response(JSON.stringify({ error: 'Balance changed during spin, please try again' }), {
+        status: 409,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

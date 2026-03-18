@@ -59,11 +59,11 @@ serve(async (req) => {
 
     console.log('[START-STREAM] Starting stream for battle:', battleId);
 
-    // Update battle status to voting (live)
+    // FIX: Set status to 'active' (not 'voting') — voting begins after stream ends
     const { error: battleError } = await supabaseClient
       .from('battles')
       .update({
-        status: 'voting',
+        status: 'active',
         starts_at: new Date().toISOString(),
       })
       .eq('id', battleId);
@@ -85,7 +85,7 @@ serve(async (req) => {
       }
     }
 
-    console.log('[START-STREAM] Stream started successfully');
+    console.log('[START-STREAM] Stream started successfully (status: active)');
 
     return new Response(
       JSON.stringify({ 
