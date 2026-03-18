@@ -232,7 +232,7 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
 
       const { error } = await supabase
         .from('barber_profiles')
-        .upsert(barberData, { onConflict: 'user_id' });
+        .upsert(barberData as any, { onConflict: 'user_id' });
       
       if (error) throw error;
     },

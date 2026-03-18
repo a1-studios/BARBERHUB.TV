@@ -3977,6 +3977,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_client_appointments: {
+        Args: { p_client_id: string; p_is_no_show?: boolean }
+        Returns: undefined
+      }
       increment_no_show_count: {
         Args: { barber_user_id: string }
         Returns: undefined
