@@ -192,21 +192,6 @@ export default function BarbersDirectory() {
                 </SelectContent>
               </Select>
 
-              {/* Country Filter */}
-              <Select value={countryFilter} onValueChange={setCountryFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Country" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Countries</SelectItem>
-                  {countries.map((country) => (
-                    <SelectItem key={country} value={country}>
-                      {country}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
               {/* Live Status Filter */}
               <Select value={liveFilter} onValueChange={setLiveFilter}>
                 <SelectTrigger>
