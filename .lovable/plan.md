@@ -1,33 +1,52 @@
-## Anti-Gravity System Audit — Implementation Status
 
-### Phase 1 — Economy Integrity ✅ COMPLETED
-1. ✅ `donate-to-battle` — rewritten to delegate to `process_battle_donation` RPC (80/15/5 split)
-2. ✅ `process-bb-donation` — added 5% fee (3% M4M + 2% platform) on direct tips
-3. ✅ `spin-wheel` — added optimistic lock (`eq('barber_bucks', currentBalance)`) to prevent race conditions
-4. ✅ `distribute-pot` — rewired with 3% M4M + 2% platform fee, M4M fund ledger deposits
-5. ✅ `useBarberBucks.tsx` — removed insecure client-side `deductBucks` mutation
-6. ✅ `auto-close-voting` — added inline pot distribution when battle completes (auto-distribute-pot agent)
-7. ✅ `get_m4m_fund_summary()` — new RPC for Sovereign HQ M4M reporting
 
-### Phase 2 — Battle Lifecycle Fixes ✅ COMPLETED
-1. ✅ `submit-battle-video` — removed YouTube-only regex, accepts any valid video URL (HLS, S3, MP4)
-2. ✅ `start-live-stream` — fixed status from `'voting'` → `'active'`
-3. ✅ `tournament-matchmaker` — fixed FK mismatch: now uses `barber_profile_id` instead of `user_id` for `barber1_id`/`barber2_id`
-4. ✅ `complete-match` — switched from `SUPABASE_ANON_KEY` to `SUPABASE_SERVICE_ROLE_KEY`
+## Restructure Booking Flow + Add Barber Availability & Services Management
 
-### Phase 3 — AWS IVS Integration (Pending)
-- Needs `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` secrets
-- Build `create-ivs-channel`, `ivs-webhook-handler`, rewrite `sync-battle-viewers`
-- Remove `check-youtube-live` obsolete function
+### Problem
+1. The booking flow order isn't intuitive — service is picked before date/time. User wants: **Date → Service (dropdown) → Time (30-min slots with 3 quick picks: morning/afternoon/evening)**.
+2. Quick picks show 4 slots; user wants exactly 3 spread across morning, afternoon, evening.
+3. Barbers have no UI to manage their **services** (add/edit/delete haircut types, prices, durations) or **weekly availability** (set hours per day of week). The Business tab only has a freeform text "Business Hours" field and a slot duration selector — no structured CRUD.
 
-### Phase 4 — Missing Agents ✅ COMPLETED
-1. ✅ `battle-reminders` — new edge function sends notifications 24h + 1h before scheduled battles
-2. ✅ `subscription-expiry` — new edge function finds expired subscriptions, downgrades tier, notifies barber
-3. ✅ `strike-enforcement` — new edge function DQs barbers with 3+ no-shows from tournaments
-4. ✅ `M4MFundPanel` — new Sovereign HQ component showing total fund balance, source breakdown, recent deposits
+### Changes
 
-### Phase 5 — Cleanup ✅ COMPLETED
-1. ✅ Deleted `check-youtube-live` edge function (obsolete YouTube dependency)
-2. ✅ Rewrote `sync-battle-viewers` to use Twilio participant API instead of YouTube Data API
-3. ✅ Removed YouTube config from `config.toml`
-4. ⏳ `expire_bounties_batch` pg_cron — needs cron schedule set via SQL Editor (not migration)
+#### 1. Reorder `BookingConsole.tsx` — Date → Service → Time
+Restructure the booking flow to this order:
+- Style Capture (camera/mic) stays at top as hero
+- **Date picker** (existing dropdown, moves up)
+- **Service selector** (existing dropdown, moves below date)
+- **Time slot picker** (quick picks + collapsible grid, moves to bottom)
+- SOS / House Call buttons remain visible at bottom
+- Notes link stays collapsed
+
+This just reorders the existing components — no new components needed.
+
+#### 2. Update `DateSlotPicker.tsx` — 3 Quick Picks (Morning/Afternoon/Evening)
+- Change `getQuickPicks` to return exactly **3** slots: one from morning (before 12), one from afternoon (12-17), one from evening (17+). If a bucket is empty, skip it (so could be 1-3 picks).
+- Label each quick pick with its period: "Morning 9:30 AM", "Afternoon 2:00 PM", "Evening 6:30 PM".
+- Make them slightly larger cards for easy tapping.
+- Keep the "Show all slots" collapsible below.
+
+#### 3. Add Services Manager to `BarberSettings.tsx` Business tab
+Add a "My Services" section in the Business tab with:
+- List of existing services (name, price BB, duration, toggles for SOS/house call)
+- "Add Service" button that expands an inline form: service name, price (BB), duration (minutes), deposit amount, allows SOS, allows house call, is free intro
+- Edit/delete buttons on each service row
+- CRUD operations hit `barber_services` table directly (barber already has RLS for own rows)
+
+#### 4. Add Weekly Availability Manager to `BarberSettings.tsx` Business tab
+Replace the freeform "Business Hours" textarea with a structured weekly schedule:
+- 7 rows (Mon-Sun), each with: toggle (available/not), start time, end time
+- Uses the existing `barber_availability` table
+- On save, upsert rows for each day (insert if new, update if exists)
+- Slot duration selector stays as-is (already works)
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/components/booking/BookingConsole.tsx` | Reorder: Date → Service → Time |
+| `src/components/booking/DateSlotPicker.tsx` | 3 quick picks labeled Morning/Afternoon/Evening |
+| `src/components/profiles/BarberSettings.tsx` | Add Services CRUD + Weekly Availability schedule manager in Business tab |
+
+No database changes needed — `barber_services` and `barber_availability` tables already exist with proper RLS.
+
