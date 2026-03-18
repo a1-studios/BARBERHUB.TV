@@ -46,6 +46,7 @@ const Profile = () => {
   const [txOpen, setTxOpen] = useState(false);
   const [apptOpen, setApptOpen] = useState(false);
   const [barberApptOpen, setBarberApptOpen] = useState(false);
+  const [prizesOpen, setPrizesOpen] = useState(false);
 
   const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
 
