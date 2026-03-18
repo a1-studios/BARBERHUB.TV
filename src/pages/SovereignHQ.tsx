@@ -13,6 +13,7 @@ import BattleDirectoryPanel from '@/components/sovereign/BattleDirectoryPanel';
 import TournamentQueuePanel from '@/components/sovereign/TournamentQueuePanel';
 import TournamentManagerPanel from '@/components/sovereign/TournamentManagerPanel';
 import VaultMetricsPanel from '@/components/sovereign/VaultMetricsPanel';
+import M4MFundPanel from '@/components/sovereign/M4MFundPanel';
 
 const SovereignHQ = () => {
   const { user } = useAuth();
