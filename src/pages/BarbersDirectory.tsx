@@ -177,16 +177,16 @@ export default function BarbersDirectory() {
                 </SelectContent>
               </Select>
 
-              {/* Specialty Filter */}
-              <Select value={specialtyFilter} onValueChange={setSpecialtyFilter}>
+              {/* Country Filter */}
+              <Select value={countryFilter} onValueChange={setCountryFilter}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Specialty" />
+                  <SelectValue placeholder="Country" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Specialties</SelectItem>
-                  {specialties.map((specialty) => (
-                    <SelectItem key={specialty} value={specialty}>
-                      {specialty}
+                  <SelectItem value="all">All Countries</SelectItem>
+                  {countries.map((country) => (
+                    <SelectItem key={country} value={country}>
+                      {country}
                     </SelectItem>
                   ))}
                 </SelectContent>
