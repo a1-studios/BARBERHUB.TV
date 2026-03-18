@@ -55,7 +55,7 @@ export const useCategoryPrizePools = (tournamentYear?: number) => {
           total_pool_cents: existingPool?.total_pool_cents || BASE_PRIZE_POOL_CENTS,
           entry_contributions_cents: entries,
           donation_contributions_cents: donations,
-          platform_fees_collected_cents: Math.floor(totalBeforeFee * PLATFORM_FEE_PERCENT),
+          platform_fees_collected_cents: Math.floor(dynamicContributions * PLATFORM_FEE_PERCENT),
           participant_count: existingPool?.participant_count || 0,
           last_updated: existingPool?.last_updated || new Date().toISOString(),
           display_pool_cents: displayPool
