@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
-import { Zap, ChevronDown } from 'lucide-react';
+import { Sun, Sunset, Moon, ChevronDown } from 'lucide-react';
 
 interface DateSlotPickerProps {
   getAvailableSlots: (date: Date) => string[];
@@ -12,35 +12,31 @@ interface DateSlotPickerProps {
   onSelectSlot: (slot: string) => void;
 }
 
-function getQuickPicks(slots: string[]): string[] {
-  if (slots.length <= 4) return slots;
+type Period = 'Morning' | 'Afternoon' | 'Evening';
 
-  // Bucket slots into morning (<12), midday (12-15), afternoon (15-18), evening (18+)
-  const buckets: Record<string, string[]> = { morning: [], midday: [], afternoon: [], evening: [] };
-  for (const slot of slots) {
-    const h = new Date(slot).getHours();
-    if (h < 12) buckets.morning.push(slot);
-    else if (h < 15) buckets.midday.push(slot);
-    else if (h < 18) buckets.afternoon.push(slot);
-    else buckets.evening.push(slot);
-  }
+function getPeriod(iso: string): Period {
+  const h = new Date(iso).getHours();
+  if (h < 12) return 'Morning';
+  if (h < 17) return 'Afternoon';
+  return 'Evening';
+}
 
-  const picks: string[] = [];
-  // Take first from each non-empty bucket
-  for (const key of ['morning', 'midday', 'afternoon', 'evening'] as const) {
-    if (buckets[key].length > 0 && picks.length < 4) {
-      picks.push(buckets[key][0]);
-    }
-  }
-  // If still < 4, fill from remaining slots not already picked
-  if (picks.length < 4) {
-    for (const slot of slots) {
-      if (!picks.includes(slot) && picks.length < 4) {
-        picks.push(slot);
-      }
-    }
-  }
-  return picks.sort();
+const periodIcon: Record<Period, typeof Sun> = {
+  Morning: Sun,
+  Afternoon: Sunset,
+  Evening: Moon,
+};
+
+function getQuickPicks(slots: string[]): { period: Period; slot: string }[] {
+  const picks: { period: Period; slot: string }[] = [];
+  const morning = slots.find(s => new Date(s).getHours() < 12);
+  const afternoon = slots.find(s => { const h = new Date(s).getHours(); return h >= 12 && h < 17; });
+  const evening = slots.find(s => new Date(s).getHours() >= 17);
+
+  if (morning) picks.push({ period: 'Morning', slot: morning });
+  if (afternoon) picks.push({ period: 'Afternoon', slot: afternoon });
+  if (evening) picks.push({ period: 'Evening', slot: evening });
+  return picks;
 }
 
 export function DateSlotPicker({ getAvailableSlots, selectedSlot, onSelectSlot }: DateSlotPickerProps) {
@@ -90,31 +86,32 @@ export function DateSlotPicker({ getAvailableSlots, selectedSlot, onSelectSlot }
         </Select>
       </div>
 
-      {/* Quick Picks */}
+      {/* Quick Picks — 3 period-based */}
       {quickPicks.length > 0 && (
         <div className="space-y-1.5">
-          <Label className="text-sm text-muted-foreground flex items-center gap-1.5">
-            <Zap className="h-3.5 w-3.5 text-cyan-400" />
-            Quick Picks
-          </Label>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {quickPicks.map((slot) => (
-              <Button
-                key={slot}
-                type="button"
-                variant="outline"
-                size="sm"
-                className={cn(
-                  'text-sm font-medium px-4 py-2 h-9 shrink-0 border-cyan-500/40',
-                  selectedSlot === slot
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20'
-                )}
-                onClick={() => onSelectSlot(slot)}
-              >
-                {formatTime(slot)}
-              </Button>
-            ))}
+          <Label className="text-sm text-muted-foreground">Quick Picks</Label>
+          <div className="grid grid-cols-3 gap-2">
+            {quickPicks.map(({ period, slot }) => {
+              const Icon = periodIcon[period];
+              return (
+                <Button
+                  key={slot}
+                  type="button"
+                  variant="outline"
+                  className={cn(
+                    'flex flex-col items-center gap-1 h-auto py-3 px-2 border-cyan-500/40',
+                    selectedSlot === slot
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20'
+                  )}
+                  onClick={() => onSelectSlot(slot)}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="text-[10px] font-medium opacity-70">{period}</span>
+                  <span className="text-sm font-bold">{formatTime(slot)}</span>
+                </Button>
+              );
+            })}
           </div>
         </div>
       )}
