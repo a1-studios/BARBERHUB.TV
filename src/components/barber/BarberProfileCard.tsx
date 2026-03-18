@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ExternalLink, Scissors } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +15,7 @@ import { BarberActionButtons } from './BarberActionButtons';
 import { TierRing } from '../TierRing';
 import { SubCategoryBadge } from '../SubCategoryBadge';
 import { M4MHeartbeat } from '../m4m/M4MHeartbeat';
+import { parseSpecialties, getSpecialtyDisplay } from '@/config/specialtyTags';
 
 interface BarberProfileCardProps {
   barberId: string;
@@ -219,9 +220,16 @@ export const BarberProfileCard = ({
                 )}
               </div>
               {barberProfile.specialty && (
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Scissors className="w-3 h-3" />
-                  <span>{barberProfile.specialty}</span>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {parseSpecialties(barberProfile.specialty).map(id => {
+                    const tag = getSpecialtyDisplay(id);
+                    return tag ? (
+                      <Badge key={id} variant="secondary" className="text-[10px] gap-1 px-1.5 py-0">
+                        <span>{tag.emoji}</span>
+                        <span>{tag.label}</span>
+                      </Badge>
+                    ) : null;
+                  })}
                 </div>
               )}
             </div>

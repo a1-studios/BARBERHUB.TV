@@ -6,12 +6,13 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Search, MapPin, Scissors, Crown, Sparkles, Star } from 'lucide-react';
+import { Search, Scissors, Crown, Sparkles, Star, Diamond } from 'lucide-react';
 import { BarberProfileCard } from '@/components/barber/BarberProfileCard';
 import { BackButton } from '@/components/ui/BackButton';
 import { QuickBookBanner } from '@/components/fan/QuickBookBanner';
+import { SPECIALTY_TAGS, parseSpecialties } from '@/config/specialtyTags';
+import { cn } from '@/lib/utils';
 
 export default function BarbersDirectory() {
   const [searchParams] = useSearchParams();
@@ -61,7 +62,6 @@ export default function BarbersDirectory() {
   const tierMap = new Map(subscriptionTiers?.map(t => [t.user_id, t.active_subscription_tier]) || []);
 
   // Get unique specialties and countries
-  const specialties = [...new Set(barbers?.map(b => b.specialty).filter(Boolean))] as string[];
   const countries = [...new Set(barbers?.map(b => b.country_code).filter(Boolean))] as string[];
 
   // Filter and sort barbers
@@ -71,7 +71,7 @@ export default function BarbersDirectory() {
       barber.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       barber.specialty?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesSpecialty = specialtyFilter === 'all' || barber.specialty === specialtyFilter;
+    const matchesSpecialty = specialtyFilter === 'all' || parseSpecialties(barber.specialty).includes(specialtyFilter);
     const matchesCountry = countryFilter === 'all' || barber.country_code === countryFilter;
     const matchesLive = liveFilter === 'all' || 
       (liveFilter === 'live' && barber.is_live) ||
@@ -90,6 +90,7 @@ export default function BarbersDirectory() {
     // Helper to get tier priority (Gold > Silver > Bronze > Free)
     const getTierPriority = (userId: string) => {
       const tier = tierMap.get(userId)?.toLowerCase();
+      if (tier === 'diamond') return 5;
       if (tier === 'gold') return 4;
       if (tier === 'silver') return 3;
       if (tier === 'bronze') return 2;
@@ -153,6 +154,12 @@ export default function BarbersDirectory() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Tiers</SelectItem>
+                  <SelectItem value="diamond">
+                    <div className="flex items-center gap-2">
+                      <Diamond className="w-4 h-4 text-cyan-400" />
+                      Diamond
+                    </div>
+                  </SelectItem>
                   <SelectItem value="gold">
                     <div className="flex items-center gap-2">
                       <Crown className="w-4 h-4 text-yellow-500" />
@@ -172,21 +179,6 @@ export default function BarbersDirectory() {
                     </div>
                   </SelectItem>
                   <SelectItem value="free">Free</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {/* Specialty Filter */}
-              <Select value={specialtyFilter} onValueChange={setSpecialtyFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Specialty" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Specialties</SelectItem>
-                  {specialties.map((specialty) => (
-                    <SelectItem key={specialty} value={specialty}>
-                      {specialty}
-                    </SelectItem>
-                  ))}
                 </SelectContent>
               </Select>
 
@@ -243,6 +235,36 @@ export default function BarbersDirectory() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Specialty Pill Filter */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <button
+            onClick={() => setSpecialtyFilter('all')}
+            className={cn(
+              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200',
+              specialtyFilter === 'all'
+                ? 'bg-primary/20 border-primary/50 text-primary shadow-sm'
+                : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted hover:border-muted-foreground/30'
+            )}
+          >
+            All Specialties
+          </button>
+          {SPECIALTY_TAGS.map((tag) => (
+            <button
+              key={tag.id}
+              onClick={() => setSpecialtyFilter(specialtyFilter === tag.id ? 'all' : tag.id)}
+              className={cn(
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200',
+                specialtyFilter === tag.id
+                  ? 'bg-primary/20 border-primary/50 text-primary shadow-sm'
+                  : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted hover:border-muted-foreground/30'
+              )}
+            >
+              <span>{tag.emoji}</span>
+              <span>{tag.label}</span>
+            </button>
+          ))}
+        </div>
 
         {/* Results */}
         {isLoading ? (
