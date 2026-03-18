@@ -310,7 +310,7 @@ export const AvatarCrest = ({
 
   const cx = config.svgSize / 2;
   const cy = config.svgSize / 2 - (showM4M ? 6 * config.wingScale : 0);
-  const starCount = validTier === 'bronze' ? 3 : validTier === 'silver' ? 4 : validTier === 'gold' ? 5 : 0;
+  const starCount = validTier === 'diamond' ? 6 : validTier === 'gold' ? 5 : validTier === 'silver' ? 4 : validTier === 'bronze' ? 3 : 0;
   const tierColors = TIER_COLORS[validTier];
 
   const m4mState: 'ghost' | 'certified' | 'complete' =
