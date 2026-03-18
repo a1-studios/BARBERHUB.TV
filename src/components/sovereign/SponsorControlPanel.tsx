@@ -49,6 +49,10 @@ interface SponsorFormData {
   link: string;
   display_order: number;
   is_active: boolean;
+  product_image_url: string;
+  product_image_url_2: string;
+  promo_text: string;
+  product_link: string;
 }
 
 const DEFAULT_FORM: SponsorFormData = {
@@ -59,6 +63,10 @@ const DEFAULT_FORM: SponsorFormData = {
   link: "",
   display_order: 0,
   is_active: true,
+  product_image_url: "",
+  product_image_url_2: "",
+  promo_text: "15% off with BB",
+  product_link: "",
 };
 
 interface Props {
