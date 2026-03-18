@@ -18,7 +18,7 @@ interface BookAppointmentParams {
 
 interface ManageAppointmentParams {
   appointment_id: string;
-  action: 'accept' | 'deny' | 'complete' | 'cancel';
+  action: 'accept' | 'deny' | 'complete' | 'cancel' | 'no_show';
   denial_reason?: string;
 }
 
