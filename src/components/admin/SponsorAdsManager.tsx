@@ -396,19 +396,19 @@ export default function SponsorAdsManager() {
                 placeholder="https://sponsor-website.com"
               />
             </div>
-            {/* Product Image Upload */}
+            {/* Product Image 1 */}
             <div>
-              <Label>Product Image (shown in battle theater)</Label>
+              <Label>Product Image 1 URL</Label>
               <div className="flex items-center gap-3 mt-1">
                 {form.product_image_url ? (
-                  <img src={form.product_image_url} alt="Product preview" className="h-10 w-10 rounded object-contain bg-muted border" />
+                  <img src={form.product_image_url} alt="Product 1" className="h-10 w-10 rounded object-contain bg-muted border" />
                 ) : (
                   <div className="h-10 w-10 rounded bg-muted flex items-center justify-center border">
                     <Sparkles className="w-4 h-4 text-muted-foreground" />
                   </div>
                 )}
                 <Input
-                  placeholder="Product image URL"
+                  placeholder="Product image 1 URL"
                   value={form.product_image_url}
                   onChange={(e) => setForm((p) => ({ ...p, product_image_url: e.target.value }))}
                 />
@@ -416,6 +416,45 @@ export default function SponsorAdsManager() {
                   <Button variant="ghost" size="sm" onClick={() => setForm((p) => ({ ...p, product_image_url: "" }))}>Remove</Button>
                 )}
               </div>
+            </div>
+            {/* Product Image 2 */}
+            <div>
+              <Label>Product Image 2 URL</Label>
+              <div className="flex items-center gap-3 mt-1">
+                {form.product_image_url_2 ? (
+                  <img src={form.product_image_url_2} alt="Product 2" className="h-10 w-10 rounded object-contain bg-muted border" />
+                ) : (
+                  <div className="h-10 w-10 rounded bg-muted flex items-center justify-center border">
+                    <Sparkles className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                )}
+                <Input
+                  placeholder="Product image 2 URL"
+                  value={form.product_image_url_2}
+                  onChange={(e) => setForm((p) => ({ ...p, product_image_url_2: e.target.value }))}
+                />
+                {form.product_image_url_2 && (
+                  <Button variant="ghost" size="sm" onClick={() => setForm((p) => ({ ...p, product_image_url_2: "" }))}>Remove</Button>
+                )}
+              </div>
+            </div>
+            {/* Promo Text */}
+            <div>
+              <Label>Promo Text (overlay on Product 2)</Label>
+              <Input
+                value={form.promo_text}
+                onChange={(e) => setForm((p) => ({ ...p, promo_text: e.target.value }))}
+                placeholder="15% off with BB"
+              />
+            </div>
+            {/* Product Link */}
+            <div>
+              <Label>Product Link URL</Label>
+              <Input
+                value={form.product_link}
+                onChange={(e) => setForm((p) => ({ ...p, product_link: e.target.value }))}
+                placeholder="https://shop.example.com/product"
+              />
             </div>
             {/* Scheduling */}
             <div className="grid grid-cols-2 gap-3">
