@@ -1,33 +1,36 @@
-## Anti-Gravity System Audit — Implementation Status
 
-### Phase 1 — Economy Integrity ✅ COMPLETED
-1. ✅ `donate-to-battle` — rewritten to delegate to `process_battle_donation` RPC (80/15/5 split)
-2. ✅ `process-bb-donation` — added 5% fee (3% M4M + 2% platform) on direct tips
-3. ✅ `spin-wheel` — added optimistic lock (`eq('barber_bucks', currentBalance)`) to prevent race conditions
-4. ✅ `distribute-pot` — rewired with 3% M4M + 2% platform fee, M4M fund ledger deposits
-5. ✅ `useBarberBucks.tsx` — removed insecure client-side `deductBucks` mutation
-6. ✅ `auto-close-voting` — added inline pot distribution when battle completes (auto-distribute-pot agent)
-7. ✅ `get_m4m_fund_summary()` — new RPC for Sovereign HQ M4M reporting
 
-### Phase 2 — Battle Lifecycle Fixes ✅ COMPLETED
-1. ✅ `submit-battle-video` — removed YouTube-only regex, accepts any valid video URL (HLS, S3, MP4)
-2. ✅ `start-live-stream` — fixed status from `'voting'` → `'active'`
-3. ✅ `tournament-matchmaker` — fixed FK mismatch: now uses `barber_profile_id` instead of `user_id` for `barber1_id`/`barber2_id`
-4. ✅ `complete-match` — switched from `SUPABASE_ANON_KEY` to `SUPABASE_SERVICE_ROLE_KEY`
+## Pill-Based Specialty Selector + Barber-to-Client Review Tags
 
-### Phase 3 — AWS IVS Integration (Pending)
-- Needs `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` secrets
-- Build `create-ivs-channel`, `ivs-webhook-handler`, rewrite `sync-battle-viewers`
-- Remove `check-youtube-live` obsolete function
+### What Already Exists
+- The **review pill system** is fully built: `TagSelector` component, `CLIENT_REVIEW_TAGS` config (with positive tags like "Good Tipper 💰", "On Time ⏰" and negative tags like "No-Show Risk 🚩", "Aggressive 😤"), `PostAppointmentReviewModal`, and `ClientSnapshotWidget`. This flow already works for barber-to-client reviews.
+- The **specialty field** uses a basic `<Select>` dropdown allowing only one choice from 6 options.
 
-### Phase 4 — Missing Agents ✅ COMPLETED
-1. ✅ `battle-reminders` — new edge function sends notifications 24h + 1h before scheduled battles
-2. ✅ `subscription-expiry` — new edge function finds expired subscriptions, downgrades tier, notifies barber
-3. ✅ `strike-enforcement` — new edge function DQs barbers with 3+ no-shows from tournaments
-4. ✅ `M4MFundPanel` — new Sovereign HQ component showing total fund balance, source breakdown, recent deposits
+### What Needs to Change
 
-### Phase 5 — Cleanup ✅ COMPLETED
-1. ✅ Deleted `check-youtube-live` edge function (obsolete YouTube dependency)
-2. ✅ Rewrote `sync-battle-viewers` to use Twilio participant API instead of YouTube Data API
-3. ✅ Removed YouTube config from `config.toml`
-4. ⏳ `expire_bounties_batch` pg_cron — needs cron schedule set via SQL Editor (not migration)
+#### 1. Create specialty pills config (`src/config/specialtyTags.ts`)
+Define a list of barber specialty pills with emoji + label, similar to `reviewTags.ts`:
+- ✂️ Fades, 💈 Classic Cuts, 🧔 Beard Styling, 🎨 Hair Color, 🌀 Texture Work, 🔥 Creative Styles, 👶 Kids Cuts, 💇‍♀️ Women's Cuts, 🪒 Straight Razor, 💎 Luxury Grooming
+
+#### 2. Create `SpecialtyPillSelector` component (`src/components/profiles/SpecialtyPillSelector.tsx`)
+Reuses the same pill visual pattern as `TagSelector` but for multi-select specialties. Max 3 selections. Shows selected pills with primary highlight.
+
+#### 3. Update `BarberProfileForm.tsx` and `BarberSettings.tsx`
+Replace the `<Select>` dropdown for specialty with the new `SpecialtyPillSelector`. Store selected specialties as comma-separated string in `barber_profiles.specialty` (no schema change needed — it's already a `text` column).
+
+#### 4. Update display locations
+In `Profile.tsx`, `BarberPublicProfile.tsx`, `Rankings.tsx` — render specialty as pill badges instead of plain text. Split the comma-separated value and show each as a styled pill.
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/config/specialtyTags.ts` | New — define specialty pill options with emoji/label |
+| `src/components/profiles/SpecialtyPillSelector.tsx` | New — pill-based multi-select (max 3) |
+| `src/components/profiles/BarberProfileForm.tsx` | Replace `<Select>` with `SpecialtyPillSelector` |
+| `src/components/profiles/BarberSettings.tsx` | Replace `<Select>` with `SpecialtyPillSelector` |
+| `src/pages/Profile.tsx` | Render specialty as pill badges |
+| `src/pages/BarberPublicProfile.tsx` | Render specialty as pill badges |
+
+No database changes needed — `barber_profiles.specialty` is already a text field. The review system for barber-to-client feedback is already fully implemented.
+
