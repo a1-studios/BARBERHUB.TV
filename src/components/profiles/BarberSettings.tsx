@@ -78,6 +78,23 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
     enabled: !!user?.id
   });
 
+  // Fetch current slot duration from availability
+  const { data: availabilityData } = useQuery({
+    queryKey: ['barber-availability-settings', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('barber_availability')
+        .select('slot_duration_minutes')
+        .eq('barber_user_id', user.id)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id
+  });
+
   // Form states
   const [profileForm, setProfileForm] = useState({
     display_name: '',
