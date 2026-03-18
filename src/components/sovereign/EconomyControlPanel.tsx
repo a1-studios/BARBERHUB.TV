@@ -22,6 +22,7 @@ interface EconomyControlPanelProps {
     users_with_bb?: number;
   };
   onRefresh: () => void;
+  refreshTrigger?: number;
 }
 
 const EconomyControlPanel = ({ stats, onRefresh }: EconomyControlPanelProps) => {
