@@ -31,6 +31,7 @@ import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { BottomNavBar } from '@/components/BottomNavBar';
 import { cn } from '@/lib/utils';
+import { parseSpecialties, getSpecialtyDisplay } from '@/config/specialtyTags';
 
 const Profile = () => {
   const { user, signOut } = useAuth();
