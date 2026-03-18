@@ -90,7 +90,7 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
         localStorage.setItem('pending_spin_prize', JSON.stringify({
           prize_id: prize.id,
           prize_bb: prize.bb_value || 0,
-          prize_type: prize.type || 'bb',
+          prize_type: prize.prize_type || 'bb',
           prize_label: prize.label,
           role: selectedRole,
           duration_months: prize.duration_months || 0,
