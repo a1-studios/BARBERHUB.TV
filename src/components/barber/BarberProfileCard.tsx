@@ -220,9 +220,16 @@ export const BarberProfileCard = ({
                 )}
               </div>
               {barberProfile.specialty && (
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <Scissors className="w-3 h-3" />
-                  <span>{barberProfile.specialty}</span>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {parseSpecialties(barberProfile.specialty).map(id => {
+                    const tag = getSpecialtyDisplay(id);
+                    return tag ? (
+                      <Badge key={id} variant="secondary" className="text-[10px] gap-1 px-1.5 py-0">
+                        <span>{tag.emoji}</span>
+                        <span>{tag.label}</span>
+                      </Badge>
+                    ) : null;
+                  })}
                 </div>
               )}
             </div>

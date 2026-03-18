@@ -231,6 +231,36 @@ export default function BarbersDirectory() {
           </CardContent>
         </Card>
 
+        {/* Specialty Pill Filter */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <button
+            onClick={() => setSpecialtyFilter('all')}
+            className={cn(
+              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200',
+              specialtyFilter === 'all'
+                ? 'bg-primary/20 border-primary/50 text-primary shadow-sm'
+                : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted hover:border-muted-foreground/30'
+            )}
+          >
+            All Specialties
+          </button>
+          {SPECIALTY_TAGS.map((tag) => (
+            <button
+              key={tag.id}
+              onClick={() => setSpecialtyFilter(specialtyFilter === tag.id ? 'all' : tag.id)}
+              className={cn(
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200',
+                specialtyFilter === tag.id
+                  ? 'bg-primary/20 border-primary/50 text-primary shadow-sm'
+                  : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted hover:border-muted-foreground/30'
+              )}
+            >
+              <span>{tag.emoji}</span>
+              <span>{tag.label}</span>
+            </button>
+          ))}
+        </div>
+
         {/* Results */}
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
