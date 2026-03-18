@@ -189,7 +189,7 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
         slot_duration_minutes: availabilityData?.slot_duration_minutes?.toString() || '30'
       });
     }
-  }, [barberProfile]);
+  }, [barberProfile, availabilityData]);
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
