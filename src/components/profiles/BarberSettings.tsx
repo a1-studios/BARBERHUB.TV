@@ -108,7 +108,11 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
     accepting_clients: true,
     available_for_battles: true,
     pricing_range: '',
-    business_hours: ''
+    business_hours: '',
+    // Booking economy
+    require_deposit: true,
+    default_no_show_fee_bb: 50,
+    booking_message: ''
   });
 
   const [businessSettings, setBusinessSettings] = useState({
