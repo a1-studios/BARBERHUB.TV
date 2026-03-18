@@ -25,7 +25,7 @@ interface EconomyControlPanelProps {
   refreshTrigger?: number;
 }
 
-const EconomyControlPanel = ({ stats, onRefresh }: EconomyControlPanelProps) => {
+const EconomyControlPanel = ({ stats, onRefresh, refreshTrigger }: EconomyControlPanelProps) => {
   const [modalOpen, setModalOpen] = useState<'mint' | 'burn' | 'transfer' | null>(null);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
