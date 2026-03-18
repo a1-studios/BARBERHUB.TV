@@ -69,6 +69,7 @@ export const TierRing = ({ tier, size = 'md', interactive = false, children, cla
               'absolute inset-0 rounded-full',
               validTier === 'silver' && 'bg-gradient-conic from-transparent via-slate-200/30 to-transparent',
               validTier === 'gold' && 'bg-gradient-conic from-transparent via-yellow-300/40 to-transparent',
+              validTier === 'diamond' && 'bg-gradient-conic from-transparent via-cyan-300/50 to-transparent',
             )} />
           </div>
         )}

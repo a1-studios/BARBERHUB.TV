@@ -366,6 +366,7 @@ export const AvatarCrest = ({
             {validTier === 'bronze' && <BronzeWings cx={svgW / 2} cy={cy + (svgH - config.svgSize) / 2} scale={config.wingScale} active={true} />}
             {validTier === 'silver' && <SilverWings cx={svgW / 2} cy={cy + (svgH - config.svgSize) / 2} scale={config.wingScale} active={true} />}
             {validTier === 'gold' && <GoldWings cx={svgW / 2} cy={cy + (svgH - config.svgSize) / 2} scale={config.wingScale} active={true} />}
+            {validTier === 'diamond' && <DiamondWings cx={svgW / 2} cy={cy + (svgH - config.svgSize) / 2} scale={config.wingScale} active={true} />}
 
             {/* Inner ring */}
             <circle
