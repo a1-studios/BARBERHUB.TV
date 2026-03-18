@@ -45,8 +45,8 @@ export const useCategoryPrizePools = (tournamentYear?: number) => {
         
         const donations = existingPool?.donation_contributions_cents || 0;
         const entries = existingPool?.entry_contributions_cents || 0;
-        const totalBeforeFee = BASE_PRIZE_POOL_CENTS + donations + entries;
-        const displayPool = Math.floor(totalBeforeFee * (1 - PLATFORM_FEE_PERCENT));
+        const dynamicContributions = donations + entries;
+        const displayPool = BASE_PRIZE_POOL_CENTS + Math.floor(dynamicContributions * (1 - PLATFORM_FEE_PERCENT));
         
         return {
           id: existingPool?.id || category.id,
