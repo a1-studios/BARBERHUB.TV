@@ -212,7 +212,7 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
       if (!user?.id) throw new Error('No user');
       
       // country_code is intentionally excluded (permanently locked)
-      const barberData = {
+      const barberData: Record<string, any> = {
         user_id: user.id,
         name: data.name,
         nickname: data.nickname,
@@ -224,7 +224,10 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
         instagram_handle: data.instagram || null,
         facebook_handle: data.facebook || null,
         twitter_handle: data.twitter || null,
-        youtube_handle: data.youtube || null
+        youtube_handle: data.youtube || null,
+        require_deposit: data.require_deposit,
+        default_no_show_fee_bb: data.default_no_show_fee_bb,
+        booking_message: data.booking_message || null
       };
 
       const { error } = await supabase
