@@ -27,6 +27,7 @@ const TIER_BORDER = {
   bronze: 'border-[3px] border-orange-500 animate-tier-glow-bronze',
   silver: 'border-[3px] border-slate-300 animate-tier-glow-silver',
   gold: 'border-4 border-yellow-400 animate-tier-glow-gold',
+  diamond: 'border-4 border-cyan-300 animate-tier-glow-diamond',
 } as const;
 
 export const TierRing = ({ tier, size = 'md', interactive = false, children, className }: TierRingProps) => {
