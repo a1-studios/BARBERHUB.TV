@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Activity, Users, Vote, Coins, RefreshCw } from 'lucide-react';
+import { Activity, Users, Vote, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -11,7 +11,7 @@ const LivePulseMonitor = ({ refreshTrigger }: LivePulseMonitorProps) => {
   const [stats, setStats] = useState({
     active_battles: 0,
     recent_vote_activity: 0,
-    total_bb_circulation: 0,
+    active_streams: 0,
     transactions_last_hour: 0
   });
   const [loading, setLoading] = useState(false);
@@ -75,12 +75,10 @@ const LivePulseMonitor = ({ refreshTrigger }: LivePulseMonitorProps) => {
 
         <div className="bg-[#0f0f1a] p-3 rounded-lg border border-gray-800 text-center">
           <div className="flex items-center justify-center gap-1 mb-1">
-            <Coins className="h-4 w-4 text-yellow-400" />
+            <Users className="h-4 w-4 text-yellow-400" />
           </div>
-          <div className="text-xl font-mono text-yellow-400">
-            {stats.total_bb_circulation.toLocaleString()}
-          </div>
-          <div className="text-xs text-gray-500">Total BB</div>
+          <div className="text-xl font-mono text-yellow-400">{stats.active_streams}</div>
+          <div className="text-xs text-gray-500">Active Streams</div>
         </div>
 
         <div className="bg-[#0f0f1a] p-3 rounded-lg border border-gray-800 text-center">

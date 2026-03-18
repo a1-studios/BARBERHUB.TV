@@ -95,7 +95,7 @@ const SovereignHQ = () => {
 
         {/* Control Panels Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <EconomyControlPanel stats={economyStats} onRefresh={refresh} />
+          <EconomyControlPanel stats={economyStats} onRefresh={refresh} refreshTrigger={refreshTrigger} />
           <BattleControlPanel stats={battleStats} onRefresh={refresh} />
           <UserControlPanel stats={userStats} onRefresh={refresh} />
         </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Coins, Plus, Minus, ArrowRightLeft, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,9 +22,10 @@ interface EconomyControlPanelProps {
     users_with_bb?: number;
   };
   onRefresh: () => void;
+  refreshTrigger?: number;
 }
 
-const EconomyControlPanel = ({ stats, onRefresh }: EconomyControlPanelProps) => {
+const EconomyControlPanel = ({ stats, onRefresh, refreshTrigger }: EconomyControlPanelProps) => {
   const [modalOpen, setModalOpen] = useState<'mint' | 'burn' | 'transfer' | null>(null);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -66,7 +67,7 @@ const EconomyControlPanel = ({ stats, onRefresh }: EconomyControlPanelProps) => 
         {/* Stats Row */}
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="bg-[#0f0f1a] p-3 rounded-lg border border-gray-800">
-            <div className="text-xs text-gray-500 uppercase tracking-wide">Total Supply</div>
+            <div className="text-xs text-gray-500 uppercase tracking-wide">Total BB in Circulation</div>
             <div className="text-2xl font-mono text-yellow-400">
               {stats?.total_supply?.toLocaleString() || '0'}
             </div>
