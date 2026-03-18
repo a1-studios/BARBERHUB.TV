@@ -77,33 +77,72 @@ const Index = () => {
     if (!user || loading || recoveryAttempted.current) return;
     recoveryAttempted.current = true;
 
+    // 1. Recover pending BB purchases
     try {
       const raw = localStorage.getItem('pending_bb_purchase');
-      if (!raw) return;
+      if (raw) {
+        const pending = JSON.parse(raw);
+        const ageMs = Date.now() - (pending.timestamp || 0);
 
-      const pending = JSON.parse(raw);
-      const ageMs = Date.now() - (pending.timestamp || 0);
-
-      if (ageMs > 24 * 60 * 60 * 1000) {
-        localStorage.removeItem('pending_bb_purchase');
-        return;
-      }
-
-      supabase.functions.invoke('verify-bb-purchase', {
-        body: { session_id: pending.session_id }
-      }).then(({ data, error }) => {
-        if (!error && data?.success) {
+        if (ageMs > 24 * 60 * 60 * 1000) {
           localStorage.removeItem('pending_bb_purchase');
-          queryClient.invalidateQueries({ queryKey: ['barber_bucks'] });
-          queryClient.invalidateQueries({ queryKey: ['barber_bucks_transactions'] });
-          toast.success(`+${data.bb_credited} BB credited to your account!`);
-        } else if (error || !data?.success) {
-          console.log('[BB Recovery] Verification unsuccessful, clearing pending:', data?.error || error);
-          localStorage.removeItem('pending_bb_purchase');
+        } else {
+          supabase.functions.invoke('verify-bb-purchase', {
+            body: { session_id: pending.session_id }
+          }).then(({ data, error }) => {
+            if (!error && data?.success) {
+              localStorage.removeItem('pending_bb_purchase');
+              queryClient.invalidateQueries({ queryKey: ['barber_bucks'] });
+              queryClient.invalidateQueries({ queryKey: ['barber_bucks_transactions'] });
+              toast.success(`+${data.bb_credited} BB credited to your account!`);
+            } else {
+              console.log('[BB Recovery] Verification unsuccessful:', data?.error || error);
+              localStorage.removeItem('pending_bb_purchase');
+            }
+          });
         }
-      });
+      }
     } catch {
       localStorage.removeItem('pending_bb_purchase');
+    }
+
+    // 2. Auto-claim pending spin prize from guest session
+    try {
+      const spinRaw = localStorage.getItem('pending_spin_prize');
+      if (spinRaw) {
+        const pending = JSON.parse(spinRaw);
+        const ageMs = Date.now() - (pending.timestamp || 0);
+
+        if (ageMs > 24 * 60 * 60 * 1000) {
+          localStorage.removeItem('pending_spin_prize');
+        } else {
+          supabase.functions.invoke('spin-wheel', {
+            body: {
+              role: pending.role || 'fan',
+              prize_id: pending.prize_id,
+              prize_bb: pending.prize_bb || 0,
+              prize_type: pending.prize_type || 'bb',
+              prize_label: pending.prize_label || 'Spin Prize',
+              duration_months: pending.duration_months || 0,
+              is_free_spin: true,
+            },
+          }).then(({ data, error }) => {
+            if (!error && data?.success) {
+              localStorage.removeItem('pending_spin_prize');
+              queryClient.invalidateQueries({ queryKey: ['barber_bucks'] });
+              queryClient.invalidateQueries({ queryKey: ['barber_bucks_transactions'] });
+              toast.success(`🎰 Your spin prize was claimed: ${pending.prize_label}!`);
+            } else if (data?.already_claimed) {
+              localStorage.removeItem('pending_spin_prize');
+            } else {
+              console.log('[Spin Recovery] Claim unsuccessful:', data?.error || error);
+              localStorage.removeItem('pending_spin_prize');
+            }
+          });
+        }
+      }
+    } catch {
+      localStorage.removeItem('pending_spin_prize');
     }
   }, [user, loading]);
 
