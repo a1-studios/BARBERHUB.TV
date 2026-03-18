@@ -6,12 +6,13 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { Search, MapPin, Scissors, Crown, Sparkles, Star } from 'lucide-react';
+import { Search, Scissors, Crown, Sparkles, Star, Diamond } from 'lucide-react';
 import { BarberProfileCard } from '@/components/barber/BarberProfileCard';
 import { BackButton } from '@/components/ui/BackButton';
 import { QuickBookBanner } from '@/components/fan/QuickBookBanner';
+import { SPECIALTY_TAGS, parseSpecialties } from '@/config/specialtyTags';
+import { cn } from '@/lib/utils';
 
 export default function BarbersDirectory() {
   const [searchParams] = useSearchParams();
