@@ -1,33 +1,44 @@
-## Anti-Gravity System Audit — Implementation Status
 
-### Phase 1 — Economy Integrity ✅ COMPLETED
-1. ✅ `donate-to-battle` — rewritten to delegate to `process_battle_donation` RPC (80/15/5 split)
-2. ✅ `process-bb-donation` — added 5% fee (3% M4M + 2% platform) on direct tips
-3. ✅ `spin-wheel` — added optimistic lock (`eq('barber_bucks', currentBalance)`) to prevent race conditions
-4. ✅ `distribute-pot` — rewired with 3% M4M + 2% platform fee, M4M fund ledger deposits
-5. ✅ `useBarberBucks.tsx` — removed insecure client-side `deductBucks` mutation
-6. ✅ `auto-close-voting` — added inline pot distribution when battle completes (auto-distribute-pot agent)
-7. ✅ `get_m4m_fund_summary()` — new RPC for Sovereign HQ M4M reporting
 
-### Phase 2 — Battle Lifecycle Fixes ✅ COMPLETED
-1. ✅ `submit-battle-video` — removed YouTube-only regex, accepts any valid video URL (HLS, S3, MP4)
-2. ✅ `start-live-stream` — fixed status from `'voting'` → `'active'`
-3. ✅ `tournament-matchmaker` — fixed FK mismatch: now uses `barber_profile_id` instead of `user_id` for `barber1_id`/`barber2_id`
-4. ✅ `complete-match` — switched from `SUPABASE_ANON_KEY` to `SUPABASE_SERVICE_ROLE_KEY`
+## Plan: Specialty Pills Visible to Fans + Hide Tier Plans from Non-Barbers
 
-### Phase 3 — AWS IVS Integration (Pending)
-- Needs `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION` secrets
-- Build `create-ivs-channel`, `ivs-webhook-handler`, rewrite `sync-battle-viewers`
-- Remove `check-youtube-live` obsolete function
+### Problem
+1. **Specialty pills** are only shown on profile edit forms — fans can't see or filter by them in the Barbers Directory or on barber cards/profiles.
+2. **Tier subscription plans** (the membership drawer in TierRing) are visible to anyone who clicks the avatar, including fans who shouldn't see barber-only tier options.
 
-### Phase 4 — Missing Agents ✅ COMPLETED
-1. ✅ `battle-reminders` — new edge function sends notifications 24h + 1h before scheduled battles
-2. ✅ `subscription-expiry` — new edge function finds expired subscriptions, downgrades tier, notifies barber
-3. ✅ `strike-enforcement` — new edge function DQs barbers with 3+ no-shows from tournaments
-4. ✅ `M4MFundPanel` — new Sovereign HQ component showing total fund balance, source breakdown, recent deposits
+### Changes
 
-### Phase 5 — Cleanup ✅ COMPLETED
-1. ✅ Deleted `check-youtube-live` edge function (obsolete YouTube dependency)
-2. ✅ Rewrote `sync-battle-viewers` to use Twilio participant API instead of YouTube Data API
-3. ✅ Removed YouTube config from `config.toml`
-4. ⏳ `expire_bounties_batch` pg_cron — needs cron schedule set via SQL Editor (not migration)
+#### 1. Replace specialty dropdown filter with pill-based filter in BarbersDirectory
+**File**: `src/pages/BarbersDirectory.tsx`
+- Replace the `<Select>` specialty filter (lines 178-191) with a horizontal row of clickable specialty pills using `SPECIALTY_TAGS` from `specialtyTags.ts`
+- Update the filter logic (line 74) to check if the barber's comma-separated specialty string contains the selected specialty ID (not exact match)
+- Add diamond to the tier sort priority (line 91-97): `diamond` = 5
+
+#### 2. Show specialty pills on BarberProfileCard
+**File**: `src/components/barber/BarberProfileCard.tsx`
+- Import `parseSpecialties`, `getSpecialtyDisplay` from `specialtyTags.ts`
+- Replace the plain text specialty display (lines 221-226) with parsed pill badges showing emoji + label
+
+#### 3. Hide tier drawer from non-barbers in TierRing
+**File**: `src/components/TierRing.tsx`
+- Add an optional `hideUpgrade` prop (default false)
+- When `hideUpgrade` is true, skip the interactive drawer entirely (just show the ring visually)
+
+#### 4. Pass `hideUpgrade` from fan-facing contexts
+**Files**: `src/components/barber/BarberProfileCard.tsx`, `src/pages/BarberPublicProfile.tsx`
+- On the public profile and directory cards, the TierRing/AvatarCrest should never show the membership plans drawer — set `interactive={false}` (BarberProfileCard already doesn't pass `interactive`, so it defaults to false — this is fine)
+- In `BarberProfileHeader.tsx`, the `interactive` prop is tied to `showActions` which is only true on the barber's own profile — this is already correct
+
+#### 5. Show specialty pills on BarberPublicProfile
+**File**: `src/pages/BarberPublicProfile.tsx`
+- Ensure the specialty section renders parsed pills (already done in last edit — verify it's correct)
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `src/pages/BarbersDirectory.tsx` | Replace specialty `<Select>` with pill row filter; fix specialty matching for comma-separated values; add diamond to tier sort |
+| `src/components/barber/BarberProfileCard.tsx` | Render specialty as pill badges instead of plain text |
+
+Two files. The TierRing and public profile are already correctly configured — no changes needed there.
+
