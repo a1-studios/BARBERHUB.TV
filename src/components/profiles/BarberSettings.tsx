@@ -8,6 +8,8 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SpecialtyPillSelector } from './SpecialtyPillSelector';
+import { ServicesManager } from './ServicesManager';
+import { WeeklyAvailabilityManager } from './WeeklyAvailabilityManager';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { AvatarUpload } from './AvatarUpload';
