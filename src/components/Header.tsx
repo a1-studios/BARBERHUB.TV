@@ -58,13 +58,6 @@ const Header = () => {
       requiresAuth: true
     },
     {
-      id: 'battles',
-      label: 'View Battles',
-      icon: <Swords className="w-5 h-5" />,
-      path: '/battles',
-      requiresAuth: true
-    },
-    {
       id: 'portal',
       label: 'Portal',
       icon: <Zap className="w-5 h-5" />,

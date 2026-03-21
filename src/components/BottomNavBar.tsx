@@ -5,7 +5,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 
 const barberTabs = [
   { icon: Home, label: 'HOME', path: '/' },
-  { icon: Swords, label: 'BATTLES', path: '/battles' },
+  { icon: Play, label: 'WATCH', path: '/watch' },
   { isFab: true },
   { icon: BarChart3, label: 'RANKS', path: '/rankings' },
   { icon: User, label: 'PROFILE', path: '/profile' },
