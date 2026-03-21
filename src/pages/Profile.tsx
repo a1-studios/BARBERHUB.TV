@@ -201,7 +201,7 @@ const Profile = () => {
             <img
               src={`https://flagcdn.com/w1280/${countryCode.toLowerCase()}.png`}
               alt=""
-              className="w-full h-full object-cover rotate-90 scale-150"
+              className="w-full h-full object-cover"
             />
           </div>
           <div className="fixed inset-0 z-0 bg-gradient-to-b from-background/60 via-background/40 to-background/80" />
