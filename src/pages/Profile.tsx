@@ -201,7 +201,7 @@ const Profile = () => {
             <img
               src={`https://flagcdn.com/w1280/${countryCode.toLowerCase()}.png`}
               alt=""
-              className="w-full h-full object-cover rotate-90 scale-150"
+              className="w-full h-full object-cover"
             />
           </div>
           <div className="fixed inset-0 z-0 bg-gradient-to-b from-background/60 via-background/40 to-background/80" />
@@ -214,7 +214,7 @@ const Profile = () => {
         <div className="max-w-md mx-auto min-h-[calc(100dvh-4rem-5rem)] flex flex-col">
 
           {/* ===== HERO: Avatar ===== */}
-          <div className="relative flex flex-col items-center pt-4 pb-2">
+          <div className="relative flex flex-col items-center pt-8 pb-2">
 
             {isBarber ? (
               <AvatarCrest
