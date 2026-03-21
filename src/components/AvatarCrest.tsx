@@ -16,7 +16,6 @@ interface AvatarCrestProps {
   interactive?: boolean;
   children: ReactNode;
   className?: string;
-  // M4M props
   m4mCertified?: boolean;
   m4mPaid?: boolean;
   m4mLivesTouched?: number;
@@ -37,54 +36,59 @@ const SIZE_CONFIG = {
 
 const TIER_COLORS = {
   free: { stroke: 'hsl(0 0% 30%)', fill: 'none', glow: 'none', starFill: 'hsl(0 0% 30%)' },
-  bronze: { stroke: 'hsl(24 80% 45%)', fill: 'hsl(24 80% 45%)', glow: '0 0 12px hsl(24 80% 45% / 0.5)', starFill: 'hsl(24 80% 50%)' },
-  silver: { stroke: 'hsl(210 20% 80%)', fill: 'hsl(210 20% 80%)', glow: '0 0 16px hsl(210 20% 80% / 0.5)', starFill: 'hsl(210 20% 85%)' },
-  gold: { stroke: 'hsl(45 100% 55%)', fill: 'hsl(45 100% 55%)', glow: '0 0 20px hsl(45 100% 55% / 0.5)', starFill: 'hsl(45 100% 60%)' },
-  diamond: { stroke: 'hsl(200 80% 75%)', fill: 'hsl(200 80% 75%)', glow: '0 0 24px hsl(200 80% 75% / 0.6)', starFill: 'hsl(200 80% 80%)' },
+  bronze: { stroke: 'hsl(24 80% 45%)', fill: 'hsl(24 80% 45%)', glow: '0 0 16px hsl(24 80% 45% / 0.6)', starFill: 'hsl(24 80% 50%)' },
+  silver: { stroke: 'hsl(210 20% 80%)', fill: 'hsl(210 20% 80%)', glow: '0 0 20px hsl(210 20% 80% / 0.6)', starFill: 'hsl(210 20% 85%)' },
+  gold: { stroke: 'hsl(45 100% 55%)', fill: 'hsl(45 100% 55%)', glow: '0 0 28px hsl(45 100% 55% / 0.6)', starFill: 'hsl(45 100% 60%)' },
+  diamond: { stroke: 'hsl(200 80% 75%)', fill: 'hsl(200 80% 75%)', glow: '0 0 32px hsl(200 80% 75% / 0.7)', starFill: 'hsl(200 80% 80%)' },
+};
+
+const TIER_ORDER = ['free', 'bronze', 'silver', 'gold', 'diamond'] as const;
+
+const getNextTierColor = (currentTier: string) => {
+  const idx = TIER_ORDER.indexOf(currentTier as any);
+  const nextKey = TIER_ORDER[Math.min(idx + 1, TIER_ORDER.length - 1)];
+  return TIER_COLORS[nextKey];
 };
 
 // Bronze: angular chevron wings
-const BronzeWings = ({ cx, cy, scale, active }: { cx: number; cy: number; scale: number; active: boolean }) => (
-  <g opacity={active ? 1 : 0.15} className={active ? 'animate-crest-wing-bronze' : ''}>
-    {/* Left wing - angular chevrons */}
+const BronzeWings = ({ cx, cy, scale, active, ghost }: { cx: number; cy: number; scale: number; active: boolean; ghost?: boolean }) => (
+  <g opacity={active ? 1 : ghost ? undefined : 0.35} className={active ? 'animate-crest-wing-bronze' : ghost ? 'animate-crest-ghost-pulse' : ''}>
     <path
       d={`M${cx - 34 * scale} ${cy - 8 * scale} L${cx - 48 * scale} ${cy - 20 * scale} L${cx - 42 * scale} ${cy - 4 * scale} L${cx - 50 * scale} ${cy + 8 * scale} L${cx - 36 * scale} ${cy + 4 * scale} Z`}
       stroke={TIER_COLORS.bronze.stroke}
-      strokeWidth={1.5}
-      fill={active ? `${TIER_COLORS.bronze.fill}` : 'none'}
-      fillOpacity={active ? 0.2 : 0}
+      strokeWidth={active ? 3 : 2}
+      fill={active ? TIER_COLORS.bronze.fill : 'none'}
+      fillOpacity={active ? 0.4 : 0}
       style={active ? { filter: TIER_COLORS.bronze.glow } : {}}
     />
     <path
       d={`M${cx - 38 * scale} ${cy - 14 * scale} L${cx - 55 * scale} ${cy - 28 * scale} L${cx - 48 * scale} ${cy - 10 * scale} L${cx - 58 * scale} ${cy + 4 * scale} L${cx - 42 * scale} ${cy - 2 * scale}`}
       stroke={TIER_COLORS.bronze.stroke}
-      strokeWidth={1}
+      strokeWidth={active ? 2 : 1.5}
       fill="none"
-      opacity={active ? 0.6 : 0.1}
+      opacity={active ? 0.7 : 0.2}
     />
-    {/* Right wing - mirrored */}
     <path
       d={`M${cx + 34 * scale} ${cy - 8 * scale} L${cx + 48 * scale} ${cy - 20 * scale} L${cx + 42 * scale} ${cy - 4 * scale} L${cx + 50 * scale} ${cy + 8 * scale} L${cx + 36 * scale} ${cy + 4 * scale} Z`}
       stroke={TIER_COLORS.bronze.stroke}
-      strokeWidth={1.5}
-      fill={active ? `${TIER_COLORS.bronze.fill}` : 'none'}
-      fillOpacity={active ? 0.2 : 0}
+      strokeWidth={active ? 3 : 2}
+      fill={active ? TIER_COLORS.bronze.fill : 'none'}
+      fillOpacity={active ? 0.4 : 0}
       style={active ? { filter: TIER_COLORS.bronze.glow } : {}}
     />
     <path
       d={`M${cx + 38 * scale} ${cy - 14 * scale} L${cx + 55 * scale} ${cy - 28 * scale} L${cx + 48 * scale} ${cy - 10 * scale} L${cx + 58 * scale} ${cy + 4 * scale} L${cx + 42 * scale} ${cy - 2 * scale}`}
       stroke={TIER_COLORS.bronze.stroke}
-      strokeWidth={1}
+      strokeWidth={active ? 2 : 1.5}
       fill="none"
-      opacity={active ? 0.6 : 0.1}
+      opacity={active ? 0.7 : 0.2}
     />
   </g>
 );
 
 // Silver: curved laurel branches
-const SilverWings = ({ cx, cy, scale, active }: { cx: number; cy: number; scale: number; active: boolean }) => (
-  <g opacity={active ? 1 : 0.15} className={active ? 'animate-crest-wing-silver' : ''}>
-    {/* Left laurel */}
+const SilverWings = ({ cx, cy, scale, active, ghost }: { cx: number; cy: number; scale: number; active: boolean; ghost?: boolean }) => (
+  <g opacity={active ? 1 : ghost ? undefined : 0.35} className={active ? 'animate-crest-wing-silver' : ghost ? 'animate-crest-ghost-pulse' : ''}>
     {[-24, -16, -8, 0, 8, 16].map((offset, i) => (
       <ellipse
         key={`l-${i}`}
@@ -94,13 +98,12 @@ const SilverWings = ({ cx, cy, scale, active }: { cx: number; cy: number; scale:
         ry={4 * scale}
         transform={`rotate(${-30 + i * 10} ${cx - 40 * scale - i * 2 * scale} ${cy + offset * scale * 0.6})`}
         stroke={TIER_COLORS.silver.stroke}
-        strokeWidth={1.2}
+        strokeWidth={active ? 2.5 : 1.8}
         fill={active ? TIER_COLORS.silver.fill : 'none'}
-        fillOpacity={active ? 0.15 : 0}
+        fillOpacity={active ? 0.35 : 0}
         style={active ? { filter: TIER_COLORS.silver.glow } : {}}
       />
     ))}
-    {/* Right laurel */}
     {[-24, -16, -8, 0, 8, 16].map((offset, i) => (
       <ellipse
         key={`r-${i}`}
@@ -110,43 +113,40 @@ const SilverWings = ({ cx, cy, scale, active }: { cx: number; cy: number; scale:
         ry={4 * scale}
         transform={`rotate(${30 - i * 10} ${cx + 40 * scale + i * 2 * scale} ${cy + offset * scale * 0.6})`}
         stroke={TIER_COLORS.silver.stroke}
-        strokeWidth={1.2}
+        strokeWidth={active ? 2.5 : 1.8}
         fill={active ? TIER_COLORS.silver.fill : 'none'}
-        fillOpacity={active ? 0.15 : 0}
+        fillOpacity={active ? 0.35 : 0}
         style={active ? { filter: TIER_COLORS.silver.glow } : {}}
       />
     ))}
-    {/* Central stem left */}
     <path
       d={`M${cx - 34 * scale} ${cy - 18 * scale} Q${cx - 50 * scale} ${cy} ${cx - 38 * scale} ${cy + 18 * scale}`}
       stroke={TIER_COLORS.silver.stroke}
-      strokeWidth={1.5}
+      strokeWidth={active ? 2.5 : 1.8}
       fill="none"
-      opacity={active ? 0.8 : 0.1}
+      opacity={active ? 0.9 : 0.2}
     />
-    {/* Central stem right */}
     <path
       d={`M${cx + 34 * scale} ${cy - 18 * scale} Q${cx + 50 * scale} ${cy} ${cx + 38 * scale} ${cy + 18 * scale}`}
       stroke={TIER_COLORS.silver.stroke}
-      strokeWidth={1.5}
+      strokeWidth={active ? 2.5 : 1.8}
       fill="none"
-      opacity={active ? 0.8 : 0.1}
+      opacity={active ? 0.9 : 0.2}
     />
   </g>
 );
 
 // Gold: elaborate multi-layered wings
-const GoldWings = ({ cx, cy, scale, active }: { cx: number; cy: number; scale: number; active: boolean }) => (
-  <g opacity={active ? 1 : 0.15} className={active ? 'animate-crest-wing-gold' : ''}>
-    {/* Left wing - layered feathers */}
+const GoldWings = ({ cx, cy, scale, active, ghost }: { cx: number; cy: number; scale: number; active: boolean; ghost?: boolean }) => (
+  <g opacity={active ? 1 : ghost ? undefined : 0.35} className={active ? 'animate-crest-wing-gold' : ghost ? 'animate-crest-ghost-pulse' : ''}>
     <path
       d={`M${cx - 34 * scale} ${cy - 5 * scale} 
           C${cx - 50 * scale} ${cy - 30 * scale} ${cx - 65 * scale} ${cy - 25 * scale} ${cx - 60 * scale} ${cy - 10 * scale}
           C${cx - 55 * scale} ${cy + 5 * scale} ${cx - 45 * scale} ${cy + 15 * scale} ${cx - 34 * scale} ${cy + 10 * scale}`}
       stroke={TIER_COLORS.gold.stroke}
-      strokeWidth={2}
+      strokeWidth={active ? 3.5 : 2}
       fill={active ? TIER_COLORS.gold.fill : 'none'}
-      fillOpacity={active ? 0.15 : 0}
+      fillOpacity={active ? 0.4 : 0}
       style={active ? { filter: TIER_COLORS.gold.glow } : {}}
     />
     <path
@@ -154,29 +154,23 @@ const GoldWings = ({ cx, cy, scale, active }: { cx: number; cy: number; scale: n
           C${cx - 58 * scale} ${cy - 38 * scale} ${cx - 75 * scale} ${cy - 30 * scale} ${cx - 68 * scale} ${cy - 12 * scale}
           C${cx - 62 * scale} ${cy + 8 * scale} ${cx - 48 * scale} ${cy + 20 * scale} ${cx - 36 * scale} ${cy + 8 * scale}`}
       stroke={TIER_COLORS.gold.stroke}
-      strokeWidth={1.2}
+      strokeWidth={active ? 2 : 1.5}
       fill="none"
-      opacity={active ? 0.5 : 0.08}
+      opacity={active ? 0.6 : 0.15}
     />
-    {/* Ornate tip left */}
     <circle
-      cx={cx - 62 * scale}
-      cy={cy - 14 * scale}
-      r={3 * scale}
-      stroke={TIER_COLORS.gold.stroke}
-      strokeWidth={1}
-      fill={active ? TIER_COLORS.gold.fill : 'none'}
-      fillOpacity={active ? 0.3 : 0}
+      cx={cx - 62 * scale} cy={cy - 14 * scale} r={3.5 * scale}
+      stroke={TIER_COLORS.gold.stroke} strokeWidth={active ? 2 : 1.2}
+      fill={active ? TIER_COLORS.gold.fill : 'none'} fillOpacity={active ? 0.5 : 0}
     />
-    {/* Right wing - mirrored */}
     <path
       d={`M${cx + 34 * scale} ${cy - 5 * scale}
           C${cx + 50 * scale} ${cy - 30 * scale} ${cx + 65 * scale} ${cy - 25 * scale} ${cx + 60 * scale} ${cy - 10 * scale}
           C${cx + 55 * scale} ${cy + 5 * scale} ${cx + 45 * scale} ${cy + 15 * scale} ${cx + 34 * scale} ${cy + 10 * scale}`}
       stroke={TIER_COLORS.gold.stroke}
-      strokeWidth={2}
+      strokeWidth={active ? 3.5 : 2}
       fill={active ? TIER_COLORS.gold.fill : 'none'}
-      fillOpacity={active ? 0.15 : 0}
+      fillOpacity={active ? 0.4 : 0}
       style={active ? { filter: TIER_COLORS.gold.glow } : {}}
     />
     <path
@@ -184,26 +178,21 @@ const GoldWings = ({ cx, cy, scale, active }: { cx: number; cy: number; scale: n
           C${cx + 58 * scale} ${cy - 38 * scale} ${cx + 75 * scale} ${cy - 30 * scale} ${cx + 68 * scale} ${cy - 12 * scale}
           C${cx + 62 * scale} ${cy + 8 * scale} ${cx + 48 * scale} ${cy + 20 * scale} ${cx + 36 * scale} ${cy + 8 * scale}`}
       stroke={TIER_COLORS.gold.stroke}
-      strokeWidth={1.2}
+      strokeWidth={active ? 2 : 1.5}
       fill="none"
-      opacity={active ? 0.5 : 0.08}
+      opacity={active ? 0.6 : 0.15}
     />
     <circle
-      cx={cx + 62 * scale}
-      cy={cy - 14 * scale}
-      r={3 * scale}
-      stroke={TIER_COLORS.gold.stroke}
-      strokeWidth={1}
-      fill={active ? TIER_COLORS.gold.fill : 'none'}
-      fillOpacity={active ? 0.3 : 0}
+      cx={cx + 62 * scale} cy={cy - 14 * scale} r={3.5 * scale}
+      stroke={TIER_COLORS.gold.stroke} strokeWidth={active ? 2 : 1.2}
+      fill={active ? TIER_COLORS.gold.fill : 'none'} fillOpacity={active ? 0.5 : 0}
     />
   </g>
 );
 
-// Diamond: crystalline faceted wings — most elaborate
-const DiamondWings = ({ cx, cy, scale, active }: { cx: number; cy: number; scale: number; active: boolean }) => (
-  <g opacity={active ? 1 : 0.15} className={active ? 'animate-crest-wing-diamond' : ''}>
-    {/* Left wing - crystalline facets */}
+// Diamond: crystalline faceted wings
+const DiamondWings = ({ cx, cy, scale, active, ghost }: { cx: number; cy: number; scale: number; active: boolean; ghost?: boolean }) => (
+  <g opacity={active ? 1 : ghost ? undefined : 0.35} className={active ? 'animate-crest-wing-diamond' : ghost ? 'animate-crest-ghost-pulse' : ''}>
     <path
       d={`M${cx - 34 * scale} ${cy - 5 * scale}
           L${cx - 52 * scale} ${cy - 32 * scale}
@@ -215,23 +204,22 @@ const DiamondWings = ({ cx, cy, scale, active }: { cx: number; cy: number; scale
           L${cx - 48 * scale} ${cy + 18 * scale}
           L${cx - 34 * scale} ${cy + 10 * scale} Z`}
       stroke={TIER_COLORS.diamond.stroke}
-      strokeWidth={2}
+      strokeWidth={active ? 3.5 : 2}
       fill={active ? TIER_COLORS.diamond.fill : 'none'}
-      fillOpacity={active ? 0.12 : 0}
+      fillOpacity={active ? 0.35 : 0}
       style={active ? { filter: TIER_COLORS.diamond.glow } : {}}
     />
     <path
       d={`M${cx - 52 * scale} ${cy - 32 * scale} L${cx - 50 * scale} ${cy - 4 * scale} L${cx - 70 * scale} ${cy - 22 * scale}`}
-      stroke={TIER_COLORS.diamond.stroke} strokeWidth={0.8} fill="none" opacity={active ? 0.4 : 0.06}
+      stroke={TIER_COLORS.diamond.stroke} strokeWidth={1.5} fill="none" opacity={active ? 0.5 : 0.1}
     />
     <path
       d={`M${cx - 50 * scale} ${cy - 4 * scale} L${cx - 48 * scale} ${cy + 18 * scale}`}
-      stroke={TIER_COLORS.diamond.stroke} strokeWidth={0.8} fill="none" opacity={active ? 0.3 : 0.06}
+      stroke={TIER_COLORS.diamond.stroke} strokeWidth={1.5} fill="none" opacity={active ? 0.4 : 0.1}
     />
-    <circle cx={cx - 70 * scale} cy={cy - 22 * scale} r={2.5 * scale}
-      stroke={TIER_COLORS.diamond.stroke} strokeWidth={1}
-      fill={active ? TIER_COLORS.diamond.fill : 'none'} fillOpacity={active ? 0.5 : 0} />
-    {/* Right wing - mirrored */}
+    <circle cx={cx - 70 * scale} cy={cy - 22 * scale} r={3 * scale}
+      stroke={TIER_COLORS.diamond.stroke} strokeWidth={1.5}
+      fill={active ? TIER_COLORS.diamond.fill : 'none'} fillOpacity={active ? 0.6 : 0} />
     <path
       d={`M${cx + 34 * scale} ${cy - 5 * scale}
           L${cx + 52 * scale} ${cy - 32 * scale}
@@ -243,34 +231,34 @@ const DiamondWings = ({ cx, cy, scale, active }: { cx: number; cy: number; scale
           L${cx + 48 * scale} ${cy + 18 * scale}
           L${cx + 34 * scale} ${cy + 10 * scale} Z`}
       stroke={TIER_COLORS.diamond.stroke}
-      strokeWidth={2}
+      strokeWidth={active ? 3.5 : 2}
       fill={active ? TIER_COLORS.diamond.fill : 'none'}
-      fillOpacity={active ? 0.12 : 0}
+      fillOpacity={active ? 0.35 : 0}
       style={active ? { filter: TIER_COLORS.diamond.glow } : {}}
     />
     <path
       d={`M${cx + 52 * scale} ${cy - 32 * scale} L${cx + 50 * scale} ${cy - 4 * scale} L${cx + 70 * scale} ${cy - 22 * scale}`}
-      stroke={TIER_COLORS.diamond.stroke} strokeWidth={0.8} fill="none" opacity={active ? 0.4 : 0.06}
+      stroke={TIER_COLORS.diamond.stroke} strokeWidth={1.5} fill="none" opacity={active ? 0.5 : 0.1}
     />
     <path
       d={`M${cx + 50 * scale} ${cy - 4 * scale} L${cx + 48 * scale} ${cy + 18 * scale}`}
-      stroke={TIER_COLORS.diamond.stroke} strokeWidth={0.8} fill="none" opacity={active ? 0.3 : 0.06}
+      stroke={TIER_COLORS.diamond.stroke} strokeWidth={1.5} fill="none" opacity={active ? 0.4 : 0.1}
     />
-    <circle cx={cx + 70 * scale} cy={cy - 22 * scale} r={2.5 * scale}
-      stroke={TIER_COLORS.diamond.stroke} strokeWidth={1}
-      fill={active ? TIER_COLORS.diamond.fill : 'none'} fillOpacity={active ? 0.5 : 0} />
+    <circle cx={cx + 70 * scale} cy={cy - 22 * scale} r={3 * scale}
+      stroke={TIER_COLORS.diamond.stroke} strokeWidth={1.5}
+      fill={active ? TIER_COLORS.diamond.fill : 'none'} fillOpacity={active ? 0.6 : 0} />
   </g>
 );
 
-// Stars row
-const Stars = ({ cx, cy, count, scale, color, active }: { cx: number; cy: number; count: number; scale: number; color: string; active: boolean }) => {
+// Stars row — bolder
+const Stars = ({ cx, cy, count, scale, color, active, ghost }: { cx: number; cy: number; count: number; scale: number; color: string; active: boolean; ghost?: boolean }) => {
   const spacing = 10 * scale;
   const startX = cx - ((count - 1) * spacing) / 2;
   return (
-    <g opacity={active ? 1 : 0.15} className={active ? 'animate-crest-star-twinkle' : ''}>
+    <g opacity={active ? 1 : ghost ? undefined : 0.35} className={active ? 'animate-crest-star-twinkle' : ghost ? 'animate-crest-ghost-pulse' : ''}>
       {Array.from({ length: count }).map((_, i) => {
         const sx = startX + i * spacing;
-        const r = 3.5 * scale;
+        const r = 5 * scale;
         const points = Array.from({ length: 5 }).map((_, j) => {
           const angle = (j * 72 - 90) * (Math.PI / 180);
           const innerAngle = ((j * 72 + 36) - 90) * (Math.PI / 180);
@@ -282,8 +270,9 @@ const Stars = ({ cx, cy, count, scale, color, active }: { cx: number; cy: number
             points={points}
             fill={active ? color : 'none'}
             stroke={color}
-            strokeWidth={0.8}
-            fillOpacity={active ? 0.9 : 0}
+            strokeWidth={active ? 1.2 : 0.8}
+            fillOpacity={active ? 1 : 0}
+            style={active ? { filter: `drop-shadow(0 0 4px ${color})` } : {}}
           />
         );
       })}
@@ -306,38 +295,20 @@ const M4MHeart = ({ cx, cy, scale, glowState }: { cx: number; cy: number; scale:
           : {}
       }
     >
-      {/* Invisible hit-area for click */}
-      <rect
-        x={cx - 18 * s}
-        y={cy - 16 * s}
-        width={36 * s}
-        height={34 * s}
-        fill="transparent"
-        style={{ pointerEvents: 'all' }}
-      />
-      {/* Heart outline */}
+      <rect x={cx - 18 * s} y={cy - 16 * s} width={36 * s} height={34 * s} fill="transparent" style={{ pointerEvents: 'all' }} />
       <path
         d={`M${cx} ${cy + 16 * s} C${cx} ${cy + 16 * s} ${cx - 16 * s} ${cy + 4 * s} ${cx - 16 * s} ${cy - 5 * s} C${cx - 16 * s} ${cy - 11 * s} ${cx - 11 * s} ${cy - 14 * s} ${cx - 6 * s} ${cy - 14 * s} C${cx - 3 * s} ${cy - 14 * s} ${cx - 1 * s} ${cy - 11 * s} ${cx} ${cy - 9 * s} C${cx + 1 * s} ${cy - 11 * s} ${cx + 3 * s} ${cy - 14 * s} ${cx + 6 * s} ${cy - 14 * s} C${cx + 11 * s} ${cy - 14 * s} ${cx + 16 * s} ${cy - 11 * s} ${cx + 16 * s} ${cy - 5 * s} C${cx + 16 * s} ${cy + 4 * s} ${cx} ${cy + 16 * s} ${cx} ${cy + 16 * s} Z`}
-        stroke={color}
-        strokeWidth={1.5 * s}
+        stroke={color} strokeWidth={1.5 * s}
         fill={glowState === 'complete' ? `${M4M_CYAN}30` : 'none'}
       />
-      {/* Shield */}
       <path
         d={`M${cx} ${cy - 8 * s} L${cx - 5.5 * s} ${cy - 4 * s} L${cx - 5.5 * s} ${cy + 3 * s} C${cx - 5.5 * s} ${cy + 7 * s} ${cx - 3 * s} ${cy + 10 * s} ${cx} ${cy + 12 * s} C${cx + 3 * s} ${cy + 10 * s} ${cx + 5.5 * s} ${cy + 7 * s} ${cx + 5.5 * s} ${cy + 3 * s} L${cx + 5.5 * s} ${cy - 4 * s} Z`}
-        stroke={color}
-        strokeWidth={1 * s}
-        fill="none"
+        stroke={color} strokeWidth={1 * s} fill="none"
       />
-      {/* Checkmark */}
       {glowState !== 'ghost' && (
         <path
           d={`M${cx - 2.5 * s} ${cy + 2 * s} L${cx - 0.5 * s} ${cy + 4.5 * s} L${cx + 3 * s} ${cy - 1 * s}`}
-          stroke={M4M_CYAN}
-          strokeWidth={1.2 * s}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
+          stroke={M4M_CYAN} strokeWidth={1.2 * s} strokeLinecap="round" strokeLinejoin="round" fill="none"
         />
       )}
     </g>
@@ -363,6 +334,7 @@ export const AvatarCrest = ({
   const [verificationModalOpen, setVerificationModalOpen] = useState(false);
   const [certificationModalOpen, setCertificationModalOpen] = useState(false);
   const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [ghostHovered, setGhostHovered] = useState(false);
   const { barberBucks, isLoading: bbLoading } = useBarberBucks();
 
   const tierKey = (tier?.toLowerCase() || 'free') as keyof typeof TIER_COLORS;
@@ -378,9 +350,9 @@ export const AvatarCrest = ({
   const m4mState: 'ghost' | 'certified' | 'complete' =
     m4mCertified && m4mPaid ? 'complete' : m4mCertified ? 'certified' : 'ghost';
 
+  // Allow upgrade from any tier — no isActive guard
   const handleRingClick = () => {
     if (!interactive) return;
-    if (isActive) return; // already subscribed
     setDrawerOpen(true);
   };
 
@@ -399,15 +371,20 @@ export const AvatarCrest = ({
     setShowAddFunds(true);
   };
 
-  // Total SVG height includes M4M heart below + stars
+  const handleGhostInteraction = () => {
+    if (interactive && !isActive) {
+      setDrawerOpen(true);
+    }
+  };
+
   const svgW = config.svgSize + 40 * config.wingScale;
   const svgH = config.svgSize + (showM4M ? 24 * config.wingScale : 8 * config.wingScale);
+  const nextTierColors = getNextTierColor(validTier);
 
   return (
     <>
       <div className={cn('relative inline-flex flex-col items-center', className)}>
         <div className="relative" style={{ width: svgW, height: svgH }}>
-          {/* SVG Frame */}
           <svg
             viewBox={`0 0 ${svgW} ${svgH}`}
             width={svgW}
@@ -415,13 +392,24 @@ export const AvatarCrest = ({
             className="absolute inset-0"
             style={{ overflow: 'visible' }}
           >
-            {/* Ghost preview for free tier — show all three outlines faintly */}
+            {/* Ghost preview for free tier — interactive */}
             {!isActive && (
-              <>
-                <BronzeWings cx={svgW / 2} cy={cy + (svgH - config.svgSize) / 2} scale={config.wingScale} active={false} />
-                <SilverWings cx={svgW / 2} cy={cy + (svgH - config.svgSize) / 2} scale={config.wingScale} active={false} />
-                <GoldWings cx={svgW / 2} cy={cy + (svgH - config.svgSize) / 2} scale={config.wingScale} active={false} />
-              </>
+              <g
+                className={cn(
+                  'transition-all duration-300 cursor-pointer',
+                  ghostHovered ? 'animate-crest-ghost-hover' : ''
+                )}
+                style={{ opacity: ghostHovered ? 0.7 : undefined }}
+                onMouseEnter={() => setGhostHovered(true)}
+                onMouseLeave={() => setGhostHovered(false)}
+                onTouchStart={() => setGhostHovered(true)}
+                onTouchEnd={() => { setGhostHovered(false); handleGhostInteraction(); }}
+                onClick={handleGhostInteraction}
+              >
+                <BronzeWings cx={svgW / 2} cy={cy + (svgH - config.svgSize) / 2} scale={config.wingScale} active={false} ghost />
+                <SilverWings cx={svgW / 2} cy={cy + (svgH - config.svgSize) / 2} scale={config.wingScale} active={false} ghost />
+                <GoldWings cx={svgW / 2} cy={cy + (svgH - config.svgSize) / 2} scale={config.wingScale} active={false} ghost />
+              </g>
             )}
 
             {/* Active tier wings */}
@@ -430,17 +418,30 @@ export const AvatarCrest = ({
             {validTier === 'gold' && <GoldWings cx={svgW / 2} cy={cy + (svgH - config.svgSize) / 2} scale={config.wingScale} active={true} />}
             {validTier === 'diamond' && <DiamondWings cx={svgW / 2} cy={cy + (svgH - config.svgSize) / 2} scale={config.wingScale} active={true} />}
 
-            {/* Inner ring */}
+            {/* Inner ring — bold badge style */}
             <circle
               cx={svgW / 2}
               cy={cy + (svgH - config.svgSize) / 2}
               r={config.ringR}
               stroke={tierColors.stroke}
-              strokeWidth={isActive ? (validTier === 'gold' ? 3 : 2.5) : 1.5}
+              strokeWidth={isActive ? (validTier === 'diamond' ? 5 : validTier === 'gold' ? 4.5 : 4) : 2}
               fill="none"
-              opacity={isActive ? 1 : 0.3}
+              opacity={isActive ? 1 : 0.4}
               style={isActive ? { filter: tierColors.glow } : {}}
             />
+            {/* Outer glow ring for gold/diamond */}
+            {(validTier === 'gold' || validTier === 'diamond') && (
+              <circle
+                cx={svgW / 2}
+                cy={cy + (svgH - config.svgSize) / 2}
+                r={config.ringR + 3}
+                stroke={tierColors.stroke}
+                strokeWidth={1.5}
+                fill="none"
+                opacity={0.4}
+                style={{ filter: tierColors.glow }}
+              />
+            )}
 
             {/* Stars */}
             {starCount > 0 && (
@@ -462,10 +463,11 @@ export const AvatarCrest = ({
                 scale={config.wingScale}
                 color="hsl(0 0% 40%)"
                 active={false}
+                ghost
               />
             )}
 
-            {/* M4M Heart at bottom */}
+            {/* M4M Heart */}
             {showM4M && (
               <motion.g
                 onClick={handleM4MClick}
@@ -486,7 +488,7 @@ export const AvatarCrest = ({
             )}
           </svg>
 
-          {/* Avatar positioned over center */}
+          {/* Avatar */}
           <div
             className="absolute rounded-full overflow-hidden"
             style={{
@@ -501,19 +503,27 @@ export const AvatarCrest = ({
           >
             {children}
           </div>
+
+          {/* "Upgrade" label on ghost hover */}
+          {!isActive && ghostHovered && interactive && (
+            <div
+              className="absolute left-1/2 -translate-x-1/2 text-xs font-bold tracking-wide pointer-events-none"
+              style={{
+                bottom: -4,
+                color: 'hsl(187 100% 50%)',
+                textShadow: '0 0 8px hsl(187 100% 50% / 0.6)',
+              }}
+            >
+              UPGRADE
+            </div>
+          )}
         </div>
 
-        {/* M4M pulse animation for complete state */}
+        {/* M4M pulse */}
         {showM4M && m4mState === 'complete' && (
           <motion.div
             className="absolute pointer-events-none"
-            style={{
-              bottom: 0,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: 20 * config.wingScale,
-              height: 20 * config.wingScale,
-            }}
+            style={{ bottom: 0, left: '50%', transform: 'translateX(-50%)', width: 20 * config.wingScale, height: 20 * config.wingScale }}
             animate={{ scale: [1, 1.15, 1, 1.1, 1] }}
             transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.6 }}
           />
@@ -532,10 +542,7 @@ export const AvatarCrest = ({
                 <div className="flex items-center justify-center gap-2 py-2 px-4 bg-muted/30 rounded-lg border border-border/30 mx-auto w-fit mb-4">
                   <Coins className="h-4 w-4 text-primary" />
                   <span className="text-sm font-medium">
-                    Balance:{' '}
-                    <span className="text-primary font-bold">
-                      {bbLoading ? '...' : `${barberBucks} BB`}
-                    </span>
+                    Balance: <span className="text-primary font-bold">{bbLoading ? '...' : `${barberBucks} BB`}</span>
                   </span>
                 </div>
                 <BarberSubscriptionTiers onShowAddFunds={handleShowAddFunds} />
@@ -549,26 +556,9 @@ export const AvatarCrest = ({
       {/* M4M Modals */}
       {showM4M && (
         <>
-          <M4MVerificationModal
-            open={verificationModalOpen}
-            onOpenChange={setVerificationModalOpen}
-            barberName={barberName}
-            barberUserId={barberUserId}
-            livesTouched={m4mLivesTouched}
-          />
-          <M4MCertificationModal
-            open={certificationModalOpen}
-            onOpenChange={setCertificationModalOpen}
-            barberName={barberName}
-            barberUserId={barberUserId}
-          />
-          <M4MQRCodeModal
-            open={qrModalOpen}
-            onOpenChange={setQrModalOpen}
-            barberName={barberName}
-            barberUserId={barberUserId}
-            livesTouched={m4mLivesTouched}
-          />
+          <M4MVerificationModal open={verificationModalOpen} onOpenChange={setVerificationModalOpen} barberName={barberName} barberUserId={barberUserId} livesTouched={m4mLivesTouched} />
+          <M4MCertificationModal open={certificationModalOpen} onOpenChange={setCertificationModalOpen} barberName={barberName} barberUserId={barberUserId} />
+          <M4MQRCodeModal open={qrModalOpen} onOpenChange={setQrModalOpen} barberName={barberName} barberUserId={barberUserId} livesTouched={m4mLivesTouched} />
         </>
       )}
     </>
