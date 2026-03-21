@@ -1,52 +1,48 @@
 
 
-## Audit: Spin Wheel, Arena Gate, and Membership — Binary Role Logic Alignment
+## Make Tier Crest Eye-Catching + Interactive Ghost Upgrade Prompt
 
-### Issues Found
+### Problems
 
-#### Issue 1: Spin Wheel — "Back" button lets authenticated users reach role-select
-**File**: `SpinWheelOverlay.tsx` line 220
-The `confirm-spin` step has a "Back" button that navigates to `role-select`. For authenticated users, this should never happen — they should not be able to change their role. An authenticated barber could press Back, pick "Fan", and spin with fan prizes (getting "3 Month Free Cuts" instead of barber-appropriate "Premium" prizes).
+1. **Active tiers barely visible**: Wings use thin SVG strokes (1-2px) with low fill opacity (0.12-0.2). On dark backgrounds they're nearly invisible.
+2. **Ghost state at 15% opacity is invisible**: Free-tier users see wings/stars at `opacity={0.15}` — practically invisible on dark backgrounds.
+3. **No hover/touch interaction on ghost**: The ghost wings don't highlight or prompt upgrade on interaction.
+4. **Ring stroke too thin**: The circle around the avatar is only 2-2.5px — not badge-like at all.
+5. **`handleRingClick` still blocks subscribed users** (line 383: `if (isActive) return;`) — was supposed to be removed per last plan.
 
-**Fix**: Change the Back button behavior — for authenticated users, close the overlay instead of going to role-select. Or hide the Back button entirely for authenticated users.
+### Design Goal
+Make the crest feel like a **verified badge** — immediately recognizable, bold, glowing. Ghost state should be a teaser that lights up on hover to say "upgrade me."
 
-#### Issue 2: Spin Wheel — Authenticated users not charged server-side for `is_free_spin`
-**File**: `SpinWheelOverlay.tsx` line 70-78
-When an authenticated user spins after confirming (paying 5 BB), the `handleResult` call to `spin-wheel` does NOT send `is_free_spin: false`. Since `is_free_spin` defaults to `undefined` (falsy), the edge function treats it as a paid spin — this is correct by accident. However, the BB deduction and prize capping at 100 BB happen server-side while the prize selection (weighted random) happens client-side. A user could manipulate client-side code to always select the best prize. This is a known limitation but worth noting.
+### Changes
 
-#### Issue 3: Spin Wheel — Fan prizes awarded to barbers via `existing_fan` prize set
-**File**: `SpinWheelOverlay.tsx` line 123-128
-The `getPrizeSet()` function uses `selectedRole` not `detectedRole`. If `selectedRole` somehow becomes 'fan' for a barber (via the Back button issue above), they'd get fan prizes ("Free Cuts") instead of barber prizes ("Premium").
+#### 1. `AvatarCrest.tsx` — Bold up everything
 
-**Fix**: For authenticated users, always use `detectedRole` regardless of `selectedRole`.
+**Active wings**: Increase stroke widths by ~2x, increase `fillOpacity` from 0.12-0.2 to 0.35-0.5, add stronger glow filters with larger spread. The wings should be **filled and glowing**, not just outlines.
 
-#### Issue 4: Arena Gate — Only creates barber accounts
-**File**: `ArenaGateModal.tsx` line 87
-The Arena Gate hardcodes `user_type: 'barber'` in the signup metadata. This is correct — Arena Gate is the barber onboarding path. But it means there's no equivalent guided onboarding for fans. The LandingHero handles fan signup separately. This is consistent with binary roles.
+**Ring**: Increase stroke width from 2-3px to 4-5px for active tiers. Add a second outer glow ring for gold/diamond.
 
-**Status**: Correct — no fix needed.
+**Stars**: Increase `fillOpacity` from 0.9 to 1, increase star size multiplier from 3.5 to 5, add glow filter matching tier color.
 
-#### Issue 5: Membership Tiers — Already properly gated
-**File**: `BarberPublicProfile.tsx` line 291, `TierRing.tsx` line 42-44
-`interactive={isOwner}` correctly limits the tier drawer to the profile owner. The `TierRing` also blocks the drawer if the user already has a non-free tier (`validTier !== 'free'` returns early on line 43). 
+**Ghost state**: Change `opacity` from 0.15 to 0.35 so outlines are actually visible. Add a `[hovered, setHovered]` state. On hover/touch (`onMouseEnter`/`onTouchStart`), animate ghost wings to 0.7 opacity with the next-tier color pulsing — like a preview of what they'd get. Show a small "Upgrade" tooltip/label below the crest on hover.
 
-**Status**: Correct — no fix needed.
+**Remove `if (isActive) return;`** from `handleRingClick` so subscribed barbers can still upgrade.
 
-#### Issue 6: TierRing blocks upgrade for users who already have a tier
-**File**: `TierRing.tsx` line 43
-`if (interactive && validTier !== 'free') return;` — This means a Bronze barber can't open the drawer to upgrade to Silver/Gold/Diamond. This seems like a bug — barbers should be able to upgrade from any tier.
+#### 2. `src/index.css` — Stronger crest animations
 
-**Fix**: Remove the `validTier !== 'free'` early return so barbers with existing subscriptions can still view/change their tier.
+Increase the glow intensity in `crestWing*` keyframes:
+- Bronze: `drop-shadow` from `10px 0.6` to `16px 0.8`
+- Silver: from `14px 0.6` to `20px 0.8`
+- Gold: from `20px 0.7` to `28px 0.9`
+- Diamond: from `24px 0.8` to `32px 1.0`
 
----
+Add a new `crestGhostPulse` keyframe that fades ghost wings from 0.35 to 0.6 opacity on a slow cycle, making the ghost subtly alive even without interaction.
 
-### Summary of Fixes
+Add a `crestGhostHover` class that on hover transitions to 0.7 opacity with a cyan glow — signaling "tap to upgrade."
 
-| File | Issue | Fix |
-|------|-------|-----|
-| `SpinWheelOverlay.tsx` | Back button lets auth users reach role-select | Hide Back button for authenticated users (or make it close the overlay) |
-| `SpinWheelOverlay.tsx` | `getPrizeSet()` uses `selectedRole` which could be manipulated | For auth users, force `detectedRole` in `getPrizeSet()` |
-| `TierRing.tsx` | Blocks upgrade drawer for non-free tiers | Remove `validTier !== 'free'` guard so barbers can upgrade |
+### Files Changed
 
-3 files, 3 targeted fixes.
+| File | Change |
+|------|--------|
+| `src/components/AvatarCrest.tsx` | Bolder strokes, higher fill opacity, stronger glows, interactive ghost with hover highlight, remove `isActive` guard, add hover state |
+| `src/index.css` | Stronger glow keyframes, add ghost pulse + hover animations |
 
