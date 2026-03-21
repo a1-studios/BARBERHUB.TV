@@ -13,7 +13,7 @@ import SovereignGuard from "@/components/auth/SovereignGuard";
 import { useFollowedBarbersNotifications } from "@/hooks/useFollowedBarbersNotifications";
 import Index from "./pages/Index";
 import Profile from "./pages/Profile";
-import BattlesPage from "./pages/BattlesPage";
+// BattlesPage removed — /battles redirects to /watch
 import BattleDetails from "./pages/BattleDetails";
 
 import Analytics from "./pages/Analytics";
@@ -60,14 +60,7 @@ const AppContent = () => {
                 </AuthGuard>
               } 
             />
-            <Route 
-              path="/battles" 
-              element={
-                <AuthGuard>
-                  <BattlesPage />
-                </AuthGuard>
-              }
-            />
+            <Route path="/battles" element={<Navigate to="/watch" replace />} />
             <Route 
               path="/battles/create" 
               element={<Navigate to="/creator-hub" replace />}

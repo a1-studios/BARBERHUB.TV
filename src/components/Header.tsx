@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Plus, User, Zap, Scissors, Swords, Crown } from 'lucide-react';
+import { Plus, User, Zap, Scissors, Crown } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import barberPole from '@/assets/barber-pole.png';
 import { cn } from '@/lib/utils';
@@ -55,13 +55,6 @@ const Header = () => {
       label: 'Barbers',
       icon: <Scissors className="w-5 h-5" />,
       path: '/barbers',
-      requiresAuth: true
-    },
-    {
-      id: 'battles',
-      label: 'View Battles',
-      icon: <Swords className="w-5 h-5" />,
-      path: '/battles',
       requiresAuth: true
     },
     {

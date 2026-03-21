@@ -1,11 +1,11 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Swords, Plus, BarChart3, User, Play, Scissors } from 'lucide-react';
+import { Home, Plus, BarChart3, User, Play, Scissors } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
 
 const barberTabs = [
   { icon: Home, label: 'HOME', path: '/' },
-  { icon: Swords, label: 'BATTLES', path: '/battles' },
+  { icon: Play, label: 'WATCH', path: '/watch' },
   { isFab: true },
   { icon: BarChart3, label: 'RANKS', path: '/rankings' },
   { icon: User, label: 'PROFILE', path: '/profile' },
