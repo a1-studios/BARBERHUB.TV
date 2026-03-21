@@ -573,44 +573,65 @@
   }
 
   /* ===== Avatar Crest Wing Animations ===== */
+
+  /* Bronze wing glow — bold warm copper */
   @keyframes crestWingBronze {
-    0%, 100% { filter: drop-shadow(0 0 4px hsl(24 80% 45% / 0.3)); }
-    50% { filter: drop-shadow(0 0 10px hsl(24 80% 45% / 0.6)); }
+    0%, 100% { filter: drop-shadow(0 0 8px hsl(24 80% 45% / 0.5)); }
+    50% { filter: drop-shadow(0 0 16px hsl(24 80% 45% / 0.8)); }
   }
   .animate-crest-wing-bronze {
     animation: crestWingBronze 2.5s ease-in-out infinite;
   }
 
+  /* Silver wing glow — bright metallic */
   @keyframes crestWingSilver {
-    0%, 100% { filter: drop-shadow(0 0 6px hsl(210 20% 80% / 0.3)); }
-    50% { filter: drop-shadow(0 0 14px hsl(210 20% 80% / 0.6)); }
+    0%, 100% { filter: drop-shadow(0 0 10px hsl(210 20% 80% / 0.5)); }
+    50% { filter: drop-shadow(0 0 20px hsl(210 20% 80% / 0.8)); }
   }
   .animate-crest-wing-silver {
     animation: crestWingSilver 2s ease-in-out infinite;
   }
 
+  /* Gold wing glow — intense elite */
   @keyframes crestWingGold {
-    0%, 100% { filter: drop-shadow(0 0 8px hsl(45 100% 55% / 0.4)); }
-    50% { filter: drop-shadow(0 0 20px hsl(45 100% 55% / 0.7)); }
+    0%, 100% { filter: drop-shadow(0 0 12px hsl(45 100% 55% / 0.6)); }
+    50% { filter: drop-shadow(0 0 28px hsl(45 100% 55% / 0.9)); }
   }
   .animate-crest-wing-gold {
     animation: crestWingGold 1.8s ease-in-out infinite;
   }
 
+  /* Diamond wing glow — crystalline brilliance */
   @keyframes crestWingDiamond {
-    0%, 100% { filter: drop-shadow(0 0 10px hsl(200 80% 75% / 0.5)); }
-    50% { filter: drop-shadow(0 0 24px hsl(200 80% 75% / 0.8)); }
+    0%, 100% { filter: drop-shadow(0 0 14px hsl(200 80% 75% / 0.6)); }
+    50% { filter: drop-shadow(0 0 32px hsl(200 80% 75% / 1.0)); }
   }
   .animate-crest-wing-diamond {
     animation: crestWingDiamond 1.6s ease-in-out infinite;
   }
 
+  /* Star twinkle */
   @keyframes crestStarTwinkle {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.6; }
   }
   .animate-crest-star-twinkle {
     animation: crestStarTwinkle 2s ease-in-out infinite;
+  }
+
+  /* Ghost pulse — subtle "alive" breathing for locked tiers */
+  @keyframes crestGhostPulse {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.55; }
+  }
+  .animate-crest-ghost-pulse {
+    animation: crestGhostPulse 3s ease-in-out infinite;
+  }
+
+  /* Ghost hover — lights up with cyan glow on interaction */
+  .animate-crest-ghost-hover {
+    filter: drop-shadow(0 0 12px hsl(187 100% 50% / 0.5));
+    transition: filter 0.3s ease, opacity 0.3s ease;
   }
 }
 
