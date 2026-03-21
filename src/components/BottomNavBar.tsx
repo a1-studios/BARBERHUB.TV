@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Swords, Plus, BarChart3, User, Play, Scissors } from 'lucide-react';
+import { Home, Plus, BarChart3, User, Play, Scissors } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
 
