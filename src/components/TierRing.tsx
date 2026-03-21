@@ -40,7 +40,6 @@ export const TierRing = ({ tier, size = 'md', interactive = false, children, cla
   const sizeConfig = SIZE_MAP[size];
 
   const handleClick = () => {
-    if (interactive && validTier !== 'free') return;
     if (interactive) setDrawerOpen(true);
   };
 

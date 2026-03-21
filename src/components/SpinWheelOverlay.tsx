@@ -124,7 +124,8 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
     if (!isAuthenticated) {
       return selectedRole === 'barber' ? 'new_barber' : 'new_fan';
     }
-    return selectedRole === 'barber' ? 'existing_barber' : 'existing_fan';
+    // Always use detected role for authenticated users to prevent manipulation
+    return detectedRole === 'barber' ? 'existing_barber' : 'existing_fan';
   };
 
   if (!open) return null;
@@ -217,10 +218,10 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
                 <motion.button
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
-                  onClick={() => setStep('role-select')}
+                  onClick={handleClose}
                   className="px-6 py-3 rounded-xl bg-white/10 text-white font-bold"
                 >
-                  Back
+                  Cancel
                 </motion.button>
                 <motion.button
                   whileHover={{ scale: barberBucks >= SPIN_COST ? 1.03 : 1 }}
