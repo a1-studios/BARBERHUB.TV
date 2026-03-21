@@ -214,7 +214,7 @@ const Profile = () => {
         <div className="max-w-md mx-auto min-h-[calc(100dvh-4rem-5rem)] flex flex-col">
 
           {/* ===== HERO: Avatar ===== */}
-          <div className="relative flex flex-col items-center pt-4 pb-2">
+          <div className="relative flex flex-col items-center pt-8 pb-2">
 
             {isBarber ? (
               <AvatarCrest
