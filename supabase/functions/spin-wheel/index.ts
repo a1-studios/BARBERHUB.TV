@@ -53,8 +53,21 @@ Deno.serve(async (req) => {
     const clampedPrize = Math.min(Math.max(prize_bb || 0, 0), 100);
     const isFree = is_free_spin === true;
 
-    // Prevent double-claiming free spins
+    // Prevent double-claiming free spins AND enforce new-account requirement
     if (isFree) {
+      // Check if account was created within the last hour — existing accounts can't get free spins
+      const { data: userData } = await supabase.auth.admin.getUserById(user.id);
+      if (userData?.user?.created_at) {
+        const accountAgeMs = Date.now() - new Date(userData.user.created_at).getTime();
+        const ONE_HOUR_MS = 60 * 60 * 1000;
+        if (accountAgeMs > ONE_HOUR_MS) {
+          return new Response(JSON.stringify({ error: 'Free spin only available for new accounts', expired: true }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+
       const { data: existingFree } = await supabase
         .from('barber_bucks_transactions')
         .select('id')

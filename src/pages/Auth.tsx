@@ -25,7 +25,13 @@ export default function Auth() {
         if (raw) {
           const pending = JSON.parse(raw);
           const ageMs = Date.now() - (pending.timestamp || 0);
-          if (ageMs < 24 * 60 * 60 * 1000) {
+
+          // Validate role match — check user metadata since useUserRole may not be loaded yet
+          const userType = user.user_metadata?.user_type;
+          if (pending.role && userType && pending.role !== userType) {
+            console.log('[Auth Spin] Role mismatch: prize for', pending.role, 'but user is', userType);
+            localStorage.removeItem('pending_spin_prize');
+          } else if (ageMs < 24 * 60 * 60 * 1000) {
             supabase.functions.invoke('spin-wheel', {
               body: {
                 role: pending.role || 'fan',

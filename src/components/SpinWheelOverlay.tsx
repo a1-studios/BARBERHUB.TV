@@ -28,12 +28,13 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
   const isAuthenticated = !!user;
   const detectedRole: 'barber' | 'fan' = isBarber ? 'barber' : 'fan';
 
-  const [step, setStep] = useState<Step>('role-select');
-  const [selectedRole, setSelectedRole] = useState<'barber' | 'fan' | null>(null);
+  // Initialize step based on auth state — authenticated users NEVER see role-select
+  const [step, setStep] = useState<Step>(() => isAuthenticated ? 'confirm-spin' : 'role-select');
+  const [selectedRole, setSelectedRole] = useState<'barber' | 'fan' | null>(() => isAuthenticated ? detectedRole : null);
   const [wonPrize, setWonPrize] = useState<Prize | null>(null);
   const [spinning, setSpinning] = useState(false);
 
-  // When auth loads, skip role-select for authenticated users
+  // Keep in sync if auth state changes after mount
   useEffect(() => {
     if (isAuthenticated && step === 'role-select') {
       setSelectedRole(detectedRole);
@@ -43,6 +44,7 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
 
   const handleRoleSelect = (role: 'barber' | 'fan') => {
     setSelectedRole(role);
+    // Only guests can pick a role and go straight to spinning (free spin)
     if (isAuthenticated) {
       setStep('confirm-spin');
     } else {

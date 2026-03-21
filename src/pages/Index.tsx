@@ -113,7 +113,12 @@ const Index = () => {
         const pending = JSON.parse(spinRaw);
         const ageMs = Date.now() - (pending.timestamp || 0);
 
-        if (ageMs > 24 * 60 * 60 * 1000) {
+        // Validate role match — discard if prize role doesn't match user's actual role
+        const userActualRole = isFan ? 'fan' : 'barber';
+        if (pending.role && pending.role !== userActualRole) {
+          console.log('[Spin Recovery] Role mismatch: prize for', pending.role, 'but user is', userActualRole);
+          localStorage.removeItem('pending_spin_prize');
+        } else if (ageMs > 24 * 60 * 60 * 1000) {
           localStorage.removeItem('pending_spin_prize');
         } else {
           supabase.functions.invoke('spin-wheel', {
