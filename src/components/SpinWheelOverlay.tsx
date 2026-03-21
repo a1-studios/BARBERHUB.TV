@@ -124,7 +124,8 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
     if (!isAuthenticated) {
       return selectedRole === 'barber' ? 'new_barber' : 'new_fan';
     }
-    return selectedRole === 'barber' ? 'existing_barber' : 'existing_fan';
+    // Always use detected role for authenticated users to prevent manipulation
+    return detectedRole === 'barber' ? 'existing_barber' : 'existing_fan';
   };
 
   if (!open) return null;
