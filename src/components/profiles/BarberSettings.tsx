@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { SpecialtyPillSelector } from './SpecialtyPillSelector';
 import { ServicesManager } from './ServicesManager';
 import { WeeklyAvailabilityManager } from './WeeklyAvailabilityManager';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { AvatarUpload } from './AvatarUpload';
 import { PortfolioManager } from './PortfolioManager';
@@ -22,9 +21,7 @@ import { toast } from 'sonner';
 import { 
   User, 
   Briefcase, 
-  Phone, 
   Globe, 
-  Clock, 
   DollarSign, 
   Shield,
   Settings,
@@ -33,10 +30,9 @@ import {
   Twitter,
   Youtube,
   MapPin,
-  Award,
   Loader2,
   Save,
-  Lock
+  Navigation
 } from 'lucide-react';
 
 interface BarberSettingsProps {
@@ -47,6 +43,7 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('profile');
+  const [gettingLocation, setGettingLocation] = useState(false);
 
   // Fetch profile data
   const { data: profile, isLoading: profileLoading } = useQuery({
@@ -99,7 +96,6 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
 
   // Form states
   const [profileForm, setProfileForm] = useState({
-    display_name: '',
     username: '',
     bio: '',
     country_code: '',
@@ -108,26 +104,19 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
 
   const [barberForm, setBarberForm] = useState({
     name: '',
-    nickname: '',
     specialty: '',
     bio: '',
     location: '',
     country_code: '',
-    years_experience: '',
     portfolio_url: '',
     // Social media
     instagram: '',
     facebook: '', 
     twitter: '',
     youtube: '',
-    // Contact
-    phone: '',
-    website: '',
     // Business settings
     accepting_clients: true,
     available_for_battles: true,
-    pricing_range: '',
-    business_hours: '',
     // Booking economy
     require_deposit: true,
     default_no_show_fee_bb: 50,
@@ -135,27 +124,10 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
     slot_duration_minutes: '30'
   });
 
-  const [businessSettings, setBusinessSettings] = useState({
-    shop_name: '',
-    shop_address: '',
-    services: [] as string[],
-    price_range: '',
-    booking_enabled: false,
-    online_presence: {
-      website: '',
-      instagram: '',
-      facebook: '',
-      twitter: '',
-      youtube: '',
-      tiktok: ''
-    }
-  });
-
   // Update forms when data loads
   useEffect(() => {
     if (profile) {
       setProfileForm({
-        display_name: profile.display_name || '',
         username: profile.username || '',
         bio: profile.bio || '',
         country_code: profile.country_code || '',
@@ -168,23 +140,17 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
     if (barberProfile) {
       setBarberForm({
         name: barberProfile.name || '',
-        nickname: barberProfile.nickname || '',
         specialty: barberProfile.specialty || '',
         bio: barberProfile.bio || '',
         location: barberProfile.location || '',
         country_code: barberProfile.country_code || '',
-        years_experience: barberProfile.years_experience?.toString() || '',
         portfolio_url: barberProfile.portfolio_url || '',
         instagram: (barberProfile as any).instagram_handle || '',
         facebook: (barberProfile as any).facebook_handle || '',
         twitter: (barberProfile as any).twitter_handle || '',
         youtube: (barberProfile as any).youtube_handle || '',
-        phone: '',
-        website: '',
         accepting_clients: true,
         available_for_battles: true,
-        pricing_range: '',
-        business_hours: '',
         require_deposit: (barberProfile as any).require_deposit ?? true,
         default_no_show_fee_bb: (barberProfile as any).default_no_show_fee_bb ?? 50,
         booking_message: (barberProfile as any).booking_message || '',
@@ -197,18 +163,14 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
   const updateProfileMutation = useMutation({
     mutationFn: async (data: typeof profileForm) => {
       if (!user?.id) throw new Error('No user');
-      
-      // Update profiles — country_code is intentionally excluded (permanently locked)
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
-          display_name: data.display_name,
           username: data.username,
           bio: data.bio,
           avatar_url: data.avatar_url
         })
         .eq('user_id', user.id);
-      
       if (profileError) throw profileError;
     },
     onSuccess: () => {
@@ -218,7 +180,6 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
       toast.success('Profile updated successfully!');
     },
     onError: (error: any) => {
-      // Handle duplicate username error
       if (error.code === '23505' || error.message?.includes('duplicate key value') || error.message?.includes('profiles_username_key')) {
         toast.error('This username is already taken. Please choose another one.');
       } else {
@@ -231,16 +192,12 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
   const updateBarberMutation = useMutation({
     mutationFn: async (data: any) => {
       if (!user?.id) throw new Error('No user');
-      
-      // country_code is intentionally excluded (permanently locked)
       const barberData: Record<string, any> = {
         user_id: user.id,
         name: data.name,
-        nickname: data.nickname,
         specialty: data.specialty,
         bio: data.bio,
         location: data.location,
-        years_experience: data.years_experience ? parseInt(data.years_experience) : null,
         portfolio_url: data.portfolio_url,
         instagram_handle: data.instagram || null,
         facebook_handle: data.facebook || null,
@@ -254,16 +211,13 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
       const { error } = await supabase
         .from('barber_profiles')
         .upsert(barberData as any, { onConflict: 'user_id' });
-      
       if (error) throw error;
 
-      // Update slot_duration_minutes on all availability rows for this barber
       const duration = parseInt(data.slot_duration_minutes) || 30;
       const { error: availError } = await supabase
         .from('barber_availability')
         .update({ slot_duration_minutes: duration })
         .eq('barber_user_id', user.id);
-      
       if (availError) console.warn('Could not update slot duration:', availError.message);
     },
     onSuccess: () => {
@@ -294,6 +248,35 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
     updateProfileMutation.mutate({ ...profileForm, avatar_url: url });
   };
 
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser');
+      return;
+    }
+    setGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const res = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&localityLanguage=en`
+          );
+          const data = await res.json();
+          const location = [data.city, data.principalSubdivision, data.countryName].filter(Boolean).join(', ');
+          setBarberForm(prev => ({ ...prev, location }));
+          toast.success('Location detected!');
+        } catch {
+          setBarberForm(prev => ({ ...prev, location: `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}` }));
+        }
+        setGettingLocation(false);
+      },
+      (err) => {
+        toast.error('Could not get your location: ' + err.message);
+        setGettingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
   if (profileLoading || barberLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -311,25 +294,25 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
       )}
 
       <div className="flex items-center gap-3 mb-6">
-        <Settings className="h-6 w-6" />
+        <Settings className="h-6 w-6 text-primary" />
         <h1 className="text-2xl font-bold">Barber Settings</h1>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="professional">Professional</TabsTrigger>
-          <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
-          <TabsTrigger value="business">Business</TabsTrigger>
-          <TabsTrigger value="privacy">Privacy</TabsTrigger>
+        <TabsList className="flex w-full overflow-x-auto no-scrollbar gap-1 bg-muted p-1 rounded-lg">
+          <TabsTrigger value="profile" className="flex-shrink-0 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Profile</TabsTrigger>
+          <TabsTrigger value="professional" className="flex-shrink-0 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Pro</TabsTrigger>
+          <TabsTrigger value="portfolio" className="flex-shrink-0 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Portfolio</TabsTrigger>
+          <TabsTrigger value="business" className="flex-shrink-0 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Biz</TabsTrigger>
+          <TabsTrigger value="privacy" className="flex-shrink-0 text-xs data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Privacy</TabsTrigger>
         </TabsList>
 
         {/* Profile Tab */}
         <TabsContent value="profile" className="space-y-6">
-          <Card>
+          <Card className="border-primary/30">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <User className="h-5 w-5" />
+                <User className="h-5 w-5 text-primary" />
                 Personal Information
               </CardTitle>
               <CardDescription>
@@ -350,45 +333,25 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
 
               {/* Profile Form */}
               <form onSubmit={handleProfileSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="display_name">Display Name</Label>
-                    <Input
-                      id="display_name"
-                      value={profileForm.display_name}
-                      onChange={(e) => setProfileForm(prev => ({ ...prev, display_name: e.target.value }))}
-                      placeholder="Your display name"
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="username">Username</Label>
-                    <Input
-                      id="username"
-                      value={profileForm.username}
-                      onChange={(e) => setProfileForm(prev => ({ ...prev, username: e.target.value }))}
-                      placeholder="@username"
-                    />
-                  </div>
+                <div>
+                  <Label htmlFor="username">Username</Label>
+                  <Input
+                    id="username"
+                    value={profileForm.username}
+                    onChange={(e) => setProfileForm(prev => ({ ...prev, username: e.target.value }))}
+                    placeholder="@username"
+                    className="border-cyan-500/30 focus-visible:ring-cyan-500/50"
+                  />
                 </div>
 
                 <div>
-                  <Label className="flex items-center gap-2">
-                    Country
-                    <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-500 border-amber-500/30">
-                      <Lock className="h-3 w-3 mr-1" />
-                      Locked
-                    </Badge>
-                  </Label>
+                  <Label>Country</Label>
                   <CountrySelector
                     value={profileForm.country_code}
                     onChange={() => {}}
                     placeholder="Set during Arena Gate"
                     disabled={true}
                   />
-                  <p className="text-xs text-amber-500/80 mt-1">
-                    Nationality is permanently set during sign-up
-                  </p>
                 </div>
 
                 <Button type="submit" disabled={updateProfileMutation.isPending}>
@@ -405,104 +368,124 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
 
         {/* Professional Tab */}
         <TabsContent value="professional" className="space-y-6">
-          <Card>
+          <Card className="border-primary/30">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Briefcase className="h-5 w-5" />
+                <Briefcase className="h-5 w-5 text-primary" />
                 Professional Details
               </CardTitle>
               <CardDescription>
-                Showcase your skills, experience, and professional information
+                Showcase your skills and professional information
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleBarberSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="prof_name">Professional Name *</Label>
-                    <Input
-                      id="prof_name"
-                      value={barberForm.name}
-                      onChange={(e) => setBarberForm(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Your professional name"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="nickname">Nickname</Label>
-                    <Input
-                      id="nickname"
-                      value={barberForm.nickname}
-                      onChange={(e) => setBarberForm(prev => ({ ...prev, nickname: e.target.value }))}
-                      placeholder="Your street name or nickname"
-                    />
+              <form onSubmit={handleBarberSubmit} className="space-y-5">
+                {/* Social Media Links — moved to top */}
+                <div className="p-3 rounded-lg border border-cyan-500/30 bg-cyan-500/5">
+                  <h4 className="font-semibold mb-3 flex items-center gap-2 text-sm">
+                    <Globe className="h-4 w-4 text-cyan-400" />
+                    Social Media Links
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="flex items-center gap-2">
+                      <Instagram className="h-4 w-4 text-pink-500 flex-shrink-0" />
+                      <Input
+                        placeholder="@instagram"
+                        value={barberForm.instagram}
+                        onChange={(e) => setBarberForm(prev => ({ ...prev, instagram: e.target.value }))}
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Facebook className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                      <Input
+                        placeholder="facebook.com/profile"
+                        value={barberForm.facebook}
+                        onChange={(e) => setBarberForm(prev => ({ ...prev, facebook: e.target.value }))}
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Twitter className="h-4 w-4 text-blue-400 flex-shrink-0" />
+                      <Input
+                        placeholder="@twitter"
+                        value={barberForm.twitter}
+                        onChange={(e) => setBarberForm(prev => ({ ...prev, twitter: e.target.value }))}
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Youtube className="h-4 w-4 text-red-500 flex-shrink-0" />
+                      <Input
+                        placeholder="youtube.com/channel"
+                        value={barberForm.youtube}
+                        onChange={(e) => setBarberForm(prev => ({ ...prev, youtube: e.target.value }))}
+                        className="h-9 text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Specialties</Label>
-                    <SpecialtyPillSelector
-                      value={barberForm.specialty}
-                      onChange={(value) => setBarberForm(prev => ({ ...prev, specialty: value }))}
-                    />
-                  </div>
-                  
-                  <div>
-                    <Label htmlFor="experience">Years of Experience</Label>
-                    <Input
-                      id="experience"
-                      type="number"
-                      value={barberForm.years_experience}
-                      onChange={(e) => setBarberForm(prev => ({ ...prev, years_experience: e.target.value }))}
-                      placeholder="e.g., 5"
-                      min="0"
-                      max="50"
-                    />
-                  </div>
+                <Separator />
+
+                {/* Specialties — compact mode */}
+                <div>
+                  <Label className="mb-2 block">Specialties</Label>
+                  <SpecialtyPillSelector
+                    value={barberForm.specialty}
+                    onChange={(value) => setBarberForm(prev => ({ ...prev, specialty: value }))}
+                    compact
+                  />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="location">Location</Label>
+                {/* Location with geolocation */}
+                <div>
+                  <Label htmlFor="location" className="flex items-center gap-2">
+                    <MapPin className="h-3.5 w-3.5 text-primary" />
+                    Location
+                  </Label>
+                  <div className="flex gap-2 mt-1">
                     <Input
                       id="location"
                       value={barberForm.location}
                       onChange={(e) => setBarberForm(prev => ({ ...prev, location: e.target.value }))}
                       placeholder="City, State/Country"
+                      className="border-cyan-500/30 flex-1"
                     />
-                  </div>
-
-                  <div>
-                    <Label className="flex items-center gap-2">
-                      Professional Country
-                      <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-500 border-amber-500/30">
-                        <Lock className="h-3 w-3 mr-1" />
-                        Locked
-                      </Badge>
-                    </Label>
-                    <CountrySelector
-                      value={barberForm.country_code}
-                      onChange={() => {}}
-                      placeholder="Set during Arena Gate"
-                      disabled={true}
-                    />
-                    <p className="text-xs text-amber-500/80 mt-1 flex items-center gap-1">
-                      <Lock className="h-3 w-3" />
-                      Represents your nation in World Cup battles
-                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handleGetLocation}
+                      disabled={gettingLocation}
+                      className="border-primary/40 hover:bg-primary/10 flex-shrink-0"
+                      title="Use my location"
+                    >
+                      {gettingLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <Navigation className="h-4 w-4 text-primary" />}
+                    </Button>
                   </div>
                 </div>
 
+                {/* Nationality — silent disabled */}
+                <div>
+                  <Label>Nationality</Label>
+                  <CountrySelector
+                    value={barberForm.country_code}
+                    onChange={() => {}}
+                    placeholder="Set during Arena Gate"
+                    disabled={true}
+                  />
+                </div>
+
+                {/* Professional Bio */}
                 <div>
                   <Label htmlFor="prof_bio">Professional Bio</Label>
                   <Textarea
                     id="prof_bio"
                     value={barberForm.bio}
                     onChange={(e) => setBarberForm(prev => ({ ...prev, bio: e.target.value }))}
-                    placeholder="Describe your style, experience, and what makes you unique..."
-                    rows={4}
+                    placeholder="Describe your style and what makes you unique..."
+                    rows={3}
                   />
                 </div>
 
@@ -514,51 +497,8 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
                     onChange={(e) => setBarberForm(prev => ({ ...prev, portfolio_url: e.target.value }))}
                     placeholder="https://your-portfolio.com"
                     type="url"
+                    className="border-cyan-500/30"
                   />
-                </div>
-
-                <Separator />
-
-                {/* Social Media */}
-                <div>
-                  <h4 className="font-semibold mb-4 flex items-center gap-2">
-                    <Globe className="h-4 w-4" />
-                    Social Media Links
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-2">
-                      <Instagram className="h-4 w-4 text-pink-500" />
-                      <Input
-                        placeholder="@instagram_handle"
-                        value={barberForm.instagram}
-                        onChange={(e) => setBarberForm(prev => ({ ...prev, instagram: e.target.value }))}
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Facebook className="h-4 w-4 text-blue-500" />
-                      <Input
-                        placeholder="facebook.com/profile"
-                        value={barberForm.facebook}
-                        onChange={(e) => setBarberForm(prev => ({ ...prev, facebook: e.target.value }))}
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Twitter className="h-4 w-4 text-blue-400" />
-                      <Input
-                        placeholder="@twitter_handle"
-                        value={barberForm.twitter}
-                        onChange={(e) => setBarberForm(prev => ({ ...prev, twitter: e.target.value }))}
-                      />
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Youtube className="h-4 w-4 text-red-500" />
-                      <Input
-                        placeholder="youtube.com/channel"
-                        value={barberForm.youtube}
-                        onChange={(e) => setBarberForm(prev => ({ ...prev, youtube: e.target.value }))}
-                      />
-                    </div>
-                  </div>
                 </div>
 
                 <Button type="submit" disabled={updateBarberMutation.isPending}>
@@ -580,10 +520,10 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
 
         {/* Business Tab */}
         <TabsContent value="business" className="space-y-6">
-          <Card>
+          <Card className="border-primary/30">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Briefcase className="h-5 w-5" />
+                <Briefcase className="h-5 w-5 text-primary" />
                 Business Settings
               </CardTitle>
               <CardDescription>
@@ -626,7 +566,7 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
               {/* Booking Economy */}
               <div>
                 <h4 className="font-semibold mb-4 flex items-center gap-2">
-                  <DollarSign className="h-4 w-4" />
+                  <DollarSign className="h-4 w-4 text-primary" />
                   Booking Economy
                 </h4>
                 <div className="space-y-4">
@@ -710,10 +650,10 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
 
         {/* Privacy Tab */}
         <TabsContent value="privacy" className="space-y-6">
-          <Card>
+          <Card className="border-primary/30">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5" />
+                <Shield className="h-5 w-5 text-primary" />
                 Privacy & Security
               </CardTitle>
               <CardDescription>
