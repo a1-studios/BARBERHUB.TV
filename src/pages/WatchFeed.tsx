@@ -5,6 +5,7 @@ import { ArrowLeft, Play, GraduationCap, Flame } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useState, useRef, useEffect, useCallback } from "react";
+import { RotateCcw } from "lucide-react";
 import SplitScreenBattle from "@/components/battles/SplitScreenBattle";
 
 interface FeedItem {
@@ -43,6 +44,7 @@ const PLATFORM_PROMOS: FeedItem[] = [
 const WatchFeed = () => {
   const navigate = useNavigate();
   const [activeIndex, setActiveIndex] = useState(0);
+  const [endedVideos, setEndedVideos] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
 
@@ -240,6 +242,23 @@ const WatchFeed = () => {
     return () => observer.disconnect();
   }, [feed.length]);
 
+  const handleVideoEnded = useCallback((itemId: string) => {
+    setEndedVideos(prev => new Set(prev).add(itemId));
+  }, []);
+
+  const handleReplay = useCallback((itemId: string) => {
+    const video = videoRefs.current.get(itemId);
+    if (video) {
+      video.currentTime = 0;
+      video.play();
+      setEndedVideos(prev => {
+        const next = new Set(prev);
+        next.delete(itemId);
+        return next;
+      });
+    }
+  }, []);
+
   const renderVideoItem = (item: FeedItem, idx: number) => (
     <div className="relative w-full h-full bg-black">
       {item.media_url && (item.media_url.includes('.mp4') || item.media_url.includes('.webm') || item.media_url.startsWith('http')) ? (
@@ -251,8 +270,22 @@ const WatchFeed = () => {
             autoPlay={activeIndex === idx}
             muted
             playsInline
-            loop
+            onEnded={() => handleVideoEnded(item.id)}
           />
+          {/* Replay overlay */}
+          {endedVideos.has(item.id) && (
+            <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10">
+              <button
+                onClick={() => handleReplay(item.id)}
+                className="flex flex-col items-center gap-2 p-4"
+              >
+                <div className="p-4 rounded-full bg-primary/20 border border-primary/40">
+                  <RotateCcw className="w-8 h-8 text-primary" />
+                </div>
+                <span className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Replay</span>
+              </button>
+            </div>
+          )}
         </>
       ) : (
         <div
