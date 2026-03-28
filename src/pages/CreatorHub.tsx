@@ -15,7 +15,7 @@ import { ChallengeModal } from '@/components/battles/ChallengeModal';
 import Header from '@/components/Header';
 import { BottomNavBar } from '@/components/BottomNavBar';
 import { toast } from 'sonner';
-import { Crown, Scissors } from 'lucide-react';
+import { Crown, Scissors, Camera, ArrowRight } from 'lucide-react';
 
 export default function CreatorHub() {
   const { user, loading } = useAuth();
