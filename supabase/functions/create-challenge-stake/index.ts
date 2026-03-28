@@ -17,6 +17,7 @@ interface StakeRequest {
   stake_amount: number;
   challenge_message?: string;
   duration_minutes?: number;
+  target_barber_id?: string;
 }
 
 serve(async (req) => {
