@@ -1,22 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Upload, X, Eye, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Plus, Upload, Trash2, Image as ImageIcon, Video, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { uploadPortfolioImage } from '@/lib/storage';
+import { supabase } from '@/integrations/supabase/client';
+import { uploadPortfolioMedia } from '@/lib/storage';
 import { toast } from 'sonner';
-
-interface PortfolioImage {
-  id: string;
-  url: string;
-  title?: string;
-  category?: string;
-  order: number;
-}
 
 interface PortfolioManagerProps {
   barberId?: string;
@@ -25,73 +16,92 @@ interface PortfolioManagerProps {
 
 export function PortfolioManager({ barberId, readonly = false }: PortfolioManagerProps) {
   const { user } = useAuth();
-  const [images, setImages] = useState<PortfolioImage[]>([]);
-  const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<PortfolioImage | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const categories = ['Fades', 'Classic Cuts', 'Beard Styling', 'Hair Color', 'Creative Styles', 'Before/After'];
+  // Fetch from creations table — same source as BarberPublicProfile
+  const { data: portfolio = [], isLoading } = useQuery({
+    queryKey: ['barber-portfolio', barberId],
+    queryFn: async () => {
+      if (!barberId) return [];
+      const { data, error } = await supabase
+        .from('creations')
+        .select('*')
+        .eq('barber_id', barberId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!barberId,
+  });
+
+  const isVideo = (url: string) => /\.(mp4|mov|avi|webm)$/i.test(url);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
-    if (!files || !user) return;
+    if (!files || !user || !barberId) return;
+
+    // Cumulative 5GB cap
+    const existingTotalSize = portfolio.reduce((sum, p) => sum + ((p as any).file_size_bytes || 0), 0);
+    const newFilesSize = Array.from(files).reduce((s, f) => s + f.size, 0);
+    if (existingTotalSize + newFilesSize > 5 * 1024 * 1024 * 1024) {
+      toast.error('Portfolio storage limit reached (5GB)');
+      return;
+    }
 
     setUploading(true);
-    const uploadPromises = Array.from(files).map(async (file) => {
+    let uploaded = 0;
+
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith('image/') && !file.type.startsWith('video/')) {
+        toast.error(`${file.name} is not a supported file type`);
+        continue;
+      }
+      if (file.type.startsWith('image/') && file.size > 10 * 1024 * 1024) {
+        toast.error(`${file.name} is too large (max 10MB for images)`);
+        continue;
+      }
+
       try {
-        if (!file.type.startsWith('image/')) {
-          throw new Error(`${file.name} is not an image file`);
-        }
-        if (file.size > 10 * 1024 * 1024) {
-          throw new Error(`${file.name} is too large (max 10MB)`);
-        }
+        const publicUrl = await uploadPortfolioMedia(file, user.id);
+        const category = file.type.startsWith('video/') ? 'video' : 'haircut';
 
-        const publicUrl = await uploadPortfolioImage(file, user.id);
-
-        const newImage: PortfolioImage = {
-          id: crypto.randomUUID(),
-          url: publicUrl,
+        await supabase.from('creations').insert({
+          barber_id: barberId,
+          media_url: publicUrl,
+          category,
           title: file.name.split('.')[0],
-          category: 'Uncategorized',
-          order: images.length + 1,
-        };
+        });
 
-        return newImage;
+        uploaded++;
       } catch (error: any) {
-        toast.error(error.message);
-        return null;
+        toast.error(`Failed to upload ${file.name}`);
+        console.error('Upload error:', error);
       }
-    });
-
-    try {
-      const uploadedImages = (await Promise.all(uploadPromises)).filter(Boolean) as PortfolioImage[];
-      setImages(prev => [...prev, ...uploadedImages]);
-      
-      if (uploadedImages.length > 0) {
-        toast.success(`Successfully uploaded ${uploadedImages.length} image(s)`);
-      }
-    } catch (error: any) {
-      console.error('Error uploading images:', error);
-      toast.error('Failed to upload some images');
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
+
+    if (uploaded > 0) {
+      toast.success(`Uploaded ${uploaded} file(s)`);
+      queryClient.invalidateQueries({ queryKey: ['barber-portfolio', barberId] });
+    }
+
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleRemoveImage = (imageId: string) => {
-    setImages(prev => prev.filter(img => img.id !== imageId));
-    toast.success('Image removed');
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this item?')) return;
+    const { error } = await supabase.from('creations').delete().eq('id', id);
+    if (error) {
+      toast.error('Failed to delete');
+      return;
+    }
+    toast.success('Deleted');
+    queryClient.invalidateQueries({ queryKey: ['barber-portfolio', barberId] });
   };
 
-  const updateImageDetails = (imageId: string, updates: Partial<PortfolioImage>) => {
-    setImages(prev => prev.map(img => 
-      img.id === imageId ? { ...img, ...updates } : img
-    ));
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-8">
@@ -111,10 +121,10 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
               Portfolio Gallery
             </CardTitle>
             <CardDescription>
-              Showcase your best work and attract more clients
+              Showcase your best work — images &amp; videos
             </CardDescription>
           </div>
-          
+
           {!readonly && (
             <Button
               variant="outline"
@@ -126,22 +136,21 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
               ) : (
                 <Plus className="h-4 w-4 mr-2" />
               )}
-              Add Images
+              Add Media
             </Button>
           )}
         </div>
       </CardHeader>
-      
+
       <CardContent>
-        {images.length === 0 ? (
+        {portfolio.length === 0 ? (
           <div className="text-center py-12 border-2 border-dashed border-muted-foreground/25 rounded-lg">
             <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-            <h3 className="font-semibold text-lg mb-2">No images yet</h3>
+            <h3 className="font-semibold text-lg mb-2">No media yet</h3>
             <p className="text-muted-foreground mb-4">
-              {readonly 
-                ? 'This barber hasn\'t uploaded any portfolio images yet' 
-                : 'Upload your best work to showcase your skills'
-              }
+              {readonly
+                ? "This barber hasn't uploaded any portfolio media yet"
+                : 'Upload your best work to showcase your skills'}
             </p>
             {!readonly && (
               <Button
@@ -150,105 +159,72 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
                 disabled={uploading}
               >
                 <Upload className="h-4 w-4 mr-2" />
-                Upload Your First Image
+                Upload Your First File
               </Button>
             )}
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {images.map((image) => (
-              <div key={image.id} className="relative group">
-                <div className="aspect-square rounded-lg overflow-hidden bg-muted">
-                  <img
-                    src={image.url}
-                    alt={image.title || 'Portfolio image'}
-                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                  />
-                  
-                  {/* Overlay */}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors flex items-center justify-center">
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => setSelectedImage(image)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl">
-                          <DialogHeader>
-                            <DialogTitle>{selectedImage?.title || 'Portfolio Image'}</DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            <img
-                              src={selectedImage?.url}
-                              alt={selectedImage?.title || 'Portfolio image'}
-                              className="w-full max-h-96 object-contain rounded-lg"
-                            />
-                            {!readonly && selectedImage && (
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <Label htmlFor="image-title">Title</Label>
-                                  <Input
-                                    id="image-title"
-                                    value={selectedImage.title || ''}
-                                    onChange={(e) => updateImageDetails(selectedImage.id, { title: e.target.value })}
-                                  />
-                                </div>
-                                <div>
-                                  <Label htmlFor="image-category">Category</Label>
-                                  <select 
-                                    id="image-category"
-                                    className="w-full p-2 border rounded-md"
-                                    value={selectedImage.category || ''}
-                                    onChange={(e) => updateImageDetails(selectedImage.id, { category: e.target.value })}
-                                  >
-                                    <option value="">Select category</option>
-                                    {categories.map(cat => (
-                                      <option key={cat} value={cat}>{cat}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                      
-                      {!readonly && (
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleRemoveImage(image.id)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
+            {portfolio.map((item) => {
+              const mediaUrl = item.media_url || '';
+              const isVid = isVideo(mediaUrl);
+              return (
+                <div key={item.id} className="relative group">
+                  <div className="aspect-square rounded-lg overflow-hidden bg-muted">
+                    {isVid ? (
+                      <video
+                        src={mediaUrl}
+                        className="w-full h-full object-cover"
+                        muted
+                        playsInline
+                        preload="metadata"
+                      />
+                    ) : (
+                      <img
+                        src={item.thumbnail_url || mediaUrl}
+                        alt={item.title || 'Portfolio'}
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+
+                    {isVid && (
+                      <Badge className="absolute top-2 right-2 bg-black/80 text-white border-0 pointer-events-none">
+                        <Video className="w-3 h-3 mr-1" />
+                        Video
+                      </Badge>
+                    )}
+
+                    {/* Delete — always visible on mobile */}
+                    {!readonly && (
+                      <Button
+                        size="icon"
+                        variant="destructive"
+                        className="absolute top-2 left-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity h-8 w-8"
+                        onClick={() => handleDelete(item.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="mt-2">
+                    <p className="text-sm font-medium truncate">{item.title}</p>
+                    {item.category && (
+                      <Badge variant="secondary" className="text-xs mt-1">
+                        {item.category}
+                      </Badge>
+                    )}
                   </div>
                 </div>
-                
-                {/* Image info */}
-                <div className="mt-2">
-                  <p className="text-sm font-medium truncate">{image.title}</p>
-                  {image.category && (
-                    <Badge variant="secondary" className="text-xs mt-1">
-                      {image.category}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,video/*"
           multiple
           onChange={handleFileUpload}
           className="hidden"

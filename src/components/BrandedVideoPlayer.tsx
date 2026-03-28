@@ -117,11 +117,12 @@ export const BrandedVideoPlayer = ({
       onMouseMove={scheduleHide}
       onTouchStart={scheduleHide}
     >
-      {/* Brand watermark */}
+      {/* Centered tactical watermark */}
       {showBranding && (
-        <div className="absolute top-3 left-3 z-20 pointer-events-none select-none">
-          <span className="text-[10px] font-black tracking-[0.25em] uppercase text-white/30 drop-shadow-md">
-            BARBER HUB
+        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none select-none">
+          <span className="text-2xl md:text-3xl font-black tracking-[0.3em] uppercase drop-shadow-md">
+            <span className="text-white/15">BARBER</span>
+            <span className="text-primary/20">-HUB</span>
           </span>
         </div>
       )}
