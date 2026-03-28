@@ -10,6 +10,8 @@ import { VoteComboIndicator } from '@/components/battles/VoteComboIndicator';
 import { PresenceIndicator } from '@/components/battles/PresenceIndicator';
 import { BattleSettings } from '@/components/battles/BattleSettings';
 import { AnimatedCounter } from '@/components/battles/AnimatedCounter';
+import { LiveKitArena } from '@/components/battles/LiveKitArena';
+import { ProcessingArena } from '@/components/battles/ProcessingArena';
 import { useVoteCombo } from '@/hooks/useVoteCombo';
 import { useRealtimeBattleViewers } from '@/hooks/useRealtimeBattleViewers';
 import { HapticFeedback } from '@/utils/hapticFeedback';
@@ -25,35 +27,18 @@ const MP4Player = ({ src, className }: { src: string; className?: string }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMuted, setIsMuted] = useState(true);
 
-  const handleUnmute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = false;
-      setIsMuted(false);
-    }
-  };
-
-  const handleMute = () => {
-    if (videoRef.current) {
-      videoRef.current.muted = true;
-      setIsMuted(true);
-    }
-  };
-
   return (
     <div className="relative w-full h-full">
-      <video
-        ref={videoRef}
-        src={src}
-        controls
-        autoPlay
-        muted
-        playsInline
-        className={className}
-      />
+      <video ref={videoRef} src={src} controls autoPlay muted playsInline className={className} />
       <Button
         variant="secondary"
         size="icon"
-        onClick={isMuted ? handleUnmute : handleMute}
+        onClick={() => {
+          if (videoRef.current) {
+            videoRef.current.muted = !videoRef.current.muted;
+            setIsMuted(videoRef.current.muted);
+          }
+        }}
         className="absolute top-3 right-3 z-20 bg-black/60 hover:bg-black/80 backdrop-blur-sm border-0"
       >
         {isMuted ? <VolumeX className="h-4 w-4 text-white" /> : <Volume2 className="h-4 w-4 text-white" />}
@@ -71,14 +56,16 @@ export default function BattleTheater() {
   const [userVote, setUserVote] = useState<string | null>(null);
   const [controlsVisible, setControlsVisible] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  
+  const [localPhase, setLocalPhase] = useState<'live' | 'processing' | 'vod' | null>(null);
+  const [liveKitCreds, setLiveKitCreds] = useState<{ token: string; serverUrl: string } | null>(null);
+
   const { comboCount, bonusEarned, incrementCombo } = useVoteCombo(id || '', user?.id);
   const viewerData = useRealtimeBattleViewers(id || '');
 
   useEffect(() => { AudioManager.init(); AudioManager.preloadSounds(); }, []);
 
   // Fetch battle details
-  const { data: battle, isLoading } = useQuery({
+  const { data: battle, isLoading, refetch } = useQuery({
     queryKey: ['battle', id],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -95,6 +82,58 @@ export default function BattleTheater() {
     },
     enabled: !!id,
   });
+
+  // Derive phase from battle status
+  useEffect(() => {
+    if (!battle) return;
+    if (battle.status === 'live') setLocalPhase('live');
+    else if (battle.status === 'processing') setLocalPhase('processing');
+    else setLocalPhase('vod');
+  }, [battle?.status]);
+
+  // Realtime subscription for status changes
+  useEffect(() => {
+    if (!id) return;
+    const channel = supabase
+      .channel(`theater-status-${id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'battles',
+        filter: `id=eq.${id}`,
+      }, (payload) => {
+        const s = (payload.new as any).status;
+        if (s === 'processing') setLocalPhase('processing');
+        else if (s === 'voting' || s === 'completed') {
+          setLocalPhase('vod');
+          refetch();
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [id, refetch]);
+
+  // Request viewer token when phase is live
+  useEffect(() => {
+    if (localPhase !== 'live' || !user || !id || liveKitCreds) return;
+
+    const fetchToken = async () => {
+      try {
+        const roomName = `battle-${id}`;
+        const { data, error } = await supabase.functions.invoke('get-livekit-viewer-token', {
+          body: { battleId: id, roomName },
+        });
+        if (error) throw error;
+        if (data?.token && data?.serverUrl) {
+          setLiveKitCreds({ token: data.token, serverUrl: data.serverUrl });
+        }
+      } catch (err) {
+        console.error('Failed to get viewer token:', err);
+        toast.error('Could not connect to live stream');
+      }
+    };
+    fetchToken();
+  }, [localPhase, user, id, liveKitCreds]);
 
   // Check if user has voted
   useEffect(() => {
@@ -124,12 +163,13 @@ export default function BattleTheater() {
       const barber2Votes = data?.filter(v => v.submission_id === battle?.creation2_id).length || 0;
       return { barber1Votes, barber2Votes, total: data?.length || 0 };
     },
-    enabled: !!id && !!battle,
+    enabled: !!id && !!battle && localPhase === 'vod',
     refetchInterval: 2000,
   });
 
   // Auto-hide controls
   useEffect(() => {
+    if (localPhase === 'live') return; // Live mode has its own UI
     let timeout: NodeJS.Timeout;
     const resetTimer = () => {
       setControlsVisible(true);
@@ -140,7 +180,7 @@ export default function BattleTheater() {
     window.addEventListener('keydown', resetTimer);
     resetTimer();
     return () => { window.removeEventListener('mousemove', resetTimer); window.removeEventListener('keydown', resetTimer); clearTimeout(timeout); };
-  }, []);
+  }, [localPhase]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -187,6 +227,16 @@ export default function BattleTheater() {
     toast.success('Liked! ❤️');
   };
 
+  const handleTimeUp = useCallback(() => {
+    setLocalPhase('processing');
+    setLiveKitCreds(null);
+  }, []);
+
+  const handleProcessingReady = useCallback(() => {
+    setLocalPhase('vod');
+    refetch();
+  }, [refetch]);
+
   if (isLoading) {
     return (
       <div className="fixed inset-0 bg-background flex items-center justify-center">
@@ -209,11 +259,55 @@ export default function BattleTheater() {
   const barber1 = battle.barber1 as any;
   const barber2 = battle.barber2 as any;
 
-  // Resolve video source: IVS playback > VOD video URL > null
+  // ─── LIVE PHASE: LiveKit Arena ───
+  if (localPhase === 'live' && liveKitCreds) {
+    return (
+      <>
+        <LiveKitArena
+          battleId={id!}
+          serverUrl={liveKitCreds.serverUrl}
+          token={liveKitCreds.token}
+          barber1Id={barber1?.id || ''}
+          barber2Id={barber2?.id || ''}
+          barber1Name={barber1?.name || 'Barber 1'}
+          barber2Name={barber2?.name || 'Barber 2'}
+          endsAt={battle.ends_at}
+          onTimeUp={handleTimeUp}
+          onDisconnected={() => console.log('LiveKit disconnected')}
+        />
+        {/* Overlay controls for live */}
+        <div className="fixed top-4 left-4 z-40">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="text-white hover:bg-white/20">
+            <X className="h-6 w-6" />
+          </Button>
+        </div>
+        <div className="fixed top-4 right-4 z-40 flex gap-2">
+          <PresenceIndicator battleId={id!} />
+          <Button variant="ghost" size="icon" onClick={() => setChatOpen(!chatOpen)} className="text-white hover:bg-white/20">
+            <MessageSquare className="h-5 w-5" />
+          </Button>
+        </div>
+        {user && (
+          <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40">
+            <ReactionPicker battleId={id!} userId={user.id} />
+          </div>
+        )}
+        <FloatingReactions battleId={id!} />
+        {localStorage.getItem('battleChatEnabled') !== 'false' && (
+          <BattleChat battleId={id!} isOpen={chatOpen} onClose={() => setChatOpen(false)} />
+        )}
+      </>
+    );
+  }
+
+  // ─── PROCESSING PHASE ───
+  if (localPhase === 'processing') {
+    return <ProcessingArena battleId={id!} onReady={handleProcessingReady} />;
+  }
+
+  // ─── VOD PHASE: Existing playback ───
   const barber1VideoSrc = (battle as any).ivs_playback_url || battle.barber_1_video_url || battle.stream_url || null;
   const barber2VideoSrc = battle.barber_2_video_url || null;
-
-  // Detect if source is a direct MP4 (R2 recording) vs HLS stream
   const isMP4 = (url: string | null) => url?.endsWith('.mp4');
 
   return (
@@ -251,13 +345,7 @@ export default function BattleTheater() {
           {isMP4(barber1VideoSrc) ? (
             <MP4Player src={barber1VideoSrc!} className="w-full h-full object-cover" />
           ) : (
-            <HLSVideoPlayer
-              src={barber1VideoSrc}
-              isLive={battle.status === 'voting'}
-              title={barber1?.name}
-              size="large"
-              autoPlay
-            />
+            <HLSVideoPlayer src={barber1VideoSrc} isLive={false} title={barber1?.name} size="large" autoPlay />
           )}
           <div className="absolute bottom-20 left-4 right-4 space-y-3">
             <div className="text-white text-center">
@@ -295,13 +383,7 @@ export default function BattleTheater() {
           {isMP4(barber2VideoSrc) ? (
             <MP4Player src={barber2VideoSrc!} className="w-full h-full object-cover" />
           ) : (
-            <HLSVideoPlayer
-              src={barber2VideoSrc}
-              isLive={battle.status === 'voting'}
-              title={barber2?.name}
-              size="large"
-              autoPlay
-            />
+            <HLSVideoPlayer src={barber2VideoSrc} isLive={false} title={barber2?.name} size="large" autoPlay />
           )}
           <div className="absolute bottom-20 left-4 right-4 space-y-3">
             <div className="text-white text-center">
