@@ -152,7 +152,7 @@ serve(async (req) => {
       started_at: new Date().toISOString(),
     });
 
-    // Transition battle to live
+    // Transition battle to live and start egress recording
     const transitionStatuses = ["upcoming", "scheduled", "active", "check_in"];
     if (transitionStatuses.includes(battle.status)) {
       await supabaseAdmin
@@ -163,6 +163,26 @@ serve(async (req) => {
           [`barber${barberPosition}_is_streaming`]: true,
         })
         .eq("id", battleId);
+
+      // Start egress recording (only triggers once — checks egress_id inside)
+      try {
+        const egressResponse = await fetch(
+          `${supabaseUrl}/functions/v1/start-battle-egress`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${supabaseKey}`,
+            },
+            body: JSON.stringify({ battleId, roomName }),
+          }
+        );
+        const egressResult = await egressResponse.json();
+        console.log("Egress start result:", egressResult);
+      } catch (egressErr) {
+        // Non-fatal: recording failure shouldn't block the battle
+        console.error("Failed to start egress (non-fatal):", egressErr);
+      }
     } else if (battle.status === "live") {
       await supabaseAdmin
         .from("battles")

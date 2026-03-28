@@ -1120,6 +1120,7 @@ export type Database = {
           creation2_id: string | null
           currency: string
           description: string | null
+          egress_id: string | null
           ends_at: string | null
           forfeit_reason: string | null
           forfeit_winner_id: string | null
@@ -1178,6 +1179,7 @@ export type Database = {
           creation2_id?: string | null
           currency?: string
           description?: string | null
+          egress_id?: string | null
           ends_at?: string | null
           forfeit_reason?: string | null
           forfeit_winner_id?: string | null
@@ -1236,6 +1238,7 @@ export type Database = {
           creation2_id?: string | null
           currency?: string
           description?: string | null
+          egress_id?: string | null
           ends_at?: string | null
           forfeit_reason?: string | null
           forfeit_winner_id?: string | null

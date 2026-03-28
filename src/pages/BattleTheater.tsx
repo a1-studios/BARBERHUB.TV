@@ -171,6 +171,9 @@ export default function BattleTheater() {
   const barber1VideoSrc = (battle as any).ivs_playback_url || battle.barber_1_video_url || battle.stream_url || null;
   const barber2VideoSrc = battle.barber_2_video_url || null;
 
+  // Detect if source is a direct MP4 (R2 recording) vs HLS stream
+  const isMP4 = (url: string | null) => url?.endsWith('.mp4');
+
   return (
     <div className="fixed inset-0 bg-black overflow-hidden">
       <FloatingReactions battleId={id!} />
@@ -203,13 +206,23 @@ export default function BattleTheater() {
       <div className="h-full flex">
         {/* Left Side - Barber 1 */}
         <div className="flex-1 relative">
-          <HLSVideoPlayer
-            src={barber1VideoSrc}
-            isLive={battle.status === 'voting'}
-            title={barber1?.name}
-            size="large"
-            autoPlay
-          />
+          {isMP4(barber1VideoSrc) ? (
+            <video
+              src={barber1VideoSrc!}
+              controls
+              autoPlay
+              playsInline
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <HLSVideoPlayer
+              src={barber1VideoSrc}
+              isLive={battle.status === 'voting'}
+              title={barber1?.name}
+              size="large"
+              autoPlay
+            />
+          )}
           <div className="absolute bottom-20 left-4 right-4 space-y-3">
             <div className="text-white text-center">
               <h2 className="text-2xl font-bold mb-2">{barber1?.name}</h2>
@@ -243,13 +256,23 @@ export default function BattleTheater() {
 
         {/* Right Side - Barber 2 */}
         <div className="flex-1 relative">
-          <HLSVideoPlayer
-            src={barber2VideoSrc}
-            isLive={battle.status === 'voting'}
-            title={barber2?.name}
-            size="large"
-            autoPlay
-          />
+          {isMP4(barber2VideoSrc) ? (
+            <video
+              src={barber2VideoSrc!}
+              controls
+              autoPlay
+              playsInline
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <HLSVideoPlayer
+              src={barber2VideoSrc}
+              isLive={battle.status === 'voting'}
+              title={barber2?.name}
+              size="large"
+              autoPlay
+            />
+          )}
           <div className="absolute bottom-20 left-4 right-4 space-y-3">
             <div className="text-white text-center">
               <h2 className="text-2xl font-bold mb-2">{barber2?.name}</h2>
