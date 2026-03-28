@@ -33,7 +33,7 @@ export function multipartUploadToR2(
   file: File,
   battleId: string,
   onProgress?: (progress: UploadProgress) => void,
-  options?: { title?: string; description?: string }
+  options?: { title?: string; description?: string; category?: R2Category }
 ): UploadController {
   let isPaused = false;
   let isCancelled = false;
@@ -121,7 +121,7 @@ export function multipartUploadToR2(
       reportProgress('uploading');
       const { data: initData, error: initError } = await supabase.functions.invoke(
         'initiate-multipart-upload',
-        { body: { filename: file.name, contentType: file.type || 'video/mp4', battleId } }
+        { body: { filename: file.name, contentType: file.type || 'video/mp4', battleId, category: options?.category || 'recordings' } }
       );
       if (initError || !initData?.uploadId) {
         throw new Error(initData?.error || initError?.message || 'Failed to initiate upload');
