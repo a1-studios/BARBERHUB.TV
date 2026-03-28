@@ -42,7 +42,7 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { title, stake_amount, challenge_message, duration_minutes }: StakeRequest = await req.json();
+    const { title, stake_amount, challenge_message, duration_minutes, target_barber_id }: StakeRequest = await req.json();
 
     console.log(`Creating challenge stake: ${stake_amount} BB from ${user.id}`);
 

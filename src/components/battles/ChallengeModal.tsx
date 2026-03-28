@@ -32,7 +32,7 @@ interface BarberResult {
 export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
   const [mounted, setMounted] = useState(false);
   const { user } = useAuth();
-  const { balance, refetch: refetchBalance } = useBarberBucks();
+  const { barberBucks: balance, refreshBalance: refetchBalance } = useBarberBucks();
 
   // Barber search
   const [searchQuery, setSearchQuery] = useState('');
