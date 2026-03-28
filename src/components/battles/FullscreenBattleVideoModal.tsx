@@ -1,6 +1,6 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X, UserPlus, Heart, ThumbsUp, DollarSign, Play } from "lucide-react";
+import { X, UserPlus, Heart, ThumbsUp, DollarSign } from "lucide-react";
 import { BrandedVideoPlayer } from "@/components/BrandedVideoPlayer";
 
 interface BattleSubmission {
