@@ -1,38 +1,49 @@
 
 
-## Fix: Update All Video Upload Limits from 100MB to 5GB
+## Fix: Standardize R2 Edge Functions to Use R2_ENDPOINT
 
-The enterprise multipart upload engine (`multipartUploadToR2`) was built but only wired into the **battle submission** modal. Three other video upload surfaces still use the old single-PUT approach with a 100MB cap:
+### Root Cause
+All 4 multipart edge functions construct the R2 endpoint from `R2_ACCOUNT_ID` (which doesn't exist as a secret), producing `https://battle-submissions.undefined.r2.cloudflarestorage.com`. The secrets page confirms `R2_ENDPOINT` is set instead.
 
-1. **`src/components/barber/BarberVideoSection.tsx`** — Featured video upload on barber dashboard
-2. **`src/pages/BarberPublicProfile.tsx`** — Featured video upload on public profile page
-3. **`src/components/creator/EducatorUpload.tsx`** — Education content upload
+### Changes
 
-### Changes per file
+Update these 4 files to replace `R2_ACCOUNT_ID`-based endpoint construction with `R2_ENDPOINT`, and add upfront validation:
 
-**`BarberVideoSection.tsx`**:
-- Change `maxSize` from `100 * 1024 * 1024` to `5 * 1024 * 1024 * 1024`
-- Update error message from "100MB" to "5GB"
-- Update UI label from "Max 100MB" to "Max 5GB"
-- Wire in `multipartUploadToR2` from `src/lib/storage` for files over ~50MB (use single PUT for small files, multipart for large)
-- Add `ChunkedUploadProgress` component to show real progress during large uploads
+| File | Change |
+|------|--------|
+| `supabase/functions/initiate-multipart-upload/index.ts` | Use `R2_ENDPOINT`, add secret validation |
+| `supabase/functions/presign-upload-part/index.ts` | Use `R2_ENDPOINT`, add secret validation |
+| `supabase/functions/complete-multipart-upload/index.ts` | Use `R2_ENDPOINT`, add secret validation |
+| `supabase/functions/abort-multipart-upload/index.ts` | Use `R2_ENDPOINT`, add secret validation |
 
-**`BarberPublicProfile.tsx`**:
-- Change video `maxSize` from `100 * 1024 * 1024` to `5 * 1024 * 1024 * 1024`
-- Update all three UI labels ("Max 100MB", "100MB", "Max 1 video, 100MB") to reference 5GB
-- Update error toast message
-- Wire in multipart upload for large video files
+### In each file, replace:
+```typescript
+const r2AccountId = Deno.env.get('R2_ACCOUNT_ID')!;
+// ...
+endpoint: `https://${r2AccountId}.r2.cloudflarestorage.com`,
+```
 
-**`EducatorUpload.tsx`**:
-- Change size check from `100 * 1024 * 1024` to `5 * 1024 * 1024 * 1024`
-- Update error toast and UI label from "Max 100MB" to "Max 5GB"
-- Wire in multipart upload for large files
+### With:
+```typescript
+const r2Endpoint = Deno.env.get('R2_ENDPOINT');
+const r2AccessKeyId = Deno.env.get('R2_ACCESS_KEY_ID');
+const r2SecretAccessKey = Deno.env.get('R2_SECRET_ACCESS_KEY');
 
-### Technical approach
+if (!r2Endpoint || !r2AccessKeyId || !r2SecretAccessKey) {
+  return new Response(JSON.stringify({ 
+    error: 'R2 credentials not configured. Set R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY in Supabase secrets.' 
+  }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+}
 
-For each file, import `multipartUploadToR2` and `ChunkedUploadProgress`. Use a size threshold (e.g., 50MB) to decide:
-- **Small files (< 50MB)**: Keep existing single-PUT via `uploadToR2` for speed
-- **Large files (≥ 50MB)**: Use `multipartUploadToR2` with chunked progress UI
+const s3 = new S3Client({
+  region: 'auto',
+  endpoint: r2Endpoint,
+  credentials: { accessKeyId: r2AccessKeyId, secretAccessKey: r2SecretAccessKey },
+});
+```
 
-Each upload surface will gain pause/resume/cancel controls and real chunk-by-chunk progress for large files.
+Also remove the `R2_BUCKET_NAME` fallback pattern and use `R2_BUCKET_NAME` with a default of `'battle-submissions'` (unchanged).
+
+### Post-deploy
+Redeploy all 4 functions, then test the upload flow.
 
