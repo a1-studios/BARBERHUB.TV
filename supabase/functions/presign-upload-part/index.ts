@@ -43,7 +43,6 @@ serve(async (req) => {
       });
     }
 
-    // Support batch mode (partNumbers array) or single mode (partNumber)
     const parts: number[] = partNumbers && Array.isArray(partNumbers)
       ? partNumbers
       : partNumber ? [partNumber] : [];
@@ -60,18 +59,23 @@ serve(async (req) => {
       });
     }
 
-    const r2AccountId = Deno.env.get('R2_ACCOUNT_ID')!;
-    const r2AccessKeyId = Deno.env.get('R2_ACCESS_KEY_ID')!;
-    const r2SecretAccessKey = Deno.env.get('R2_SECRET_ACCESS_KEY')!;
+    const r2Endpoint = Deno.env.get('R2_ENDPOINT');
+    const r2AccessKeyId = Deno.env.get('R2_ACCESS_KEY_ID');
+    const r2SecretAccessKey = Deno.env.get('R2_SECRET_ACCESS_KEY');
     const r2BucketName = Deno.env.get('R2_BUCKET_NAME') || 'battle-submissions';
+
+    if (!r2Endpoint || !r2AccessKeyId || !r2SecretAccessKey) {
+      return new Response(JSON.stringify({ error: 'R2 credentials not configured. Set R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY in Supabase secrets.' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const s3 = new S3Client({
       region: 'auto',
-      endpoint: `https://${r2AccountId}.r2.cloudflarestorage.com`,
+      endpoint: r2Endpoint,
       credentials: { accessKeyId: r2AccessKeyId, secretAccessKey: r2SecretAccessKey },
     });
 
-    // Generate presigned URLs for all requested parts in parallel
     const presignedUrls = await Promise.all(
       parts.map(async (pn: number) => {
         const command = new UploadPartCommand({
