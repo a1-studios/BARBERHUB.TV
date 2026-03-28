@@ -1,0 +1,1 @@
+ALTER TABLE public.battles ADD COLUMN IF NOT EXISTS egress_id TEXT;
