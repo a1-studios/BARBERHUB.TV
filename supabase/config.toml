@@ -163,3 +163,9 @@ verify_jwt = false
 
 [functions.spin-wheel]
 verify_jwt = false
+
+[functions.start-battle-egress]
+verify_jwt = false
+
+[functions.livekit-egress-webhook]
+verify_jwt = false
