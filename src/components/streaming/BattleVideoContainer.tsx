@@ -1,11 +1,11 @@
 import { useRef, useEffect, memo } from 'react';
-import { LocalVideoTrack, RemoteVideoTrack } from 'twilio-video';
 import { cn } from '@/lib/utils';
 import { Users, Wifi, WifiOff, Loader2 } from 'lucide-react';
 import { ReadinessBadge } from '@/components/contender/ReadinessBadge';
+import type { AttachableTrack } from '@/hooks/useBattleVideoRoom';
 
 interface VideoAttachProps {
-  track: LocalVideoTrack | RemoteVideoTrack | null;
+  track: AttachableTrack | null;
   className?: string;
   muted?: boolean;
 }
@@ -37,7 +37,7 @@ const VideoAttach = memo(({ track, className, muted = false }: VideoAttachProps)
 
 VideoAttach.displayName = 'VideoAttach';
 
-// Stream preview from MediaStream (for preview phase before Twilio connection)
+// Stream preview from MediaStream (for preview phase before connection)
 interface StreamPreviewProps {
   stream: MediaStream | null;
   className?: string;
@@ -72,8 +72,8 @@ const StreamPreview = memo(({ stream, className, muted = true }: StreamPreviewPr
 StreamPreview.displayName = 'StreamPreview';
 
 interface BattleVideoContainerProps {
-  localTrack: LocalVideoTrack | null;
-  remoteTrack: RemoteVideoTrack | null;
+  localTrack: AttachableTrack | null;
+  remoteTrack: AttachableTrack | null;
   localBarberName: string;
   remoteBarberName: string;
   localCountry?: string;
@@ -288,10 +288,8 @@ export const BattleVideoContainer = ({
   }
 
   if (layout === 'pip') {
-    // Picture-in-Picture layout - large remote, small local overlay
     return (
       <div className={cn("relative w-full h-full bg-black overflow-hidden", className)}>
-        {/* Remote/Opponent Video (Full Screen) */}
         <div className="absolute inset-0">
           {hasOpponent && remoteTrack ? (
             <VideoAttach track={remoteTrack} className="w-full h-full" />
@@ -307,7 +305,6 @@ export const BattleVideoContainer = ({
           )}
         </div>
 
-        {/* Local Video (PIP Overlay) */}
         <div className="absolute bottom-4 right-4 w-32 h-24 md:w-48 md:h-36 rounded-lg overflow-hidden border-2 border-primary shadow-lg">
           {localTrack ? (
             <VideoAttach track={localTrack} className="w-full h-full" muted />
@@ -321,12 +318,7 @@ export const BattleVideoContainer = ({
           </div>
         </div>
 
-        {/* Battle Info Overlay */}
-        <BattleOverlay
-          isConnected={isConnected}
-          duration={duration}
-          viewerCount={viewerCount}
-        />
+        <BattleOverlay isConnected={isConnected} duration={duration} viewerCount={viewerCount} />
       </div>
     );
   }
@@ -335,7 +327,6 @@ export const BattleVideoContainer = ({
   return (
     <div className={cn("relative w-full h-full bg-black overflow-hidden", className)}>
       <div className="flex h-full">
-        {/* Local Video (Left/Your Side) - 50% */}
         <div id="local-video-container" className="relative w-1/2 border-r border-white/10">
           {localTrack ? (
             <VideoAttach track={localTrack} className="w-full h-full" muted />
@@ -354,32 +345,28 @@ export const BattleVideoContainer = ({
             </div>
           )}
           
-      {/* Your Side Label */}
-      <div className="absolute top-2 left-2 flex items-center gap-2">
-        <span className="bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded-full">
-          YOUR SIDE
-        </span>
-        {localCountry && (
-          <span className="bg-background/60 text-foreground text-xs px-2 py-1 rounded">
+          <div className="absolute top-2 left-2 flex items-center gap-2">
+            <span className="bg-primary text-primary-foreground text-xs font-bold px-2 py-1 rounded-full">
+              YOUR SIDE
+            </span>
+            {localCountry && (
+              <span className="bg-background/60 text-foreground text-xs px-2 py-1 rounded">
                 {localCountry}
               </span>
             )}
           </div>
-      
-      {/* Barber Name */}
-      <div className="absolute bottom-2 left-2 bg-background/70 backdrop-blur-sm text-foreground text-sm px-2 py-1 rounded">
-        {localBarberName}
-      </div>
-    </div>
+          
+          <div className="absolute bottom-2 left-2 bg-background/70 backdrop-blur-sm text-foreground text-sm px-2 py-1 rounded">
+            {localBarberName}
+          </div>
+        </div>
 
-        {/* VS Divider */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
           <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-destructive flex items-center justify-center shadow-lg animate-pulse">
             <span className="text-primary-foreground font-black text-sm">VS</span>
           </div>
         </div>
 
-        {/* Remote Video (Right/Opponent) - 50% */}
         <div id="remote-video-container" className="relative w-1/2">
           {hasOpponent && remoteTrack ? (
             <VideoAttach track={remoteTrack} className="w-full h-full" />
@@ -396,7 +383,6 @@ export const BattleVideoContainer = ({
             </div>
           )}
           
-          {/* Opponent Label */}
           <div className="absolute top-2 right-2 flex items-center gap-2">
             {remoteCountry && (
               <span className="bg-background/60 text-foreground text-xs px-2 py-1 rounded">
@@ -408,7 +394,6 @@ export const BattleVideoContainer = ({
             </span>
           </div>
           
-          {/* Opponent Name */}
           {hasOpponent && (
             <div className="absolute bottom-2 right-2 bg-background/70 backdrop-blur-sm text-foreground text-sm px-2 py-1 rounded">
               {remoteBarberName}
@@ -417,12 +402,7 @@ export const BattleVideoContainer = ({
         </div>
       </div>
 
-      {/* Battle Info Overlay */}
-      <BattleOverlay
-        isConnected={isConnected}
-        duration={duration}
-        viewerCount={viewerCount}
-      />
+      <BattleOverlay isConnected={isConnected} duration={duration} viewerCount={viewerCount} />
     </div>
   );
 };
@@ -434,13 +414,8 @@ interface BattleOverlayProps {
   viewerCount: number;
 }
 
-const BattleOverlay = ({
-  isConnected,
-  duration,
-  viewerCount,
-}: BattleOverlayProps) => (
+const BattleOverlay = ({ isConnected, duration, viewerCount }: BattleOverlayProps) => (
   <>
-    {/* Live Indicator */}
     <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-2">
       <div className={cn(
         "flex items-center gap-1.5 px-3 py-1 rounded-full",
@@ -465,27 +440,21 @@ const BattleOverlay = ({
       )}
     </div>
 
-    {/* Viewer Count */}
     {isConnected && viewerCount > 0 && (
       <div className="absolute top-2 right-2 flex items-center gap-1 bg-background/70 backdrop-blur-sm text-foreground text-xs px-2 py-1 rounded">
         <Users className="w-3 h-3" />
-        <span>{viewerCount.toLocaleString()}</span>
+        {viewerCount.toLocaleString()}
       </div>
     )}
 
-    {/* Connection Status */}
-    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 bg-background/70 backdrop-blur-sm text-xs px-2 py-1 rounded">
-      {isConnected ? (
-        <>
-          <Wifi className="w-3 h-3 text-primary" />
-          <span className="text-primary">Connected</span>
-        </>
-      ) : (
-        <>
-          <WifiOff className="w-3 h-3 text-muted-foreground" />
-          <span className="text-muted-foreground">Disconnected</span>
-        </>
-      )}
-    </div>
+    {isConnected && (
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1">
+        {isConnected ? (
+          <Wifi className="w-3 h-3 text-green-500" />
+        ) : (
+          <WifiOff className="w-3 h-3 text-destructive" />
+        )}
+      </div>
+    )}
   </>
 );

@@ -1,0 +1,84 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { S3Client, PutObjectCommand } from "npm:@aws-sdk/client-s3";
+import { getSignedUrl } from "npm:@aws-sdk/s3-request-presigner";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+const BUCKET = "battle-submissions";
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const r2Endpoint = Deno.env.get("R2_ENDPOINT");
+    const r2AccessKey = Deno.env.get("R2_ACCESS_KEY_ID");
+    const r2SecretKey = Deno.env.get("R2_SECRET_ACCESS_KEY");
+
+    if (!r2Endpoint || !r2AccessKey || !r2SecretKey) {
+      throw new Error("R2 credentials not configured");
+    }
+
+    // Auth
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      {
+        global: {
+          headers: { Authorization: req.headers.get("Authorization")! },
+        },
+      }
+    );
+
+    const { data: { user }, error: authError } =
+      await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { key, contentType } = await req.json();
+    if (!key) throw new Error("key is required");
+
+    const s3 = new S3Client({
+      region: "auto",
+      endpoint: r2Endpoint,
+      credentials: {
+        accessKeyId: r2AccessKey,
+        secretAccessKey: r2SecretKey,
+      },
+    });
+
+    const command = new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: key,
+      ContentType: contentType || "application/octet-stream",
+    });
+
+    const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
+
+    // Derive public URL (assumes R2 public bucket or custom domain)
+    // Format: https://<account>.r2.cloudflarestorage.com/<bucket>/<key>
+    // or custom domain set by user
+    const publicUrl = `${r2Endpoint}/${BUCKET}/${key}`;
+
+    return new Response(
+      JSON.stringify({ success: true, uploadUrl, publicUrl, key }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error: any) {
+    console.error("[GET-R2-PRESIGNED-URL] Error:", error);
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});

@@ -4,12 +4,9 @@ import { AccessToken } from "npm:livekit-server-sdk@^2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
-
-interface TokenRequest {
-  battleId: string;
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -31,83 +28,73 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Authenticate user
-    const authHeader = req.headers.get("Authorization") ?? req.headers.get("authorization");
-    if (!authHeader?.toLowerCase().startsWith("bearer ")) {
-      return new Response(
-        JSON.stringify({ error: "Authorization required" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Auth
+    const authHeader = req.headers.get("Authorization") ?? "";
+    if (!authHeader.toLowerCase().startsWith("bearer ")) {
+      return new Response(JSON.stringify({ error: "Authorization required" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
-
-    const token = authHeader.replace(/^Bearer\s+/i, "").trim();
-    if (!token || token.split(".").length !== 3) {
-      return new Response(
-        JSON.stringify({ error: "Invalid token format. Please sign in again." }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const jwt = authHeader.replace(/^Bearer\s+/i, "").trim();
 
     const supabaseAuth = createClient(
       supabaseUrl,
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { auth: { persistSession: false, autoRefreshToken: false } }
     );
-
-    const { data: { user: authUser }, error: authError } = await supabaseAuth.auth.getUser(token);
-    const userId = authUser?.id;
-
-    if (authError || !userId) {
-      return new Response(
-        JSON.stringify({ error: "Invalid authentication. Please sign in again." }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    const { data: { user: authUser }, error: authError } =
+      await supabaseAuth.auth.getUser(jwt);
+    if (authError || !authUser) {
+      return new Response(JSON.stringify({ error: "Invalid authentication" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
+    const userId = authUser.id;
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
-    const { battleId }: TokenRequest = await req.json();
-
+    const { battleId } = await req.json();
     if (!battleId) {
-      return new Response(
-        JSON.stringify({ error: "Battle ID is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "battleId is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Get barber profile
-    const { data: barberProfile, error: barberError } = await supabaseAdmin
+    const { data: barber, error: barberErr } = await supabaseAdmin
       .from("barber_profiles")
       .select("id, name, country_code, user_id")
       .eq("user_id", userId)
       .single();
 
-    if (barberError || !barberProfile) {
+    if (barberErr || !barber) {
       return new Response(
-        JSON.stringify({ error: "Barber profile not found. Only barbers can join battles." }),
+        JSON.stringify({ error: "Barber profile not found" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Get battle and verify participation
-    const { data: battle, error: battleError } = await supabaseAdmin
+    // Get battle
+    const { data: battle, error: battleErr } = await supabaseAdmin
       .from("battles")
       .select("id, title, barber1_id, barber2_id, status")
       .eq("id", battleId)
       .single();
 
-    if (battleError || !battle) {
-      return new Response(
-        JSON.stringify({ error: "Battle not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (battleErr || !battle) {
+      return new Response(JSON.stringify({ error: "Battle not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const isBarber1 = battle.barber1_id === barberProfile.id;
-    const isBarber2 = battle.barber2_id === barberProfile.id;
-
+    const isBarber1 = battle.barber1_id === barber.id;
+    const isBarber2 = battle.barber2_id === barber.id;
     if (!isBarber1 && !isBarber2) {
       return new Response(
         JSON.stringify({ error: "You are not a participant in this battle" }),
@@ -115,8 +102,8 @@ serve(async (req) => {
       );
     }
 
-    const allowedStatuses = ["upcoming", "check_in", "live", "scheduled", "active"];
-    if (!allowedStatuses.includes(battle.status)) {
+    const allowed = ["upcoming", "check_in", "live", "scheduled", "active"];
+    if (!allowed.includes(battle.status)) {
       return new Response(
         JSON.stringify({ error: `Cannot join battle with status: ${battle.status}` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -126,10 +113,10 @@ serve(async (req) => {
     const roomName = `battle-${battleId}`;
     const barberPosition = isBarber1 ? 1 : 2;
 
-    // Generate LiveKit Access Token
+    // Generate LiveKit token
     const at = new AccessToken(livekitApiKey, livekitApiSecret, {
-      identity: barberProfile.id,
-      ttl: "45m",
+      identity: barber.id,
+      ttl: "4h",
     });
     at.addGrant({
       roomJoin: true,
@@ -137,28 +124,27 @@ serve(async (req) => {
       canPublish: true,
       canSubscribe: true,
     });
-    const jwtToken = await at.toJwt();
+    const token = await at.toJwt();
 
-    // Get display name
+    // Display name
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("display_name")
       .eq("user_id", userId)
       .single();
-
-    const displayName = profile?.display_name || barberProfile.name || "Barber";
+    const displayName = profile?.display_name || barber.name || "Barber";
 
     // Clean stale sessions & insert new one
     await supabaseAdmin
       .from("stream_sessions")
       .delete()
       .eq("battle_id", battleId)
-      .eq("barber_id", barberProfile.id)
+      .eq("barber_id", barber.id)
       .in("status", ["connecting", "disconnected", "failed"]);
 
     await supabaseAdmin.from("stream_sessions").insert({
       battle_id: battleId,
-      barber_id: barberProfile.id,
+      barber_id: barber.id,
       user_id: userId,
       room_name: roomName,
       status: "connecting",
@@ -166,7 +152,7 @@ serve(async (req) => {
       started_at: new Date().toISOString(),
     });
 
-    // Transition battle status
+    // Transition battle to live
     const transitionStatuses = ["upcoming", "scheduled", "active", "check_in"];
     if (transitionStatuses.includes(battle.status)) {
       await supabaseAdmin
@@ -184,27 +170,27 @@ serve(async (req) => {
         .eq("id", battleId);
     }
 
-    console.log(`LiveKit token generated for barber ${barberProfile.id} in battle ${battleId}`);
+    console.log(`LiveKit token generated for barber ${barber.id} in battle ${battleId}`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        token: jwtToken,
+        token,
         serverUrl: livekitUrl,
         roomName,
         barberPosition,
-        identity: barberProfile.id,
+        identity: barber.id,
         displayName,
-        country: barberProfile.country_code || null,
+        country: barber.country_code || null,
         battleTitle: battle.title,
-        expiresIn: 2700,
+        expiresIn: 14400,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
     console.error("Token generation error:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Failed to generate battle token" }),
+      JSON.stringify({ error: error.message || "Failed to generate token" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

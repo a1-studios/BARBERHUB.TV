@@ -15,7 +15,7 @@ import {
   Loader2,
   Camera,
 } from 'lucide-react';
-import { useTwilioStream, StreamStatus } from '@/hooks/useTwilioStream';
+import { useLiveKitStream, StreamStatus } from '@/hooks/useLiveKitStream';
 import { CameraPermissionPrompt } from '@/components/camera/CameraPermissionPrompt';
 import { useCameraPermission } from '@/hooks/useCameraPermission';
 import { cn } from '@/lib/utils';
@@ -50,7 +50,7 @@ export const StreamControlPanel = ({
     endStream,
     isStreaming,
     canStart,
-  } = useTwilioStream({
+  } = useLiveKitStream({
     battleId,
     barberPosition,
     onStatusChange: (newStatus) => {

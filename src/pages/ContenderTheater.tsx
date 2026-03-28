@@ -144,7 +144,7 @@ export default function ContenderTheater() {
     hasCamera: isPreviewActive,
   });
 
-  // Initialize Battle Video Room hook with Twilio SDK
+  // Initialize Battle Video Room hook with LiveKit
   const {
     status: streamStatus,
     localVideoTrack,
@@ -200,10 +200,10 @@ export default function ContenderTheater() {
     }
   }, [bothReady, phase]);
 
-  // Handle countdown complete - connect to Twilio
+  // Handle countdown complete - connect to LiveKit
   const handleCountdownComplete = useCallback(async () => {
     try {
-      // Stop preview and connect to Twilio room
+      // Stop preview and connect to LiveKit room
       stopPreview();
       await connect();
       setPhase('live');
