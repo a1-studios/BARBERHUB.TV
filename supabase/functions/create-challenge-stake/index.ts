@@ -161,6 +161,7 @@ serve(async (req) => {
         duration_minutes: durationMins,
         expires_at: expiresAt,
         battle_id: battle.id,
+        ...(target_barber_id ? { target_barber_id } : {}),
       })
       .select()
       .single();
