@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Users, Zap, Trash2, RefreshCw, Link2 } from 'lucide-react';
+import { Users, Zap, Trash2, RefreshCw, Link2, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -75,6 +75,42 @@ const TournamentQueuePanel = ({ onRefresh }: TournamentQueuePanelProps) => {
     }
   };
 
+  const handleExecuteMatch = async () => {
+    const ids = Array.from(selected);
+    if (ids.length !== 2) { toast.error('Select exactly 2 entries'); return; }
+    try {
+      // Force match first
+      const data = await invoke('force_match', { queue_entry_ids: ids });
+      const battleId = data.battle?.id;
+      toast.success(`Match created! Battle: ${battleId}`);
+
+      // Then send SMS notifications
+      if (battleId) {
+        try {
+          const smsRes = await supabase.functions.invoke('send-match-sms', {
+            body: {
+              battle_id: battleId,
+              barber1_user_id: data.battle?.barber1_user_id,
+              barber2_user_id: data.battle?.barber2_user_id,
+            },
+          });
+          if (smsRes.data?.sent > 0) {
+            toast.success(`SMS sent to ${smsRes.data.sent} barber(s)`);
+          }
+        } catch (smsErr) {
+          console.error('SMS error (non-fatal):', smsErr);
+          toast.info('Match created but SMS notification failed');
+        }
+      }
+
+      setSelected(new Set());
+      fetchQueue();
+      onRefresh();
+    } catch (e: any) {
+      toast.error(e.message || 'Execute match failed');
+    }
+  };
+
   const triggerMatchmaker = async () => {
     setMatchmakerLoading(true);
     try {
@@ -108,9 +144,14 @@ const TournamentQueuePanel = ({ onRefresh }: TournamentQueuePanelProps) => {
             <Zap className={`h-3 w-3 mr-1 ${matchmakerLoading ? 'animate-spin' : ''}`} /> Run Matchmaker
           </Button>
           {selected.size === 2 && (
-            <Button size="sm" variant="outline" className="bg-purple-950/30 border-purple-700 text-purple-400 h-8" onClick={handleForceMatch}>
-              <Link2 className="h-3 w-3 mr-1" /> Force Match ({selected.size})
-            </Button>
+            <>
+              <Button size="sm" variant="outline" className="bg-purple-950/30 border-purple-700 text-purple-400 h-8" onClick={handleForceMatch}>
+                <Link2 className="h-3 w-3 mr-1" /> Force Match
+              </Button>
+              <Button size="sm" variant="outline" className="bg-red-950/30 border-red-700 text-red-400 h-8" onClick={handleExecuteMatch}>
+                <Send className="h-3 w-3 mr-1" /> Execute + SMS
+              </Button>
+            </>
           )}
           <Button size="sm" variant="ghost" className="text-gray-400 h-8" onClick={fetchQueue} disabled={loading}>
             <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
