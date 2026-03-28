@@ -17,6 +17,32 @@ import { ChallengeModal } from "@/components/battles/ChallengeModal";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
+import { useSponsorAds } from "@/hooks/useSponsorAds";
+
+const SponsorStrip = () => {
+  const { data: sponsors = [] } = useSponsorAds(true);
+  if (sponsors.length === 0) return null;
+  const sponsor = sponsors[0];
+  return (
+    <div className="flex items-center gap-2 px-2 py-1 rounded-full bg-black/20 backdrop-blur-sm w-fit">
+      {sponsor.logo_url && (
+        <img src={sponsor.logo_url} alt={sponsor.name} className="w-5 h-5 rounded-full object-cover" />
+      )}
+      <span className="text-[10px] text-white/70 font-medium">Powered by {sponsor.name}</span>
+      {sponsor.link && (
+        <a
+          href={sponsor.link}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="text-[9px] text-primary font-bold"
+        >
+          ↗
+        </a>
+      )}
+    </div>
+  );
+};
 
 const getCountryFlag = (countryCode?: string) => {
   if (!countryCode) return '';
