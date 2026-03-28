@@ -66,7 +66,7 @@ const WatchFeed = () => {
           media_url: b.featured_video_id!,
           barber_name: b.display_name || b.barber_name || "Barber",
           creator_avatar: b.avatar_url,
-          specialty: (b as any).barber_specialty ?? null,
+          specialty: null,
         }));
     },
   });
