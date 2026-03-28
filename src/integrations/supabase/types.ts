@@ -3975,6 +3975,28 @@ export type Database = {
           total_from_tip_fees: number
         }[]
       }
+      get_marketing_lead_by_fingerprint: {
+        Args: { p_fingerprint: string }
+        Returns: {
+          converted: boolean | null
+          created_at: string | null
+          device_fingerprint: string | null
+          email: string
+          id: string
+          max_spins: number | null
+          prize_id: string | null
+          prize_label: string | null
+          role: string
+          shared: boolean | null
+          spins_used: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "marketing_leads"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_multiple_public_profiles: {
         Args: { user_ids: string[] }
         Returns: {
@@ -4115,6 +4137,16 @@ export type Database = {
           p_entry_amount_cents?: number
           p_increment_participants?: boolean
           p_platform_fee_cents?: number
+        }
+        Returns: undefined
+      }
+      update_marketing_lead_by_fingerprint: {
+        Args: {
+          p_converted?: boolean
+          p_fingerprint: string
+          p_prize_id?: string
+          p_shared?: boolean
+          p_spins_used?: number
         }
         Returns: undefined
       }
