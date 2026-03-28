@@ -33,7 +33,7 @@ export function multipartUploadToR2(
   file: File,
   battleId: string,
   onProgress?: (progress: UploadProgress) => void,
-  options?: { title?: string; description?: string }
+  options?: { title?: string; description?: string; category?: R2Category }
 ): UploadController {
   let isPaused = false;
   let isCancelled = false;
@@ -85,14 +85,30 @@ export function multipartUploadToR2(
           signal: abortController.signal,
         });
 
-        if (!res.ok) throw new Error(`Chunk ${partNumber} failed: ${res.status}`);
+        if (!res.ok) {
+          const bodyText = await res.text().catch(() => '(unreadable)');
+          console.error(`[R2-UPLOAD] Chunk ${partNumber} HTTP ${res.status}`, {
+            statusText: res.statusText,
+            headers: Object.fromEntries(res.headers.entries()),
+            body: bodyText.slice(0, 500),
+          });
+          throw new Error(`Chunk ${partNumber} failed: ${res.status} ${res.statusText}`);
+        }
 
-        const etag = res.headers.get('ETag') || `"${partNumber}"`;
+        const etag = res.headers.get('ETag');
+        if (!etag) {
+          console.error(`[R2-UPLOAD] Chunk ${partNumber} missing ETag header!`, {
+            headers: Object.fromEntries(res.headers.entries()),
+            hint: 'R2 CORS policy must include ExposeHeaders: ["ETag"]. Update your Cloudflare R2 bucket CORS settings.',
+          });
+          throw new Error(`Chunk ${partNumber}: ETag header missing — CORS ExposeHeaders misconfigured on R2`);
+        }
+
         return { partNumber, etag: etag.replace(/"/g, '') };
       } catch (err: any) {
         if (isCancelled || err.name === 'AbortError') throw new Error('Upload cancelled');
+        console.error(`[R2-UPLOAD] Chunk ${partNumber} attempt ${attempt + 1}/${MAX_RETRIES + 1} failed:`, err.message);
         if (attempt === MAX_RETRIES) throw err;
-        // Exponential backoff
         await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
       }
     }
@@ -105,7 +121,7 @@ export function multipartUploadToR2(
       reportProgress('uploading');
       const { data: initData, error: initError } = await supabase.functions.invoke(
         'initiate-multipart-upload',
-        { body: { filename: file.name, contentType: file.type || 'video/mp4', battleId } }
+        { body: { filename: file.name, contentType: file.type || 'video/mp4', battleId, category: options?.category || 'recordings' } }
       );
       if (initError || !initData?.uploadId) {
         throw new Error(initData?.error || initError?.message || 'Failed to initiate upload');
@@ -281,15 +297,16 @@ export async function uploadFileToR2(
   const MULTIPART_THRESHOLD = 50 * 1024 * 1024; // 50MB
 
   if (file.size >= MULTIPART_THRESHOLD) {
-    const battleId = category === 'recordings'
-      ? (options?.battleId || `${category}-${userId}`)
-      : `${category}-${userId}`;
+    // For multipart, we pass the category so the edge function generates the correct R2 key prefix
+    const battleIdForMultipart = category === 'recordings'
+      ? (options?.battleId || 'general')
+      : undefined;
 
     const controller = multipartUploadToR2(
       file,
-      battleId,
+      battleIdForMultipart || '',
       (progress) => onProgress?.(progress.percentage),
-      { title: options?.title, description: options?.description }
+      { title: options?.title, description: options?.description, category }
     );
     return controller.promise;
   }
