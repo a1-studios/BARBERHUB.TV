@@ -9,7 +9,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const BUCKET = "battle-submissions";
+const BUCKET = Deno.env.get("R2_BUCKET_NAME") || "battles-submissions";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
