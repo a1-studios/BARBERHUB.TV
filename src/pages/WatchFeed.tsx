@@ -58,16 +58,22 @@ const WatchFeed = () => {
         .order("barber_updated_at", { ascending: false })
         .limit(30);
       if (error) throw error;
-      return (data || [])
-        .filter((b) => b.featured_video_id && b.featured_video_id.startsWith("http"))
-        .map((b) => ({
-          type: "video" as const,
-          id: `profile-${b.barber_id}`,
-          media_url: b.featured_video_id!,
-          barber_name: b.display_name || b.barber_name || "Barber",
-          creator_avatar: b.avatar_url,
-          specialty: null,
-        }));
+      const filtered = (data || []).filter((b) => b.featured_video_id && b.featured_video_id.startsWith("http"));
+      // Fetch specialties from barber_profiles
+      const barberIds = filtered.map((b) => b.barber_id).filter(Boolean) as string[];
+      let specMap: Record<string, string | null> = {};
+      if (barberIds.length > 0) {
+        const { data: bps } = await supabase.from("barber_profiles").select("id, specialty").in("id", barberIds);
+        bps?.forEach((p) => { specMap[p.id] = p.specialty; });
+      }
+      return filtered.map((b) => ({
+        type: "video" as const,
+        id: `profile-${b.barber_id}`,
+        media_url: b.featured_video_id!,
+        barber_name: b.display_name || b.barber_name || "Barber",
+        creator_avatar: b.avatar_url,
+        specialty: specMap[b.barber_id] ?? null,
+      }));
     },
   });
 
