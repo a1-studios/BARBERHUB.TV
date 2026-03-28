@@ -4084,6 +4084,10 @@ export type Database = {
         Args: { increment_by?: number; submission_id: string }
         Returns: undefined
       }
+      mark_marketing_lead_converted: {
+        Args: { p_email: string }
+        Returns: undefined
+      }
       normalize_country_code: {
         Args: { code: string; location?: string; name?: string }
         Returns: string
