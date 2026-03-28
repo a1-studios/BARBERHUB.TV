@@ -255,26 +255,62 @@ async function uploadToR2(
   contentType: string,
   onProgress?: (pct: number) => void
 ): Promise<string> {
+  console.log('[R2-SINGLE-PUT] Requesting presigned URL', { key, contentType, fileSize: file.size });
+
   const { data, error } = await supabase.functions.invoke('get-r2-presigned-url', {
     body: { key, contentType },
   });
 
   if (error || !data?.uploadUrl) {
+    console.error('[R2-SINGLE-PUT] Presigned URL request failed', { error, data });
     throw new Error(error?.message || data?.error || 'Failed to get upload URL');
   }
 
-  const uploadRes = await fetch(data.uploadUrl, {
-    method: 'PUT',
-    headers: { 'Content-Type': contentType },
-    body: file,
+  console.log('[R2-SINGLE-PUT] Got presigned URL', {
+    uploadUrlDomain: new URL(data.uploadUrl).hostname,
+    publicUrl: data.publicUrl,
+    contentType,
   });
 
-  if (!uploadRes.ok) {
-    throw new Error(`Upload failed: ${uploadRes.status} ${uploadRes.statusText}`);
-  }
+  try {
+    const uploadRes = await fetch(data.uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': contentType },
+      body: file,
+    });
 
-  onProgress?.(100);
-  return data.publicUrl as string;
+    if (!uploadRes.ok) {
+      const bodyText = await uploadRes.text().catch(() => '(unreadable)');
+      console.error(`[R2-SINGLE-PUT] HTTP ${uploadRes.status}`, {
+        statusText: uploadRes.statusText,
+        headers: Object.fromEntries(uploadRes.headers.entries()),
+        body: bodyText.slice(0, 500),
+        contentType,
+        key,
+      });
+      throw new Error(`Upload failed: ${uploadRes.status} ${uploadRes.statusText} — ${bodyText.slice(0, 200)}`);
+    }
+
+    const etag = uploadRes.headers.get('ETag');
+    console.log('[R2-SINGLE-PUT] Success', {
+      status: uploadRes.status,
+      etag,
+      headers: Object.fromEntries(uploadRes.headers.entries()),
+    });
+
+    onProgress?.(100);
+    return data.publicUrl as string;
+  } catch (err: any) {
+    if (err.name === 'TypeError') {
+      console.error('[R2-SINGLE-PUT] Network/CORS error (TypeError)', {
+        message: err.message,
+        hint: 'This usually means CORS is blocking the PUT request or the presigned URL domain is unreachable.',
+        contentType,
+        key,
+      });
+    }
+    throw err;
+  }
 }
 
 /**
@@ -294,10 +330,12 @@ export async function uploadFileToR2(
     ? `${category}/${options?.battleId || 'general'}/${userId}-${timestamp}.${ext}`
     : `${category}/${userId}/${timestamp}.${ext}`;
 
+  const contentType = file.type || 'application/octet-stream';
+  console.log('[R2-UPLOAD] uploadFileToR2 called', { category, key, contentType, fileSize: file.size, userId });
+
   const MULTIPART_THRESHOLD = 50 * 1024 * 1024; // 50MB
 
   if (file.size >= MULTIPART_THRESHOLD) {
-    // For multipart, we pass the category so the edge function generates the correct R2 key prefix
     const battleIdForMultipart = category === 'recordings'
       ? (options?.battleId || 'general')
       : undefined;
@@ -311,7 +349,7 @@ export async function uploadFileToR2(
     return controller.promise;
   }
 
-  return uploadToR2(file, key, file.type || 'application/octet-stream', onProgress);
+  return uploadToR2(file, key, contentType, onProgress);
 }
 
 // ============ Convenience wrappers ============
