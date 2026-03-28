@@ -234,13 +234,13 @@ export default function CameraStudio() {
 
     try {
       const { data: urlData, error: urlErr } = await supabase.functions.invoke('get-r2-presigned-url', {
-        body: { filename, contentType, action: 'PUT' },
+        body: { key: filename, contentType },
       });
-      if (urlErr || !urlData?.url) throw new Error(urlErr?.message || 'Failed to get upload URL');
+      if (urlErr || !urlData?.uploadUrl) throw new Error(urlErr?.message || 'Failed to get upload URL');
 
       setUploadProgress(30);
 
-      const res = await fetch(urlData.url, {
+      const res = await fetch(urlData.uploadUrl, {
         method: 'PUT',
         headers: { 'Content-Type': contentType },
         body: blob,
