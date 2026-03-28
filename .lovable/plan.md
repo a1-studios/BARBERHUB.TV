@@ -1,67 +1,79 @@
 
 
-# Fix Watermark Size, Delete Button, and Hero Video Navigation
+# Fix Portfolio Upload, Delete, and Video Tab Integration
 
-## Three Issues
+## Root Causes Found
 
-### 1. Watermark is way too big
-Currently the "BARBER-HUB" watermark is centered and large (`text-2xl/3xl`). User wants it **60% smaller**, positioned at the **top-center**, styled as a **Reddit-style transparent pill** with a thin rounded border.
+After auditing the code and database:
 
-**Changes in `src/pages/WatchFeed.tsx` and `src/components/BrandedVideoPlayer.tsx`:**
-- Move watermark from `inset-0 items-center justify-center` to `top-3 left-1/2 -translate-x-1/2`
-- Reduce text to `text-[10px]` with `tracking-[0.2em]`
-- Add pill styling: `rounded-full border border-white/30 px-3 py-1 bg-black/20 backdrop-blur-sm`
-- Keep "BARBER" in `text-white/40` and "-HUB" in `text-primary/50` (slightly more visible at small size)
+1. **Upload only works once on mobile**: The hidden file inputs use static `id` attributes (`portfolio-video-upload`, `portfolio-image-upload`) and `document.getElementById()` to trigger clicks. After the first upload completes and `event.target.value = ''` resets the input, mobile browsers (especially Safari) often refuse to re-trigger the same input element. Fix: use React `useRef` and force re-mount with a `key` prop tied to an upload counter.
 
-### 2. Delete button doesn't work (RLS blocks it)
-The delete button exists and is visible, but the actual database delete **fails silently** because the RLS policy on `creations` requires `has_role(auth.uid(), 'barber')`. Only 5 out of all users have the barber role entry in `user_roles`. Most barbers registered via `user_type = 'barber'` on profiles but were never added to `user_roles`.
+2. **Video tab doesn't create portfolio items**: `BarberVideoSection` (the Video tab) only writes to `barber_profiles.featured_video_id`. It never inserts into the `creations` table. So videos uploaded from the Video tab don't appear in the Portfolio tab. Fix: after updating `featured_video_id`, also insert a `creations` row so it shows in the portfolio grid.
 
-**Fix: New migration** — Replace the ALL policy with a simpler DELETE policy:
-```sql
-DROP POLICY "Barbers can manage their own creations" ON creations;
+3. **Delete button hidden behind native video controls**: Portfolio video items render `<video controls>` which places native browser controls over the entire video surface. The delete button at `top-2 left-2` gets trapped behind these native controls and is untappable. Fix: remove `controls` from the portfolio grid thumbnails (they're just previews) and show a play icon overlay instead.
 
--- Separate policies for INSERT, UPDATE, DELETE
-CREATE POLICY "Owners can insert creations" ON creations
-  FOR INSERT TO authenticated
-  WITH CHECK (EXISTS (
-    SELECT 1 FROM barber_profiles bp
-    WHERE bp.id = creations.barber_id AND bp.user_id = auth.uid()
-  ));
+4. **Extension-based video detection is fragile**: The regex `\.(mp4|mov|avi|webm)$/i` works for R2 URLs without query params, but `category` is set to `'haircut'` for all portfolio uploads from the image button and `'video'` only if explicitly passed. Fix: also check `category === 'video'` in addition to the extension regex.
 
-CREATE POLICY "Owners can update creations" ON creations
-  FOR UPDATE TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM barber_profiles bp
-    WHERE bp.id = creations.barber_id AND bp.user_id = auth.uid()
-  ));
+## Changes
 
-CREATE POLICY "Owners can delete creations" ON creations
-  FOR DELETE TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM barber_profiles bp
-    WHERE bp.id = creations.barber_id AND bp.user_id = auth.uid()
-  ));
+### File: `src/pages/BarberPublicProfile.tsx`
+
+**A. Replace static file input IDs with refs + re-mount key**
+- Add `useRef` for image and video file inputs
+- Add `uploadKey` state counter, incremented after each upload
+- Use `key={uploadKey}` on the file inputs so they re-mount after each upload
+- Replace all `document.getElementById('portfolio-...')?.click()` with `ref.current?.click()`
+
+**B. Fix video detection in portfolio grid**
+- Change `creation.media_url?.match(/\.(mp4|mov|avi|webm)$/i)` to also check `creation.category === 'video'`
+- Same for `imageCount` / `videoCount` counters
+
+**C. Remove `controls` from portfolio video thumbnails**
+- Remove `controls` attribute from `<video>` in the portfolio grid
+- Add a centered play icon overlay so users know it's a video
+- This ensures the delete button is always tappable
+
+**D. Make delete button more prominent**
+- Increase size slightly and add `z-20` to ensure it's above any overlay
+
+### File: `src/components/barber/BarberVideoSection.tsx`
+
+**E. Also create a `creations` record on Video tab upload**
+- After successfully writing `featured_video_id` to `barber_profiles`, also insert into `creations` with `category: 'video'` and `title: 'Featured Video'`
+- This requires passing `barberProfileId` (the `barber_profiles.id`) as a prop
+- Query it from `barber_profiles` using `user_id` if not already available
+
+### File: `src/pages/BarberPublicProfile.tsx` (Video tab section)
+
+**F. Pass barber profile ID to BarberVideoSection**
+- Pass `barberProfileId={barberData?.barber_id}` so the Video tab can insert into `creations`
+
+## Technical Details
+
+```text
+Upload flow (fixed):
+  1. User taps "Upload Video" button
+  2. ref.current.click() opens file picker
+  3. File selected -> upload to R2 -> insert into creations table
+  4. uploadKey++ forces input re-mount
+  5. User can immediately upload another file
+
+Video tab flow (new):
+  1. User uploads from Video tab
+  2. File uploaded to R2 -> barber_profiles.featured_video_id updated
+  3. NEW: Also insert into creations (barber_id, media_url, category='video')
+  4. Portfolio tab now shows the video too
+
+Delete flow (fixed):
+  1. Portfolio grid shows video thumbnail WITHOUT native controls
+  2. Delete button always visible, z-20, not blocked by controls
+  3. User taps delete -> confirm -> DELETE FROM creations -> refetch
 ```
-This removes the `has_role` check so any authenticated user who owns the barber profile can delete their own creations.
 
-**Also in `src/pages/BarberPublicProfile.tsx`:** Add better error feedback — log the actual error message in the toast so users can report issues.
-
-### 3. Clicking hero video navigates to random content
-`DynamicBattleHero.tsx` line 312: `onClick={() => navigate('/watch')}` — goes to the WatchFeed without specifying which video. The feed then shows whatever content loads first.
-
-**Fix:**
-- In `DynamicBattleHero.tsx`: Change to `navigate('/watch?video=' + fallbackVideo.barber_id)` to pass the barber whose video was shown.
-- In `WatchFeed.tsx`: Read `?video=` query param. If present, find that barber's video in the feed and set `activeIndex` to its position, so the user lands on the exact video they clicked.
-
----
-
-## Files to modify
+## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/pages/WatchFeed.tsx` | Shrink watermark to small pill at top-center |
-| `src/components/BrandedVideoPlayer.tsx` | Same watermark pill treatment |
-| `src/pages/BarberPublicProfile.tsx` | Improve delete error feedback |
-| `src/components/DynamicBattleHero.tsx` | Pass barber ID in navigation to `/watch?video=` |
-| New migration | Replace creations ALL policy with separate INSERT/UPDATE/DELETE without `has_role` |
+| `src/pages/BarberPublicProfile.tsx` | Replace static IDs with refs, add re-mount key, fix video detection, remove native controls from thumbnails, pass barberProfileId to VideoSection |
+| `src/components/barber/BarberVideoSection.tsx` | Accept barberProfileId prop, insert creations record on upload |
 
