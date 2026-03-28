@@ -1,79 +1,46 @@
 
 
-## Fix R2 Bucket Name + Multi-Category Media Architecture
+## Diagnostic Patch: Aggressive Logging for Single-PUT R2 Uploads + Content-Type Alignment
 
-### Part 1: Immediate Fix (I do this — no action from you)
+### Problem
+The single-PUT upload path (`uploadToR2` in `src/lib/storage.ts`) has minimal error logging — if the R2 PUT fails due to CORS caching or a signature mismatch, the error message is generic and unhelpful. The multipart path already has detailed logging, but the small-file path does not.
 
-Update the default bucket name from `'battle-submissions'` to `'battles-submissions'` in all 5 edge functions:
+There is also a **potential Content-Type signature mismatch**: the presigned URL is generated with `ContentType` (e.g., `video/mp4`), but the frontend sends whatever `file.type` reports. If these differ, R2 returns a 403 `SignatureDoesNotMatch`. The current code passes `contentType` from the frontend to the edge function, but the frontend PUT also sends a `Content-Type` header — these must match exactly.
 
-| File | Change |
-|------|--------|
-| `supabase/functions/initiate-multipart-upload/index.ts` | Line 59 |
-| `supabase/functions/presign-upload-part/index.ts` | Line 65 |
-| `supabase/functions/complete-multipart-upload/index.ts` | Line 46 |
-| `supabase/functions/abort-multipart-upload/index.ts` | Line 46 |
-| `supabase/functions/get-r2-presigned-url/index.ts` | Line 12 |
+### Changes
 
-Then redeploy all 5 functions. This fixes the `NoSuchBucket` error immediately.
+**File: `src/lib/storage.ts`**
 
----
+1. **Add aggressive diagnostic logging to `uploadToR2`** (the single-PUT path, lines 252-278):
+   - Log the presigned URL domain, key, and content type before the PUT
+   - On failure: log HTTP status, all response headers, and first 500 chars of body
+   - On success: log confirmation with status and headers
+   - This mirrors the logging already present in `uploadChunk` for multipart
 
-### Part 2: Multi-Category R2 Upload Architecture
+2. **Fix Content-Type alignment**: Ensure the `Content-Type` header sent in the frontend PUT matches exactly what was used to generate the presigned URL. Currently `uploadFileToR2` passes `file.type || 'application/octet-stream'` to `uploadToR2`, which then passes `contentType` to the edge function AND uses it in the PUT header — this looks correct, but add a console log to confirm alignment.
 
-Your single `battles-submissions` R2 bucket will hold all content, organized by folder prefix:
+3. **Add edge function response logging**: Log the full response from `get-r2-presigned-url` so we can see the exact presigned URL domain and verify it matches the R2 endpoint.
+
+**No edge function changes needed** — the current edge functions have correct bucket names and logging. The diagnostic gap is purely client-side.
+
+### Technical detail
 
 ```text
-battles-submissions/
-├── recordings/        ← Battle submission videos (existing)
-│   └── {battleId}/{userId}-{timestamp}-{filename}
-├── portfolios/        ← Barber social/portfolio content (NEW)
-│   └── {userId}/{timestamp}-{filename}
-└── education/         ← Paywalled educator content (NEW)
-    └── {userId}/{timestamp}-{filename}
+Current uploadToR2 error handling:
+  throw new Error(`Upload failed: ${status} ${statusText}`)  ← no headers, no body
+
+After patch:
+  console.error('[R2-SINGLE-PUT] HTTP ${status}', { 
+    statusText, headers, body, contentType, key 
+  })
+  → Reveals if it's 403 (signature), 0 (CORS block), or other
 ```
 
-No new R2 buckets needed — just folder separation within the existing one.
+### Files to modify
+- `src/lib/storage.ts` — add logging to `uploadToR2` function and `uploadFileToR2` entry point
 
-#### Category 1: Battle Submissions (existing)
-- Already working via multipart upload flow
-- Stored under `/recordings/`
-
-#### Category 2: Portfolio / Social Content (new)
-- Barbers upload videos/images that live on their profile
-- Propagated in the global feed based on engagement + optional BB boost
-- Uses the same R2 bucket via `get-r2-presigned-url` with `portfolios/` prefix
-- Fix `BarberVideoSection.tsx` and `BarberPublicProfile.tsx` to upload to R2 instead of Supabase Storage (which has the RLS error)
-
-#### Category 3: Education Content (new, paywalled)
-- Only barbers with Educator-tier subscription can publish
-- Masterclass, Tutorial, Quick Tip categories
-- Fix `EducatorUpload.tsx` to upload to R2 with `education/` prefix instead of Supabase Storage
-- Paywall enforced via `creator_content.is_locked` flag + subscription check on viewer side
-
-### What changes in code
-
-| File | What changes |
-|------|-------------|
-| 5 edge functions | Bucket name `→ battles-submissions` |
-| `src/lib/storage.ts` | New `uploadPortfolioToR2()` and `uploadEducationToR2()` helpers using `get-r2-presigned-url` |
-| `src/components/barber/BarberVideoSection.tsx` | Small-file path switches from Supabase Storage to R2 via presigned URL |
-| `src/pages/BarberPublicProfile.tsx` | Portfolio image/video uploads use R2 instead of Supabase Storage |
-| `src/components/creator/EducatorUpload.tsx` | Upload goes to R2 `education/` prefix; large files use multipart |
-
-### What you need to do
-
-**Nothing for Part 1** — I handle the bucket name fix and redeployment.
-
-**For Part 2**, verify:
-1. Your R2 bucket `battles-submissions` has **public access** enabled (so the `R2_PUBLIC_URL` serves files). Your screenshot shows `pub-a2131dfd...r2.dev` which looks correct.
-2. No CORS restrictions on the R2 bucket that would block browser PUT requests. If uploads fail with CORS errors after the fix, you'll need to add a CORS policy in Cloudflare R2 settings allowing `PUT` from your app domain.
-
-### Technical: Feed propagation for portfolio content
-
-Portfolio uploads will insert into `creator_content` with `promote_to_feed = true` and use the existing `build_universal_feed()` RPC. Engagement ranking uses:
-- Base score: 500
-- BB boost: added directly to rank_score
-- Engagement signals (likes, views) can be layered later
-
-Education content uses the same flow but with `is_locked = true` for non-subscribers, enforced client-side via subscription check.
+### Expected outcome
+- If CORS is now working: upload succeeds, console shows `[R2-SINGLE-PUT] Success` with ETag
+- If CORS cache stale: console shows `TypeError: Failed to fetch` or status 0 — user waits 5 min and retries
+- If signature mismatch: console shows 403 with `SignatureDoesNotMatch` in body — we fix the Content-Type alignment
 
