@@ -11,6 +11,7 @@ interface BrandedVideoPlayerProps {
   title?: string;
   autoPlay?: boolean;
   muted?: boolean;
+  loop?: boolean;
   className?: string;
   viewerCount?: number;
   showBranding?: boolean;

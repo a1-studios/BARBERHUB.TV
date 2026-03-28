@@ -43,26 +43,8 @@ const PLATFORM_PROMOS: FeedItem[] = [
 const WatchFeed = () => {
   const navigate = useNavigate();
   const [activeIndex, setActiveIndex] = useState(0);
-  const [endedVideos, setEndedVideos] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
-
-  const handleVideoEnded = useCallback((id: string) => {
-    setEndedVideos(prev => new Set(prev).add(id));
-  }, []);
-
-  const handleReplay = useCallback((id: string) => {
-    const video = videoRefs.current.get(id);
-    if (video) {
-      video.currentTime = 0;
-      video.play();
-      setEndedVideos(prev => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-    }
-  }, []);
 
   const { data: videos = [] } = useQuery({
     queryKey: ["watch-feed-videos"],

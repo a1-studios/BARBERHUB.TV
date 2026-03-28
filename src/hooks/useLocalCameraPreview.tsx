@@ -8,6 +8,8 @@ interface UseLocalCameraPreviewReturn {
   toggleAudio: () => void;
   startPreview: () => Promise<void>;
   stopPreview: () => void;
+  switchCamera: () => Promise<void>;
+  facingMode: 'user' | 'environment';
   isPreviewActive: boolean;
   error: string | null;
   videoRef: React.RefObject<HTMLVideoElement>;
