@@ -48,7 +48,7 @@ export const DynamicBattleHero = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isBarber } = useUserRole();
-  const [rotationIndex, setRotationIndex] = useState(0);
+  const [_rotationIndex, _setRotationIndex] = useState(0); // kept to preserve hook order
   const [currentUserBarberPosition, setCurrentUserBarberPosition] = useState<1 | 2 | null>(null);
   const [voted1, setVoted1] = useState(false);
   const [voted2, setVoted2] = useState(false);
