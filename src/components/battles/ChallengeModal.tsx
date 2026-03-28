@@ -32,7 +32,7 @@ interface BarberResult {
 export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
   const [mounted, setMounted] = useState(false);
   const { user } = useAuth();
-  const { barberBucks: balance, refreshBalance: refetchBalance } = useBarberBucks();
+  const { barberBucks: balance } = useBarberBucks();
 
   // Barber search
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,7 +99,6 @@ export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
       });
       if (error) throw error;
       toast.success(`Challenge issued to ${selectedBarber.display_name || selectedBarber.barber_name}! ${stakeAmount} BB staked.`);
-      refetchBalance();
       setSelectedBarber(null);
       setSearchQuery('');
     } catch (err: any) {
