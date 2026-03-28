@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSponsorAds } from "@/hooks/useSponsorAds";
-import { ArrowLeft, Play, GraduationCap, Flame } from "lucide-react";
+import { ArrowLeft, Play, GraduationCap, Flame, Volume2, VolumeX } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
@@ -44,6 +44,7 @@ const PLATFORM_PROMOS: FeedItem[] = [
 const WatchFeed = () => {
   const navigate = useNavigate();
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isMuted, setIsMuted] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
 
@@ -287,17 +288,18 @@ const WatchFeed = () => {
     return () => observer.disconnect();
   }, [feed.length]);
 
-  // Auto-play/pause videos based on active index
+  // Auto-play/pause videos based on active index + sync muted state
   useEffect(() => {
     videoRefs.current.forEach((video, key) => {
       const idx = feed.findIndex((f) => f.id === key);
+      video.muted = isMuted;
       if (idx === activeIndex) {
         video.play().catch(() => {});
       } else {
         video.pause();
       }
     });
-  }, [activeIndex, feed.length]);
+  }, [activeIndex, feed.length, isMuted]);
 
   const renderSpecialtyPills = (specialty: string | null | undefined) => {
     if (!specialty) return null;
@@ -380,6 +382,14 @@ const WatchFeed = () => {
         className="absolute top-4 left-4 z-20 p-2 rounded-full bg-black/30 backdrop-blur-sm border border-white/10"
       >
         <ArrowLeft className="w-4 h-4 text-white" />
+      </button>
+
+      {/* Mute / Unmute toggle */}
+      <button
+        onClick={() => setIsMuted(!isMuted)}
+        className="absolute bottom-24 right-4 z-20 p-3 rounded-full bg-black/30 backdrop-blur-sm border border-white/10"
+      >
+        {isMuted ? <VolumeX className="w-5 h-5 text-white" /> : <Volume2 className="w-5 h-5 text-white" />}
       </button>
 
       <div ref={containerRef} className="flex-1 overflow-y-scroll snap-y snap-mandatory scrollbar-hide">
