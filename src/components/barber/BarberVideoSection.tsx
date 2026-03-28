@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { multipartUploadToR2, type UploadProgress, type UploadController } from '@/lib/storage';
+import { multipartUploadToR2, uploadPortfolioMedia, type UploadProgress, type UploadController } from '@/lib/storage';
 import { ChunkedUploadProgress } from '@/components/battles/ChunkedUploadProgress';
 
 interface BarberVideoSectionProps {
@@ -80,21 +80,8 @@ export const BarberVideoSection = ({
         setUploadController(null);
         setUploadProgress(null);
       } else {
-        // Small file: use direct Supabase storage upload
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${user?.id}-${Date.now()}.${fileExt}`;
-        const filePath = `barber-videos/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('videos')
-          .upload(filePath, file);
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl: url } } = supabase.storage
-          .from('videos')
-          .getPublicUrl(filePath);
-        publicUrl = url;
+        // Small file: use R2 presigned URL upload
+        publicUrl = await uploadPortfolioMedia(file, user?.id || '');
       }
 
       // Update barber profile with video URL

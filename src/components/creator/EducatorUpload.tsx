@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { uploadEducationContent } from '@/lib/storage';
 import { toast } from 'sonner';
 import { UpgradePrompt } from '@/components/barber/UpgradePrompt';
 import { useQuery } from '@tanstack/react-query';
@@ -104,21 +105,8 @@ export function EducatorUpload() {
 
     setUploading(true);
     try {
-      const bucket = isVideo ? 'videos' : 'creations';
-      const ext = selectedFile.name.split('.').pop();
-      const filePath = `${user.id}/${Date.now()}.${ext}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from(bucket)
-        .upload(filePath, selectedFile);
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(filePath);
-
-      const mediaUrl = urlData.publicUrl;
+      // Upload to R2 education/ prefix
+      const mediaUrl = await uploadEducationContent(selectedFile, user.id);
 
       // Insert into creator_content
       const { data: content, error: insertError } = await supabase

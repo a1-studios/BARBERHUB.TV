@@ -62,7 +62,7 @@ serve(async (req) => {
     const r2Endpoint = Deno.env.get('R2_ENDPOINT');
     const r2AccessKeyId = Deno.env.get('R2_ACCESS_KEY_ID');
     const r2SecretAccessKey = Deno.env.get('R2_SECRET_ACCESS_KEY');
-    const r2BucketName = Deno.env.get('R2_BUCKET_NAME') || 'battle-submissions';
+    const r2BucketName = Deno.env.get('R2_BUCKET_NAME') || 'battles-submissions';
 
     if (!r2Endpoint || !r2AccessKeyId || !r2SecretAccessKey) {
       return new Response(JSON.stringify({ error: 'R2 credentials not configured. Set R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY in Supabase secrets.' }), {

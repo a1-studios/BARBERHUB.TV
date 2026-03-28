@@ -19,6 +19,7 @@ import { BookingConsole } from '@/components/booking/BookingConsole';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { toast } from 'sonner';
+import { uploadPortfolioMedia } from '@/lib/storage';
 
 export default function BarberPublicProfile() {
   const { userId } = useParams();
@@ -177,22 +178,8 @@ export default function BarberPublicProfile() {
 
     setUploading(true);
     try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id}-${Date.now()}.${fileExt}`;
-      const bucket = type === 'image' ? 'portfolios' : 'videos';
-      const filePath = `${bucket}/${fileName}`;
-
-      // Upload to storage
-      const { error: uploadError } = await supabase.storage
-        .from(bucket)
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from(bucket)
-        .getPublicUrl(filePath);
+      // Upload to R2 via presigned URL
+      const publicUrl = await uploadPortfolioMedia(file, user?.id || '');
 
       // Create portfolio entry
       const { error: createError } = await supabase
@@ -208,12 +195,11 @@ export default function BarberPublicProfile() {
 
       toast.success(`${type === 'image' ? 'Image' : 'Video'} uploaded successfully!`);
       refetchPortfolio();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error);
-      toast.error('Failed to upload file');
+      toast.error(error?.message || 'Failed to upload file');
     } finally {
       setUploading(false);
-      // Reset input
       event.target.value = '';
     }
   };
