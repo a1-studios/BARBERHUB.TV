@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfileSetup } from '@/hooks/useProfileSetup';
@@ -17,9 +16,7 @@ import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { AddFundsModal } from '@/components/AddFundsModal';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/Header';
-import { BarberProfileForm } from '@/components/profiles/BarberProfileForm';
 import { ClientProfileForm } from '@/components/profiles/ClientProfileForm';
-import { BarberSettings } from '@/components/profiles/BarberSettings';
 import { SponsorBoardPurchaseModal } from '@/components/fan/SponsorBoardPurchaseModal';
 import { TransactionHistory } from '@/components/analytics/TransactionHistory';
 import { MyAppointments } from '@/components/fan/MyAppointments';
@@ -27,6 +24,7 @@ import { BarberAppointmentManager } from '@/components/booking/BarberAppointment
 import { AvatarCrest } from '@/components/AvatarCrest';
 import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
 import { SubCategoryBadge } from '@/components/SubCategoryBadge';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { BottomNavBar } from '@/components/BottomNavBar';
@@ -38,7 +36,6 @@ const Profile = () => {
   const { isBarber: isUserBarber } = useUserRole();
   const navigate = useNavigate();
   const [showProfileSetup, setShowProfileSetup] = useState(false);
-  const [showBarberSettings, setShowBarberSettings] = useState(false);
   const [showSponsorModal, setShowSponsorModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteStep, setDeleteStep] = useState<1 | 2>(1);
@@ -152,23 +149,11 @@ const Profile = () => {
           <div className="max-w-lg mx-auto">
             <Button variant="ghost" onClick={() => setShowProfileSetup(false)} className="mb-4">← Back</Button>
             {isBarber ? (
-              <BarberProfileForm onProfileCreated={() => { setShowProfileSetup(false); refreshProfiles(); }} existingProfile={barberProfile} />
+              // For barbers, redirect to their public profile with edit mode
+              (() => { navigate(`/barber/${user?.id}?edit=true`); return null; })()
             ) : (
               <ClientProfileForm onProfileCreated={() => { setShowProfileSetup(false); refreshProfiles(); }} existingProfile={clientProfile} />
             )}
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  if (showBarberSettings && isBarber) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="pt-16 pb-12 px-4">
-          <div className="max-w-2xl mx-auto">
-            <BarberSettings onBack={() => setShowBarberSettings(false)} />
           </div>
         </main>
       </div>
@@ -397,36 +382,35 @@ const Profile = () => {
             {/* ACCOUNT section */}
             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-4 pb-1">Account</p>
             <div className="bg-card/80 backdrop-blur-sm rounded-xl border border-border/30 overflow-hidden divide-y divide-border/20">
-              {/* Edit Profile */}
-              <button
-                onClick={() => setShowEditDrawer(true)}
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <Edit3 className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium text-foreground">Edit Profile</span>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </button>
-
-              {/* Settings (barbers) */}
-              {isBarber && (
+              {/* Edit Profile / Settings — unified for barbers */}
+              {isBarber ? (
                 <button
-                  onClick={() => setShowBarberSettings(true)}
+                  onClick={() => navigate(`/barber/${user?.id}?edit=true`)}
                   className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <Settings className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-medium text-foreground">Settings</span>
+                    <span className="text-sm font-medium text-foreground">Edit Profile & Settings</span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowEditDrawer(true)}
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Edit3 className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">Edit Profile</span>
                   </div>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 </button>
               )}
 
               {/* Public Profile (barbers) */}
-              {isBarber && barberProfile?.id && (
+              {isBarber && (
                 <Link
-                  to={`/barbers/${barberProfile.id}`}
+                  to={`/barber/${user?.id}`}
                   className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
                 >
                   <div className="flex items-center gap-3">
@@ -506,24 +490,17 @@ const Profile = () => {
         />
       )}
 
-      {/* Edit Profile Drawer */}
+      {/* Edit Profile Drawer — fans only */}
       <Drawer open={showEditDrawer} onOpenChange={setShowEditDrawer}>
         <DrawerContent className="max-h-[85vh]">
           <DrawerHeader className="text-center pb-2">
             <DrawerTitle>Edit Profile</DrawerTitle>
           </DrawerHeader>
           <div className="px-4 pb-6 overflow-y-auto">
-            {isBarber ? (
-              <BarberProfileForm
-                onProfileCreated={() => { setShowEditDrawer(false); refreshProfiles(); }}
-                existingProfile={barberProfile}
-              />
-            ) : (
-              <ClientProfileForm
-                onProfileCreated={() => { setShowEditDrawer(false); refreshProfiles(); }}
-                existingProfile={clientProfile}
-              />
-            )}
+            <ClientProfileForm
+              onProfileCreated={() => { setShowEditDrawer(false); refreshProfiles(); }}
+              existingProfile={clientProfile}
+            />
           </div>
         </DrawerContent>
       </Drawer>
