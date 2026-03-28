@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { 
   Video, VideoOff, Mic, MicOff, Radio, Square, 
-  MessageCircle, Settings, Users, Clock, CheckCircle2, Loader2 
+  MessageCircle, Settings, Users, Clock, CheckCircle2, Loader2, SwitchCamera 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -32,6 +32,7 @@ interface ContenderControlBarProps {
   opponentReady?: boolean;
   isOpponentPresent?: boolean;
   onReady?: () => void;
+  onSwitchCamera?: () => void;
 }
 
 export const ContenderControlBar = memo(function ContenderControlBar({
@@ -56,6 +57,7 @@ export const ContenderControlBar = memo(function ContenderControlBar({
   opponentReady = false,
   isOpponentPresent = false,
   onReady,
+  onSwitchCamera,
 }: ContenderControlBarProps) {
   const isPreviewPhase = phase === 'preview' || phase === 'standby';
   const bothReady = isReady && opponentReady;
@@ -107,6 +109,22 @@ export const ContenderControlBar = memo(function ContenderControlBar({
               ? <Video className={cn(isMobile ? "w-5 h-5" : "w-6 h-6")} /> 
               : <VideoOff className={cn(isMobile ? "w-5 h-5" : "w-6 h-6")} />}
           </Button>
+
+          {/* Camera Flip — preview/standby only */}
+          {isPreviewPhase && onSwitchCamera && (
+            <Button
+              variant="ghost"
+              size="lg"
+              onClick={(e) => { e.stopPropagation(); onSwitchCamera(); }}
+              disabled={!hasStream}
+              className={cn(
+                "rounded-full bg-white/20 text-white hover:bg-white/30 touch-manipulation",
+                isMobile ? "w-12 h-12" : "w-14 h-14"
+              )}
+            >
+              <SwitchCamera className={cn(isMobile ? "w-5 h-5" : "w-6 h-6")} />
+            </Button>
+          )}
 
           {/* Phase-based main action button */}
           {isPreviewPhase && !isReady && (
