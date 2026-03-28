@@ -264,8 +264,64 @@ export const DynamicBattleHero = () => {
   // Only use real battle barbers — no fallback rotation
   const displayBarbers = barbers && barbers.length >= 2 ? barbers : [];
 
-  // If no active battle with two barbers, show a neutral CTA
+  // State for fallback video audio
+  const fallbackVideoRef = useRef<HTMLVideoElement>(null);
+  const [isMuted, setIsMuted] = useState(true);
+  const toggleMute = useCallback(() => {
+    if (fallbackVideoRef.current) {
+      fallbackVideoRef.current.muted = !fallbackVideoRef.current.muted;
+      setIsMuted(fallbackVideoRef.current.muted);
+    }
+  }, []);
+
+  // If no active battle with two barbers, show fallback single video or CTA
   if (displayBarbers.length < 2) {
+    if (fallbackVideo?.featured_video_id) {
+      return (
+        <div className="pt-1 sm:pt-2 pb-4 px-4 max-w-7xl mx-auto">
+          <div className="aspect-video bg-card rounded-2xl shadow-2xl border border-primary/20 overflow-hidden relative">
+            <video
+              ref={fallbackVideoRef}
+              src={fallbackVideo.featured_video_id}
+              autoPlay
+              loop
+              playsInline
+              muted
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            {/* Bottom gradient overlay */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {fallbackVideo.country_code && (
+                    <span className="text-sm">{getCountryFlag(fallbackVideo.country_code)}</span>
+                  )}
+                  <span className="text-white font-semibold text-sm">
+                    {fallbackVideo.display_name || fallbackVideo.barber_name}
+                  </span>
+                </div>
+                <button
+                  onClick={toggleMute}
+                  className="p-2 rounded-full bg-black/40 backdrop-blur-sm border border-border/30"
+                >
+                  {isMuted ? (
+                    <VolumeX className="w-4 h-4 text-white/80" />
+                  ) : (
+                    <Volume2 className="w-4 h-4 text-white/80" />
+                  )}
+                </button>
+              </div>
+            </div>
+            {/* Top badge */}
+            <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent/80 backdrop-blur-sm border border-primary/30">
+              <Flame className="w-3 h-3 text-primary" />
+              <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Featured Barber</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return <div className="pt-1 sm:pt-2 pb-8 px-4 max-w-7xl mx-auto">
         <div className="aspect-video bg-card rounded-2xl shadow-2xl border-2 border-primary/20 flex flex-col items-center justify-center gap-3">
           <Swords className="w-10 h-10 text-primary/40" />
