@@ -18,6 +18,7 @@ interface BarberVideoSectionProps {
   className?: string;
   barberUserId?: string;
   isOwner?: boolean;
+  barberProfileId?: string;
   onVideoUploaded?: () => void;
 }
 
@@ -29,6 +30,7 @@ export const BarberVideoSection = ({
   className = '',
   barberUserId,
   isOwner = false,
+  barberProfileId,
   onVideoUploaded
 }: BarberVideoSectionProps) => {
   const { user } = useAuth();
@@ -94,6 +96,16 @@ export const BarberVideoSection = ({
         .eq('user_id', user?.id);
 
       if (updateError) throw updateError;
+
+      // Also insert into creations so it appears in the portfolio
+      if (barberProfileId) {
+        await supabase.from('creations').insert({
+          barber_id: barberProfileId,
+          media_url: publicUrl,
+          category: 'video',
+          title: 'Featured Video',
+        });
+      }
 
       toast.success('Video uploaded successfully!');
       onVideoUploaded?.();
