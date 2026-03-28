@@ -384,6 +384,14 @@ const WatchFeed = () => {
 
   const renderVideoItem = (item: FeedItem, idx: number) => (
     <div className="relative w-full h-full bg-black">
+      {/* Centered tactical watermark */}
+      <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none select-none">
+        <span className="text-2xl md:text-3xl font-black tracking-[0.3em] uppercase drop-shadow-md">
+          <span className="text-white/15">BARBER</span>
+          <span className="text-primary/20">-HUB</span>
+        </span>
+      </div>
+
       {item.media_url && (item.media_url.includes(".mp4") || item.media_url.includes(".webm") || item.media_url.startsWith("http")) ? (
         <video
           ref={(el) => { if (el) videoRefs.current.set(item.id, el); }}

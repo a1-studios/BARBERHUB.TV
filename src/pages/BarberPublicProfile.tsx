@@ -560,7 +560,7 @@ export default function BarberPublicProfile() {
                               <Button
                                 size="icon"
                                 variant="destructive"
-                                className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
+                                className="absolute top-2 left-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity h-8 w-8"
                                 onClick={() => handleDeletePortfolioItem(creation.id)}
                               >
                                 <Trash2 className="h-4 w-4" />
