@@ -24,7 +24,7 @@ import { AvatarUpload } from '@/components/profiles/AvatarUpload';
 import { SpecialtyPillSelector } from '@/components/profiles/SpecialtyPillSelector';
 import { ServicesManager } from '@/components/profiles/ServicesManager';
 import { WeeklyAvailabilityManager } from '@/components/profiles/WeeklyAvailabilityManager';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DonationModal } from '@/components/DonationModal';
 import { BookingConsole } from '@/components/booking/BookingConsole';
 import { useAuth } from '@/hooks/useAuth';
@@ -44,6 +44,9 @@ export default function BarberPublicProfile() {
   const [uploading, setUploading] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
+  const [uploadKey, setUploadKey] = useState(0);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
   
   const isOwner = user?.id === userId;
   const editMode = searchParams.get('edit') === 'true';
@@ -310,8 +313,9 @@ export default function BarberPublicProfile() {
   });
 
   // Count images and videos in portfolio
-  const imageCount = portfolio?.filter(p => p.media_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i))?.length || 0;
-  const videoCount = portfolio?.filter(p => p.media_url?.match(/\.(mp4|mov|avi|webm)$/i))?.length || 0;
+  const isVideoItem = (p: any) => p.category === 'video' || p.media_url?.match(/\.(mp4|mov|avi|webm)$/i);
+  const imageCount = portfolio?.filter(p => !isVideoItem(p))?.length || 0;
+  const videoCount = portfolio?.filter(p => isVideoItem(p))?.length || 0;
 
   const handleDeletePortfolioItem = async (creationId: string) => {
     if (!confirm('Are you sure you want to delete this item?')) return;
@@ -383,7 +387,7 @@ export default function BarberPublicProfile() {
       toast.error(error?.message || 'Failed to upload file');
     } finally {
       setUploading(false);
-      event.target.value = '';
+      setUploadKey(prev => prev + 1);
     }
   };
 
@@ -651,7 +655,11 @@ export default function BarberPublicProfile() {
                   aspectRatio="landscape"
                   barberUserId={userId}
                   isOwner={isOwner}
-                  onVideoUploaded={() => window.location.reload()}
+                  barberProfileId={barberData?.barber_id}
+                  onVideoUploaded={() => {
+                    refetchPortfolio();
+                    queryClient.invalidateQueries({ queryKey: ['barber-public-profile', userId] });
+                  }}
                 />
               </CardContent>
             </Card>
@@ -675,7 +683,7 @@ export default function BarberPublicProfile() {
                         size="sm"
                         variant="default"
                         disabled={uploading}
-                        onClick={() => document.getElementById('portfolio-image-upload')?.click()}
+                        onClick={() => imageInputRef.current?.click()}
                         className="flex-1 sm:flex-none"
                       >
                         <ImageIcon className="w-4 h-4 mr-2" />
@@ -685,21 +693,23 @@ export default function BarberPublicProfile() {
                         size="sm"
                         variant="default"
                         disabled={uploading}
-                        onClick={() => document.getElementById('portfolio-video-upload')?.click()}
+                        onClick={() => videoInputRef.current?.click()}
                         className="flex-1 sm:flex-none"
                       >
                         <Video className="w-4 h-4 mr-2" />
                         Upload Video
                       </Button>
                       <input
-                        id="portfolio-image-upload"
+                        key={`img-${uploadKey}`}
+                        ref={imageInputRef}
                         type="file"
                         accept="image/*"
                         className="hidden"
                         onChange={(e) => handleFileUpload(e, 'image')}
                       />
                       <input
-                        id="portfolio-video-upload"
+                        key={`vid-${uploadKey}`}
+                        ref={videoInputRef}
                         type="file"
                         accept="video/*"
                         className="hidden"
@@ -722,20 +732,28 @@ export default function BarberPublicProfile() {
                   <div className="space-y-6">
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                       {portfolio.map((creation) => {
-                        const isVideo = creation.media_url?.match(/\.(mp4|mov|avi|webm)$/i);
+                        const isVid = isVideoItem(creation);
                         return (
                           <div 
                             key={creation.id}
                             className="aspect-square rounded-lg overflow-hidden border border-primary/20 hover:border-primary/50 transition-all hover:shadow-lg relative group"
                           >
-                            {isVideo ? (
+                            {isVid ? (
                               <>
                                 <video 
                                   src={creation.media_url} 
                                   className="w-full h-full object-cover"
-                                  controls
+                                  muted
+                                  playsInline
+                                  preload="metadata"
                                 />
-                                <Badge className="absolute top-2 right-2 bg-black/80 text-white border-0">
+                                {/* Play icon overlay */}
+                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                  <div className="w-10 h-10 rounded-full bg-black/60 flex items-center justify-center">
+                                    <Video className="w-5 h-5 text-white" />
+                                  </div>
+                                </div>
+                                <Badge className="absolute bottom-2 right-2 bg-black/80 text-white border-0 pointer-events-none z-10">
                                   <Video className="w-3 h-3 mr-1" />
                                   Video
                                 </Badge>
@@ -751,7 +769,7 @@ export default function BarberPublicProfile() {
                               <Button
                                 size="icon"
                                 variant="destructive"
-                                className="absolute top-2 left-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity h-8 w-8"
+                                className="absolute top-2 left-2 z-20 h-9 w-9 opacity-100"
                                 onClick={() => handleDeletePortfolioItem(creation.id)}
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -765,7 +783,7 @@ export default function BarberPublicProfile() {
                     {isOwner && (
                       <div className="flex gap-4 pt-4 border-t border-primary/10">
                         <button
-                          onClick={() => document.getElementById('portfolio-image-upload')?.click()}
+                          onClick={() => imageInputRef.current?.click()}
                           disabled={uploading}
                           className="flex-1 border-2 border-dashed border-primary/30 rounded-lg p-6 hover:border-primary/60 hover:bg-primary/5 transition-all cursor-pointer disabled:opacity-50"
                         >
@@ -773,7 +791,7 @@ export default function BarberPublicProfile() {
                           <p className="text-sm font-medium">Add More Images</p>
                         </button>
                         <button
-                          onClick={() => document.getElementById('portfolio-video-upload')?.click()}
+                          onClick={() => videoInputRef.current?.click()}
                           disabled={uploading}
                           className="flex-1 border-2 border-dashed border-primary/30 rounded-lg p-6 hover:border-primary/60 hover:bg-primary/5 transition-all cursor-pointer disabled:opacity-50"
                         >
@@ -797,7 +815,7 @@ export default function BarberPublicProfile() {
                         
                         <div className="grid grid-cols-2 gap-4">
                           <button
-                            onClick={() => document.getElementById('portfolio-image-upload')?.click()}
+                            onClick={() => imageInputRef.current?.click()}
                             disabled={uploading}
                             className="border-2 border-dashed border-primary/30 rounded-lg p-6 hover:border-primary/60 hover:bg-primary/5 transition-all cursor-pointer disabled:opacity-50"
                           >
@@ -807,7 +825,7 @@ export default function BarberPublicProfile() {
                           </button>
                           
                           <button
-                            onClick={() => document.getElementById('portfolio-video-upload')?.click()}
+                            onClick={() => videoInputRef.current?.click()}
                             disabled={uploading}
                             className="border-2 border-dashed border-primary/30 rounded-lg p-6 hover:border-primary/60 hover:bg-primary/5 transition-all cursor-pointer disabled:opacity-50"
                           >
