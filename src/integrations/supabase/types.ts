@@ -4149,6 +4149,7 @@ export type Database = {
           p_converted?: boolean
           p_fingerprint: string
           p_prize_id?: string
+          p_prize_label?: string
           p_shared?: boolean
           p_spins_used?: number
         }
