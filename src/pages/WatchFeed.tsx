@@ -46,6 +46,8 @@ const PLATFORM_PROMOS: FeedItem[] = [
 
 const WatchFeed = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const targetVideoBarber = searchParams.get('video');
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
   const [donationTarget, setDonationTarget] = useState<{ userId: string; name: string } | null>(null);
