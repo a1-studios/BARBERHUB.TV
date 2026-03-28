@@ -51,35 +51,27 @@ const WatchFeed = () => {
   const { data: videos = [] } = useQuery({
     queryKey: ["watch-feed-videos"],
     queryFn: async () => {
+      // Fetch standalone barber profile videos (featured_video_id)
       const { data, error } = await supabase
-        .from("battle_submissions")
-        .select("id, media_url, title, description, thumbnail_url, user_id")
-        .not("media_url", "is", null)
-        .order("created_at", { ascending: false })
+        .from("public_barber_profiles")
+        .select("barber_id, barber_name, display_name, featured_video_id, avatar_url, country_code")
+        .not("featured_video_id", "is", null)
+        .order("barber_updated_at", { ascending: false })
         .limit(30);
       if (error) throw error;
 
-      const userIds = [...new Set(data?.map((v) => v.user_id) || [])];
-      let barberMap: Record<string, string> = {};
-      if (userIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("user_id, display_name")
-          .in("user_id", userIds);
-        profiles?.forEach((p) => {
-          barberMap[p.user_id] = p.display_name || "Barber";
-        });
-      }
-
-      return (data || []).map((v) => ({
-        type: "video" as const,
-        id: v.id,
-        media_url: v.media_url,
-        title: v.title,
-        description: v.description,
-        thumbnail_url: v.thumbnail_url,
-        barber_name: barberMap[v.user_id] || "Barber",
-      }));
+      return (data || [])
+        .filter((b) => b.featured_video_id && b.featured_video_id.startsWith('http'))
+        .map((b) => ({
+          type: "video" as const,
+          id: `barber-video-${b.barber_id}`,
+          media_url: b.featured_video_id!,
+          title: null,
+          description: null,
+          thumbnail_url: null,
+          barber_name: b.display_name || b.barber_name || "Barber",
+          creator_avatar: b.avatar_url,
+        }));
     },
   });
 
