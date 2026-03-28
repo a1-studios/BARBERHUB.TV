@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { toast } from 'sonner';
 
 interface UseLocalCameraPreviewReturn {
   stream: MediaStream | null;

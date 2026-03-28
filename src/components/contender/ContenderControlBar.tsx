@@ -2,7 +2,7 @@ import { memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { 
   Video, VideoOff, Mic, MicOff, Radio, Square, 
-  MessageCircle, Settings, Users, Clock, CheckCircle2, Loader2 
+  MessageCircle, Settings, Users, Clock, CheckCircle2, Loader2, SwitchCamera 
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
