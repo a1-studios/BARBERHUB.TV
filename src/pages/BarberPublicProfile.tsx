@@ -326,9 +326,9 @@ export default function BarberPublicProfile() {
 
       toast.success('Item deleted successfully');
       refetchPortfolio();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Delete error:', error);
-      toast.error('Failed to delete item');
+      toast.error('Failed to delete: ' + (error?.message || 'Unknown error'));
     }
   };
 

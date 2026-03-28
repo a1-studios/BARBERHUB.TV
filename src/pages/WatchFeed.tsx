@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSponsorAds } from "@/hooks/useSponsorAds";
 import { ArrowLeft, Play, GraduationCap, Flame, Volume2, VolumeX, Heart, Share2, User } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 import SplitScreenBattle from "@/components/battles/SplitScreenBattle";
@@ -46,6 +46,8 @@ const PLATFORM_PROMOS: FeedItem[] = [
 
 const WatchFeed = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const targetVideoBarber = searchParams.get('video');
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
   const [donationTarget, setDonationTarget] = useState<{ userId: string; name: string } | null>(null);
@@ -271,6 +273,26 @@ const WatchFeed = () => {
     if (loopPass > 3) break;
   }
 
+  // If ?video= param is set, find the matching feed item and jump to it
+  const [hasJumped, setHasJumped] = useState(false);
+  useEffect(() => {
+    if (targetVideoBarber && feed.length > 0 && !hasJumped) {
+      const idx = feed.findIndex(f => f.barber_user_id === targetVideoBarber);
+      if (idx >= 0) {
+        setActiveIndex(idx);
+        setHasJumped(true);
+        // Scroll to the item
+        setTimeout(() => {
+          const container = containerRef.current;
+          if (container) {
+            const target = container.querySelector(`[data-index="${idx}"]`);
+            target?.scrollIntoView({ behavior: 'instant' });
+          }
+        }, 100);
+      }
+    }
+  }, [targetVideoBarber, feed.length, hasJumped]);
+
   // Snap scrolling observer
   useEffect(() => {
     const container = containerRef.current;
@@ -384,11 +406,11 @@ const WatchFeed = () => {
 
   const renderVideoItem = (item: FeedItem, idx: number) => (
     <div className="relative w-full h-full bg-black">
-      {/* Centered tactical watermark */}
-      <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none select-none">
-        <span className="text-2xl md:text-3xl font-black tracking-[0.3em] uppercase drop-shadow-md">
-          <span className="text-white/15">BARBER</span>
-          <span className="text-primary/20">-HUB</span>
+      {/* Small pill watermark at top-center */}
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 pointer-events-none select-none px-3 py-1 rounded-full border border-white/30 bg-black/20 backdrop-blur-sm">
+        <span className="text-[10px] font-black tracking-[0.2em] uppercase">
+          <span className="text-white/40">BARBER</span>
+          <span className="text-primary/50">-HUB</span>
         </span>
       </div>
 
