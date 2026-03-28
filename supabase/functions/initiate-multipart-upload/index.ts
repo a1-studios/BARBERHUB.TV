@@ -13,16 +13,45 @@ serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      { global: { headers: { Authorization: authHeader } } }
     );
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error || !user) throw new Error('Unauthorized');
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Enforce barber role
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'barber');
+
+    if (!roles || roles.length === 0) {
+      return new Response(JSON.stringify({ error: 'Only barbers can upload videos' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const { filename, contentType, battleId } = await req.json();
-    if (!filename || !battleId) throw new Error('filename and battleId are required');
+    if (!filename || !battleId) {
+      return new Response(JSON.stringify({ error: 'filename and battleId are required' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const r2AccountId = Deno.env.get('R2_ACCOUNT_ID')!;
     const r2AccessKeyId = Deno.env.get('R2_ACCESS_KEY_ID')!;

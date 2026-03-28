@@ -7,13 +7,16 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
 import { Upload, CheckCircle2, AlertCircle, Loader2, HelpCircle, Video, FileVideo } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { SubmissionGuidelines } from './SubmissionGuidelines';
-import { uploadBattleVideo } from '@/lib/storage';
+import { ChunkedUploadProgress } from './ChunkedUploadProgress';
+import { multipartUploadToR2 } from '@/lib/storage';
+import type { UploadProgress, UploadController } from '@/lib/storage';
 import { z } from 'zod';
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024; // 5GB
 
 interface VideoSubmissionModalProps {
   battleId: string;
@@ -29,8 +32,9 @@ export const VideoSubmissionModal = ({ battleId, isOpen, onClose, onSuccess }: V
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [urlError, setUrlError] = useState('');
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
+  const [uploadController, setUploadController] = useState<UploadController | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
@@ -42,14 +46,8 @@ export const VideoSubmissionModal = ({ battleId, isOpen, onClose, onSuccess }: V
 
   const validateUrl = (url: string) => {
     if (!url) { setUrlError(''); return false; }
-    try {
-      new URL(url);
-      setUrlError('');
-      return true;
-    } catch {
-      setUrlError('Please enter a valid URL');
-      return false;
-    }
+    try { new URL(url); setUrlError(''); return true; }
+    catch { setUrlError('Please enter a valid URL'); return false; }
   };
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,20 +59,27 @@ export const VideoSubmissionModal = ({ battleId, isOpen, onClose, onSuccess }: V
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
-    const maxSize = 500 * 1024 * 1024; // 500MB
-    if (file.size > maxSize) {
-      toast({ title: "File too large", description: "Maximum file size is 500MB", variant: "destructive" });
+
+    if (file.size > MAX_FILE_SIZE) {
+      toast({ title: "File too large", description: "Maximum file size is 5GB", variant: "destructive" });
       return;
     }
-    
+
     const validTypes = ['video/mp4', 'video/quicktime', 'video/webm', 'video/x-msvideo'];
     if (!validTypes.includes(file.type)) {
       toast({ title: "Invalid file type", description: "Please upload MP4, MOV, WebM, or AVI files", variant: "destructive" });
       return;
     }
-    
+
     setSelectedFile(file);
+    setUploadProgress(null);
+    setUploadController(null);
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
   };
 
   const submitWithUrl = async (url: string) => {
@@ -82,12 +87,7 @@ export const VideoSubmissionModal = ({ battleId, isOpen, onClose, onSuccess }: V
     if (!user) throw new Error('Not authenticated');
 
     const { data, error } = await supabase.functions.invoke('submit-battle-video', {
-      body: {
-        battleId,
-        videoUrl: url,
-        title: title.trim() || undefined,
-        description: description.trim() || undefined,
-      },
+      body: { battleId, videoUrl: url, title: title.trim() || undefined, description: description.trim() || undefined },
     });
 
     if (error) throw error;
@@ -96,7 +96,6 @@ export const VideoSubmissionModal = ({ battleId, isOpen, onClose, onSuccess }: V
       title: data.battleStatus === 'voting' ? "🎉 Battle is Live!" : "✅ Video Submitted!",
       description: data.message,
     });
-
     onSuccess();
     resetForm();
   };
@@ -109,27 +108,33 @@ export const VideoSubmissionModal = ({ battleId, isOpen, onClose, onSuccess }: V
     }
 
     setIsSubmitting(true);
-    setUploadProgress(10);
+
+    const controller = multipartUploadToR2(
+      selectedFile,
+      battleId,
+      (progress) => setUploadProgress(progress),
+      { title: title.trim() || undefined, description: description.trim() || undefined }
+    );
+    setUploadController(controller);
 
     try {
-      const publicUrl = await uploadBattleVideo(selectedFile, battleId, (pct) => {
-        setUploadProgress(Math.min(pct, 90));
-      });
-      setUploadProgress(95);
-      await submitWithUrl(publicUrl);
-      setUploadProgress(100);
+      await controller.promise;
+      toast({ title: "✅ Video Submitted!", description: "Your battle video has been uploaded successfully." });
+      onSuccess();
+      resetForm();
     } catch (error: any) {
-      console.error('Upload error:', error);
-      toast({ title: "Upload Failed", description: error.message || "Failed to upload video.", variant: "destructive" });
+      if (error.message === 'Upload cancelled') {
+        toast({ title: "Upload Cancelled", description: "Your upload has been cancelled." });
+      } else {
+        toast({ title: "Upload Failed", description: error.message || "Failed to upload video.", variant: "destructive" });
+      }
     } finally {
       setIsSubmitting(false);
-      setUploadProgress(0);
     }
   };
 
   const handleUrlSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     try {
       videoSubmissionSchema.parse({ videoUrl, title: title || undefined, description: description || undefined });
     } catch (error) {
@@ -138,31 +143,29 @@ export const VideoSubmissionModal = ({ battleId, isOpen, onClose, onSuccess }: V
       }
       return;
     }
-
     if (!validateUrl(videoUrl)) {
       toast({ title: "Invalid URL", description: "Please enter a valid video URL", variant: "destructive" });
       return;
     }
-
     setIsSubmitting(true);
-    try {
-      await submitWithUrl(videoUrl.trim());
-    } catch (error: any) {
-      console.error('Error submitting video:', error);
+    try { await submitWithUrl(videoUrl.trim()); }
+    catch (error: any) {
       toast({ title: "Submission Failed", description: error.message || "Failed to submit video.", variant: "destructive" });
-    } finally {
-      setIsSubmitting(false);
-    }
+    } finally { setIsSubmitting(false); }
   };
 
   const resetForm = () => {
     setVideoUrl(''); setTitle(''); setDescription('');
-    setUrlError(''); setSelectedFile(null); setUploadProgress(0);
+    setUrlError(''); setSelectedFile(null);
+    setUploadProgress(null); setUploadController(null);
   };
 
-  const handleClose = () => { if (!isSubmitting) { resetForm(); onClose(); } };
+  const handleClose = () => {
+    if (!isSubmitting) { resetForm(); onClose(); }
+  };
 
   const isValidUrl = videoUrl && !urlError;
+  const isUploading = uploadProgress && ['uploading', 'paused', 'completing'].includes(uploadProgress.status);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -190,7 +193,8 @@ export const VideoSubmissionModal = ({ battleId, isOpen, onClose, onSuccess }: V
                 Direct Video Upload
               </h4>
               <p className="text-sm text-muted-foreground">
-                Upload your video directly. Supports MP4, MOV, WebM (max 500MB).
+                Upload your video directly to our servers. Supports MP4, MOV, WebM up to <strong>5GB</strong>.
+                Large files are chunked automatically for reliable delivery.
               </p>
             </Card>
 
@@ -215,24 +219,20 @@ export const VideoSubmissionModal = ({ battleId, isOpen, onClose, onSuccess }: V
                     <div className="text-center">
                       <CheckCircle2 className="h-6 w-6 text-green-500 mx-auto mb-1" />
                       <p className="text-sm font-medium">{selectedFile.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {(selectedFile.size / (1024 * 1024)).toFixed(1)} MB
-                      </p>
+                      <p className="text-xs text-muted-foreground">{formatFileSize(selectedFile.size)}</p>
                     </div>
                   ) : (
                     <div className="text-center">
                       <Upload className="h-6 w-6 mx-auto mb-1 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">Click to select video</p>
+                      <p className="text-sm text-muted-foreground">Click to select video (up to 5GB)</p>
                     </div>
                   )}
                 </Button>
               </div>
 
-              {uploadProgress > 0 && (
-                <div className="space-y-1">
-                  <Progress value={uploadProgress} className="h-2" />
-                  <p className="text-xs text-muted-foreground text-right">{uploadProgress}%</p>
-                </div>
+              {/* Chunked upload progress */}
+              {uploadProgress && uploadProgress.status !== 'idle' && (
+                <ChunkedUploadProgress progress={uploadProgress} controller={uploadController} />
               )}
 
               <div className="space-y-2">
@@ -248,7 +248,7 @@ export const VideoSubmissionModal = ({ battleId, isOpen, onClose, onSuccess }: V
               <div className="flex gap-3 justify-end">
                 <Button type="button" variant="outline" onClick={handleClose} disabled={isSubmitting}>Cancel</Button>
                 <Button type="submit" disabled={!selectedFile || isSubmitting} className="min-w-[180px]">
-                  {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />Uploading...</>) : (<><Upload className="mr-2 h-4 w-4" />Upload & Submit</>)}
+                  {isSubmitting ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" />{isUploading ? 'Uploading...' : 'Processing...'}</>) : (<><Upload className="mr-2 h-4 w-4" />Upload & Submit</>)}
                 </Button>
               </div>
             </form>
@@ -276,12 +276,9 @@ export const VideoSubmissionModal = ({ battleId, isOpen, onClose, onSuccess }: V
                   {isValidUrl && <CheckCircle2 className="h-4 w-4 text-green-500" />}
                 </Label>
                 <Input
-                  id="videoUrl"
-                  type="text"
+                  id="videoUrl" type="text"
                   placeholder="https://example.com/my-battle-video.mp4"
-                  value={videoUrl}
-                  onChange={handleUrlChange}
-                  disabled={isSubmitting}
+                  value={videoUrl} onChange={handleUrlChange} disabled={isSubmitting}
                   className={urlError ? 'border-destructive' : isValidUrl ? 'border-green-500' : ''}
                 />
                 {urlError && (
