@@ -65,10 +65,12 @@ serve(async (req) => {
 
     const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
 
-    // Derive public URL (assumes R2 public bucket or custom domain)
-    // Format: https://<account>.r2.cloudflarestorage.com/<bucket>/<key>
-    // or custom domain set by user
-    const publicUrl = `${r2Endpoint}/${BUCKET}/${key}`;
+    // Derive public URL from R2_PUBLIC_URL (custom domain or public bucket URL)
+    const r2PublicUrl = Deno.env.get("R2_PUBLIC_URL");
+    if (!r2PublicUrl) {
+      throw new Error("R2_PUBLIC_URL not configured");
+    }
+    const publicUrl = `${r2PublicUrl}/${key}`;
 
     return new Response(
       JSON.stringify({ success: true, uploadUrl, publicUrl, key }),

@@ -6,8 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Upload, X, Eye, Image as ImageIcon, Loader2 } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { uploadPortfolioImage } from '@/lib/storage';
 import { toast } from 'sonner';
 
 interface PortfolioImage {
@@ -26,48 +26,12 @@ interface PortfolioManagerProps {
 export function PortfolioManager({ barberId, readonly = false }: PortfolioManagerProps) {
   const { user } = useAuth();
   const [images, setImages] = useState<PortfolioImage[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedImage, setSelectedImage] = useState<PortfolioImage | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const categories = ['Fades', 'Classic Cuts', 'Beard Styling', 'Hair Color', 'Creative Styles', 'Before/After'];
-
-  useEffect(() => {
-    loadPortfolioImages();
-  }, [barberId]);
-
-  const loadPortfolioImages = async () => {
-    try {
-      setLoading(true);
-      
-      // For now, we'll simulate portfolio images since we don't have a portfolio_images table
-      // In a real implementation, you'd fetch from a portfolio_images table
-      const mockImages: PortfolioImage[] = [
-        {
-          id: '1',
-          url: '/placeholder.svg',
-          title: 'Classic Fade',
-          category: 'Fades',
-          order: 1
-        },
-        {
-          id: '2', 
-          url: '/placeholder.svg',
-          title: 'Beard Trim',
-          category: 'Beard Styling',
-          order: 2
-        }
-      ];
-      
-      setImages(mockImages);
-    } catch (error: any) {
-      console.error('Error loading portfolio:', error);
-      toast.error('Failed to load portfolio images');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -76,7 +40,6 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
     setUploading(true);
     const uploadPromises = Array.from(files).map(async (file) => {
       try {
-        // Validate file
         if (!file.type.startsWith('image/')) {
           throw new Error(`${file.name} is not an image file`);
         }
@@ -84,31 +47,14 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
           throw new Error(`${file.name} is too large (max 10MB)`);
         }
 
-        // Upload to Supabase Storage
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${user.id}-${Date.now()}-${Math.random()}.${fileExt}`;
-        const filePath = `portfolio/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('portfolios')
-          .upload(filePath, file, {
-            cacheControl: '3600',
-            upsert: false
-          });
-
-        if (uploadError) throw uploadError;
-
-        // Get public URL
-        const { data } = supabase.storage
-          .from('portfolios')
-          .getPublicUrl(filePath);
+        const publicUrl = await uploadPortfolioImage(file, user.id);
 
         const newImage: PortfolioImage = {
-          id: fileName,
-          url: data.publicUrl,
+          id: crypto.randomUUID(),
+          url: publicUrl,
           title: file.name.split('.')[0],
           category: 'Uncategorized',
-          order: images.length + 1
+          order: images.length + 1,
         };
 
         return newImage;
@@ -130,24 +76,13 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
       toast.error('Failed to upload some images');
     } finally {
       setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  const handleRemoveImage = async (imageId: string) => {
-    try {
-      // Remove from storage
-      const { error } = await supabase.storage
-        .from('portfolios')
-        .remove([`portfolio/${imageId}`]);
-
-      if (error) throw error;
-
-      setImages(prev => prev.filter(img => img.id !== imageId));
-      toast.success('Image removed successfully');
-    } catch (error: any) {
-      console.error('Error removing image:', error);
-      toast.error('Failed to remove image');
-    }
+  const handleRemoveImage = (imageId: string) => {
+    setImages(prev => prev.filter(img => img.id !== imageId));
+    toast.success('Image removed');
   };
 
   const updateImageDetails = (imageId: string, updates: Partial<PortfolioImage>) => {

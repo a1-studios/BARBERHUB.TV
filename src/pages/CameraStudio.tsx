@@ -399,7 +399,7 @@ export default function CameraStudio() {
                   Stop
                 </Button>
 
-                {/* Twilio connect/disconnect */}
+                {/* Battle room connect/disconnect */}
                 {battleId && isActive && !battleRoom.isConnected && !battleRoom.isConnecting && (
                   <Button
                     size="sm"

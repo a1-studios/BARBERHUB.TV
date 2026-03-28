@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,9 +16,51 @@ import { HapticFeedback } from '@/utils/hapticFeedback';
 import { AudioManager } from '@/utils/audioManager';
 import { CelebrationEffects } from '@/utils/celebrationEffects';
 import { Button } from '@/components/ui/button';
-import { X, MessageSquare, Settings as SettingsIcon, Heart } from 'lucide-react';
+import { X, MessageSquare, Settings as SettingsIcon, Heart, Volume2, VolumeX } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+
+/** Native MP4 player with muted-autoplay + unmute overlay */
+const MP4Player = ({ src, className }: { src: string; className?: string }) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isMuted, setIsMuted] = useState(true);
+
+  const handleUnmute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = false;
+      setIsMuted(false);
+    }
+  };
+
+  const handleMute = () => {
+    if (videoRef.current) {
+      videoRef.current.muted = true;
+      setIsMuted(true);
+    }
+  };
+
+  return (
+    <div className="relative w-full h-full">
+      <video
+        ref={videoRef}
+        src={src}
+        controls
+        autoPlay
+        muted
+        playsInline
+        className={className}
+      />
+      <Button
+        variant="secondary"
+        size="icon"
+        onClick={isMuted ? handleUnmute : handleMute}
+        className="absolute top-3 right-3 z-20 bg-black/60 hover:bg-black/80 backdrop-blur-sm border-0"
+      >
+        {isMuted ? <VolumeX className="h-4 w-4 text-white" /> : <Volume2 className="h-4 w-4 text-white" />}
+      </Button>
+    </div>
+  );
+};
 
 export default function BattleTheater() {
   const { id } = useParams();
@@ -207,13 +249,7 @@ export default function BattleTheater() {
         {/* Left Side - Barber 1 */}
         <div className="flex-1 relative">
           {isMP4(barber1VideoSrc) ? (
-            <video
-              src={barber1VideoSrc!}
-              controls
-              autoPlay
-              playsInline
-              className="w-full h-full object-cover"
-            />
+            <MP4Player src={barber1VideoSrc!} className="w-full h-full object-cover" />
           ) : (
             <HLSVideoPlayer
               src={barber1VideoSrc}
@@ -257,13 +293,7 @@ export default function BattleTheater() {
         {/* Right Side - Barber 2 */}
         <div className="flex-1 relative">
           {isMP4(barber2VideoSrc) ? (
-            <video
-              src={barber2VideoSrc!}
-              controls
-              autoPlay
-              playsInline
-              className="w-full h-full object-cover"
-            />
+            <MP4Player src={barber2VideoSrc!} className="w-full h-full object-cover" />
           ) : (
             <HLSVideoPlayer
               src={barber2VideoSrc}
