@@ -7,6 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { multipartUploadToR2, type UploadProgress, type UploadController } from '@/lib/storage';
+import { ChunkedUploadProgress } from '@/components/battles/ChunkedUploadProgress';
 
 interface BarberVideoSectionProps {
   videoId?: string | null;
@@ -31,6 +33,10 @@ export const BarberVideoSection = ({
 }: BarberVideoSectionProps) => {
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
+  const [uploadController, setUploadController] = useState<UploadController | null>(null);
+
+  const MULTIPART_THRESHOLD = 50 * 1024 * 1024; // 50MB
   
   const hasExplicitHeight = className.includes('h-full') || className.includes('h-[');
   const aspectClass = hasExplicitHeight
@@ -51,30 +57,45 @@ export const BarberVideoSection = ({
       return;
     }
 
-    // Validate file size (100MB max)
-    const maxSize = 100 * 1024 * 1024; // 100MB in bytes
+    // Validate file size (5GB max)
+    const maxSize = 5 * 1024 * 1024 * 1024;
     if (file.size > maxSize) {
-      toast.error('Video must be under 100MB');
+      toast.error('Video must be under 5GB');
       return;
     }
 
     setUploading(true);
     try {
-      // Upload to Supabase storage
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user?.id}-${Date.now()}.${fileExt}`;
-      const filePath = `barber-videos/${fileName}`;
+      let publicUrl: string;
 
-      const { error: uploadError } = await supabase.storage
-        .from('videos')
-        .upload(filePath, file);
+      if (file.size >= MULTIPART_THRESHOLD) {
+        // Large file: use multipart upload to R2
+        const controller = multipartUploadToR2(
+          file,
+          `featured-${user?.id}`,
+          (progress) => setUploadProgress(progress)
+        );
+        setUploadController(controller);
+        publicUrl = await controller.promise;
+        setUploadController(null);
+        setUploadProgress(null);
+      } else {
+        // Small file: use direct Supabase storage upload
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${user?.id}-${Date.now()}.${fileExt}`;
+        const filePath = `barber-videos/${fileName}`;
 
-      if (uploadError) throw uploadError;
+        const { error: uploadError } = await supabase.storage
+          .from('videos')
+          .upload(filePath, file);
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('videos')
-        .getPublicUrl(filePath);
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl: url } } = supabase.storage
+          .from('videos')
+          .getPublicUrl(filePath);
+        publicUrl = url;
+      }
 
       // Update barber profile with video URL
       const { error: updateError } = await supabase
@@ -89,11 +110,14 @@ export const BarberVideoSection = ({
 
       toast.success('Video uploaded successfully!');
       onVideoUploaded?.();
-    } catch (error) {
+    } catch (error: any) {
+      if (error?.message === 'Upload cancelled') return;
       console.error('Upload error:', error);
       toast.error('Failed to upload video');
     } finally {
       setUploading(false);
+      setUploadController(null);
+      setUploadProgress(null);
     }
   };
   
@@ -105,15 +129,23 @@ export const BarberVideoSection = ({
           <div className="text-center space-y-3 p-4">
             {uploading ? (
               <>
-                <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
-                <p className="text-sm text-muted-foreground">Uploading...</p>
+                {uploadProgress ? (
+                  <div className="w-full px-2">
+                    <ChunkedUploadProgress progress={uploadProgress} controller={uploadController} />
+                  </div>
+                ) : (
+                  <>
+                    <Loader2 className="w-12 h-12 mx-auto text-primary animate-spin" />
+                    <p className="text-sm text-muted-foreground">Uploading...</p>
+                  </>
+                )}
               </>
             ) : (
               <>
                 <Upload className="w-12 h-12 mx-auto text-primary/40" />
                 <div className="space-y-1">
                   <p className="text-sm font-medium">Upload Video</p>
-                  <p className="text-xs text-muted-foreground">Max 100MB</p>
+                  <p className="text-xs text-muted-foreground">Max 5GB</p>
                 </div>
                 <Button
                   size="sm"
