@@ -52,6 +52,8 @@ export default function CameraStudio() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const recTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isFlippingRef = useRef(false);
+  const activeMimeTypeRef = useRef<string>('video/mp4');
 
   const [isActive, setIsActive] = useState(false);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
@@ -186,12 +188,20 @@ export default function CameraStudio() {
   };
 
   // ─── Recording ───
+  const getSupportedMimeType = (): string => {
+    const candidates = ['video/mp4', 'video/webm;codecs=vp9', 'video/webm'];
+    for (const mt of candidates) {
+      if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(mt)) return mt;
+    }
+    return 'video/webm';
+  };
+
   const startRecording = useCallback(() => {
     if (!streamRef.current || isRecording) return;
     chunksRef.current = [];
-    const mr = new MediaRecorder(streamRef.current, {
-      mimeType: MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9' : 'video/webm',
-    });
+    const mimeType = getSupportedMimeType();
+    activeMimeTypeRef.current = mimeType;
+    const mr = new MediaRecorder(streamRef.current, { mimeType });
     mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
     mr.onstop = () => handleRecordingComplete();
     mr.start(1000);
@@ -210,18 +220,21 @@ export default function CameraStudio() {
   }, []);
 
   const handleRecordingComplete = async () => {
-    const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+    const mimeType = activeMimeTypeRef.current;
+    const blob = new Blob(chunksRef.current, { type: mimeType });
     if (blob.size < 1000) { toast.error('Recording too short'); return; }
 
+    const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
     const folder = R2_FOLDERS[studioMode] || 'portfolios';
-    const filename = `${folder}/${Date.now()}_studio.webm`;
+    const filename = `${folder}/${Date.now()}_studio.${ext}`;
+    const contentType = mimeType.split(';')[0]; // strip codecs param
 
     setIsUploading(true);
     setUploadProgress(10);
 
     try {
       const { data: urlData, error: urlErr } = await supabase.functions.invoke('get-r2-presigned-url', {
-        body: { filename, contentType: 'video/webm', action: 'PUT' },
+        body: { filename, contentType, action: 'PUT' },
       });
       if (urlErr || !urlData?.url) throw new Error(urlErr?.message || 'Failed to get upload URL');
 
@@ -229,7 +242,7 @@ export default function CameraStudio() {
 
       const res = await fetch(urlData.url, {
         method: 'PUT',
-        headers: { 'Content-Type': 'video/webm' },
+        headers: { 'Content-Type': contentType },
         body: blob,
       });
       if (!res.ok) throw new Error('Upload failed');
@@ -278,11 +291,11 @@ export default function CameraStudio() {
     };
   }, [enumerateDevices]);
 
-  // Restart when device changes
+  // Restart when device selection changes (not facingMode — that's handled by flip handler)
   useEffect(() => {
     if (isActive) { stopPreview(); startPreview(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCamera, selectedMic, facingMode]);
+  }, [selectedCamera, selectedMic]);
 
   return (
     <div className="fixed inset-0 bg-black flex flex-col" style={{ touchAction: 'manipulation' }}>
@@ -490,28 +503,28 @@ export default function CameraStudio() {
             </div>
           )}
 
-          <div className="flex items-center justify-center gap-3 px-4 py-3">
+          <div className="flex items-center justify-center gap-2 px-4 py-3">
             {/* Video toggle */}
             <Button variant={isVideoEnabled ? 'ghost' : 'destructive'} size="icon"
-              className="rounded-full h-12 w-12 text-white border border-white/20" onClick={toggleVideo}>
-              {isVideoEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
+              className="rounded-full h-10 w-10 min-w-[40px] text-white border border-white/20" onClick={toggleVideo}>
+              {isVideoEnabled ? <Video className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />}
             </Button>
 
             {/* Audio toggle */}
             <Button variant={isAudioEnabled ? 'ghost' : 'destructive'} size="icon"
-              className="rounded-full h-12 w-12 text-white border border-white/20" onClick={toggleAudio}>
-              {isAudioEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
+              className="rounded-full h-10 w-10 min-w-[40px] text-white border border-white/20" onClick={toggleAudio}>
+              {isAudioEnabled ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
             </Button>
 
             {/* REC / STOP button — always visible when camera is active */}
             {studioMode !== 'challenge' && (
               isRecording ? (
-                <Button size="icon" className="rounded-full h-14 w-14 bg-red-600 hover:bg-red-700 border-4 border-white/30"
+                <Button size="icon" className="rounded-full h-14 w-14 min-w-[56px] bg-red-600 hover:bg-red-700 border-4 border-white/30"
                   onClick={stopRecording}>
                   <Square className="h-5 w-5 text-white fill-white" />
                 </Button>
               ) : (
-                <Button size="icon" className="rounded-full h-14 w-14 bg-red-600 hover:bg-red-700 border-4 border-white/30"
+                <Button size="icon" className="rounded-full h-14 w-14 min-w-[56px] bg-red-600 hover:bg-red-700 border-4 border-white/30"
                   onClick={() => {
                     if (studioMode === 'idle') setStudioMode('portfolio');
                     startRecording();
@@ -525,8 +538,8 @@ export default function CameraStudio() {
             <Drawer open={isModeDrawerOpen} onOpenChange={setIsModeDrawerOpen}>
               <DrawerTrigger asChild>
                 <Button variant="ghost" size="icon"
-                  className="rounded-full h-12 w-12 text-white border border-primary/40 bg-primary/20">
-                  <Swords className="h-5 w-5" />
+                  className="rounded-full h-10 w-10 min-w-[40px] text-white border border-primary/40 bg-primary/20">
+                  <Swords className="h-4 w-4" />
                 </Button>
               </DrawerTrigger>
               <DrawerContent className="max-h-[60vh]">
@@ -554,12 +567,39 @@ export default function CameraStudio() {
 
             {/* Flip camera */}
             <Button variant="ghost" size="icon"
-              className="rounded-full h-12 w-12 text-white border border-white/20"
-              onClick={() => {
-                setSelectedCamera('');
-                setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+              className="rounded-full h-10 w-10 min-w-[40px] text-white border border-white/20"
+              onClick={async () => {
+                if (isFlippingRef.current) return;
+                isFlippingRef.current = true;
+                try {
+                  const newMode = facingMode === 'user' ? 'environment' : 'user';
+                  setFacingMode(newMode);
+                  setSelectedCamera('');
+                  // Stop current stream
+                  if (isRecording) stopRecording();
+                  streamRef.current?.getTracks().forEach(t => t.stop());
+                  streamRef.current = null;
+                  if (videoRef.current) videoRef.current.srcObject = null;
+                  cancelAnimationFrame(animFrameRef.current);
+                  // Start with new facing mode
+                  const constraints: MediaStreamConstraints = {
+                    video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 }, facingMode: newMode },
+                    audio: { echoCancellation: true, noiseSuppression: true, ...(selectedMic ? { deviceId: { exact: selectedMic } } : {}) },
+                  };
+                  const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+                  streamRef.current = mediaStream;
+                  if (videoRef.current) videoRef.current.srcObject = mediaStream;
+                  setIsActive(true);
+                  setIsVideoEnabled(true);
+                  setIsAudioEnabled(true);
+                } catch (err) {
+                  console.error('Failed to flip camera:', err);
+                  toast.error('Could not switch camera');
+                } finally {
+                  isFlippingRef.current = false;
+                }
               }}>
-              <RefreshCw className="h-5 w-5" />
+              <RefreshCw className="h-4 w-4" />
             </Button>
           </div>
 
