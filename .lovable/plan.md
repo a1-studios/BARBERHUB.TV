@@ -1,59 +1,65 @@
 
 
-# Unify Barber Portfolio, Visible Delete, and BARBER-HUB Watermark
+# Unified Barber Profile: One Page, One Experience
 
 ## Problem Summary
 
-1. **Settings Portfolio tab is disconnected** — `PortfolioManager` uses local `useState` for images and never reads the `creations` table. So uploads done on the public profile don't appear in Settings, and vice versa.
-2. **Delete button invisible on mobile** — Uses `opacity-0 group-hover:opacity-100`, which doesn't work on touch devices.
-3. **Watermark needs redesign** — Currently tiny "BARBER HUB" top-left at 10px. Needs centered, transparent, tactical "BARBER-HUB" with "-HUB" in signature orange.
+There are three disconnected views for a barber's content:
 
----
+1. **`/profile`** (Profile.tsx) -- The iOS-style profile page with avatar, stats, and grouped list items. "Settings" opens BarberSettings, which has a Portfolio tab using `PortfolioManager`. "Public Profile" links to `/barbers/:barberProfile.id` -- but the route expects `/barber/:userId`, so the link is **broken** (404/wrong profile).
 
-## Plan
+2. **`/barber/:userId`** (BarberPublicProfile.tsx) -- The public-facing page with hero, About/Video/Portfolio tabs. Has its own upload and delete UI for portfolio, querying `creations` by `barber_id`.
 
-### 1. Rewrite PortfolioManager to use the `creations` table
-**File: `src/components/profiles/PortfolioManager.tsx`**
+3. **BarberSettings > Portfolio tab** -- Uses `PortfolioManager` which also queries `creations` by `barberId`. Shows "No media yet" because the component works but the data display is disconnected from uploads done on the public profile page.
 
-- Replace local `useState<PortfolioImage[]>` with a `useQuery` that fetches from `creations` table (same query as `BarberPublicProfile`):  
-  `supabase.from('creations').select('*').eq('barber_id', barberId).order('created_at', { ascending: false })`
-- Accept both images AND videos (change `accept="image/*"` → `accept="image/*,video/*"`)
-- On upload, use `uploadPortfolioMedia` (R2) then insert into `creations` table (matching BarberPublicProfile's handler)
-- On delete, call `supabase.from('creations').delete().eq('id', id)` and invalidate the query
-- Apply the same 5GB cumulative cap logic
-- Show videos inline with a `<video>` tag (like BarberPublicProfile does)
+**Root causes:**
+- Profile.tsx links to `/barbers/${barberProfile.id}` but the route is `/barber/${userId}` -- completely broken link
+- Two separate portfolio UIs exist (PortfolioManager and BarberPublicProfile's inline portfolio)
+- Username and Country fields are still editable in Settings despite being locked by policy
 
-### 2. Make delete button always visible for owners
-**File: `src/pages/BarberPublicProfile.tsx`** (lines 559-567)
+## Plan: Hybrid Merge
 
-Change `opacity-0 group-hover:opacity-100` → always visible on mobile:
-```
-className="absolute top-2 left-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity h-8 w-8"
-```
+When a barber taps their profile icon, they see the `/profile` page (flag background, centered avatar, iOS grouped list). When they tap "Settings," instead of a separate full-screen Settings view, they go to their **own public profile** at `/barber/:userId` which gains an inline editing panel at the bottom (for the owner only).
 
-Same pattern applied in the rewritten `PortfolioManager`.
+### Changes
 
-### 3. Centered BARBER-HUB watermark
-**File: `src/components/BrandedVideoPlayer.tsx`** (lines 121-127)
+**1. Fix the "Public Profile" link in Profile.tsx (line 428-429)**
+Change `to={'/barbers/${barberProfile.id}'}` to `to={'/barber/${user.id}'}`. This is the critical broken link.
 
-Replace the top-left 10px watermark with a centered, transparent tactical watermark:
-- Position: `absolute inset-0 flex items-center justify-center` (dead center of video)
-- Text: `BARBER` in white/15 opacity, `-HUB` in primary (orange) /20 opacity
-- Size: `text-2xl font-black tracking-[0.3em]`
-- Style: `pointer-events-none select-none` so it doesn't interfere with controls
+**2. Replace "Settings" button with direct link to own public profile**
+Remove the `showBarberSettings` full-screen takeover from Profile.tsx. Instead, the "Settings" button navigates to `/barber/${user.id}?edit=true`. This merges both entry points into one destination.
 
-**File: `src/pages/WatchFeed.tsx`**
+**3. Add owner editing section to BarberPublicProfile.tsx**
+When `isOwner` is true and `?edit=true` query param is present, render a collapsible "Settings" panel below the tabs. This panel contains:
+- **Pro tab content** (social links, specialties, location, bio) from BarberSettings
+- **Biz tab content** (availability toggles, booking economy) from BarberSettings
+- **Privacy tab content** from BarberSettings
 
-Add the same centered watermark overlay to each feed video item (the WatchFeed doesn't use `BrandedVideoPlayer`).
+The Portfolio tab already has upload/delete in BarberPublicProfile -- that becomes the single source of truth.
 
----
+**4. Remove BarberSettings full-screen from Profile.tsx**
+Delete the `showBarberSettings` state, the conditional render block (lines 165-176), and the Settings button that triggers it. Replace with navigation to `/barber/${user.id}?edit=true`.
 
-## Files to modify
+**5. Lock username and country fields**
+In the owner editing section, show username as read-only text (not an input). Show country as flag + name text, not a dropdown. Show phone/email as locked with "Contact support to change" note.
+
+**6. Remove the "Edit Profile" drawer**
+The Edit Profile drawer (BarberProfileForm) is redundant -- all editing happens on the unified profile page. Remove `showEditDrawer` state and the Drawer component from Profile.tsx. Keep the "Edit Profile" button but redirect to `/barber/${user.id}?edit=true`.
+
+**7. Remove PortfolioManager from BarberSettings**
+Since BarberSettings is being dismantled, `PortfolioManager` is no longer needed as a separate component. The portfolio UI lives solely in BarberPublicProfile's Portfolio tab.
+
+## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/profiles/PortfolioManager.tsx` | Full rewrite — query `creations` table, support images+videos, delete from DB, R2 upload |
-| `src/pages/BarberPublicProfile.tsx` | Make delete button always visible on mobile (1 line) |
-| `src/components/BrandedVideoPlayer.tsx` | Replace top-left watermark with centered transparent "BARBER-HUB" |
-| `src/pages/WatchFeed.tsx` | Add same centered watermark overlay to feed videos |
+| `src/pages/Profile.tsx` | Fix public profile link URL, remove BarberSettings full-screen, remove Edit drawer, replace both with navigation to `/barber/:userId?edit=true` |
+| `src/pages/BarberPublicProfile.tsx` | Add collapsible owner settings panel (Pro, Biz, Privacy) when `isOwner && edit=true`. Reuse form logic from BarberSettings. |
+| `src/components/profiles/BarberSettings.tsx` | Extract Pro/Biz/Privacy form sections into reusable sub-components, or inline them into BarberPublicProfile |
+
+## What stays the same
+- The `/profile` page keeps its flag background, centered avatar, stats row, iOS grouped list, BB pill, and all modals
+- The public profile page keeps its hero, About/Video/Portfolio tabs
+- Portfolio upload/delete stays in BarberPublicProfile's Portfolio tab (already working with delete buttons)
+- Fan profile flow is unchanged
 
