@@ -1,46 +1,60 @@
 
 
-## Diagnostic Patch: Aggressive Logging for Single-PUT R2 Uploads + Content-Type Alignment
+## Remove YouTube & Build Native Barber Hub Video Player
 
-### Problem
-The single-PUT upload path (`uploadToR2` in `src/lib/storage.ts`) has minimal error logging — if the R2 PUT fails due to CORS caching or a signature mismatch, the error message is generic and unhelpful. The multipart path already has detailed logging, but the small-file path does not.
+### What's happening now
+YouTube iframes are embedded in 3 places across the app. When videos are uploaded to R2, the URL gets wrongly stuffed into a YouTube embed URL, causing broken playback. Additionally, any working YouTube embeds show YouTube's branding, logo, and controls — not yours.
 
-There is also a **potential Content-Type signature mismatch**: the presigned URL is generated with `ContentType` (e.g., `video/mp4`), but the frontend sends whatever `file.type` reports. If these differ, R2 returns a 403 `SignatureDoesNotMatch`. The current code passes `contentType` from the frontend to the edge function, but the frontend PUT also sends a `Content-Type` header — these must match exactly.
+### What we'll build
 
-### Changes
+**A single `BrandedVideoPlayer` component** that replaces all YouTube iframes and existing video players with a fully native HTML5 `<video>` element featuring Barber Hub branding.
 
-**File: `src/lib/storage.ts`**
+#### Player features
+- Custom play button with Barber Hub styling (gold/primary gradient circle with scissors or custom icon)
+- Branded overlay with "BARBER HUB" text watermark (top corner, semi-transparent)
+- Native HTML5 controls (no YouTube logo, no YouTube recommendations)
+- Support for R2 URLs (MP4/WebM), poster thumbnails, and live badge
+- Fullscreen, picture-in-picture support
+- Viewer count overlay for live content
 
-1. **Add aggressive diagnostic logging to `uploadToR2`** (the single-PUT path, lines 252-278):
-   - Log the presigned URL domain, key, and content type before the PUT
-   - On failure: log HTTP status, all response headers, and first 500 chars of body
-   - On success: log confirmation with status and headers
-   - This mirrors the logging already present in `uploadChunk` for multipart
+#### Files to change
 
-2. **Fix Content-Type alignment**: Ensure the `Content-Type` header sent in the frontend PUT matches exactly what was used to generate the presigned URL. Currently `uploadFileToR2` passes `file.type || 'application/octet-stream'` to `uploadToR2`, which then passes `contentType` to the edge function AND uses it in the PUT header — this looks correct, but add a console log to confirm alignment.
+| File | What changes |
+|------|-------------|
+| **NEW** `src/components/BrandedVideoPlayer.tsx` | Single unified player: native `<video>` with custom play overlay, Barber Hub logo watermark, poster state, and controls |
+| `src/components/barber/BarberVideoSection.tsx` | Remove YouTube iframe (lines 204-250). Use `BrandedVideoPlayer` for all `videoId` values — treat them as direct URLs, not YouTube IDs |
+| `src/pages/WatchFeed.tsx` | Remove `getYouTubeId()` helper and YouTube iframe branch (lines 259-273). All media URLs go through `BrandedVideoPlayer` or native `<video>` |
+| `src/components/battles/SubmissionGuidelines.tsx` | Remove YouTube-specific text ("YouTube videos only", "Stream on YouTube", "YouTube saves your video"). Replace with R2 direct upload instructions |
+| `src/components/battles/FullscreenBattleVideoModal.tsx` | Already uses `HLSVideoPlayer` — swap to `BrandedVideoPlayer` |
+| `src/components/VideoPlayer.tsx` | Deprecate — functionality absorbed into `BrandedVideoPlayer` |
+| `src/components/battles/HLSVideoPlayer.tsx` | Deprecate — functionality absorbed into `BrandedVideoPlayer` |
 
-3. **Add edge function response logging**: Log the full response from `get-r2-presigned-url` so we can see the exact presigned URL domain and verify it matches the R2 endpoint.
-
-**No edge function changes needed** — the current edge functions have correct bucket names and logging. The diagnostic gap is purely client-side.
-
-### Technical detail
+#### BrandedVideoPlayer design
 
 ```text
-Current uploadToR2 error handling:
-  throw new Error(`Upload failed: ${status} ${statusText}`)  ← no headers, no body
-
-After patch:
-  console.error('[R2-SINGLE-PUT] HTTP ${status}', { 
-    statusText, headers, body, contentType, key 
-  })
-  → Reveals if it's 403 (signature), 0 (CORS block), or other
+┌─────────────────────────────┐
+│  BARBER HUB          🔴LIVE │  ← Semi-transparent brand + live badge
+│                             │
+│                             │
+│         ┌───────┐           │
+│         │  ▶︎  │           │  ← Custom play button (gold gradient)
+│         └───────┘           │
+│                             │
+│  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄  │  ← Native controls bar
+└─────────────────────────────┘
 ```
 
-### Files to modify
-- `src/lib/storage.ts` — add logging to `uploadToR2` function and `uploadFileToR2` entry point
+- Before play: poster image + branded play button overlay
+- During play: controls appear on hover/tap, brand watermark stays in corner
+- No third-party logos anywhere
 
-### Expected outcome
-- If CORS is now working: upload succeeds, console shows `[R2-SINGLE-PUT] Success` with ETag
-- If CORS cache stale: console shows `TypeError: Failed to fetch` or status 0 — user waits 5 min and retries
-- If signature mismatch: console shows 403 with `SignatureDoesNotMatch` in body — we fix the Content-Type alignment
+#### Technical approach
+- Pure HTML5 `<video>` element — no plugins or external libraries needed
+- MP4 and WebM playback is natively supported by all modern browsers
+- R2 serves files over HTTPS with proper `Content-Type` headers — works directly with `<video src="...">`
+- Custom controls built with React state (`playing`, `currentTime`, `duration`) for full brand control
+- Framer Motion for play button animation and transitions
+
+### No plugins required
+HTML5 `<video>` handles MP4/WebM natively. R2 serves files as static assets. No HLS library, no video.js, no external player SDK needed for recorded content playback.
 
