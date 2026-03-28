@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import twilio from "npm:twilio@^4.19";
+import { AccessToken } from "npm:livekit-server-sdk@^2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,14 +17,13 @@ serve(async (req) => {
   }
 
   try {
-    const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
-    const apiKey = Deno.env.get("TWILIO_API_KEY");
-    const apiSecret = Deno.env.get("TWILIO_API_SECRET");
+    const livekitApiKey = Deno.env.get("LIVEKIT_API_KEY");
+    const livekitApiSecret = Deno.env.get("LIVEKIT_API_SECRET");
+    const livekitUrl = Deno.env.get("LIVEKIT_URL");
 
-    if (!accountSid || !apiKey || !apiSecret) {
-      console.error("Missing Twilio credentials");
+    if (!livekitApiKey || !livekitApiSecret || !livekitUrl) {
       return new Response(
-        JSON.stringify({ error: "Streaming service not configured" }),
+        JSON.stringify({ error: "LiveKit credentials not configured" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -59,14 +58,11 @@ serve(async (req) => {
     const userId = authUser?.id;
 
     if (authError || !userId) {
-      console.error("Auth error:", authError?.message);
       return new Response(
         JSON.stringify({ error: "Invalid authentication. Please sign in again." }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    console.log(`Authenticated user: ${userId}`);
 
     const supabaseAdmin = createClient(supabaseUrl, supabaseKey, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -81,8 +77,6 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Generating battle token for user ${userId}, battle ${battleId}`);
-
     // Get barber profile
     const { data: barberProfile, error: barberError } = await supabaseAdmin
       .from("barber_profiles")
@@ -91,7 +85,6 @@ serve(async (req) => {
       .single();
 
     if (barberError || !barberProfile) {
-      console.error("Barber profile error:", barberError);
       return new Response(
         JSON.stringify({ error: "Barber profile not found. Only barbers can join battles." }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -106,14 +99,12 @@ serve(async (req) => {
       .single();
 
     if (battleError || !battle) {
-      console.error("Battle error:", battleError);
       return new Response(
         JSON.stringify({ error: "Battle not found" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Verify barber is a participant
     const isBarber1 = battle.barber1_id === barberProfile.id;
     const isBarber2 = battle.barber2_id === barberProfile.id;
 
@@ -124,7 +115,6 @@ serve(async (req) => {
       );
     }
 
-    // Check battle status
     const allowedStatuses = ["upcoming", "check_in", "live", "scheduled", "active"];
     if (!allowedStatuses.includes(battle.status)) {
       return new Response(
@@ -136,92 +126,29 @@ serve(async (req) => {
     const roomName = `battle-${battleId}`;
     const barberPosition = isBarber1 ? 1 : 2;
 
-    // --- Bug 3 Fix: Create Twilio room via REST API if it doesn't exist ---
-    const twilioClient = twilio(accountSid, apiKey, { accountSid, apiSecret: undefined });
-    // Use basic auth with API Key SID + API Secret for room creation
-    const roomApiUrl = `https://video.twilio.com/v1/Rooms`;
-    try {
-      const authString = btoa(`${apiKey}:${apiSecret}`);
-      // Try to fetch existing room first
-      const fetchRoomRes = await fetch(`${roomApiUrl}/${encodeURIComponent(roomName)}`, {
-        method: "GET",
-        headers: { "Authorization": `Basic ${authString}` },
-      });
-
-      if (fetchRoomRes.status === 404) {
-        // Room doesn't exist, create it
-        console.log(`Creating Twilio room: ${roomName}`);
-        const createRes = await fetch(roomApiUrl, {
-          method: "POST",
-          headers: {
-            "Authorization": `Basic ${authString}`,
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
-          body: new URLSearchParams({
-            UniqueName: roomName,
-            Type: "group",
-            MaxParticipants: "2",
-            MaxParticipantDuration: "2700",
-            StatusCallback: `${supabaseUrl}/functions/v1/twilio-webhook`,
-          }).toString(),
-        });
-        const createBody = await createRes.text();
-        if (!createRes.ok) {
-          console.error("Failed to create Twilio room:", createRes.status, createBody);
-          // If room already exists (race condition), that's fine
-          if (!createBody.includes("53113")) {
-            console.warn("Room creation failed but continuing - may work with ad-hoc rooms");
-          }
-        } else {
-          console.log("Twilio room created successfully");
-        }
-      } else if (fetchRoomRes.ok) {
-        const roomData = await fetchRoomRes.json();
-        console.log(`Twilio room already exists: ${roomName}, status: ${roomData.status}`);
-        // If room is completed, we need a new one — but Twilio won't allow same name
-        if (roomData.status === "completed") {
-          console.warn("Room is completed, clients will need ad-hoc room creation");
-        }
-      } else {
-        const body = await fetchRoomRes.text();
-        console.warn("Unexpected room fetch status:", fetchRoomRes.status, body);
-      }
-    } catch (roomErr: any) {
-      // Don't block token generation if room creation fails
-      console.error("Room creation/check error (non-blocking):", roomErr.message);
-    }
-
-    // Generate Twilio Access Token
-    const AccessToken = twilio.jwt.AccessToken;
-    const VideoGrant = AccessToken.VideoGrant;
-
-    const videoGrant = new VideoGrant({ room: roomName });
-
-    const accessToken = new AccessToken(
-      accountSid,
-      apiKey,
-      apiSecret,
-      {
-        identity: barberProfile.id,
-        ttl: 2700,
-      }
-    );
-
-    accessToken.addGrant(videoGrant);
-    const jwtToken = accessToken.toJwt();
+    // Generate LiveKit Access Token
+    const at = new AccessToken(livekitApiKey, livekitApiSecret, {
+      identity: barberProfile.id,
+      ttl: "45m",
+    });
+    at.addGrant({
+      roomJoin: true,
+      room: roomName,
+      canPublish: true,
+      canSubscribe: true,
+    });
+    const jwtToken = await at.toJwt();
 
     // Get display name
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("display_name")
-      .eq("id", userId)
+      .eq("user_id", userId)
       .single();
 
     const displayName = profile?.display_name || barberProfile.name || "Barber";
 
-    console.log(`Token generated for barber ${barberProfile.id} (${displayName}) in battle ${battleId}`);
-
-    // --- Bug 4 Fix: Upsert stream sessions (cleanup stale ones first) ---
+    // Clean stale sessions & insert new one
     await supabaseAdmin
       .from("stream_sessions")
       .delete()
@@ -229,67 +156,51 @@ serve(async (req) => {
       .eq("barber_id", barberProfile.id)
       .in("status", ["connecting", "disconnected", "failed"]);
 
-    const { error: sessionError } = await supabaseAdmin
-      .from("stream_sessions")
-      .insert({
-        battle_id: battleId,
-        barber_id: barberProfile.id,
-        user_id: userId,
-        room_name: roomName,
-        status: "connecting",
-        barber_position: barberPosition,
-        started_at: new Date().toISOString(),
-      });
+    await supabaseAdmin.from("stream_sessions").insert({
+      battle_id: battleId,
+      barber_id: barberProfile.id,
+      user_id: userId,
+      room_name: roomName,
+      status: "connecting",
+      barber_position: barberPosition,
+      started_at: new Date().toISOString(),
+    });
 
-    if (sessionError) {
-      console.log("Stream session insert (may already exist):", sessionError.message);
-    }
-
-    // --- Bug 1 & 2 Fix: Correct column name and expanded status gate ---
+    // Transition battle status
     const transitionStatuses = ["upcoming", "scheduled", "active", "check_in"];
     if (transitionStatuses.includes(battle.status)) {
-      const updateData: Record<string, any> = {
-        status: "live",
-        [`barber${barberPosition}_is_streaming`]: true,
-      };
-
-      const { error: updateError } = await supabaseAdmin
+      await supabaseAdmin
         .from("battles")
-        .update(updateData)
+        .update({
+          status: "live",
+          streaming_type: "livekit",
+          [`barber${barberPosition}_is_streaming`]: true,
+        })
         .eq("id", battleId);
-
-      if (updateError) {
-        console.error("Battle status update error:", updateError.message);
-      } else {
-        console.log(`Battle ${battleId} transitioned to live, barber${barberPosition}_is_streaming = true`);
-      }
     } else if (battle.status === "live") {
-      // Battle already live, just set this barber's streaming flag
-      const { error: flagError } = await supabaseAdmin
+      await supabaseAdmin
         .from("battles")
         .update({ [`barber${barberPosition}_is_streaming`]: true })
         .eq("id", battleId);
-
-      if (flagError) {
-        console.error("Streaming flag update error:", flagError.message);
-      }
     }
+
+    console.log(`LiveKit token generated for barber ${barberProfile.id} in battle ${battleId}`);
 
     return new Response(
       JSON.stringify({
         success: true,
         token: jwtToken,
-        roomName: roomName,
-        barberPosition: barberPosition,
+        serverUrl: livekitUrl,
+        roomName,
+        barberPosition,
         identity: barberProfile.id,
-        displayName: displayName,
+        displayName,
         country: barberProfile.country_code || null,
         battleTitle: battle.title,
         expiresIn: 2700,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-
   } catch (error: any) {
     console.error("Token generation error:", error);
     return new Response(

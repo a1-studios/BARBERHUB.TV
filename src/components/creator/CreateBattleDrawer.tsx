@@ -44,7 +44,7 @@ const battleSchema = z.object({
 type BattleFormData = z.infer<typeof battleSchema>;
 
 const STREAMING_TYPES = [
-  { value: 'twilio', label: 'Twilio (Default)' },
+  { value: 'livekit', label: 'LiveKit (Default)' },
   { value: 'youtube', label: 'YouTube Live' },
   { value: 'video_upload', label: 'Video Upload Only' },
 ];
@@ -68,7 +68,7 @@ export function CreateBattleDrawer({ isOpen, onClose }: CreateBattleDrawerProps)
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [maxParticipants, setMaxParticipants] = useState<string>('');
-  const [streamingType, setStreamingType] = useState('twilio');
+  const [streamingType, setStreamingType] = useState('livekit');
   const [startsAt, setStartsAt] = useState<Date | undefined>();
   const [endsAt, setEndsAt] = useState<Date | undefined>();
   const [submissionDeadline, setSubmissionDeadline] = useState<Date | undefined>();
@@ -80,7 +80,7 @@ export function CreateBattleDrawer({ isOpen, onClose }: CreateBattleDrawerProps)
 
   const resetForm = () => {
     setTitle(''); setDescription(''); setCategory('');
-    setMaxParticipants(''); setStreamingType('twilio');
+    setMaxParticipants(''); setStreamingType('livekit');
     setStartsAt(undefined); setEndsAt(undefined);
     setSubmissionDeadline(undefined); setVotingEndsAt(undefined);
     setPrizeSeedBB('0'); setCoverImageUrl(''); setRules('');
@@ -131,7 +131,7 @@ export function CreateBattleDrawer({ isOpen, onClose }: CreateBattleDrawerProps)
           organizer_id: user.id,
           status: 'upcoming',
           battle_type: 'unofficial',
-          streaming_type: streamingType || 'twilio',
+          streaming_type: streamingType || 'livekit',
           max_participants: maxP,
           starts_at: startsAt?.toISOString() || null,
           ends_at: endsAt?.toISOString() || null,
