@@ -279,7 +279,10 @@ export const DynamicBattleHero = () => {
     if (fallbackVideo?.featured_video_id) {
       return (
         <div className="pt-1 sm:pt-2 pb-4 px-4 max-w-7xl mx-auto">
-          <div className="aspect-video bg-card rounded-2xl shadow-2xl border border-primary/20 overflow-hidden relative">
+          <div
+            onClick={() => navigate('/watch')}
+            className="aspect-[9/14] md:aspect-video bg-card rounded-2xl shadow-2xl border border-primary/20 overflow-hidden relative cursor-pointer"
+          >
             <video
               ref={fallbackVideoRef}
               src={fallbackVideo.featured_video_id}
@@ -301,7 +304,7 @@ export const DynamicBattleHero = () => {
                   </span>
                 </div>
                 <button
-                  onClick={toggleMute}
+                  onClick={(e) => { e.stopPropagation(); toggleMute(); }}
                   className="p-2 rounded-full bg-black/40 backdrop-blur-sm border border-border/30"
                 >
                   {isMuted ? (
@@ -311,11 +314,6 @@ export const DynamicBattleHero = () => {
                   )}
                 </button>
               </div>
-            </div>
-            {/* Top badge */}
-            <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent/80 backdrop-blur-sm border border-primary/30">
-              <Flame className="w-3 h-3 text-primary" />
-              <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Featured Barber</span>
             </div>
           </div>
         </div>
