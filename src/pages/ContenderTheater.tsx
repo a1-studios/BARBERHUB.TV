@@ -357,6 +357,7 @@ export default function ContenderTheater() {
         opponentReady={opponentReady}
         isOpponentPresent={isOpponentPresent}
         onReady={handleReady}
+        onSwitchCamera={switchCamera}
       />
 
       {battleId && (
