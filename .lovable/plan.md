@@ -1,41 +1,24 @@
 
 
-# Play Existing Video Content on Homepage + Feed Fixes
+# WatchFeed Endless Scroll + Homepage Hero Refinements
 
-## What changes
+## Changes
 
-### 1. Homepage hero: single-video player when no battles exist
-Currently shows a static "No active battles" placeholder. Instead, fetch the first available `featured_video_id` from `public_barber_profiles` and play it in a **single full-width video player** (not split-screen) with audio enabled. When a real VS battle becomes available, the component automatically switches to the existing split-screen layout.
-
-**File: `src/components/DynamicBattleHero.tsx`**
-- Replace the empty state (lines 250-258) with a query for the first barber profile that has a valid `featured_video_id`
-- Render a single `<video>` element inside the same card container (same aspect ratio, rounded corners, shadow) — NOT full screen
-- Set `autoPlay`, `playsInline`, `loop` so something is always playing
-- Remove `muted` so audio plays (browsers may block — add a tap-to-unmute overlay as fallback)
-- Show the barber name overlay at bottom-left
-- Keep the existing VS battle rendering untouched for when `displayBarbers.length >= 2`
-
-### 2. WatchFeed: rename "Sponsored" → "Powered by"
+### 1. WatchFeed: Restore endless scroll with looping videos
 **File: `src/pages/WatchFeed.tsx`**
-- Change the sponsor card label from `"Sponsored"` to `"Powered by"`
+- Add `loop` back to all `<video>` elements in `renderVideoItem` so videos play continuously (no replay overlay needed — remove `onEnded` and replay state)
+- The sponsor cards are already interleaved and already say "Powered by" — confirm the `link` prop opens to external pages correctly (the current `<a href>` with `target="_blank"` already does this)
+- The feed structure with interleaved sponsors, educator, platform, and battle content is already in place — no structural changes needed
 
-### 3. WatchFeed: keep endless scrolling structure
-The existing interleaved feed with ads, educator content, and battles is already in place. No structural changes needed — just the label rename above.
+### 2. Homepage hero: Make video taller + clickable + remove badge
+**File: `src/components/DynamicBattleHero.tsx`** (lines 278-322)
+- Change `aspect-video` (16:9) to a taller aspect ratio like `aspect-[9/14]` on mobile for ~30% more vertical space, keep `aspect-video` on desktop via responsive class
+- Remove the "Featured Barber" badge (lines 316-319)
+- Wrap the entire video container in an `onClick={() => navigate('/watch')}` so tapping takes users to the watch feed
 
----
-
-## Technical detail
-
-```text
-DynamicBattleHero render logic:
-1. Loading? → skeleton
-2. Real battle with 2 barbers? → VS split-screen (existing code)
-3. No battle? → fetch first featured_video_id → single video player
-4. No video either? → static CTA fallback
-
-Single video player container:
-- Same wrapper: aspect-video, bg-card, rounded-2xl, shadow-2xl
-- <video autoPlay playsInline loop> with tap-to-unmute
-- Barber name + flag overlay bottom-left
-```
+### Files to modify
+| File | What |
+|------|------|
+| `src/pages/WatchFeed.tsx` | Add `loop` to videos, remove ended/replay logic |
+| `src/components/DynamicBattleHero.tsx` | Taller aspect ratio, remove badge, add click-to-navigate |
 
