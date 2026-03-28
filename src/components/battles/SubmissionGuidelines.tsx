@@ -5,7 +5,7 @@ import {
   AlertCircle, 
   Video, 
   Clock, 
-  Youtube, 
+  Upload,
   Scissors,
   Trophy,
   Users
@@ -26,13 +26,13 @@ export const SubmissionGuidelines = () => {
           {/* Video Requirements */}
           <div className="space-y-3">
             <h4 className="font-semibold flex items-center gap-2">
-              <Youtube className="h-4 w-4 text-red-500" />
+              <Upload className="h-4 w-4 text-primary" />
               Video Requirements
             </h4>
             <ul className="space-y-2 text-sm">
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                <span><strong>Platform:</strong> YouTube videos only (public or unlisted)</span>
+                <span><strong>Upload:</strong> Upload your video directly (MP4 or WebM, up to 5GB)</span>
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
@@ -58,15 +58,15 @@ export const SubmissionGuidelines = () => {
             <ol className="space-y-2 text-sm list-decimal list-inside">
               <li className="flex items-start gap-2">
                 <span className="min-w-[20px]">1.</span>
-                <span><strong>Go Live:</strong> Stream your battle performance on YouTube</span>
+                <span><strong>Record:</strong> Film your battle performance in high quality</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="min-w-[20px]">2.</span>
-                <span><strong>Save VOD:</strong> After streaming, YouTube saves your video automatically</span>
+                <span><strong>Upload:</strong> Upload your video directly through the submission form</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="min-w-[20px]">3.</span>
-                <span><strong>Submit URL:</strong> Copy the video link and submit it here</span>
+                <span><strong>Review:</strong> Preview your submission before confirming</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="min-w-[20px]">4.</span>

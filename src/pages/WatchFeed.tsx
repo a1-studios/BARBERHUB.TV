@@ -256,22 +256,9 @@ const WatchFeed = () => {
     return () => observer.disconnect();
   }, [feed.length]);
 
-  const getYouTubeId = (url?: string) => {
-    if (!url) return null;
-    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([^&?/]+)/);
-    return match?.[1] || null;
-  };
-
   const renderVideoItem = (item: FeedItem, idx: number) => (
     <div className="relative w-full h-full bg-black">
-      {getYouTubeId(item.media_url) ? (
-        <iframe
-          src={`https://www.youtube.com/embed/${getYouTubeId(item.media_url)}?autoplay=${activeIndex === idx ? 1 : 0}&mute=1&loop=1&controls=0&modestbranding=1&rel=0&playsinline=1`}
-          className="absolute inset-0 w-full h-full"
-          allow="autoplay; encrypted-media"
-          allowFullScreen
-        />
-      ) : item.media_url && (item.media_url.includes('.mp4') || item.media_url.includes('.webm')) ? (
+      {item.media_url && (item.media_url.includes('.mp4') || item.media_url.includes('.webm') || item.media_url.startsWith('http')) ? (
         <>
           <video
             ref={(el) => { if (el) videoRefs.current.set(item.id, el); }}
