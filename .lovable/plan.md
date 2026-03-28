@@ -1,60 +1,92 @@
 
 
-## Remove YouTube & Build Native Barber Hub Video Player
+# LiveKit WebRTC Integration & Feed Content Separation
 
-### What's happening now
-YouTube iframes are embedded in 3 places across the app. When videos are uploaded to R2, the URL gets wrongly stuffed into a YouTube embed URL, causing broken playback. Additionally, any working YouTube embeds show YouTube's branding, logo, and controls — not yours.
+## Summary
 
-### What we'll build
+This plan addresses three areas: (1) separating content types so only battle/VS videos use the 50/50 split screen while portfolio/educator content plays in the theater player, (2) making all videos loop continuously, and (3) completing the LiveKit real-time infrastructure with device management and Data Channel donation broadcasting.
 
-**A single `BrandedVideoPlayer` component** that replaces all YouTube iframes and existing video players with a fully native HTML5 `<video>` element featuring Barber Hub branding.
+---
 
-#### Player features
-- Custom play button with Barber Hub styling (gold/primary gradient circle with scissors or custom icon)
-- Branded overlay with "BARBER HUB" text watermark (top corner, semi-transparent)
-- Native HTML5 controls (no YouTube logo, no YouTube recommendations)
-- Support for R2 URLs (MP4/WebM), poster thumbnails, and live badge
-- Fullscreen, picture-in-picture support
-- Viewer count overlay for live content
+## Part 1: Feed Content Separation & Looping
 
-#### Files to change
+### Problem
+Currently the WatchFeed interleaves battles into the same feed as portfolio/educator videos, and battles render via `SplitScreenBattle`. This is correct — but individual battle submissions (non-VS content from `battle_submissions` table) also appear as standalone `video` type items. Additionally, no videos loop.
 
-| File | What changes |
-|------|-------------|
-| **NEW** `src/components/BrandedVideoPlayer.tsx` | Single unified player: native `<video>` with custom play overlay, Barber Hub logo watermark, poster state, and controls |
-| `src/components/barber/BarberVideoSection.tsx` | Remove YouTube iframe (lines 204-250). Use `BrandedVideoPlayer` for all `videoId` values — treat them as direct URLs, not YouTube IDs |
-| `src/pages/WatchFeed.tsx` | Remove `getYouTubeId()` helper and YouTube iframe branch (lines 259-273). All media URLs go through `BrandedVideoPlayer` or native `<video>` |
-| `src/components/battles/SubmissionGuidelines.tsx` | Remove YouTube-specific text ("YouTube videos only", "Stream on YouTube", "YouTube saves your video"). Replace with R2 direct upload instructions |
-| `src/components/battles/FullscreenBattleVideoModal.tsx` | Already uses `HLSVideoPlayer` — swap to `BrandedVideoPlayer` |
-| `src/components/VideoPlayer.tsx` | Deprecate — functionality absorbed into `BrandedVideoPlayer` |
-| `src/components/battles/HLSVideoPlayer.tsx` | Deprecate — functionality absorbed into `BrandedVideoPlayer` |
+### Changes
 
-#### BrandedVideoPlayer design
+**File: `src/pages/WatchFeed.tsx`**
+- Add `loop` attribute to the `<video>` element in `renderVideoItem` (line 264) so portfolio/educator/platform videos loop endlessly
+- Remove the `onEnded` handler and the replay overlay logic — videos now loop automatically
+- Clean up `endedVideos` state and `handleVideoEnded`/`handleReplay` callbacks (no longer needed)
 
-```text
-┌─────────────────────────────┐
-│  BARBER HUB          🔴LIVE │  ← Semi-transparent brand + live badge
-│                             │
-│                             │
-│         ┌───────┐           │
-│         │  ▶︎  │           │  ← Custom play button (gold gradient)
-│         └───────┘           │
-│                             │
-│  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄  │  ← Native controls bar
-└─────────────────────────────┘
-```
+**File: `src/components/battles/SplitScreenBattle.tsx`**
+- Videos already have `loop` attribute — confirmed, no change needed
 
-- Before play: poster image + branded play button overlay
-- During play: controls appear on hover/tap, brand watermark stays in corner
-- No third-party logos anywhere
+**File: `src/components/BrandedVideoPlayer.tsx`**
+- Add `loop` prop (default `true`) to the `<video>` element so all branded player instances loop by default
+- When `loop` is true, suppress the `onEnded` callback
 
-#### Technical approach
-- Pure HTML5 `<video>` element — no plugins or external libraries needed
-- MP4 and WebM playback is natively supported by all modern browsers
-- R2 serves files over HTTPS with proper `Content-Type` headers — works directly with `<video src="...">`
-- Custom controls built with React state (`playing`, `currentTime`, `duration`) for full brand control
-- Framer Motion for play button animation and transitions
+**File: `src/pages/BattleTheater.tsx`**
+- VOD phase MP4 players (line 32, 346, 384): add `loop` to `<video>` elements so battle replays loop continuously
 
-### No plugins required
-HTML5 `<video>` handles MP4/WebM natively. R2 serves files as static assets. No HLS library, no video.js, no external player SDK needed for recorded content playback.
+---
+
+## Part 2: Pre-Join Device Management
+
+### Problem
+The ContenderTheater preview phase starts the camera but has no UI to switch between front/rear cameras or test audio levels.
+
+### Changes
+
+**File: `src/hooks/useLocalCameraPreview.tsx`**
+- Add `switchCamera()` function that stops the current video track, re-calls `getUserMedia` with `facingMode: 'environment'` (toggling between `'user'` and `'environment'`)
+- Track current `facingMode` in state
+- Expose `switchCamera` and `facingMode` from the hook
+
+**File: `src/pages/ContenderTheater.tsx`**
+- During `preview` phase, render a camera switch button (flip icon) in the overlay area
+- Wire it to `switchCamera()` from `useLocalCameraPreview`
+- This integrates naturally with the existing `ContenderPreviewOverlay` and `ContenderControlBar`
+
+**File: `src/components/contender/ContenderControlBar.tsx`**
+- Add a camera flip button (visible only during preview/standby phases) that calls the new `switchCamera` prop
+
+---
+
+## Part 3: LiveKit Data Channel Donation Broadcast
+
+### Current State (Already Implemented)
+- **`donate-to-battle` edge function** (lines 56-115): Already queries LiveKit credentials, sums donation totals, and broadcasts a JSON payload via `RoomServiceClient.sendData()` — this is fully wired
+- **`LiveKitArena` component** (lines 44-61): Already listens for `RoomEvent.DataReceived`, parses the JSON, and updates `donationTotals` state
+- **`TugOfWarMeter` component**: Already renders from props, never updates optimistically — it only shifts when `donationTotals` state changes from the Data Channel event
+
+### Verification needed
+The `donate-to-battle` edge function queries `battle_donations.recipient_barber_id` (line 81) but the `process_battle_donation` RPC inserts into `battle_donations` with column `barber_id`, not `recipient_barber_id`. This column name mismatch would cause the totals query to return 0 for both barbers.
+
+### Changes
+
+**File: `supabase/functions/donate-to-battle/index.ts`**
+- Fix the donation totals query: change `recipient_barber_id` to `barber_id` (line 75) to match the actual column name used by the `process_battle_donation` RPC
+- This is the critical bug preventing the Tug-of-War meter from updating during live battles
+
+---
+
+## Part 4: LiveKit Secrets Verification
+
+The edge functions reference three secrets: `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `LIVEKIT_URL`. These must exist in Supabase Edge Function secrets. Will verify before implementation and prompt if missing.
+
+---
+
+## Files Modified
+
+| File | Change |
+|------|--------|
+| `src/pages/WatchFeed.tsx` | Add `loop` to videos, remove replay overlay logic |
+| `src/components/BrandedVideoPlayer.tsx` | Add `loop` prop (default true) |
+| `src/pages/BattleTheater.tsx` | Add `loop` to VOD MP4 players |
+| `src/hooks/useLocalCameraPreview.tsx` | Add `switchCamera()` with facingMode toggle |
+| `src/pages/ContenderTheater.tsx` | Wire camera switch button in preview phase |
+| `src/components/contender/ContenderControlBar.tsx` | Add camera flip button for preview/standby |
+| `supabase/functions/donate-to-battle/index.ts` | Fix `recipient_barber_id` → `barber_id` column reference |
 
