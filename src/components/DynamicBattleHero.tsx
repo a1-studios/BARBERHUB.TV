@@ -254,6 +254,16 @@ export const DynamicBattleHero = () => {
   // Check if current battle is active
   const isStreamableBattle = battle?.status === 'active' || battle?.status === 'voting' || battle?.status === 'upcoming';
 
+  // State for fallback video audio (must be before early returns)
+  const fallbackVideoRef = useRef<HTMLVideoElement>(null);
+  const [isMuted, setIsMuted] = useState(true);
+  const toggleMute = useCallback(() => {
+    if (fallbackVideoRef.current) {
+      fallbackVideoRef.current.muted = !fallbackVideoRef.current.muted;
+      setIsMuted(fallbackVideoRef.current.muted);
+    }
+  }, []);
+
   // Loading state
   if (battleLoading || barbersLoading) {
   return <div className="pt-1 sm:pt-2 pb-8 px-4 max-w-7xl mx-auto">
@@ -263,16 +273,6 @@ export const DynamicBattleHero = () => {
 
   // Only use real battle barbers — no fallback rotation
   const displayBarbers = barbers && barbers.length >= 2 ? barbers : [];
-
-  // State for fallback video audio
-  const fallbackVideoRef = useRef<HTMLVideoElement>(null);
-  const [isMuted, setIsMuted] = useState(true);
-  const toggleMute = useCallback(() => {
-    if (fallbackVideoRef.current) {
-      fallbackVideoRef.current.muted = !fallbackVideoRef.current.muted;
-      setIsMuted(fallbackVideoRef.current.muted);
-    }
-  }, []);
 
   // If no active battle with two barbers, show fallback single video or CTA
   if (displayBarbers.length < 2) {
