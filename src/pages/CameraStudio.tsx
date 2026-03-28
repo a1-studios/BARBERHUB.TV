@@ -109,7 +109,7 @@ export default function CameraStudio() {
       const constraints: MediaStreamConstraints = {
         video: {
           width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 },
-          ...(selectedCamera ? { deviceId: { exact: selectedCamera } } : { facingMode: 'user' }),
+          ...(selectedCamera ? { deviceId: { exact: selectedCamera } } : { facingMode }),
         },
         audio: {
           echoCancellation: true, noiseSuppression: true,

@@ -2462,6 +2462,7 @@ export type Database = {
           pot_total: number | null
           stake_amount: number | null
           status: string | null
+          target_barber_id: string | null
           title: string
           winner_id: string | null
         }
@@ -2487,6 +2488,7 @@ export type Database = {
           pot_total?: number | null
           stake_amount?: number | null
           status?: string | null
+          target_barber_id?: string | null
           title: string
           winner_id?: string | null
         }
@@ -2512,6 +2514,7 @@ export type Database = {
           pot_total?: number | null
           stake_amount?: number | null
           status?: string | null
+          target_barber_id?: string | null
           title?: string
           winner_id?: string | null
         }
