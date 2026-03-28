@@ -274,12 +274,3 @@ function SelectedBarberStake({
   );
 }
 
-interface BarberResult {
-  user_id: string;
-  barber_name: string;
-  display_name: string | null;
-  username: string | null;
-  avatar_url: string | null;
-  location: string | null;
-  specialty: string | null;
-}
