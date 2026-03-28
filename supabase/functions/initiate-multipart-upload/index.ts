@@ -46,9 +46,9 @@ serve(async (req) => {
       });
     }
 
-    const { filename, contentType, battleId } = await req.json();
-    if (!filename || !battleId) {
-      return new Response(JSON.stringify({ error: 'filename and battleId are required' }), {
+    const { filename, contentType, battleId, category } = await req.json();
+    if (!filename) {
+      return new Response(JSON.stringify({ error: 'filename is required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -70,7 +70,12 @@ serve(async (req) => {
       credentials: { accessKeyId: r2AccessKeyId, secretAccessKey: r2SecretAccessKey },
     });
 
-    const key = `recordings/${battleId}/${user.id}-${Date.now()}-${filename}`;
+    // Category-aware key: portfolios/{userId}/..., education/{userId}/..., recordings/{battleId}/...
+    const cat = category || 'recordings';
+    const prefix = cat === 'recordings'
+      ? `recordings/${battleId || 'general'}/${user.id}-${Date.now()}-${filename}`
+      : `${cat}/${user.id}/${Date.now()}-${filename}`;
+    const key = prefix;
 
     const command = new CreateMultipartUploadCommand({
       Bucket: r2BucketName,

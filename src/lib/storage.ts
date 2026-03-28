@@ -85,14 +85,30 @@ export function multipartUploadToR2(
           signal: abortController.signal,
         });
 
-        if (!res.ok) throw new Error(`Chunk ${partNumber} failed: ${res.status}`);
+        if (!res.ok) {
+          const bodyText = await res.text().catch(() => '(unreadable)');
+          console.error(`[R2-UPLOAD] Chunk ${partNumber} HTTP ${res.status}`, {
+            statusText: res.statusText,
+            headers: Object.fromEntries(res.headers.entries()),
+            body: bodyText.slice(0, 500),
+          });
+          throw new Error(`Chunk ${partNumber} failed: ${res.status} ${res.statusText}`);
+        }
 
-        const etag = res.headers.get('ETag') || `"${partNumber}"`;
+        const etag = res.headers.get('ETag');
+        if (!etag) {
+          console.error(`[R2-UPLOAD] Chunk ${partNumber} missing ETag header!`, {
+            headers: Object.fromEntries(res.headers.entries()),
+            hint: 'R2 CORS policy must include ExposeHeaders: ["ETag"]. Update your Cloudflare R2 bucket CORS settings.',
+          });
+          throw new Error(`Chunk ${partNumber}: ETag header missing — CORS ExposeHeaders misconfigured on R2`);
+        }
+
         return { partNumber, etag: etag.replace(/"/g, '') };
       } catch (err: any) {
         if (isCancelled || err.name === 'AbortError') throw new Error('Upload cancelled');
+        console.error(`[R2-UPLOAD] Chunk ${partNumber} attempt ${attempt + 1}/${MAX_RETRIES + 1} failed:`, err.message);
         if (attempt === MAX_RETRIES) throw err;
-        // Exponential backoff
         await new Promise((r) => setTimeout(r, Math.pow(2, attempt) * 1000));
       }
     }
