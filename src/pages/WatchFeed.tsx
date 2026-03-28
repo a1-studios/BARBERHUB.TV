@@ -361,7 +361,7 @@ const WatchFeed = () => {
                   transition={{ duration: 0.4 }}
                   className="w-full max-w-sm text-center space-y-4"
                 >
-                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Sponsored</span>
+                  <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-bold">Powered by</span>
                   {item.logo_url && (
                     <img src={item.logo_url} alt={item.name} className="w-16 h-16 rounded-full mx-auto object-cover border-2 border-primary/30" />
                   )}
