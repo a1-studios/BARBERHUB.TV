@@ -33,8 +33,6 @@ export const StreamControlPanel = ({
   barberName,
   onStreamStatusChange,
 }: StreamControlPanelProps) => {
-  const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOff, setIsVideoOff] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
   
@@ -46,8 +44,12 @@ export const StreamControlPanel = ({
     error,
     viewerCount,
     formattedDuration,
+    isAudioEnabled,
+    isVideoEnabled,
     startStream,
     endStream,
+    toggleAudio,
+    toggleVideo,
     isStreaming,
     canStart,
   } = useLiveKitStream({
@@ -64,26 +66,6 @@ export const StreamControlPanel = ({
       videoPreviewRef.current.srcObject = localStream;
     }
   }, [localStream]);
-
-  // Toggle audio
-  const toggleMute = () => {
-    if (localStream) {
-      localStream.getAudioTracks().forEach(track => {
-        track.enabled = isMuted;
-      });
-      setIsMuted(!isMuted);
-    }
-  };
-
-  // Toggle video
-  const toggleVideo = () => {
-    if (localStream) {
-      localStream.getVideoTracks().forEach(track => {
-        track.enabled = isVideoOff;
-      });
-      setIsVideoOff(!isVideoOff);
-    }
-  };
 
   // Handle go live click
   const handleGoLive = async () => {
@@ -132,7 +114,7 @@ export const StreamControlPanel = ({
           <CameraPermissionPrompt 
             status={cameraStatus}
             onRequestPermission={() => requestPermission()}
-            onUploadInstead={() => {}} // Not applicable for streaming
+            onUploadInstead={() => {}}
           />
         </CardContent>
       </Card>
@@ -172,10 +154,10 @@ export const StreamControlPanel = ({
               playsInline
               className={cn(
                 "w-full h-full object-cover",
-                isVideoOff && "hidden"
+                !isVideoEnabled && "hidden"
               )}
             />
-            {isVideoOff && (
+            {!isVideoEnabled && (
               <div className="absolute inset-0 flex items-center justify-center bg-muted">
                 <VideoOff className="h-12 w-12 text-muted-foreground" />
               </div>
@@ -253,18 +235,18 @@ export const StreamControlPanel = ({
               <Button
                 variant="outline"
                 size="icon"
-                onClick={toggleMute}
-                className={cn(isMuted && "bg-destructive/20 border-destructive")}
+                onClick={toggleAudio}
+                className={cn(!isAudioEnabled && "bg-destructive/20 border-destructive")}
               >
-                {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                {!isAudioEnabled ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
               </Button>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={toggleVideo}
-                className={cn(isVideoOff && "bg-destructive/20 border-destructive")}
+                className={cn(!isVideoEnabled && "bg-destructive/20 border-destructive")}
               >
-                {isVideoOff ? <VideoOff className="h-4 w-4" /> : <Video className="h-4 w-4" />}
+                {!isVideoEnabled ? <VideoOff className="h-4 w-4" /> : <Video className="h-4 w-4" />}
               </Button>
               <Button
                 variant="destructive"

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Room, RoomEvent, Track } from 'livekit-client';
+import { Room, Track } from 'livekit-client';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -13,6 +13,8 @@ interface StreamState {
   error: string | null;
   viewerCount: number;
   duration: number;
+  isAudioEnabled: boolean;
+  isVideoEnabled: boolean;
 }
 
 interface UseLiveKitStreamOptions {
@@ -34,6 +36,8 @@ export const useLiveKitStream = ({
     error: null,
     viewerCount: 0,
     duration: 0,
+    isAudioEnabled: true,
+    isVideoEnabled: true,
   });
 
   const roomRef = useRef<Room | null>(null);
@@ -58,9 +62,16 @@ export const useLiveKitStream = ({
       setState((prev) => ({ ...prev, status: 'connecting', error: null }));
       onStatusChange?.('connecting');
 
+      // Get fresh session for auth header
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        throw new Error('Not authenticated. Please sign in.');
+      }
+
       // Get LiveKit token
       const { data, error } = await supabase.functions.invoke('generate-livekit-token', {
         body: { battleId },
+        headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
       if (error || !data?.success) {
@@ -90,6 +101,8 @@ export const useLiveKitStream = ({
         roomName: data.roomName,
         token: data.token,
         localStream,
+        isAudioEnabled: true,
+        isVideoEnabled: true,
       }));
 
       startTimeRef.current = new Date();
@@ -132,7 +145,6 @@ export const useLiveKitStream = ({
         durationIntervalRef.current = null;
       }
 
-      // Notify server that stream ended
       await supabase.functions.invoke('update-stream-status', {
         body: { battleId, barberPosition, status: 'ended' },
       });
@@ -145,6 +157,8 @@ export const useLiveKitStream = ({
         error: null,
         viewerCount: 0,
         duration: prev.duration,
+        isAudioEnabled: true,
+        isVideoEnabled: true,
       }));
 
       onStatusChange?.('ended');
@@ -154,6 +168,22 @@ export const useLiveKitStream = ({
       toast.error('Failed to end stream properly');
     }
   }, [battleId, barberPosition, onStatusChange]);
+
+  const toggleAudio = useCallback(async () => {
+    const room = roomRef.current;
+    if (!room) return;
+    const newEnabled = !state.isAudioEnabled;
+    await room.localParticipant.setMicrophoneEnabled(newEnabled);
+    setState((prev) => ({ ...prev, isAudioEnabled: newEnabled }));
+  }, [state.isAudioEnabled]);
+
+  const toggleVideo = useCallback(async () => {
+    const room = roomRef.current;
+    if (!room) return;
+    const newEnabled = !state.isVideoEnabled;
+    await room.localParticipant.setCameraEnabled(newEnabled);
+    setState((prev) => ({ ...prev, isVideoEnabled: newEnabled }));
+  }, [state.isVideoEnabled]);
 
   const updateViewerCount = useCallback(
     (count: number) => {
@@ -183,6 +213,8 @@ export const useLiveKitStream = ({
     formattedDuration: formattedDuration(),
     startStream,
     endStream,
+    toggleAudio,
+    toggleVideo,
     updateViewerCount,
     isStreaming: state.status === 'live',
     canStart: state.status === 'idle' || state.status === 'failed' || state.status === 'ended',
