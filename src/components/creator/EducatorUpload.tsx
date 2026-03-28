@@ -68,8 +68,8 @@ export function EducatorUpload() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 100 * 1024 * 1024) {
-      toast.error('File too large — max 100MB');
+    if (file.size > 5 * 1024 * 1024 * 1024) {
+      toast.error('File too large — max 5GB');
       return;
     }
 
@@ -233,7 +233,7 @@ export function EducatorUpload() {
               </div>
               <div className="text-center">
                 <p className="text-sm font-medium text-foreground">Tap to upload</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Video or Image • Max 100MB</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Video or Image • Max 5GB</p>
               </div>
             </div>
           )}

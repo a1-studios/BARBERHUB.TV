@@ -169,9 +169,9 @@ export default function BarberPublicProfile() {
     }
 
     // Validate file size
-    const maxSize = type === 'video' ? 100 * 1024 * 1024 : 5 * 1024 * 1024; // 100MB for video, 5MB for image
+    const maxSize = type === 'video' ? 5 * 1024 * 1024 * 1024 : 5 * 1024 * 1024; // 5GB for video, 5MB for image
     if (file.size > maxSize) {
-      toast.error(`File must be under ${type === 'video' ? '100MB' : '5MB'}`);
+      toast.error(`File must be under ${type === 'video' ? '5GB' : '5MB'}`);
       return;
     }
 
@@ -623,7 +623,7 @@ export default function BarberPublicProfile() {
                             <Video className="w-8 h-8 mx-auto mb-2 text-primary/60" />
                             <p className="text-sm font-medium">Add Video</p>
                             <p className="text-xs text-muted-foreground mt-1">
-                              1 video slot • Max 100MB
+                              1 video slot • Max 5GB
                             </p>
                           </button>
                         )}
@@ -660,7 +660,7 @@ export default function BarberPublicProfile() {
                           >
                             <Video className="w-10 h-10 mx-auto mb-3 text-primary" />
                             <p className="font-medium mb-1">Upload Video</p>
-                            <p className="text-xs text-muted-foreground">Max 1 video, 100MB</p>
+                            <p className="text-xs text-muted-foreground">Max 1 video, 5GB</p>
                           </button>
                         </div>
                       </div>
