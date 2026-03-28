@@ -1,92 +1,125 @@
 
 
-## LiveKit Egress — Auto-Record Battles to R2
+## System Audit & Fixes — Implementation Plan
 
-LiveKit Egress is a server-side feature that records room audio/video and outputs directly to S3-compatible storage (your R2 bucket). The flow:
+### 1. Twilio Purge (3 deletions)
 
-```text
-Battle goes LIVE
-  → Edge function starts a RoomCompositeEgress via LiveKit API
-  → LiveKit server records the room as MP4
-  → When recording finishes, LiveKit sends a webhook
-  → Webhook edge function receives it, extracts the R2 file path
-  → Updates battles table with the public MP4 URL
-  → BattleTheater plays the recording
+- **Delete `src/components/streaming/TwilioVideoPlayer.tsx`** — unused after migration, no imports reference it
+- **Delete `supabase/functions/generate-battle-token/index.ts`** — duplicate of `generate-livekit-token` with identical logic; nothing calls it (confirmed via search)
+- **Remove Twilio comment** on `CameraStudio.tsx` line 402 (`{/* Twilio connect/disconnect */}`)
+
+No other Twilio references exist outside `types.ts` (which is auto-generated and has a `twilio_room_sid` column — harmless DB column, not code).
+
+---
+
+### 2. Fix R2 Public URL (Bug)
+
+**File:** `supabase/functions/get-r2-presigned-url/index.ts` line 71
+
+Current code constructs `publicUrl` from the S3 API endpoint, which is private and returns 403s.
+
+**Fix:** Read `R2_PUBLIC_URL` from env (already added as a secret) and construct:
+```
+const publicUrl = `${R2_PUBLIC_URL}/${key}`;
 ```
 
 ---
 
-### What will be built
+### 3. Fix Audio in Egress + BattleTheater
 
-**1. `supabase/functions/start-battle-egress/index.ts`** — New edge function
+**Egress (start-battle-egress):** The `RoomCompositeEgress` already captures the full room (video + audio) — this is the default behavior. No code change needed on the egress side; the SDK's `EncodedFileOutput` for MP4 inherently includes audio.
 
-Called internally (from `generate-livekit-token`) when a battle transitions to `live`. Uses `livekit-server-sdk`'s `EgressClient` to start a `RoomCompositeEgress`:
+**BattleTheater (the real bug):** The `<video>` elements on lines 210-215 and 260-265 have `autoPlay` but **no `muted` attribute**, which is good. However, browsers block autoplay with audio unless the user has interacted. The fix:
+- Start videos `muted` with autoplay
+- Add an "Unmute" button overlay that users tap to enable audio
+- This follows the standard web pattern for autoplay compliance
 
-- Connects to LiveKit using `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`
-- Targets R2 via S3-compatible output config:
-  ```
-  s3: {
-    accessKey: R2_ACCESS_KEY_ID,
-    secret: R2_SECRET_ACCESS_KEY,
-    endpoint: R2_ENDPOINT,
-    bucket: "battle-summissions",
-    region: "auto",
-    forcePathStyle: true
+---
+
+### 4. Fix StreamControlPanel Toggle Desync
+
+**Problem:** `StreamControlPanel.tsx` lines 69-85 toggle raw `MediaStream` tracks directly, but LiveKit manages tracks through `Room.localParticipant`. This causes state to desync.
+
+**Fix in `useLiveKitStream.tsx`:**
+- Expose `toggleAudio()` and `toggleVideo()` methods that call `roomRef.current?.localParticipant.setMicrophoneEnabled()` and `setCameraEnabled()`
+- Return these from the hook
+
+**Fix in `StreamControlPanel.tsx`:**
+- Replace inline `localStream.getAudioTracks()` / `getVideoTracks()` toggles with the hook's `toggleAudio()` / `toggleVideo()` calls
+
+---
+
+### 5. Fix useLiveKitStream Auth Header
+
+**File:** `src/hooks/useLiveKitStream.tsx` line 62
+
+The `supabase.functions.invoke` call doesn't pass the Authorization header, but `generate-livekit-token` requires a Bearer token.
+
+**Fix:** Get fresh session token before invoking:
+```typescript
+const { data: { session } } = await supabase.auth.getSession();
+const { data, error } = await supabase.functions.invoke('generate-livekit-token', {
+  body: { battleId },
+  headers: { Authorization: `Bearer ${session?.access_token}` },
+});
+```
+
+---
+
+### 6. R2 Folder Partitioning + Portfolio Migration
+
+**Update `src/lib/storage.ts`** — add two new upload helpers:
+- `uploadPortfolioImage(file, userId)` — key: `portfolios/{userId}/{uuid}.{ext}`
+- `uploadEducationContent(file, creatorId)` — key: `education/{creatorId}/{uuid}.{ext}`
+
+Both use the same `get-r2-presigned-url` edge function (already supports arbitrary keys).
+
+**Rewrite `PortfolioManager.tsx`:**
+- Replace `supabase.storage.from('portfolios').upload(...)` with `uploadPortfolioImage()` from `src/lib/storage.ts`
+- Replace `supabase.storage.from('portfolios').remove(...)` with a delete call (add a new `deleteR2Object` helper or accept that deletes can be handled later)
+- Remove mock data — load real portfolio from a DB table or profile field
+
+The existing recordings already use `recordings/{battleId}/` prefix. Battle video uploads use `battles/{battleId}/`. This establishes the partitioned structure:
+```
+battle-submissions/
+  recordings/    ← LiveKit egress MP4s
+  battles/       ← manual video submissions
+  portfolios/    ← barber portfolio images
+  education/     ← tutorial content
+```
+
+---
+
+### 7. R2 CORS for Media Playback
+
+If R2 videos return 403 or CORS errors during playback, you need to configure CORS on the R2 bucket. After implementation, I'll provide the exact CORS JSON you need to paste into the Cloudflare R2 dashboard:
+
+```json
+[
+  {
+    "AllowedOrigins": ["*"],
+    "AllowedMethods": ["GET", "PUT", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "MaxAgeSeconds": 86400
   }
-  ```
-- Output path: `recordings/{battleId}/{timestamp}.mp4`
-- Stores the egress ID in the `battles` table (new column `egress_id`) for tracking
-
-**2. Update `supabase/functions/generate-livekit-token/index.ts`**
-
-After transitioning battle status to `live`, call `start-battle-egress` internally (or inline the egress start logic) to begin recording. Only triggers once (checks if `egress_id` is already set).
-
-**3. `supabase/functions/livekit-egress-webhook/index.ts`** — New edge function
-
-Receives LiveKit webhook POST events. This function:
-
-- Verifies the webhook signature using `WebhookReceiver` from `livekit-server-sdk` (uses `LIVEKIT_API_KEY` + `LIVEKIT_API_SECRET`)
-- Handles `egress_ended` event type
-- Extracts the output file path from the egress result
-- Constructs the public URL: `{R2_PUBLIC_URL}/recordings/{battleId}/{file}.mp4`
-- Updates the `battles` table: sets `barber_1_video_url` (or `barber_2_video_url`) with the recording URL
-- If both videos are now present, transitions battle to `voting` status
-
-Important: This function must have `verify_jwt = false` since LiveKit sends webhooks without Supabase auth.
-
-**4. Database migration**
-
-Add an `egress_id` column to the `battles` table to track active egress sessions:
-```sql
-ALTER TABLE battles ADD COLUMN IF NOT EXISTS egress_id TEXT;
+]
 ```
 
-**5. Update `BattleTheater.tsx`**
-
-The component already reads `barber_1_video_url` and `barber_2_video_url` and passes them to `HLSVideoPlayer`. Since recordings will be MP4 (not HLS), add a fallback: if the URL ends in `.mp4`, render a native `<video>` element instead of the HLS player.
+This must be set manually in **Cloudflare Dashboard → R2 → battle-submissions → Settings → CORS Policy**.
 
 ---
 
-### LiveKit Webhook Setup (Your action required after implementation)
-
-You will need to configure the webhook URL in your LiveKit Cloud dashboard:
-- Go to LiveKit Cloud → Project Settings → Webhooks
-- Add URL: `https://msuepyfssovvkjzpfjzu.supabase.co/functions/v1/livekit-egress-webhook`
-
----
-
-### Config changes
-
-- Add `verify_jwt = false` for `livekit-egress-webhook` in `supabase/config.toml`
-
-### Files summary
+### Files Summary
 
 | Action | File |
 |--------|------|
-| Create | `supabase/functions/start-battle-egress/index.ts` |
-| Create | `supabase/functions/livekit-egress-webhook/index.ts` |
-| Update | `supabase/functions/generate-livekit-token/index.ts` (trigger egress) |
-| Update | `supabase/config.toml` (webhook JWT bypass) |
-| Update | `src/pages/BattleTheater.tsx` (MP4 fallback) |
-| Migration | Add `egress_id` column to `battles` |
+| Delete | `src/components/streaming/TwilioVideoPlayer.tsx` |
+| Delete | `supabase/functions/generate-battle-token/index.ts` |
+| Fix | `supabase/functions/get-r2-presigned-url/index.ts` (R2_PUBLIC_URL) |
+| Fix | `src/hooks/useLiveKitStream.tsx` (auth header + toggle methods) |
+| Fix | `src/components/streaming/StreamControlPanel.tsx` (use hook toggles) |
+| Fix | `src/pages/BattleTheater.tsx` (autoplay muted + unmute button) |
+| Fix | `src/pages/CameraStudio.tsx` (remove Twilio comment) |
+| Update | `src/lib/storage.ts` (add portfolio/education upload helpers) |
+| Rewrite | `src/components/profiles/PortfolioManager.tsx` (R2 uploads) |
 
