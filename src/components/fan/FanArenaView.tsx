@@ -11,7 +11,10 @@ export const FanArenaView = () => {
 
   return (
     <main className="space-y-4 pb-24">
-      {/* Grand Prize Banner */}
+      {/* Featured Battle Hero */}
+      <DynamicBattleHero />
+
+      {/* Grand Prize Banner — below the video feed */}
       <section className="px-3 sm:px-6">
         <ArenaTicker
           prizePools={prizePools}
@@ -19,9 +22,6 @@ export const FanArenaView = () => {
           onNavigate={(path) => navigate(path)}
         />
       </section>
-
-      {/* Featured Battle Hero */}
-      <DynamicBattleHero />
 
       {/* Live Battle Feed — the core fan experience */}
       <section className="px-3 sm:px-6">
