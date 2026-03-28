@@ -17,6 +17,7 @@ interface StakeRequest {
   stake_amount: number;
   challenge_message?: string;
   duration_minutes?: number;
+  target_barber_id?: string;
 }
 
 serve(async (req) => {
@@ -41,7 +42,7 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
-    const { title, stake_amount, challenge_message, duration_minutes }: StakeRequest = await req.json();
+    const { title, stake_amount, challenge_message, duration_minutes, target_barber_id }: StakeRequest = await req.json();
 
     console.log(`Creating challenge stake: ${stake_amount} BB from ${user.id}`);
 
@@ -160,6 +161,7 @@ serve(async (req) => {
         duration_minutes: durationMins,
         expires_at: expiresAt,
         battle_id: battle.id,
+        ...(target_barber_id ? { target_barber_id } : {}),
       })
       .select()
       .single();

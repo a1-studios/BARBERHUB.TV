@@ -1,0 +1,1 @@
+ALTER TABLE public.open_challenges ADD COLUMN IF NOT EXISTS target_barber_id uuid;

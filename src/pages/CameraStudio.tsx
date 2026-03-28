@@ -62,6 +62,7 @@ export default function CameraStudio() {
   const [mics, setMics] = useState<DeviceInfo[]>([]);
   const [selectedCamera, setSelectedCamera] = useState('');
   const [selectedMic, setSelectedMic] = useState('');
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [error, setError] = useState<string | null>(null);
 
   // Studio mode + recording
@@ -108,7 +109,7 @@ export default function CameraStudio() {
       const constraints: MediaStreamConstraints = {
         video: {
           width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 },
-          ...(selectedCamera ? { deviceId: { exact: selectedCamera } } : { facingMode: 'user' }),
+          ...(selectedCamera ? { deviceId: { exact: selectedCamera } } : { facingMode }),
         },
         audio: {
           echoCancellation: true, noiseSuppression: true,
@@ -137,7 +138,7 @@ export default function CameraStudio() {
       else if (err.name === 'NotReadableError') msg = 'Camera is in use by another app.';
       setError(msg);
     }
-  }, [selectedCamera, selectedMic, enumerateDevices]);
+  }, [selectedCamera, selectedMic, facingMode, enumerateDevices]);
 
   const stopPreview = useCallback(() => {
     if (isRecording) stopRecording();
@@ -281,7 +282,7 @@ export default function CameraStudio() {
   useEffect(() => {
     if (isActive) { stopPreview(); startPreview(); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCamera, selectedMic]);
+  }, [selectedCamera, selectedMic, facingMode]);
 
   return (
     <div className="fixed inset-0 bg-black flex flex-col" style={{ touchAction: 'manipulation' }}>
@@ -502,8 +503,8 @@ export default function CameraStudio() {
               {isAudioEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
             </Button>
 
-            {/* REC / STOP button */}
-            {studioMode !== 'idle' && studioMode !== 'challenge' && (
+            {/* REC / STOP button — always visible when camera is active */}
+            {studioMode !== 'challenge' && (
               isRecording ? (
                 <Button size="icon" className="rounded-full h-14 w-14 bg-red-600 hover:bg-red-700 border-4 border-white/30"
                   onClick={stopRecording}>
@@ -511,7 +512,10 @@ export default function CameraStudio() {
                 </Button>
               ) : (
                 <Button size="icon" className="rounded-full h-14 w-14 bg-red-600 hover:bg-red-700 border-4 border-white/30"
-                  onClick={startRecording}>
+                  onClick={() => {
+                    if (studioMode === 'idle') setStudioMode('portfolio');
+                    startRecording();
+                  }}>
                   <Circle className="h-6 w-6 text-white fill-white" />
                 </Button>
               )
@@ -551,7 +555,10 @@ export default function CameraStudio() {
             {/* Flip camera */}
             <Button variant="ghost" size="icon"
               className="rounded-full h-12 w-12 text-white border border-white/20"
-              onClick={() => { stopPreview(); startPreview(); }}>
+              onClick={() => {
+                setSelectedCamera('');
+                setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
+              }}>
               <RefreshCw className="h-5 w-5" />
             </Button>
           </div>
