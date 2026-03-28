@@ -138,18 +138,20 @@ const WatchFeed = () => {
         });
       }
 
-      return data.map((b) => ({
-        type: "battle" as const,
-        id: `battle-${b.id}`,
-        battle_id: b.id,
-        title: b.title,
-        barber1_video: b.barber_1_video_url!,
-        barber2_video: b.barber_2_video_url!,
-        barber1_name: profileMap[b.barber1_id!]?.name || "Barber 1",
-        barber1_location: profileMap[b.barber1_id!]?.location || "",
-        barber2_name: profileMap[b.barber2_id!]?.name || "Barber 2",
-        barber2_location: profileMap[b.barber2_id!]?.location || "",
-      }));
+      return data
+        .filter((b) => b.barber_1_video_url?.startsWith('http') && b.barber_2_video_url?.startsWith('http'))
+        .map((b) => ({
+          type: "battle" as const,
+          id: `battle-${b.id}`,
+          battle_id: b.id,
+          title: b.title,
+          barber1_video: b.barber_1_video_url!,
+          barber2_video: b.barber_2_video_url!,
+          barber1_name: profileMap[b.barber1_id!]?.name || "Barber 1",
+          barber1_location: profileMap[b.barber1_id!]?.location || "",
+          barber2_name: profileMap[b.barber2_id!]?.name || "Barber 2",
+          barber2_location: profileMap[b.barber2_id!]?.location || "",
+        }));
     },
   });
 
