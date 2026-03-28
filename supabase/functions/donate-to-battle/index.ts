@@ -71,7 +71,7 @@ serve(async (req) => {
           // Sum donation totals per barber for this battle
           const { data: donations } = await supabase
             .from('battle_donations')
-            .select('recipient_barber_id, amount_bb')
+            .select('barber_id, amount_bb')
             .eq('battle_id', battle_id);
 
           let total_b1 = 0;

@@ -21,6 +21,7 @@ export const useLocalCameraPreview = (): UseLocalCameraPreviewReturn => {
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPreviewActive, setIsPreviewActive] = useState(false);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   
   const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);

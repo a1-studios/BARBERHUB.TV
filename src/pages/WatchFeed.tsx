@@ -249,18 +249,8 @@ const WatchFeed = () => {
             autoPlay={activeIndex === idx}
             muted
             playsInline
-            onEnded={() => handleVideoEnded(item.id)}
+            loop
           />
-          {endedVideos.has(item.id) && (
-            <button
-              onClick={() => handleReplay(item.id)}
-              className="absolute inset-0 z-10 flex items-center justify-center bg-black/50"
-            >
-              <div className="w-16 h-16 rounded-full bg-primary/80 backdrop-blur-sm flex items-center justify-center">
-                <Play className="w-8 h-8 text-primary-foreground ml-1" />
-              </div>
-            </button>
-          )}
         </>
       ) : (
         <div
