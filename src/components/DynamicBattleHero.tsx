@@ -294,7 +294,9 @@ export const DynamicBattleHero = () => {
             />
             {/* Bottom gradient overlay */}
             <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
-              <div className="flex items-center justify-between">
+              {/* Sponsor strip */}
+              <SponsorStrip />
+              <div className="flex items-center justify-between mt-2">
                 <div className="flex items-center gap-2">
                   {fallbackVideo.country_code && (
                     <span className="text-sm">{getCountryFlag(fallbackVideo.country_code)}</span>
