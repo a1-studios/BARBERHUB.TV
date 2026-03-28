@@ -1,145 +1,92 @@
 
 
-## LiveKit + Cloudflare R2 Migration — Implementation Plan
+## LiveKit Egress — Auto-Record Battles to R2
 
-All 6 secrets confirmed in Supabase. No action needed from you — ready to implement.
+LiveKit Egress is a server-side feature that records room audio/video and outputs directly to S3-compatible storage (your R2 bucket). The flow:
 
----
-
-### Phase 1: New Foundation Files
-
-**1. Install dependencies**
-- Add `livekit-client` and `@livekit/components-react`
-- Remove `twilio-video`
-
-**2. `src/lib/livekit.ts`** — Client-side LiveKit helpers
-- `createBattleRoom()` — returns configured `Room` instance (VP8, adaptive stream, dynacast)
-- `connectToRoom(serverUrl, token)` — connect + return Room
-- Export relevant types
-
-**3. `src/lib/storage.ts`** — R2 upload helper
-- `uploadBattleVideo(file, battleId)` — calls `get-r2-presigned-url` edge function, then PUTs directly to R2
-- `uploadBattleImage(file, path)` — same pattern for images
-- Returns public R2 URL
-
-**4. `supabase/functions/generate-livekit-token/index.ts`** — Rewrite existing function
-- Replace Twilio SDK with `npm:livekit-server-sdk` for token generation
-- Same auth/battle verification logic stays
-- Uses `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `LIVEKIT_URL`
-- Returns `{ token, serverUrl, roomName, barberPosition, identity }`
-
-**5. `supabase/functions/get-livekit-viewer-token/index.ts`** — New viewer token function
-- Subscribe-only token (`canPublish: false, canSubscribe: true`)
-- Replaces `get-viewer-token`
-
-**6. `supabase/functions/get-r2-presigned-url/index.ts`** — Presigned upload URLs
-- Uses `npm:@aws-sdk/client-s3` + `npm:@aws-sdk/s3-request-presigner`
-- S3Client with `region: 'auto'`, endpoint from `R2_ENDPOINT`
-- Generates presigned PUT URL for bucket `battle-summissions`
+```text
+Battle goes LIVE
+  → Edge function starts a RoomCompositeEgress via LiveKit API
+  → LiveKit server records the room as MP4
+  → When recording finishes, LiveKit sends a webhook
+  → Webhook edge function receives it, extracts the R2 file path
+  → Updates battles table with the public MP4 URL
+  → BattleTheater plays the recording
+```
 
 ---
 
-### Phase 2: Rewrite Hooks & Components
+### What will be built
 
-**7. `src/hooks/useBattleVideoRoom.tsx`** — Full rewrite
-- Replace all `twilio-video` imports with `livekit-client` (`Room`, `RoomEvent`, `Track`, `RemoteParticipant`)
-- `connect()` calls `generate-livekit-token`, then `room.connect(serverUrl, token)`
-- Track events via `RoomEvent.TrackSubscribed/Unsubscribed/ParticipantConnected/Disconnected`
-- Same external API shape preserved (no breaking changes for consumers)
+**1. `supabase/functions/start-battle-egress/index.ts`** — New edge function
 
-**8. `src/hooks/useTwilioStream.tsx` → `src/hooks/useLiveKitStream.tsx`**
-- Same hook API (`startStream`, `endStream`, `isStreaming`, `canStart`)
-- Internally uses LiveKit Room connection instead of Twilio
-- Calls `generate-livekit-token` instead of `create-twilio-room`
+Called internally (from `generate-livekit-token`) when a battle transitions to `live`. Uses `livekit-server-sdk`'s `EgressClient` to start a `RoomCompositeEgress`:
 
-**9. `src/components/streaming/BattleVideoContainer.tsx`**
-- Remove `twilio-video` import
-- `VideoAttach` component uses generic approach: LiveKit tracks have `.attach()` just like Twilio
-- Type the tracks as `any` or create a simple `{ attach(): HTMLMediaElement; detach(): HTMLMediaElement[] }` interface for compatibility
+- Connects to LiveKit using `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`
+- Targets R2 via S3-compatible output config:
+  ```
+  s3: {
+    accessKey: R2_ACCESS_KEY_ID,
+    secret: R2_SECRET_ACCESS_KEY,
+    endpoint: R2_ENDPOINT,
+    bucket: "battle-summissions",
+    region: "auto",
+    forcePathStyle: true
+  }
+  ```
+- Output path: `recordings/{battleId}/{timestamp}.mp4`
+- Stores the egress ID in the `battles` table (new column `egress_id`) for tracking
 
-**10. `src/components/streaming/StreamControlPanel.tsx`**
-- Import `useLiveKitStream` instead of `useTwilioStream`
+**2. Update `supabase/functions/generate-livekit-token/index.ts`**
 
-**11. `src/components/creator/CreateBattleDrawer.tsx`**
-- Change default streaming type from `'twilio'` to `'livekit'`
-- Update `STREAMING_TYPES` label
+After transitioning battle status to `live`, call `start-battle-egress` internally (or inline the egress start logic) to begin recording. Only triggers once (checks if `egress_id` is already set).
 
----
+**3. `supabase/functions/livekit-egress-webhook/index.ts`** — New edge function
 
-### Phase 3: Edge Function Cleanup
+Receives LiveKit webhook POST events. This function:
 
-**12. Rewrite `supabase/functions/generate-battle-token/index.ts`**
-- Full replacement: Twilio SDK → LiveKit `AccessToken` from `npm:livekit-server-sdk`
-- Remove all Twilio room creation logic
-- Keep same auth/battle validation
+- Verifies the webhook signature using `WebhookReceiver` from `livekit-server-sdk` (uses `LIVEKIT_API_KEY` + `LIVEKIT_API_SECRET`)
+- Handles `egress_ended` event type
+- Extracts the output file path from the egress result
+- Constructs the public URL: `{R2_PUBLIC_URL}/recordings/{battleId}/{file}.mp4`
+- Updates the `battles` table: sets `barber_1_video_url` (or `barber_2_video_url`) with the recording URL
+- If both videos are now present, transitions battle to `voting` status
 
-**13. Rewrite `supabase/functions/sync-battle-viewers/index.ts`**
-- Replace Twilio REST API calls with LiveKit `RoomServiceClient.listParticipants()`
-- Uses `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `LIVEKIT_URL`
+Important: This function must have `verify_jwt = false` since LiveKit sends webhooks without Supabase auth.
 
-**14. Delete Twilio edge functions**
-- `supabase/functions/create-twilio-room/index.ts`
-- `supabase/functions/end-twilio-stream/index.ts`
-- `supabase/functions/get-viewer-token/index.ts`
-- `supabase/functions/twilio-webhook/index.ts`
+**4. Database migration**
 
----
+Add an `egress_id` column to the `battles` table to track active egress sessions:
+```sql
+ALTER TABLE battles ADD COLUMN IF NOT EXISTS egress_id TEXT;
+```
 
-### Phase 4: Video Submission with R2
+**5. Update `BattleTheater.tsx`**
 
-**15. `src/components/battles/VideoSubmissionModal.tsx`**
-- Add file upload tab using `uploadBattleVideo()` from `src/lib/storage.ts`
-- Uploaded file goes to R2, URL passed to `submit-battle-video`
+The component already reads `barber_1_video_url` and `barber_2_video_url` and passes them to `HLSVideoPlayer`. Since recordings will be MP4 (not HLS), add a fallback: if the URL ends in `.mp4`, render a native `<video>` element instead of the HLS player.
 
 ---
 
-### Files Summary
+### LiveKit Webhook Setup (Your action required after implementation)
+
+You will need to configure the webhook URL in your LiveKit Cloud dashboard:
+- Go to LiveKit Cloud → Project Settings → Webhooks
+- Add URL: `https://msuepyfssovvkjzpfjzu.supabase.co/functions/v1/livekit-egress-webhook`
+
+---
+
+### Config changes
+
+- Add `verify_jwt = false` for `livekit-egress-webhook` in `supabase/config.toml`
+
+### Files summary
 
 | Action | File |
 |--------|------|
-| Create | `src/lib/livekit.ts` |
-| Create | `src/lib/storage.ts` |
-| Create | `supabase/functions/get-livekit-viewer-token/index.ts` |
-| Create | `supabase/functions/get-r2-presigned-url/index.ts` |
-| Rewrite | `src/hooks/useBattleVideoRoom.tsx` |
-| Rewrite | `src/hooks/useTwilioStream.tsx` → `src/hooks/useLiveKitStream.tsx` |
-| Rewrite | `supabase/functions/generate-battle-token/index.ts` |
-| Rewrite | `supabase/functions/sync-battle-viewers/index.ts` |
-| Update | `src/components/streaming/BattleVideoContainer.tsx` |
-| Update | `src/components/streaming/StreamControlPanel.tsx` |
-| Update | `src/components/creator/CreateBattleDrawer.tsx` |
-| Update | `src/components/battles/VideoSubmissionModal.tsx` |
-| Update | `package.json` (add livekit-client, @livekit/components-react; remove twilio-video) |
-| Delete | `supabase/functions/create-twilio-room/index.ts` |
-| Delete | `supabase/functions/end-twilio-stream/index.ts` |
-| Delete | `supabase/functions/get-viewer-token/index.ts` |
-| Delete | `supabase/functions/twilio-webhook/index.ts` |
-
-### Technical Details
-
-**LiveKit token (edge function)**:
-```typescript
-import { AccessToken } from 'npm:livekit-server-sdk';
-const at = new AccessToken(apiKey, apiSecret, { identity, ttl: '4h' });
-at.addGrant({ roomJoin: true, room: roomName, canPublish: true });
-return await at.toJwt();
-```
-
-**R2 presigned URL (edge function)**:
-```typescript
-import { S3Client, PutObjectCommand } from 'npm:@aws-sdk/client-s3';
-import { getSignedUrl } from 'npm:@aws-sdk/s3-request-presigner';
-const s3 = new S3Client({ region: 'auto', endpoint, credentials });
-const url = await getSignedUrl(s3, new PutObjectCommand({
-  Bucket: 'battle-summissions', Key: path
-}), { expiresIn: 3600 });
-```
-
-**Client LiveKit connection**:
-```typescript
-import { Room, RoomEvent } from 'livekit-client';
-const room = new Room({ adaptiveStream: true, dynacast: true });
-await room.connect(serverUrl, token);
-room.on(RoomEvent.TrackSubscribed, (track) => { /* attach */ });
-```
+| Create | `supabase/functions/start-battle-egress/index.ts` |
+| Create | `supabase/functions/livekit-egress-webhook/index.ts` |
+| Update | `supabase/functions/generate-livekit-token/index.ts` (trigger egress) |
+| Update | `supabase/config.toml` (webhook JWT bypass) |
+| Update | `src/pages/BattleTheater.tsx` (MP4 fallback) |
+| Migration | Add `egress_id` column to `battles` |
 
