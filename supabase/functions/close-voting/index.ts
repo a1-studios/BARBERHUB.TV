@@ -18,14 +18,13 @@ serve(async (req) => {
   try {
     console.log('[CLOSE-VOTING] Function started');
 
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
+      supabaseUrl,
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
     );
 
     const {
@@ -45,8 +44,11 @@ serve(async (req) => {
 
     const { battleId }: CloseVotingRequest = await req.json();
 
+    // Use service role for all DB operations
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
     // Get battle details
-    const { data: battle, error: fetchError } = await supabaseClient
+    const { data: battle, error: fetchError } = await supabaseAdmin
       .from('battles')
       .select('*')
       .eq('id', battleId)
@@ -59,10 +61,33 @@ serve(async (req) => {
 
     console.log('[CLOSE-VOTING] Closing voting for battle:', battleId);
 
+    // Calculate match result
+    const { data: result, error: resultError } = await supabaseAdmin
+      .rpc('calculate_match_result', { battle_id_param: battleId });
+
+    if (resultError) {
+      console.error('[CLOSE-VOTING] Result calculation failed:', resultError);
+    }
+
+    const matchResult = result?.[0];
+    const isDraw = matchResult?.is_draw ?? false;
+    const winnerId = matchResult?.winner_id ?? null;
+
+    // Determine loser
+    let loserId: string | null = null;
+    if (!isDraw && winnerId) {
+      // winner_id from calculate_match_result is a user_id from barber_profiles
+      // barber1_id and barber2_id are barber_profile IDs
+      loserId = winnerId === battle.barber1_id ? battle.barber2_id : battle.barber1_id;
+    }
+
     // Update battle status to completed
-    const { error: battleError } = await supabaseClient
+    const { error: battleError } = await supabaseAdmin
       .from('battles')
-      .update({ status: 'completed' })
+      .update({
+        status: 'completed',
+        winner_id: isDraw ? null : winnerId,
+      })
       .eq('id', battleId);
 
     if (battleError) {
@@ -70,49 +95,95 @@ serve(async (req) => {
       throw battleError;
     }
 
-    let winnerDisplayName = null;
+    let winnerDisplayName: string | null = null;
 
-    // If tournament match, trigger standings update
-    if (battle.tournament_id) {
-      console.log('[CLOSE-VOTING] Tournament match - calculating results');
+    // Get winner profile for notification
+    if (winnerId && !isDraw) {
+      const { data: winnerProfile } = await supabaseAdmin
+        .rpc('get_public_profile', { profile_user_id: winnerId });
 
-      // Calculate match result using the database function
-      const { data: result, error: resultError } = await supabaseClient
-        .rpc('calculate_match_result', { battle_id_param: battleId });
+      if (winnerProfile && winnerProfile.length > 0) {
+        winnerDisplayName = winnerProfile[0].display_name;
+      }
+    }
 
-      if (resultError) {
-        console.error('[CLOSE-VOTING] Result calculation failed:', resultError);
-      } else {
-        console.log('[CLOSE-VOTING] Match result:', result);
-        
-        // Get winner profile for notification
-        if (result && result.length > 0 && result[0].winner_id) {
-          const { data: winnerProfile } = await supabaseClient
-            .rpc('get_public_profile', { profile_user_id: result[0].winner_id });
-          
-          if (winnerProfile && winnerProfile.length > 0) {
-            winnerDisplayName = winnerProfile[0].display_name;
-          }
-        }
+    // Distribute pot with new delayed payout logic
+    try {
+      // Get user_ids for barber profile IDs
+      let barber1UserId: string | null = null;
+      let barber2UserId: string | null = null;
+
+      if (battle.barber1_id) {
+        const { data: b1 } = await supabaseAdmin
+          .from('barber_profiles')
+          .select('user_id')
+          .eq('id', battle.barber1_id)
+          .single();
+        barber1UserId = b1?.user_id ?? null;
+      }
+      if (battle.barber2_id) {
+        const { data: b2 } = await supabaseAdmin
+          .from('barber_profiles')
+          .select('user_id')
+          .eq('id', battle.barber2_id)
+          .single();
+        barber2UserId = b2?.user_id ?? null;
       }
 
-      // Update tournament standings
-      const { error: standingsError } = await supabaseClient
+      const winnerUserId = isDraw ? barber1UserId : (winnerId === battle.barber1_id ? barber1UserId : barber2UserId);
+      const loserUserId = isDraw ? barber2UserId : (winnerId === battle.barber1_id ? barber2UserId : barber1UserId);
+
+      const distributeResponse = await fetch(
+        `${supabaseUrl}/functions/v1/distribute-pot`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify({
+            battle_id: battleId,
+            winner_id: winnerUserId,
+            loser_id: loserUserId,
+            is_draw: isDraw,
+          }),
+        }
+      );
+      const distributeResult = await distributeResponse.json();
+      console.log('[CLOSE-VOTING] Distribute pot result:', distributeResult);
+    } catch (distErr) {
+      console.error('[CLOSE-VOTING] Distribute pot error (non-fatal):', distErr);
+    }
+
+    // If tournament match, update standings and bracket
+    if (battle.tournament_id) {
+      console.log('[CLOSE-VOTING] Tournament match - updating standings');
+
+      const { error: standingsError } = await supabaseAdmin
         .rpc('update_tournament_standings', { battle_id_param: battleId });
 
       if (standingsError) {
         console.error('[CLOSE-VOTING] Standings update failed:', standingsError);
-      } else {
-        console.log('[CLOSE-VOTING] Tournament standings updated');
+      }
+
+      // Finalize VOD prize split (season points)
+      try {
+        await supabaseAdmin.rpc('finalize_vod_prize_split', {
+          p_battle_id: battleId,
+          p_winner_id: winnerId,
+          p_loser_id: loserId,
+          p_is_draw: isDraw,
+        });
+      } catch (vodErr) {
+        console.error('[CLOSE-VOTING] VOD prize split error:', vodErr);
       }
 
       // Update bracket match
-      if (result && result.length > 0) {
-        const matchResult = result[0];
-        const { error: bracketError } = await supabaseClient
+      if (matchResult) {
+        const { error: bracketError } = await supabaseAdmin
           .from('bracket_matches')
           .update({
-            winner_id: matchResult.winner_id,
+            winner_id: isDraw ? null : winnerId,
             status: 'completed',
             completed_at: new Date().toISOString(),
           })
@@ -120,65 +191,48 @@ serve(async (req) => {
 
         if (bracketError) {
           console.error('[CLOSE-VOTING] Bracket update failed:', bracketError);
-        } else {
-          console.log('[CLOSE-VOTING] Bracket updated with winner:', matchResult.winner_id);
         }
       }
     }
 
-    // Send notifications to participants
-    const participantsNotifyResult = await supabaseClient
-      .rpc('notify_battle_participants', {
-        p_battle_id: battleId,
-        p_title: '🏆 Battle Results',
-        p_message: `Voting has ended for "${battle.title}". ${winnerDisplayName ? `${winnerDisplayName} won!` : 'Check the results now!'}`,
-        p_type: 'battle_completed',
-        p_data: { winner_name: winnerDisplayName }
-      });
+    // Send notifications
+    const resultMessage = isDraw
+      ? `It's a draw! Both barbers earned payouts from "${battle.title}".`
+      : `Voting has ended for "${battle.title}". ${winnerDisplayName ? `${winnerDisplayName} won!` : 'Check the results now!'}`;
 
-    if (participantsNotifyResult.error) {
-      console.error('[CLOSE-VOTING] Participant notification error:', participantsNotifyResult.error);
-    } else {
-      console.log('[CLOSE-VOTING] Notified participants');
-    }
+    await supabaseAdmin.rpc('notify_battle_participants', {
+      p_battle_id: battleId,
+      p_title: isDraw ? '🤝 Battle Draw!' : '🏆 Battle Results',
+      p_message: resultMessage,
+      p_type: 'battle_completed',
+      p_data: { winner_name: winnerDisplayName, is_draw: isDraw },
+    });
 
-    // Send notifications to voters
-    const votersNotifyResult = await supabaseClient
-      .rpc('notify_battle_voters', {
-        p_battle_id: battleId,
-        p_title: '🎉 Battle Results Are In!',
-        p_message: `The battle "${battle.title}" has ended. ${winnerDisplayName ? `${winnerDisplayName} won!` : 'See who won!'}`,
-        p_type: 'battle_result',
-        p_data: { winner_name: winnerDisplayName }
-      });
-
-    if (votersNotifyResult.error) {
-      console.error('[CLOSE-VOTING] Voter notification error:', votersNotifyResult.error);
-    } else {
-      console.log('[CLOSE-VOTING] Notified voters');
-    }
+    await supabaseAdmin.rpc('notify_battle_voters', {
+      p_battle_id: battleId,
+      p_title: isDraw ? '🤝 It\'s a Draw!' : '🎉 Battle Results Are In!',
+      p_message: resultMessage,
+      p_type: 'battle_result',
+      p_data: { winner_name: winnerDisplayName, is_draw: isDraw },
+    });
 
     console.log('[CLOSE-VOTING] Voting closed and results calculated');
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         message: 'Voting closed and results calculated',
         isTournamentMatch: !!battle.tournament_id,
+        isDraw,
+        winnerId: isDraw ? null : winnerId,
       }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('[CLOSE-VOTING] Error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

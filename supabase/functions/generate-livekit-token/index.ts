@@ -82,7 +82,7 @@ serve(async (req) => {
     // Get battle
     const { data: battle, error: battleErr } = await supabaseAdmin
       .from("battles")
-      .select("id, title, barber1_id, barber2_id, status")
+      .select("id, title, barber1_id, barber2_id, status, is_tournament_match")
       .eq("id", battleId)
       .single();
 
@@ -188,6 +188,19 @@ serve(async (req) => {
         .from("battles")
         .update({ [`barber${barberPosition}_is_streaming`]: true })
         .eq("id", battleId);
+    }
+
+    // Award show-up point for tournament matches
+    if (battle.is_tournament_match) {
+      try {
+        await supabaseAdmin.rpc('award_show_up_point', {
+          p_barber_profile_id: barber.id,
+          p_battle_id: battleId,
+        });
+        console.log(`Show-up point awarded to ${barber.id} for battle ${battleId}`);
+      } catch (showUpErr) {
+        console.error('Show-up point error (non-fatal):', showUpErr);
+      }
     }
 
     console.log(`LiveKit token generated for barber ${barber.id} in battle ${battleId}`);

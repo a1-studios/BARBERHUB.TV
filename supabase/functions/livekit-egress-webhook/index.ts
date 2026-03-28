@@ -132,7 +132,7 @@ serve(async (req) => {
 
     // If both video URLs are now present (or this is a composite), transition to voting
     const shouldTransition =
-      battle.status === "live" &&
+      (battle.status === "live" || battle.status === "processing") &&
       (publicUrl || battle.barber_2_video_url);
 
     if (shouldTransition) {
@@ -140,7 +140,7 @@ serve(async (req) => {
       updateData.voting_ends_at = new Date(
         Date.now() + 7 * 24 * 60 * 60 * 1000
       ).toISOString(); // 7 days voting window
-      console.log(`Battle ${battleId} transitioning to voting`);
+      console.log(`Battle ${battleId} transitioning from ${battle.status} to voting`);
     }
 
     const { error: updateErr } = await supabaseAdmin

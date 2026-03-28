@@ -2578,6 +2578,53 @@ export type Database = {
         }
         Relationships: []
       }
+      pending_payouts: {
+        Row: {
+          amount_bb: number
+          battle_id: string | null
+          challenge_id: string | null
+          created_at: string | null
+          id: string
+          payout_type: string
+          released_at: string | null
+          scheduled_release_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount_bb: number
+          battle_id?: string | null
+          challenge_id?: string | null
+          created_at?: string | null
+          id?: string
+          payout_type: string
+          released_at?: string | null
+          scheduled_release_at: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount_bb?: number
+          battle_id?: string | null
+          challenge_id?: string | null
+          created_at?: string | null
+          id?: string
+          payout_type?: string
+          released_at?: string | null
+          scheduled_release_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_payouts_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_config: {
         Row: {
           created_at: string | null
@@ -3460,6 +3507,7 @@ export type Database = {
           points: number | null
           qualified: boolean | null
           rank: number | null
+          show_up_points: number | null
           tournament_id: string
           updated_at: string | null
           vote_difference: number | null
@@ -3478,6 +3526,7 @@ export type Database = {
           points?: number | null
           qualified?: boolean | null
           rank?: number | null
+          show_up_points?: number | null
           tournament_id: string
           updated_at?: string | null
           vote_difference?: number | null
@@ -3496,6 +3545,7 @@ export type Database = {
           points?: number | null
           qualified?: boolean | null
           rank?: number | null
+          show_up_points?: number | null
           tournament_id?: string
           updated_at?: string | null
           vote_difference?: number | null
@@ -3788,6 +3838,10 @@ export type Database = {
       }
     }
     Functions: {
+      award_show_up_point: {
+        Args: { p_barber_profile_id: string; p_battle_id: string }
+        Returns: boolean
+      }
       build_universal_feed: {
         Args: { p_limit?: number; p_offset?: number }
         Returns: {
@@ -3856,7 +3910,20 @@ export type Database = {
         }
         Returns: undefined
       }
+      deduct_queue_entry_fee: {
+        Args: { p_amount_bb?: number; p_category: string; p_user_id: string }
+        Returns: Json
+      }
       expire_bounties_batch: { Args: never; Returns: number }
+      finalize_vod_prize_split: {
+        Args: {
+          p_battle_id: string
+          p_is_draw?: boolean
+          p_loser_id: string
+          p_winner_id: string
+        }
+        Returns: Json
+      }
       generate_elimination_bracket: {
         Args: { num_participants?: number; tournament_id_param: string }
         Returns: undefined
