@@ -32,6 +32,7 @@ interface ContenderControlBarProps {
   opponentReady?: boolean;
   isOpponentPresent?: boolean;
   onReady?: () => void;
+  onSwitchCamera?: () => void;
 }
 
 export const ContenderControlBar = memo(function ContenderControlBar({
@@ -56,6 +57,7 @@ export const ContenderControlBar = memo(function ContenderControlBar({
   opponentReady = false,
   isOpponentPresent = false,
   onReady,
+  onSwitchCamera,
 }: ContenderControlBarProps) {
   const isPreviewPhase = phase === 'preview' || phase === 'standby';
   const bothReady = isReady && opponentReady;
