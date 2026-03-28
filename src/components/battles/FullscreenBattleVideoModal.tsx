@@ -1,8 +1,7 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { X, UserPlus, Heart, ThumbsUp, DollarSign, Play } from "lucide-react";
-import { HLSVideoPlayer } from "./HLSVideoPlayer";
-import { VideoPlayer } from "@/components/VideoPlayer";
+import { BrandedVideoPlayer } from "@/components/BrandedVideoPlayer";
 
 interface BattleSubmission {
   id: string;
@@ -44,37 +43,18 @@ const getCountryFlag = (countryCode?: string) => {
 };
 
 const renderVideoPlayer = (barber: BarberData) => {
-  if (barber.submission?.media_url) {
-    return (
-      <HLSVideoPlayer
-        src={barber.submission.media_url}
-        isLive={barber.submission.is_live_stream || false}
-        title={barber.submission.title}
-        size="large"
-        autoPlay
-      />
-    );
-  }
-
-  if (barber.videoUrl) {
-    return (
-      <HLSVideoPlayer
-        src={barber.videoUrl}
-        isLive={barber.isLive || false}
-        title={`${barber.name}'s Stream`}
-        size="large"
-        autoPlay
-      />
-    );
-  }
+  const videoSrc = barber.submission?.media_url || barber.videoUrl || null;
+  const isLive = barber.submission?.is_live_stream || barber.isLive || false;
+  const videoTitle = barber.submission?.title || `${barber.name}'s Stream`;
 
   return (
-    <div className="w-full h-full bg-gradient-to-br from-gray-900 to-black flex items-center justify-center">
-      <div className="text-center space-y-4">
-        <Play className="w-20 h-20 mx-auto text-white/30" />
-        <p className="text-white/60">No video available</p>
-      </div>
-    </div>
+    <BrandedVideoPlayer
+      src={videoSrc}
+      isLive={isLive}
+      title={videoTitle}
+      autoPlay
+      showBranding
+    />
   );
 };
 
