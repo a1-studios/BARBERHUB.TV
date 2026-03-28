@@ -44,8 +44,6 @@ export function BottomNavBar() {
       className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      <div className="absolute inset-0 bg-card/95 backdrop-blur-xl border-t border-border/50" />
-
       <div className="relative flex items-end justify-around px-2 h-11">
         {tabs.map((tab, i) => {
           if ('isFab' in tab && tab.isFab) {
@@ -76,8 +74,8 @@ export function BottomNavBar() {
               onClick={() => navigate(path)}
               className={cn(
                 'flex flex-col items-center justify-center gap-0 flex-1 h-full',
-                'transition-colors duration-150',
-                active ? 'text-primary' : 'text-muted-foreground',
+                'transition-colors duration-150 drop-shadow-lg',
+                active ? 'text-primary' : 'text-white/80',
               )}
               aria-label={label}
             >

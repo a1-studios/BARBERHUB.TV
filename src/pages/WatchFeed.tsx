@@ -1,12 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSponsorAds } from "@/hooks/useSponsorAds";
-import { ArrowLeft, Play, GraduationCap, Flame, Volume2, VolumeX } from "lucide-react";
+import { ArrowLeft, Play, GraduationCap, Flame, Volume2, VolumeX, Heart, Share2, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 import SplitScreenBattle from "@/components/battles/SplitScreenBattle";
 import { parseSpecialties, getSpecialtyDisplay } from "@/config/specialtyTags";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { DonationModal } from "@/components/DonationModal";
 
 interface FeedItem {
   type: "video" | "sponsor" | "educator" | "platform" | "battle";
@@ -29,6 +31,7 @@ interface FeedItem {
   barber1_location?: string;
   barber2_name?: string;
   barber2_location?: string;
+  barber_user_id?: string;
 }
 
 const PLATFORM_PROMOS: FeedItem[] = [
@@ -45,6 +48,7 @@ const WatchFeed = () => {
   const navigate = useNavigate();
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
+  const [donationTarget, setDonationTarget] = useState<{ userId: string; name: string } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
 
@@ -54,13 +58,12 @@ const WatchFeed = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("public_barber_profiles")
-        .select("barber_id, barber_name, display_name, featured_video_id, avatar_url, country_code")
+        .select("barber_id, barber_name, display_name, featured_video_id, avatar_url, country_code, user_id")
         .not("featured_video_id", "is", null)
         .order("barber_updated_at", { ascending: false })
         .limit(30);
       if (error) throw error;
       const filtered = (data || []).filter((b) => b.featured_video_id && b.featured_video_id.startsWith("http"));
-      // Fetch specialties from barber_profiles
       const barberIds = filtered.map((b) => b.barber_id).filter(Boolean) as string[];
       let specMap: Record<string, string | null> = {};
       if (barberIds.length > 0) {
@@ -74,11 +77,12 @@ const WatchFeed = () => {
         barber_name: b.display_name || b.barber_name || "Barber",
         creator_avatar: b.avatar_url,
         specialty: specMap[b.barber_id] ?? null,
+        barber_user_id: b.user_id,
       }));
     },
   });
 
-  // 2. Creator content (educator / tips / portfolio)
+  // 2. Creator content
   const { data: creatorVideos = [] } = useQuery({
     queryKey: ["watch-feed-creator-content"],
     queryFn: async () => {
@@ -101,6 +105,7 @@ const WatchFeed = () => {
           thumbnail_url: c.thumbnail_url,
           barber_name: "Creator",
           specialty: null,
+          barber_user_id: c.creator_id,
         }));
     },
   });
@@ -118,14 +123,14 @@ const WatchFeed = () => {
       if (error) throw error;
 
       const barberIds = [...new Set((data || []).map((c) => c.barber_id).filter(Boolean))] as string[];
-      let barberMap: Record<string, { name: string; specialty: string | null }> = {};
+      let barberMap: Record<string, { name: string; specialty: string | null; user_id: string }> = {};
       if (barberIds.length > 0) {
         const { data: profiles } = await supabase
           .from("barber_profiles")
-          .select("id, name, specialty")
+          .select("id, name, specialty, user_id")
           .in("id", barberIds);
         profiles?.forEach((p) => {
-          barberMap[p.id] = { name: p.name || "Barber", specialty: p.specialty };
+          barberMap[p.id] = { name: p.name || "Barber", specialty: p.specialty, user_id: p.user_id };
         });
       }
 
@@ -140,11 +145,12 @@ const WatchFeed = () => {
           thumbnail_url: c.thumbnail_url,
           barber_name: barberMap[c.barber_id]?.name || "Barber",
           specialty: barberMap[c.barber_id]?.specialty ?? null,
+          barber_user_id: barberMap[c.barber_id]?.user_id,
         }));
     },
   });
 
-  // 4. Battle submissions (individual, theater-mode)
+  // 4. Battle submissions
   const { data: submissionVideos = [] } = useQuery({
     queryKey: ["watch-feed-submissions"],
     queryFn: async () => {
@@ -166,6 +172,7 @@ const WatchFeed = () => {
           thumbnail_url: s.thumbnail_url,
           barber_name: "Competitor",
           specialty: null,
+          barber_user_id: s.user_id,
         }));
     },
   });
@@ -224,14 +231,12 @@ const WatchFeed = () => {
   let battleIdx = 0;
   let platformIdx = 0;
 
-  // If no content at all, pad with platform promos
   const contentPool = allContent.length > 0 ? allContent : Array.from({ length: 8 }, (_, i) => ({
     ...PLATFORM_PROMOS[0],
     id: `platform-fill-${i}`,
     type: "platform" as const,
   }));
 
-  // Loop content to guarantee at least 20 items
   let contentIdx = 0;
   let loopPass = 0;
   while (feed.length < Math.max(20, contentPool.length + 10)) {
@@ -239,7 +244,6 @@ const WatchFeed = () => {
     feed.push({ ...item, id: loopPass > 0 ? `${item.id}-loop-${loopPass}` : item.id });
     contentIdx++;
 
-    // Sponsor every 3 content items
     if (contentIdx % 3 === 0 && sponsors.length > 0) {
       const sponsor = sponsors[sponsorIdx % sponsors.length];
       feed.push({
@@ -253,20 +257,18 @@ const WatchFeed = () => {
       sponsorIdx++;
     }
 
-    // Battle every 6 content items
     if (contentIdx % 6 === 0 && battleItems.length > 0) {
       feed.push({ ...battleItems[battleIdx % battleItems.length], id: `battle-feed-${battleIdx}` });
       battleIdx++;
     }
 
-    // Platform promo every 8 content items (when we have real content)
     if (allContent.length > 0 && contentIdx % 8 === 0) {
       feed.push({ ...PLATFORM_PROMOS[platformIdx % PLATFORM_PROMOS.length], id: `platform-${platformIdx}` });
       platformIdx++;
     }
 
     if (contentIdx % contentPool.length === 0) loopPass++;
-    if (loopPass > 3) break; // cap at 3 full loops
+    if (loopPass > 3) break;
   }
 
   // Snap scrolling observer
@@ -288,7 +290,7 @@ const WatchFeed = () => {
     return () => observer.disconnect();
   }, [feed.length]);
 
-  // Auto-play/pause videos based on active index + sync muted state
+  // Auto-play/pause videos + sync muted state
   useEffect(() => {
     videoRefs.current.forEach((video, key) => {
       const idx = feed.findIndex((f) => f.id === key);
@@ -319,6 +321,63 @@ const WatchFeed = () => {
             </span>
           );
         })}
+      </div>
+    );
+  };
+
+  const handleShare = async (item: FeedItem) => {
+    const url = window.location.origin + "/watch";
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: item.title || item.barber_name || "Check this out", url });
+      } catch { /* user cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(url);
+    }
+  };
+
+  const renderActionStack = (item: FeedItem) => {
+    if (item.type === "sponsor" || item.type === "battle") return null;
+    return (
+      <div className="absolute right-3 bottom-28 flex flex-col gap-5 items-center z-30">
+        {/* Creator avatar → profile */}
+        <button
+          onClick={() => item.barber_user_id && navigate(`/barber/${item.barber_user_id}`)}
+          className="drop-shadow-lg"
+        >
+          <Avatar className="h-10 w-10 border-2 border-white/80">
+            {item.creator_avatar ? (
+              <AvatarImage src={item.creator_avatar} />
+            ) : null}
+            <AvatarFallback className="bg-black/40 text-white text-xs">
+              <User className="w-4 h-4" />
+            </AvatarFallback>
+          </Avatar>
+        </button>
+
+        {/* Donate */}
+        <button
+          onClick={() => item.barber_user_id && setDonationTarget({ userId: item.barber_user_id, name: item.barber_name || "Barber" })}
+          className="text-white drop-shadow-lg active:scale-90 transition-transform"
+        >
+          <Heart className="w-7 h-7" />
+        </button>
+
+        {/* Share */}
+        <button
+          onClick={() => handleShare(item)}
+          className="text-white drop-shadow-lg active:scale-90 transition-transform"
+        >
+          <Share2 className="w-6 h-6" />
+        </button>
+
+        {/* Mute toggle */}
+        <button
+          onClick={() => setIsMuted(!isMuted)}
+          className="text-white drop-shadow-lg active:scale-90 transition-transform"
+        >
+          {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
+        </button>
       </div>
     );
   };
@@ -363,8 +422,11 @@ const WatchFeed = () => {
         </div>
       )}
 
+      {/* Right-side action stack */}
+      {renderActionStack(item)}
+
       {/* Creator info + specialty pills */}
-      <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+      <div className="absolute bottom-0 left-0 right-16 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
         {renderSpecialtyPills(item.specialty)}
         <p className="text-white font-semibold text-sm mt-1">{item.barber_name}</p>
         {item.title && (
@@ -376,20 +438,12 @@ const WatchFeed = () => {
 
   return (
     <div className="fixed inset-0 bg-background z-50 flex flex-col">
-      {/* Minimal back button — no header text */}
+      {/* Minimal back button */}
       <button
         onClick={() => navigate("/")}
         className="absolute top-4 left-4 z-20 p-2 rounded-full bg-black/30 backdrop-blur-sm border border-white/10"
       >
         <ArrowLeft className="w-4 h-4 text-white" />
-      </button>
-
-      {/* Mute / Unmute toggle */}
-      <button
-        onClick={() => setIsMuted(!isMuted)}
-        className="absolute bottom-24 right-4 z-20 p-3 rounded-full bg-black/30 backdrop-blur-sm border border-white/10"
-      >
-        {isMuted ? <VolumeX className="w-5 h-5 text-white" /> : <Volume2 className="w-5 h-5 text-white" />}
       </button>
 
       <div ref={containerRef} className="flex-1 overflow-y-scroll snap-y snap-mandatory scrollbar-hide">
@@ -442,6 +496,16 @@ const WatchFeed = () => {
           </div>
         ))}
       </div>
+
+      {/* Donation Modal */}
+      {donationTarget && (
+        <DonationModal
+          creatorId={donationTarget.userId}
+          creatorName={donationTarget.name}
+          isOpen={!!donationTarget}
+          onClose={() => setDonationTarget(null)}
+        />
+      )}
     </div>
   );
 };
