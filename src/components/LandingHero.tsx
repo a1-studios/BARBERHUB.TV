@@ -83,9 +83,7 @@ const LandingHero = ({ onOpenArenaGate }: LandingHeroProps) => {
       const email = searchParams.get('email');
       if (email) {
         supabase
-          .from('marketing_leads')
-          .update({ converted: true })
-          .eq('email', email)
+          .rpc('mark_marketing_lead_converted', { p_email: email })
           .then(() => {});
       }
     }

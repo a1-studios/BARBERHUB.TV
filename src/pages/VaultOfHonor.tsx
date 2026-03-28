@@ -36,12 +36,10 @@ const VaultOfHonor = () => {
       const stored = localStorage.getItem('vault_fingerprint');
 
       if (stored) {
-        // Check DB for this fingerprint
-        const { data } = await supabase
-          .from('marketing_leads')
-          .select('*')
-          .eq('device_fingerprint', stored)
-          .maybeSingle();
+        // Check DB for this fingerprint via secure RPC
+        const { data: rpcData } = await supabase
+          .rpc('get_marketing_lead_by_fingerprint', { p_fingerprint: stored });
+        const data = rpcData?.[0] ?? null;
 
         if (data) {
           if (data.spins_used >= data.max_spins) {
@@ -86,27 +84,25 @@ const VaultOfHonor = () => {
   };
 
   const handleShareComplete = async (shared: boolean) => {
-    if (leadId) {
-      await supabase
-        .from('marketing_leads')
-        .update({ shared })
-        .eq('id', leadId);
+    const fp = localStorage.getItem('vault_fingerprint');
+    if (fp) {
+      await supabase.rpc('update_marketing_lead_by_fingerprint', { 
+        p_fingerprint: fp, p_shared: shared 
+      });
     }
     setStep('spin');
   };
 
   const handleSpinResult = async (prize: Prize) => {
     setWonPrize(prize);
-    if (leadId) {
-      // Use raw RPC-style update to increment spins_used
-      await supabase
-        .from('marketing_leads')
-        .update({
-          prize_id: prize.id,
-          prize_label: prize.label,
-          spins_used: 1, // first spin
-        })
-        .eq('id', leadId);
+    const fp = localStorage.getItem('vault_fingerprint');
+    if (fp) {
+      await supabase.rpc('update_marketing_lead_by_fingerprint', {
+        p_fingerprint: fp,
+        p_prize_id: prize.id,
+        p_prize_label: prize.label,
+        p_spins_used: 1,
+      });
     }
     // Small delay for confetti to settle
     setTimeout(() => setStep('victory'), 1500);
