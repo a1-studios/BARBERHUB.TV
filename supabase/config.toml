@@ -56,14 +56,11 @@ verify_jwt = true
 [functions.create-donation]
 verify_jwt = true
 
-[functions.create-twilio-room]
-verify_jwt = true
+[functions.generate-livekit-token]
+verify_jwt = false
 
-[functions.end-twilio-stream]
-verify_jwt = true
-
-[functions.get-viewer-token]
-verify_jwt = true
+[functions.get-livekit-viewer-token]
+verify_jwt = false
 
 [functions.process-bb-donation]
 verify_jwt = true
@@ -116,10 +113,7 @@ verify_jwt = true
 [functions.purchase-barber-bucks]
 verify_jwt = false
 
-[functions.generate-battle-token]
-verify_jwt = false
-
-[functions.twilio-webhook]
+[functions.get-r2-presigned-url]
 verify_jwt = false
 
 [functions.sovereign-economy-control]
