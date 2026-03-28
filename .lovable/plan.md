@@ -1,168 +1,108 @@
 
 
-## Unified AAA Tournament Infrastructure — Full Implementation Plan
+## Enterprise Direct-to-R2 Multipart Video Upload — Implementation Plan
 
-This merges the revised payout logic (2-week hold, draw support) with the broader tournament upgrade (SMS, Data Channels, multipart upload, etc.) into a single execution order.
+### Diagnostic Summary
 
----
+**What exists already:**
+- Three edge functions (`initiate-multipart-upload`, `presign-upload-part`, `complete-multipart-upload`) with basic S3 SDK v3 integration against R2
+- `src/lib/storage.ts` with single-PUT `uploadToR2` (no chunking, no progress, crashes on large files)
+- `VideoSubmissionModal.tsx` uses single-file PUT upload capped at 500MB with fake progress
+- R2 secrets (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`) already configured
+- `useUserRole` hook provides `isBarber` check client-side
 
-### Phase 1: Database Foundation (Migration)
-
-Single migration covering all schema changes:
-
-**a) `pending_payouts` table:**
-```sql
-CREATE TABLE pending_payouts (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL,
-  amount_bb INTEGER NOT NULL,
-  battle_id UUID,
-  challenge_id UUID,
-  payout_type TEXT NOT NULL,  -- 'battle_winner','battle_loser','battle_draw'
-  status TEXT NOT NULL DEFAULT 'pending',
-  scheduled_release_at TIMESTAMPTZ NOT NULL,
-  released_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-```
-RLS: users SELECT own rows. Service role full access.
-
-**b) Add `show_up_points INTEGER DEFAULT 0` to `tournament_standings`.**
-
-**c) RPCs (all `SECURITY DEFINER`, `FOR UPDATE` locks):**
-
-- `deduct_queue_entry_fee(p_user_id, p_category, p_amount_bb)` — standalone refactor from `register-tournament-bb` inline logic
-- `award_show_up_point(p_barber_profile_id, p_battle_id)` — idempotent +1 show-up point for tournament matches
-- `finalize_vod_prize_split(p_battle_id, p_winner_id, p_loser_id, p_is_draw)` — called by `close-voting` after 7-day vote; awards +2 season points to winner (or +1 each on draw)
+**What is broken or missing:**
+- `presign-upload-part` generates **one URL per call** — for a 2GB file (400 chunks), that's 400 sequential edge function calls. Needs batch support.
+- No barber role enforcement on edge functions — any authenticated user can upload
+- No abort/cleanup endpoint if upload is cancelled mid-way (orphaned R2 parts)
+- No chunking logic on the frontend — the entire file blob is sent in one PUT
+- No pause/resume/cancel capability
+- No per-chunk retry logic
+- Progress bar is fake (jumps to 100% on completion)
+- 500MB file size cap is arbitrary and too low for 5GB target
 
 ---
 
-### Phase 2: Rewrite `distribute-pot` (Delayed Payout)
+### Step 1: Upgrade Edge Functions
 
-Replace current instant-credit logic with the new split:
+**a) `presign-upload-part` — Add batch mode:**
+Accept either `partNumber` (single, backward-compat) or `partNumbers: number[]` (batch). Return `presignedUrls: { partNumber, presignedUrl }[]`. This reduces 400 calls to ~40 calls (batches of 10).
+
+**b) `initiate-multipart-upload` — Add barber role check:**
+After JWT validation, query `user_roles` table to confirm user has `barber` role. Return 403 if not.
+
+**c) `complete-multipart-upload` — Add DB sync:**
+After R2 stitching succeeds, insert a record into `battle_submissions` linking the public URL to the user and battle. This completes the pipeline without requiring a separate client call.
+
+**d) New: `abort-multipart-upload` edge function:**
+Accepts `key` + `uploadId`, calls `AbortMultipartUploadCommand` to clean up orphaned parts when user cancels.
+
+---
+
+### Step 2: Chunked Upload Engine (`src/lib/storage.ts`)
+
+New export: `multipartUploadToR2(file, battleId, callbacks)` with this architecture:
 
 ```text
-Winner: 10%  → pending_payouts (14-day hold)
-Loser:   2%  → pending_payouts (14-day hold)
-Platform:15% → platform_transactions (immediate)
-M4M:     5%  → m4m_fund_ledger (immediate)
-Prize:  68%  → category_prize_pools (immediate)
-
-DRAW: 6% each barber → pending_payouts
+File (up to 5GB)
+  ├── Slice into 5MB chunks (File.slice, zero-copy)
+  ├── Call initiate-multipart-upload → get uploadId + key
+  ├── Request presigned URLs in batches of 10
+  ├── Upload 4 chunks concurrently (Promise pool)
+  │   ├── Each chunk: fetch(PUT) to presigned URL
+  │   ├── Capture ETag from response header
+  │   └── On failure: retry 3x with exponential backoff
+  ├── Track completed parts in state array
+  ├── Report progress: completedChunks / totalChunks
+  └── Call complete-multipart-upload with all ETags
 ```
 
-- Accept `winner_id` (nullable), `loser_id`, `is_draw` boolean
-- Insert into `pending_payouts` with `scheduled_release_at = NOW() + 14 days`
-- Log `barber_bucks_transactions` with type `payout_pending`
-- Notify both barbers with release date
+Key design:
+- **AbortController** passed through for cancel support
+- **Pause**: stop dispatching new chunks from the pool (in-flight chunks finish)
+- **Resume**: restart the pool from the last incomplete chunk
+- **State object** returned to caller: `{ pause(), resume(), cancel(), promise }`
+- File is never loaded into memory — `File.slice()` returns a Blob view
 
 ---
 
-### Phase 3: `release-pending-payouts` Edge Function + pg_cron
+### Step 3: `ChunkedUploadProgress` Component
 
-- Query `pending_payouts WHERE status='pending' AND scheduled_release_at <= NOW()`
-- `FOR UPDATE` lock on `profiles.barber_bucks`, credit amount, mark `released`
-- Insert `barber_bucks_transactions` type `payout_released`
-- Notify barber
-- Schedule daily at 6am UTC via `cron.schedule`
-
----
-
-### Phase 4: Update `close-voting`
-
-After `calculate_match_result`:
-- Detect draw: if `winner_id` is null or vote margin < 1%
-- Call `distribute-pot` with `winner_id`, `loser_id`, `is_draw`
-- Call `finalize_vod_prize_split` RPC for season points
+Dedicated React component showing:
+- "Uploading chunk 47 of 400" text
+- True percentage bar based on confirmed chunks (not bytes sent)
+- Upload speed estimate (bytes confirmed / elapsed time)
+- Three buttons: **Pause** (yellow), **Resume** (green), **Cancel** (red)
+- Status states: `idle`, `uploading`, `paused`, `completing`, `done`, `error`
+- On cancel: calls `abort-multipart-upload` to clean R2
 
 ---
 
-### Phase 5: UI — Draw + Pending Payout
+### Step 4: Rewrite `VideoSubmissionModal` Upload Tab
 
-**BattleResults.tsx:** Show "Draw" badge when no winner. Show "Payout Pending — releases in X days" for both barbers.
-
-**BattleResultsView.tsx:** When `winner === 'tie'`, render both barbers equally (no crown). Show pending payout countdown.
-
----
-
-### Phase 6: Admin Matchmaking + SMS
-
-- **TournamentQueuePanel:** Add "Execute Match" button that calls matchmaker then `send-match-sms`
-- **`send-match-sms` edge function:** Twilio gateway call to both barbers' phone numbers (requires Twilio connector — will prompt during implementation)
-- **ChallengerFoundOverlay:** Full-screen cinematic triggered by Realtime notification `type = 'battle_match'`
+- Remove 500MB cap, set to 5GB (`5 * 1024 * 1024 * 1024`)
+- Replace `uploadBattleVideo` call with `multipartUploadToR2`
+- Mount `ChunkedUploadProgress` component during active upload
+- The `complete-multipart-upload` edge function handles DB insertion, so no separate `submit-battle-video` call needed for the upload path
+- Keep the "Paste URL" tab untouched
 
 ---
-
-### Phase 7: LiveKit Data Channel Donation Meter
-
-- **Server:** In `process-bb-donation`, use `RoomServiceClient.sendData()` to broadcast donation JSON to room
-- **Client:** `TugOfWarMeter` component listening on `RoomEvent.DataReceived`, animated ratio bar
-
----
-
-### Phase 8: Season Points on Room Join
-
-- In `generate-livekit-token`, after token creation for tournament match, call `award_show_up_point` RPC
-
----
-
-### Phase 9: Battle End Phase Transition
-
-- **`close-battle-room` edge function:** pg_cron triggers when `ends_at <= NOW()` and `status = 'live'`. Stops egress, deletes room, sets `status = 'processing'`
-- **ProcessingArena component:** "Generating Replay..." overlay with Realtime subscription watching for `processing` → `voting`
-- **`livekit-egress-webhook` update:** Handle `processing` → `voting` transition
-
----
-
-### Phase 10: S3 Multipart Chunked Upload
-
-Three edge functions: `initiate-multipart-upload`, `presign-upload-part`, `complete-multipart-upload` — all using `@aws-sdk/client-s3` against R2.
-
-Client in `VideoSubmissionModal`: 5MB chunks, 4 parallel uploads, progress tracking.
-
----
-
-### Phase 11: Enhanced VOD Playback
-
-- Tap-to-isolate audio per barber side in split-screen
-- Viewport-based autoplay via `IntersectionObserver`, max 3 active DOM videos
-
----
-
-### Execution Order
-
-| Priority | Phase | Dependencies |
-|----------|-------|-------------|
-| 1 | Phase 1 (Migration) | None |
-| 2 | Phase 2-3-4-5 (Payout) | Phase 1 |
-| 3 | Phase 6 (SMS) | Twilio connector |
-| 3 | Phase 7 (Data Channel) | None |
-| 3 | Phase 8 (Show-up points) | Phase 1 |
-| 4 | Phase 9 (Processing) | Phase 2 |
-| 5 | Phase 10-11 (Upload/Playback) | None |
 
 ### Files Summary
 
 | Action | File |
 |--------|------|
-| Migration | `pending_payouts` table, `show_up_points` column, 4 RPCs |
-| Rewrite | `supabase/functions/distribute-pot/index.ts` |
-| Create | `supabase/functions/release-pending-payouts/index.ts` |
-| Create | `supabase/functions/send-match-sms/index.ts` |
-| Create | `supabase/functions/close-battle-room/index.ts` |
-| Create | `supabase/functions/initiate-multipart-upload/index.ts` |
-| Create | `supabase/functions/presign-upload-part/index.ts` |
-| Create | `supabase/functions/complete-multipart-upload/index.ts` |
-| Create | `src/components/battles/ChallengerFoundOverlay.tsx` |
-| Create | `src/components/battles/TugOfWarMeter.tsx` |
-| Create | `src/components/battles/ProcessingArena.tsx` |
-| Update | `supabase/functions/close-voting/index.ts` |
-| Update | `src/components/battles/BattleResults.tsx` |
-| Update | `src/components/battles/BattleResultsView.tsx` |
-| Update | `src/components/sovereign/TournamentQueuePanel.tsx` |
-| Update | `src/pages/BattleTheater.tsx` |
-| Update | `src/components/battles/VideoSubmissionModal.tsx` |
-| Update | `supabase/functions/generate-livekit-token/index.ts` |
-| Update | `supabase/functions/process-bb-donation/index.ts` |
-| Update | `supabase/functions/livekit-egress-webhook/index.ts` |
+| Rewrite | `supabase/functions/presign-upload-part/index.ts` (batch mode) |
+| Update | `supabase/functions/initiate-multipart-upload/index.ts` (barber role check) |
+| Update | `supabase/functions/complete-multipart-upload/index.ts` (DB sync) |
+| Create | `supabase/functions/abort-multipart-upload/index.ts` |
+| Update | `src/lib/storage.ts` (add `multipartUploadToR2` engine) |
+| Create | `src/components/battles/ChunkedUploadProgress.tsx` |
+| Update | `src/components/battles/VideoSubmissionModal.tsx` (wire chunked engine) |
+
+### Technical Constraints Honored
+- **Zero pass-through**: Video bytes go client → R2 presigned URL. Edge functions only generate URLs.
+- **5MB minimum**: All chunks except the last are exactly 5,242,880 bytes.
+- **R2 keys server-only**: S3Client instantiation is exclusively in edge functions.
+- **No rebuild**: Auth flows, routing, and existing UI tabs are preserved.
 
