@@ -273,6 +273,26 @@ const WatchFeed = () => {
     if (loopPass > 3) break;
   }
 
+  // If ?video= param is set, find the matching feed item and jump to it
+  const [hasJumped, setHasJumped] = useState(false);
+  useEffect(() => {
+    if (targetVideoBarber && feed.length > 0 && !hasJumped) {
+      const idx = feed.findIndex(f => f.barber_user_id === targetVideoBarber);
+      if (idx >= 0) {
+        setActiveIndex(idx);
+        setHasJumped(true);
+        // Scroll to the item
+        setTimeout(() => {
+          const container = containerRef.current;
+          if (container) {
+            const target = container.querySelector(`[data-index="${idx}"]`);
+            target?.scrollIntoView({ behavior: 'instant' });
+          }
+        }, 100);
+      }
+    }
+  }, [targetVideoBarber, feed.length, hasJumped]);
+
   // Snap scrolling observer
   useEffect(() => {
     const container = containerRef.current;
