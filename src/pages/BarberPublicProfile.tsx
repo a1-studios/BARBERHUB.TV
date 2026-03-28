@@ -1,19 +1,30 @@
-import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { parseSpecialties, getSpecialtyDisplay } from '@/config/specialtyTags';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, MapPin, Award, Upload, Image as ImageIcon, Video, Trash2, Calendar, Instagram, Twitter, Youtube, Facebook } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { ArrowLeft, MapPin, Award, Upload, Image as ImageIcon, Video, Trash2, Calendar, Instagram, Twitter, Youtube, Facebook, Settings, Briefcase, Globe, DollarSign, Shield, Save, Navigation, Loader2, ChevronDown, Lock } from 'lucide-react';
 import { BarberVideoSection } from '@/components/barber/BarberVideoSection';
 import { BarberActionButtons } from '@/components/barber/BarberActionButtons';
 import { AvatarCrest } from '@/components/AvatarCrest';
-import { useState } from 'react';
+import { AvatarUpload } from '@/components/profiles/AvatarUpload';
+import { SpecialtyPillSelector } from '@/components/profiles/SpecialtyPillSelector';
+import { ServicesManager } from '@/components/profiles/ServicesManager';
+import { WeeklyAvailabilityManager } from '@/components/profiles/WeeklyAvailabilityManager';
+import { useState, useEffect } from 'react';
 import { DonationModal } from '@/components/DonationModal';
 import { BookingConsole } from '@/components/booking/BookingConsole';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,13 +35,25 @@ import { uploadPortfolioMedia } from '@/lib/storage';
 export default function BarberPublicProfile() {
   const { userId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { isBarber: isVisitorBarber } = useUserRole();
+  const queryClient = useQueryClient();
   const [isDonationModalOpen, setIsDonationModalOpen] = useState(false);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [gettingLocation, setGettingLocation] = useState(false);
   
   const isOwner = user?.id === userId;
+  const editMode = searchParams.get('edit') === 'true';
+
+  // Auto-open settings panel when navigating with ?edit=true
+  useEffect(() => {
+    if (isOwner && editMode) {
+      setSettingsOpen(true);
+    }
+  }, [isOwner, editMode]);
 
   // Fetch barber profile using unified view
   const { data: barberData, isLoading } = useQuery({
@@ -63,6 +86,184 @@ export default function BarberPublicProfile() {
     },
     enabled: !!userId
   });
+
+  // Fetch full barber profile for editing (owner only)
+  const { data: barberProfile } = useQuery({
+    queryKey: ['barberProfile', userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      const { data, error } = await supabase
+        .from('barber_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId && isOwner
+  });
+
+  // Fetch profile for editing (owner only)
+  const { data: ownerProfile } = useQuery({
+    queryKey: ['profile', userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId && isOwner
+  });
+
+  // Fetch availability settings
+  const { data: availabilityData } = useQuery({
+    queryKey: ['barber-availability-settings', userId],
+    queryFn: async () => {
+      if (!userId) return null;
+      const { data, error } = await supabase
+        .from('barber_availability')
+        .select('slot_duration_minutes')
+        .eq('barber_user_id', userId)
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!userId && isOwner
+  });
+
+  // Owner editing form state
+  const [barberForm, setBarberForm] = useState({
+    specialty: '',
+    bio: '',
+    location: '',
+    portfolio_url: '',
+    instagram: '',
+    facebook: '',
+    twitter: '',
+    youtube: '',
+    accepting_clients: true,
+    available_for_battles: true,
+    require_deposit: true,
+    default_no_show_fee_bb: 50,
+    booking_message: '',
+    slot_duration_minutes: '30'
+  });
+
+  useEffect(() => {
+    if (barberProfile) {
+      setBarberForm({
+        specialty: barberProfile.specialty || '',
+        bio: barberProfile.bio || '',
+        location: barberProfile.location || '',
+        portfolio_url: barberProfile.portfolio_url || '',
+        instagram: (barberProfile as any).instagram_handle || '',
+        facebook: (barberProfile as any).facebook_handle || '',
+        twitter: (barberProfile as any).twitter_handle || '',
+        youtube: (barberProfile as any).youtube_handle || '',
+        accepting_clients: true,
+        available_for_battles: true,
+        require_deposit: (barberProfile as any).require_deposit ?? true,
+        default_no_show_fee_bb: (barberProfile as any).default_no_show_fee_bb ?? 50,
+        booking_message: (barberProfile as any).booking_message || '',
+        slot_duration_minutes: availabilityData?.slot_duration_minutes?.toString() || '30'
+      });
+    }
+  }, [barberProfile, availabilityData]);
+
+  // Update barber profile mutation
+  const updateBarberMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (!userId) throw new Error('No user');
+      const barberData: Record<string, any> = {
+        user_id: userId,
+        specialty: data.specialty,
+        bio: data.bio,
+        location: data.location,
+        portfolio_url: data.portfolio_url,
+        instagram_handle: data.instagram || null,
+        facebook_handle: data.facebook || null,
+        twitter_handle: data.twitter || null,
+        youtube_handle: data.youtube || null,
+        require_deposit: data.require_deposit,
+        default_no_show_fee_bb: data.default_no_show_fee_bb,
+        booking_message: data.booking_message || null
+      };
+
+      const { error } = await supabase
+        .from('barber_profiles')
+        .upsert(barberData as any, { onConflict: 'user_id' });
+      if (error) throw error;
+
+      const duration = parseInt(data.slot_duration_minutes) || 30;
+      const { error: availError } = await supabase
+        .from('barber_availability')
+        .update({ slot_duration_minutes: duration })
+        .eq('barber_user_id', userId);
+      if (availError) console.warn('Could not update slot duration:', availError.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['barberProfile', userId] });
+      queryClient.invalidateQueries({ queryKey: ['barber-public-profile', userId] });
+      toast.success('Settings saved!');
+    },
+    onError: (error: any) => {
+      toast.error('Failed to save: ' + error.message);
+    },
+  });
+
+  const handleAvatarChange = async (url: string) => {
+    if (!userId) return;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ avatar_url: url })
+      .eq('user_id', userId);
+    if (error) {
+      toast.error('Failed to update avatar');
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ['profile', userId] });
+    queryClient.invalidateQueries({ queryKey: ['barber-public-profile', userId] });
+    toast.success('Avatar updated!');
+  };
+
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser');
+      return;
+    }
+    setGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const res = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&localityLanguage=en`
+          );
+          const data = await res.json();
+          const location = [data.city, data.principalSubdivision, data.countryName].filter(Boolean).join(', ');
+          setBarberForm(prev => ({ ...prev, location }));
+          toast.success('Location detected!');
+        } catch {
+          setBarberForm(prev => ({ ...prev, location: `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}` }));
+        }
+        setGettingLocation(false);
+      },
+      (err) => {
+        toast.error('Could not get your location: ' + err.message);
+        setGettingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const handleBarberSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateBarberMutation.mutate(barberForm);
+  };
 
   // Map stats directly from the view data
   const stats = barberData ? {
@@ -116,7 +317,6 @@ export default function BarberPublicProfile() {
     if (!confirm('Are you sure you want to delete this item?')) return;
 
     try {
-      // Delete from database only (media lives on R2, orphan is acceptable)
       const { error: dbError } = await supabase
         .from('creations')
         .delete()
@@ -136,7 +336,6 @@ export default function BarberPublicProfile() {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (type === 'image' && !file.type.startsWith('image/')) {
       toast.error('Please select an image file');
       return;
@@ -146,20 +345,17 @@ export default function BarberPublicProfile() {
       return;
     }
 
-    // Check limits
     if (type === 'image' && imageCount >= 5) {
       toast.error('Maximum 5 images allowed');
       return;
     }
-    // Enforce cumulative 5GB cap across all portfolio media
     const existingTotalSize = (portfolio || []).reduce((sum, p) => sum + (p as any).file_size_bytes || 0, 0);
     if (existingTotalSize + file.size > 5 * 1024 * 1024 * 1024) {
       toast.error('Portfolio storage limit reached');
       return;
     }
 
-    // Validate individual file size
-    const maxSize = type === 'video' ? 5 * 1024 * 1024 * 1024 : 10 * 1024 * 1024; // 5GB for video, 10MB for image
+    const maxSize = type === 'video' ? 5 * 1024 * 1024 * 1024 : 10 * 1024 * 1024;
     if (file.size > maxSize) {
       toast.error(`File too large`);
       return;
@@ -167,10 +363,8 @@ export default function BarberPublicProfile() {
 
     setUploading(true);
     try {
-      // Upload to R2 via presigned URL
       const publicUrl = await uploadPortfolioMedia(file, user?.id || '');
 
-      // Create portfolio entry
       const { error: createError } = await supabase
         .from('creations')
         .insert({
@@ -309,7 +503,7 @@ export default function BarberPublicProfile() {
                     </div>
                   )}
 
-                  {/* Social Media Icons - Max 3 */}
+                  {/* Social Media Icons */}
                   {(() => {
                     const socials = [
                       { key: 'instagram', url: (barberData as any).instagram_handle, icon: Instagram, hoverClass: 'hover:text-pink-500' },
@@ -354,7 +548,7 @@ export default function BarberPublicProfile() {
                   </div>
                 </div>
 
-                {/* Action Buttons - Only show for visitors, not the profile owner */}
+                {/* Action Buttons - Only show for visitors */}
                 {!isOwner && (
                   <div className="flex gap-3 flex-wrap">
                     <BarberActionButtons
@@ -363,7 +557,6 @@ export default function BarberPublicProfile() {
                       onDonateClick={() => setIsDonationModalOpen(true)}
                     />
                     
-                    {/* Book Appointment - Only for clients/fans */}
                     {!isVisitorBarber && (
                       <Button 
                         variant="default" 
@@ -391,7 +584,6 @@ export default function BarberPublicProfile() {
           </TabsList>
 
           <TabsContent value="about" className="space-y-6">
-            {/* About Section */}
             <Card>
               <CardHeader>
                 <CardTitle>About</CardTitle>
@@ -418,7 +610,6 @@ export default function BarberPublicProfile() {
               </CardContent>
             </Card>
 
-            {/* Recent Battles */}
             {recentBattles && recentBattles.length > 0 && (
               <Card>
                 <CardHeader>
@@ -459,7 +650,7 @@ export default function BarberPublicProfile() {
                   isLive={barberData.is_live}
                   aspectRatio="landscape"
                   barberUserId={userId}
-                  isOwner={true}
+                  isOwner={isOwner}
                   onVideoUploaded={() => window.location.reload()}
                 />
               </CardContent>
@@ -571,7 +762,6 @@ export default function BarberPublicProfile() {
                       })}
                     </div>
                     
-                    {/* Show upload prompt */}
                     {isOwner && (
                       <div className="flex gap-4 pt-4 border-t border-primary/10">
                         <button
@@ -639,6 +829,329 @@ export default function BarberPublicProfile() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* ===== OWNER SETTINGS PANEL ===== */}
+        {isOwner && (
+          <Collapsible open={settingsOpen} onOpenChange={setSettingsOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full flex items-center justify-between border-primary/30">
+                <div className="flex items-center gap-2">
+                  <Settings className="h-4 w-4 text-primary" />
+                  <span>Edit Profile & Settings</span>
+                </div>
+                <ChevronDown className={`h-4 w-4 transition-transform ${settingsOpen ? 'rotate-180' : ''}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-6 pt-4">
+              {/* Avatar */}
+              <Card className="border-primary/30">
+                <CardHeader>
+                  <CardTitle className="text-lg">Avatar</CardTitle>
+                </CardHeader>
+                <CardContent className="flex justify-center">
+                  <AvatarUpload
+                    currentAvatar={ownerProfile?.avatar_url || ''}
+                    onAvatarChange={handleAvatarChange}
+                    size="lg"
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Locked Fields */}
+              <Card className="border-border/30">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Lock className="h-4 w-4 text-muted-foreground" />
+                    Identity (Locked)
+                  </CardTitle>
+                  <CardDescription>These fields are set during registration and cannot be changed.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Username</Label>
+                    <p className="text-sm font-medium text-foreground">@{ownerProfile?.username || '—'}</p>
+                  </div>
+                  <Separator />
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Nationality</Label>
+                    <p className="text-sm font-medium text-foreground">
+                      {barberData.country_code ? (
+                        <span>{getCountryFlag(barberData.country_code)} {barberData.country_code.toUpperCase()}</span>
+                      ) : '—'}
+                    </p>
+                  </div>
+                  <Separator />
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Email</Label>
+                    <p className="text-sm text-muted-foreground">{user?.email || '—'}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Phone</Label>
+                    <p className="text-sm text-muted-foreground">{barberProfile?.phone_number || '—'}</p>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground/60 pt-1">Contact support to update locked fields.</p>
+                </CardContent>
+              </Card>
+
+              {/* Professional Settings */}
+              <Card className="border-primary/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Briefcase className="h-5 w-5 text-primary" />
+                    Professional
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleBarberSubmit} className="space-y-5">
+                    {/* Social Media Links */}
+                    <div className="p-3 rounded-lg border border-primary/20 bg-primary/5">
+                      <h4 className="font-semibold mb-3 flex items-center gap-2 text-sm">
+                        <Globe className="h-4 w-4 text-primary" />
+                        Social Media Links
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="flex items-center gap-2">
+                          <Instagram className="h-4 w-4 text-pink-500 flex-shrink-0" />
+                          <Input
+                            placeholder="@instagram"
+                            value={barberForm.instagram}
+                            onChange={(e) => setBarberForm(prev => ({ ...prev, instagram: e.target.value }))}
+                            className="h-9 text-sm"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Facebook className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                          <Input
+                            placeholder="facebook.com/profile"
+                            value={barberForm.facebook}
+                            onChange={(e) => setBarberForm(prev => ({ ...prev, facebook: e.target.value }))}
+                            className="h-9 text-sm"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Twitter className="h-4 w-4 text-blue-400 flex-shrink-0" />
+                          <Input
+                            placeholder="@twitter"
+                            value={barberForm.twitter}
+                            onChange={(e) => setBarberForm(prev => ({ ...prev, twitter: e.target.value }))}
+                            className="h-9 text-sm"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Youtube className="h-4 w-4 text-red-500 flex-shrink-0" />
+                          <Input
+                            placeholder="youtube.com/channel"
+                            value={barberForm.youtube}
+                            onChange={(e) => setBarberForm(prev => ({ ...prev, youtube: e.target.value }))}
+                            className="h-9 text-sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Specialties */}
+                    <div>
+                      <Label className="mb-2 block">Specialties</Label>
+                      <SpecialtyPillSelector
+                        value={barberForm.specialty}
+                        onChange={(value) => setBarberForm(prev => ({ ...prev, specialty: value }))}
+                        compact
+                      />
+                    </div>
+
+                    {/* Location */}
+                    <div>
+                      <Label htmlFor="location" className="flex items-center gap-2">
+                        <MapPin className="h-3.5 w-3.5 text-primary" />
+                        Location
+                      </Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          id="location"
+                          value={barberForm.location}
+                          onChange={(e) => setBarberForm(prev => ({ ...prev, location: e.target.value }))}
+                          placeholder="City, State/Country"
+                          className="flex-1"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={handleGetLocation}
+                          disabled={gettingLocation}
+                          title="Use my location"
+                        >
+                          {gettingLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <Navigation className="h-4 w-4 text-primary" />}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Professional Bio */}
+                    <div>
+                      <Label htmlFor="prof_bio">Professional Bio</Label>
+                      <Textarea
+                        id="prof_bio"
+                        value={barberForm.bio}
+                        onChange={(e) => setBarberForm(prev => ({ ...prev, bio: e.target.value }))}
+                        placeholder="Describe your style and what makes you unique..."
+                        rows={3}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="portfolio_url">Portfolio Website</Label>
+                      <Input
+                        id="portfolio_url"
+                        value={barberForm.portfolio_url}
+                        onChange={(e) => setBarberForm(prev => ({ ...prev, portfolio_url: e.target.value }))}
+                        placeholder="https://your-portfolio.com"
+                        type="url"
+                      />
+                    </div>
+
+                    <Button type="submit" disabled={updateBarberMutation.isPending} className="w-full">
+                      {updateBarberMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Professional Info
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+
+              {/* Business Settings */}
+              <Card className="border-primary/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <DollarSign className="h-5 w-5 text-primary" />
+                    Business
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="accepting_clients">Accepting New Clients</Label>
+                        <p className="text-sm text-muted-foreground">Allow new clients to book</p>
+                      </div>
+                      <Switch
+                        id="accepting_clients"
+                        checked={barberForm.accepting_clients}
+                        onCheckedChange={(checked) => setBarberForm(prev => ({ ...prev, accepting_clients: checked }))}
+                      />
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="available_battles">Available for Battles</Label>
+                        <p className="text-sm text-muted-foreground">Participate in competitions</p>
+                      </div>
+                      <Switch
+                        id="available_battles"
+                        checked={barberForm.available_for_battles}
+                        onCheckedChange={(checked) => setBarberForm(prev => ({ ...prev, available_for_battles: checked }))}
+                      />
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="require_deposit">Require Deposit</Label>
+                        <p className="text-sm text-muted-foreground">Clients pay BB deposit to book</p>
+                      </div>
+                      <Switch
+                        id="require_deposit"
+                        checked={barberForm.require_deposit}
+                        onCheckedChange={(checked) => setBarberForm(prev => ({ ...prev, require_deposit: checked }))}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="no_show_fee">No-Show Fee (BB)</Label>
+                      <Input
+                        id="no_show_fee"
+                        type="number"
+                        min={0}
+                        max={1000}
+                        value={barberForm.default_no_show_fee_bb}
+                        onChange={(e) => setBarberForm(prev => ({ ...prev, default_no_show_fee_bb: parseInt(e.target.value) || 0 }))}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="booking_message">Custom Booking Message</Label>
+                      <Textarea
+                        id="booking_message"
+                        value={barberForm.booking_message}
+                        onChange={(e) => setBarberForm(prev => ({ ...prev, booking_message: e.target.value }))}
+                        placeholder="e.g., Please arrive 5 minutes early."
+                        rows={2}
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="slot_duration">Time Slot Duration</Label>
+                      <Select value={barberForm.slot_duration_minutes} onValueChange={(value) => setBarberForm(prev => ({ ...prev, slot_duration_minutes: value }))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select slot duration" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="15">15 minutes</SelectItem>
+                          <SelectItem value="30">30 minutes</SelectItem>
+                          <SelectItem value="45">45 minutes</SelectItem>
+                          <SelectItem value="60">60 minutes</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <ServicesManager barberId={barberProfile?.id} />
+
+                  <Separator />
+
+                  <WeeklyAvailabilityManager barberId={barberProfile?.id} />
+
+                  <Button 
+                    onClick={handleBarberSubmit} 
+                    disabled={updateBarberMutation.isPending}
+                    className="w-full"
+                  >
+                    {updateBarberMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Business Settings
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Privacy */}
+              <Card className="border-border/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Shield className="h-5 w-5 text-muted-foreground" />
+                    Privacy & Security
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-center py-8">
+                    <Shield className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
+                    <p className="text-sm text-muted-foreground">Advanced privacy settings coming soon</p>
+                    <div className="space-y-1 text-xs text-muted-foreground/60 mt-3">
+                      <p>• Two-factor authentication</p>
+                      <p>• Profile visibility controls</p>
+                      <p>• Data export and deletion</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
       </div>
 
       <Footer />
