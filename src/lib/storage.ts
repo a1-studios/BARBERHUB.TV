@@ -297,15 +297,16 @@ export async function uploadFileToR2(
   const MULTIPART_THRESHOLD = 50 * 1024 * 1024; // 50MB
 
   if (file.size >= MULTIPART_THRESHOLD) {
-    const battleId = category === 'recordings'
-      ? (options?.battleId || `${category}-${userId}`)
-      : `${category}-${userId}`;
+    // For multipart, we pass the category so the edge function generates the correct R2 key prefix
+    const battleIdForMultipart = category === 'recordings'
+      ? (options?.battleId || 'general')
+      : undefined;
 
     const controller = multipartUploadToR2(
       file,
-      battleId,
+      battleIdForMultipart || '',
       (progress) => onProgress?.(progress.percentage),
-      { title: options?.title, description: options?.description }
+      { title: options?.title, description: options?.description, category }
     );
     return controller.promise;
   }
