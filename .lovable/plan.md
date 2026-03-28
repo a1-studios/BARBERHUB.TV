@@ -1,65 +1,50 @@
 
 
-# Portfolio Video Management, Hero Randomization & Profile Fixes
+# Unify Barber Portfolio, Visible Delete, and BARBER-HUB Watermark
 
-## What We're Building
+## Problem Summary
 
-Six improvements across portfolio management, sponsor display, video randomization, and profile UX.
-
----
-
-### 1. Allow barbers to delete portfolio videos
-The delete button already exists for portfolio items in `BarberPublicProfile.tsx` (line 572-581) but the actual DB delete may fail due to missing RLS policies.
-
-**Changes:**
-- **`BarberPublicProfile.tsx`**: The delete handler at line 115 tries to delete from Supabase Storage, but portfolio media lives on R2 (not Supabase Storage). Fix the handler to only delete the `creations` DB row (the R2 URL stays orphaned -- acceptable for now). Ensure the delete button is visible for video items (it already renders for owners via `isOwner` check).
-- **New migration**: Add a DELETE RLS policy on the `creations` table so authenticated users can delete their own rows (join through `barber_profiles` to match `user_id`).
+1. **Settings Portfolio tab is disconnected** — `PortfolioManager` uses local `useState` for images and never reads the `creations` table. So uploads done on the public profile don't appear in Settings, and vice versa.
+2. **Delete button invisible on mobile** — Uses `opacity-0 group-hover:opacity-100`, which doesn't work on touch devices.
+3. **Watermark needs redesign** — Currently tiny "BARBER HUB" top-left at 10px. Needs centered, transparent, tactical "BARBER-HUB" with "-HUB" in signature orange.
 
 ---
 
-### 2. Randomize sponsor ad in DynamicBattleHero & reposition
-Currently `SponsorStrip` always picks `sponsors[0]`. Also, user wants it positioned bottom-right next to the barber name, not above it.
+## Plan
 
-**Changes in `DynamicBattleHero.tsx`:**
-- In `SponsorStrip`, pick a random sponsor using `useMemo(() => sponsors[Math.floor(Math.random() * sponsors.length)], [sponsors])`.
-- Move the `<SponsorStrip />` from above the name row to inside the name row, on the right side (next to the mute button area), so it sits bottom-right.
+### 1. Rewrite PortfolioManager to use the `creations` table
+**File: `src/components/profiles/PortfolioManager.tsx`**
 
----
+- Replace local `useState<PortfolioImage[]>` with a `useQuery` that fetches from `creations` table (same query as `BarberPublicProfile`):  
+  `supabase.from('creations').select('*').eq('barber_id', barberId).order('created_at', { ascending: false })`
+- Accept both images AND videos (change `accept="image/*"` → `accept="image/*,video/*"`)
+- On upload, use `uploadPortfolioMedia` (R2) then insert into `creations` table (matching BarberPublicProfile's handler)
+- On delete, call `supabase.from('creations').delete().eq('id', id)` and invalidate the query
+- Apply the same 5GB cumulative cap logic
+- Show videos inline with a `<video>` tag (like BarberPublicProfile does)
 
-### 3. Randomize hero fallback video
-Currently the `fallbackHeroVideo` query fetches up to 10 videos but always uses `valid[0]`.
+### 2. Make delete button always visible for owners
+**File: `src/pages/BarberPublicProfile.tsx`** (lines 559-567)
 
-**Changes in `DynamicBattleHero.tsx`:**
-- Replace `valid[0]` with `valid[Math.floor(Math.random() * valid.length)]` to pick a random video each time the query runs.
+Change `opacity-0 group-hover:opacity-100` → always visible on mobile:
+```
+className="absolute top-2 left-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity h-8 w-8"
+```
 
----
+Same pattern applied in the rewritten `PortfolioManager`.
 
-### 4. Allow multiple video uploads (5GB cumulative cap)
-Currently limited to 1 video in the portfolio. User wants multiple videos with a shared 5GB cap across all media (images + videos).
+### 3. Centered BARBER-HUB watermark
+**File: `src/components/BrandedVideoPlayer.tsx`** (lines 121-127)
 
-**Changes in `BarberPublicProfile.tsx`:**
-- Remove the `videoCount >= 1` guard. Replace with a cumulative size check: query total media size from the `creations` table (we'll store `file_size` on each creation).
-- Since `creations` table likely doesn't have a `file_size` column, we can enforce the cap client-side by tracking uploaded sizes. Internally cap at 5GB total -- if the new file would exceed 5GB, block with a toast error.
-- Update the UI to remove "0/1 video" labeling. Just show count of items.
-- Update the "Upload Video" button to not disable after 1 video.
+Replace the top-left 10px watermark with a centered, transparent tactical watermark:
+- Position: `absolute inset-0 flex items-center justify-center` (dead center of video)
+- Text: `BARBER` in white/15 opacity, `-HUB` in primary (orange) /20 opacity
+- Size: `text-2xl font-black tracking-[0.3em]`
+- Style: `pointer-events-none select-none` so it doesn't interfere with controls
 
----
+**File: `src/pages/WatchFeed.tsx`**
 
-### 5. Center avatar in barber profile hero
-The hero section uses `items-start` on the flex container (line 273), causing the avatar to align top-left on mobile.
-
-**Changes in `BarberPublicProfile.tsx`:**
-- Change `items-start` to `items-center` on the flex container.
-- On mobile (single column), center the AvatarCrest with `mx-auto`.
-
----
-
-### 6. Fix 403 on barber profile access
-The profile page queries `public_barber_profiles` (a view) and `barber_profiles`. If the visitor isn't authenticated or doesn't have SELECT access, they get 403.
-
-**Changes:**
-- **New migration**: Ensure `barber_profiles` has a SELECT policy for authenticated users (at minimum for the columns needed: `active_subscription_tier`, `m4m_certified`, etc.). The `public_barber_profiles` view likely runs as `security_definer` already, but the direct `barber_profiles` query at line 56 needs its own policy.
-- Add a SELECT policy: `authenticated` users can read any `barber_profiles` row (public data).
+Add the same centered watermark overlay to each feed video item (the WatchFeed doesn't use `BrandedVideoPlayer`).
 
 ---
 
@@ -67,7 +52,8 @@ The profile page queries `public_barber_profiles` (a view) and `barber_profiles`
 
 | File | Changes |
 |------|---------|
-| `src/pages/BarberPublicProfile.tsx` | Fix delete handler (skip storage delete for R2 URLs), remove 1-video cap, center avatar, remove size labels |
-| `src/components/DynamicBattleHero.tsx` | Randomize sponsor pick, reposition strip to bottom-right, randomize fallback video selection |
-| New migration | DELETE policy on `creations`, SELECT policy on `barber_profiles` for authenticated users |
+| `src/components/profiles/PortfolioManager.tsx` | Full rewrite — query `creations` table, support images+videos, delete from DB, R2 upload |
+| `src/pages/BarberPublicProfile.tsx` | Make delete button always visible on mobile (1 line) |
+| `src/components/BrandedVideoPlayer.tsx` | Replace top-left watermark with centered transparent "BARBER-HUB" |
+| `src/pages/WatchFeed.tsx` | Add same centered watermark overlay to feed videos |
 
