@@ -5,7 +5,6 @@ import { ArrowLeft, Play, GraduationCap, Flame } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { RotateCcw } from "lucide-react";
 import SplitScreenBattle from "@/components/battles/SplitScreenBattle";
 
 interface FeedItem {
