@@ -1,58 +1,61 @@
 
 
-# Fix Camera Studio: Flip Button, Record Button & Direct Challenge
+# Fix Camera Studio: Recording Errors, Missing Mobile Buttons, Flip Camera
 
-## Three Issues
+## Issues Identified
 
-1. **Flip camera does nothing** — currently calls `stopPreview(); startPreview()` which re-opens the same default camera. There is no `facingMode` state, so it never switches between front and rear.
-2. **No record button visible** — the REC button is gated behind `studioMode !== 'idle'`, but users land in `idle` mode. They must first open the mode drawer and pick Portfolio/Course/Tips before any record button appears.
-3. **No barber search in Challenge modal** — the ChallengeModal only shows preset challenges and an open challenge feed. There is no way to search for a specific barber on the network and issue a direct challenge.
+1. **Recording fails on save (iOS)**: `MediaRecorder` uses `video/webm` which iOS Safari does not support. Safari only supports `video/mp4` with H.264. The current code hardcodes `video/webm;codecs=vp9` with a fallback to `video/webm` — both fail on iOS.
+
+2. **No REC button / flip button on mobile**: The bottom control bar renders 5 buttons (video, audio, REC, mode, flip) in a single row. The REC button is 56px, others are 48px. Total width with gaps: ~296px. This *should* fit on 390px, but the `pb-[env(safe-area-inset-bottom,16px)]` combined with the gradient overlay may be clipping. More likely: the `isActive` state never becomes `true` on mobile because the camera permission flow fails silently or the `Start Camera` overlay is not tappable behind the safe area inset.
+
+3. **Flip camera not working**: The code calls `setSelectedCamera('')` + `setFacingMode(toggle)` which triggers the `useEffect` that calls `stopPreview(); startPreview()`. However `stopPreview` is synchronous but stream stop is async — `startPreview` may race with the old stream cleanup. Also, `stopPreview` calls `stopRecording()` which may reference stale state.
+
+4. **WatchFeed**: The screenshots show platform promos and educator content rendering correctly in theater mode (not split-screen). This appears to be working as intended — only `type: "battle"` items with valid HTTP URLs render in SplitScreenBattle.
 
 ---
 
 ## Changes
 
-### 1. Fix flip camera (src/pages/CameraStudio.tsx)
+### File: `src/pages/CameraStudio.tsx`
 
-- Add `facingMode` state: `useState<'user' | 'environment'>('user')`
-- In `startPreview`, use `facingMode` state instead of hardcoded `'user'` when no `selectedCamera` is set
-- Replace the flip button's `onClick` to toggle `facingMode` and restart the stream:
-  ```
-  onClick={() => {
-    setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
-  }}
-  ```
-- The existing `useEffect` on device changes (line 282) already calls `stopPreview(); startPreview()` — add `facingMode` to its dependency array so switching triggers a restart
-- On mobile (iOS Safari), `facingMode` constraint is the only reliable way to switch cameras — `deviceId` enumeration is often restricted
+**Fix 1 — iOS MediaRecorder compatibility (lines 188-244)**
+- Detect Safari/iOS: check if `MediaRecorder.isTypeSupported('video/mp4')` — Safari supports this
+- Fall through: `video/mp4` → `video/webm;codecs=vp9` → `video/webm`
+- Update the upload `contentType` and filename extension to match the selected MIME type
+- In `handleRecordingComplete`, use the actual mimeType from the recorder
 
-### 2. Show record button by default (src/pages/CameraStudio.tsx)
+**Fix 2 — Mobile button visibility (lines 493-564)**
+- Reduce button sizes from `h-12 w-12` to `h-10 w-10` for the 4 secondary buttons (video, audio, mode, flip)
+- Keep the REC button at `h-14 w-14` as the primary action
+- Reduce gap from `gap-3` to `gap-2` to ensure all 5 buttons fit within 390px minus padding
+- Increase touch target with padding so it still meets the 48px minimum touch area
 
-- Remove the `studioMode !== 'idle'` guard from the REC/STOP button rendering (line 506)
-- Always show the REC button when the camera is active — default recording mode is `portfolio`
-- When user taps REC without selecting a mode, auto-set `studioMode` to `'portfolio'` so the upload path is defined
-- Keep the mode badge: show "Portfolio" by default, update when user picks a different mode
+**Fix 3 — Flip camera race condition (lines 555-563)**
+- Instead of relying on `useEffect` to detect state changes, call `stopPreview()` then `await startPreview()` directly in the click handler
+- Remove `facingMode` from the `useEffect` dependency array (line 285) to prevent double-restart
+- Add a guard `isFlipping` ref to prevent multiple rapid taps
 
-### 3. Add barber search to ChallengeModal (src/components/battles/ChallengeModal.tsx)
+**Fix 4 — Ensure recording works on all browsers**
+- Add a `supportedMimeType` helper that returns the best available format
+- Store the chosen mimeType in a ref so `handleRecordingComplete` uses the correct content-type for the R2 upload
 
-- Add a "Direct Challenge" section above the existing ChallengeFeed
-- Query `public_barber_profiles` view for barbers (same data source as BarberSearchAutocomplete)
-- Show a search input + results list with avatar, name, and location
-- When a barber is selected, show a stake slider (100-500 BB) and "Challenge [Name]" button
-- On submit, call `create-challenge-stake` with the existing parameters + a new `target_barber_id` field
-
-### 4. Update edge function (supabase/functions/create-challenge-stake/index.ts)
-
-- Add optional `target_barber_id` to the `StakeRequest` interface
-- When provided, set it on the `open_challenges` insert (the column may need to be added or use `bounty_description` to encode the target for now)
-- This enables directed challenges that show up only for the targeted barber
+### File: `src/pages/WatchFeed.tsx`
+No changes needed — the feed already correctly separates battle content (split-screen) from video/educator/platform content (theater mode).
 
 ---
 
-## Files Modified
+## Technical Detail
 
-| File | Change |
-|------|--------|
-| `src/pages/CameraStudio.tsx` | Add `facingMode` state, fix flip button, show REC in idle mode |
-| `src/components/battles/ChallengeModal.tsx` | Add barber search section with direct challenge UI |
-| `supabase/functions/create-challenge-stake/index.ts` | Accept optional `target_barber_id` |
+```text
+MIME type detection order:
+1. video/mp4           ← Safari/iOS
+2. video/webm;codecs=vp9  ← Chrome/Firefox
+3. video/webm          ← Fallback
+
+Button layout at 390px:
+Available: 390 - 32px (px-4) = 358px
+Buttons: 40 + 40 + 56 + 40 + 40 = 216px
+Gaps: 4 × 8px (gap-2) = 32px
+Total: 248px ← comfortable fit
+```
 
