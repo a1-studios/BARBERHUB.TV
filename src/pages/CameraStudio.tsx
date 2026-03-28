@@ -42,22 +42,22 @@ export default function CameraStudio() {
   const [selectedMic, setSelectedMic] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  // Twilio room connection (only when battleId is present)
-  const twilioRoom = useBattleVideoRoom({
+  // LiveKit room connection (only when battleId is present)
+  const battleRoom = useBattleVideoRoom({
     battleId: battleId || 'studio-test',
   });
 
   // Attach remote video track to opponent ref
   useEffect(() => {
-    if (twilioRoom.remoteVideoTrack && opponentVideoRef.current) {
-      const el = twilioRoom.remoteVideoTrack.attach();
+    if (battleRoom.remoteVideoTrack && opponentVideoRef.current) {
+      const el = battleRoom.remoteVideoTrack.attach();
       opponentVideoRef.current.innerHTML = '';
       opponentVideoRef.current.appendChild(el);
       return () => {
-        twilioRoom.remoteVideoTrack?.detach().forEach(e => e.remove());
+        battleRoom.remoteVideoTrack?.detach().forEach(e => e.remove());
       };
     }
-  }, [twilioRoom.remoteVideoTrack]);
+  }, [battleRoom.remoteVideoTrack]);
 
   // Enumerate devices
   const enumerateDevices = useCallback(async () => {
@@ -334,8 +334,8 @@ export default function CameraStudio() {
           {/* Connection status */}
           {battleId && (
             <div className="absolute top-3 right-3 z-10">
-              <Badge variant="outline" className={`text-xs ${twilioRoom.isConnected ? 'border-green-500/50 text-green-500' : 'border-muted-foreground/50 text-muted-foreground'}`}>
-                {twilioRoom.isConnected ? <><Wifi className="h-3 w-3 mr-1" /> Connected</> : <><WifiOff className="h-3 w-3 mr-1" /> Not Connected</>}
+              <Badge variant="outline" className={`text-xs ${battleRoom.isConnected ? 'border-green-500/50 text-green-500' : 'border-muted-foreground/50 text-muted-foreground'}`}>
+                {battleRoom.isConnected ? <><Wifi className="h-3 w-3 mr-1" /> Connected</> : <><WifiOff className="h-3 w-3 mr-1" /> Not Connected</>}
               </Badge>
             </div>
           )}
@@ -400,27 +400,27 @@ export default function CameraStudio() {
                 </Button>
 
                 {/* Twilio connect/disconnect */}
-                {battleId && isActive && !twilioRoom.isConnected && !twilioRoom.isConnecting && (
+                {battleId && isActive && !battleRoom.isConnected && !battleRoom.isConnecting && (
                   <Button
                     size="sm"
                     className="rounded-full px-4 bg-gradient-to-r from-blue-600 to-cyan-600"
-                    onClick={() => twilioRoom.connect()}
+                    onClick={() => battleRoom.connect()}
                   >
                     <Wifi className="h-4 w-4 mr-1" />
                     Connect Room
                   </Button>
                 )}
-                {twilioRoom.isConnecting && (
+                {battleRoom.isConnecting && (
                   <Badge variant="outline" className="text-xs animate-pulse border-blue-500/50 text-blue-400">
                     Connecting...
                   </Badge>
                 )}
-                {twilioRoom.isConnected && (
+                {battleRoom.isConnected && (
                   <Button
                     variant="outline"
                     size="sm"
                     className="rounded-full px-4 border-destructive/50 text-destructive"
-                    onClick={() => twilioRoom.disconnect()}
+                    onClick={() => battleRoom.disconnect()}
                   >
                     <WifiOff className="h-4 w-4 mr-1" />
                     Disconnect
@@ -458,7 +458,7 @@ export default function CameraStudio() {
           </div>
 
           {/* Remote video or placeholder */}
-          {twilioRoom.hasOpponent ? (
+          {battleRoom.hasOpponent ? (
             <div
               ref={opponentVideoRef}
               className="w-full h-full absolute inset-0 [&_video]:w-full [&_video]:h-full [&_video]:object-cover"
@@ -477,10 +477,10 @@ export default function CameraStudio() {
             </div>
           )}
 
-          {twilioRoom.hasOpponent && (
+          {battleRoom.hasOpponent && (
             <div className="absolute bottom-3 left-3 z-10">
               <Badge className="bg-green-600/80 text-white text-xs">
-                {twilioRoom.opponentIdentity || 'Connected'}
+                {battleRoom.opponentIdentity || 'Connected'}
               </Badge>
             </div>
           )}
