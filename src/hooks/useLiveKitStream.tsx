@@ -132,8 +132,9 @@ export const useLiveKitStream = ({
         durationIntervalRef.current = null;
       }
 
-      await supabase.functions.invoke('end-twilio-stream', {
-        body: { battleId, barberPosition },
+      // Notify server that stream ended
+      await supabase.functions.invoke('update-stream-status', {
+        body: { battleId, barberPosition, status: 'ended' },
       });
 
       setState((prev) => ({
