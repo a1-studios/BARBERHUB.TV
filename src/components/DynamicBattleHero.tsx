@@ -48,7 +48,7 @@ export const DynamicBattleHero = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isBarber } = useUserRole();
-  const [rotationIndex, setRotationIndex] = useState(0);
+  const [_rotationIndex, _setRotationIndex] = useState(0); // kept to preserve hook order
   const [currentUserBarberPosition, setCurrentUserBarberPosition] = useState<1 | 2 | null>(null);
   const [voted1, setVoted1] = useState(false);
   const [voted2, setVoted2] = useState(false);
@@ -108,45 +108,7 @@ export const DynamicBattleHero = () => {
     enabled: !!battle?.barber1_id && !!battle?.barber2_id
   });
 
-  // Fallback: fetch all barbers for rotation if no battle using unified view
-  const {
-    data: featuredBarbers
-  } = useQuery({
-    queryKey: ['featuredBarbers'],
-    queryFn: async () => {
-      const {
-        data,
-        error
-      } = await supabase.from('public_barber_profiles').select('*').order('barber_updated_at', {
-        ascending: false
-      }).limit(10);
-      if (error) throw error;
-      return data?.map(barber => ({
-        id: barber.barber_id,
-        user_id: barber.user_id,
-        name: barber.barber_name,
-        display_name: barber.display_name || barber.barber_name,
-        avatar_url: barber.avatar_url,
-        country_code: barber.country_code || 'US',
-        featured_video_id: barber.featured_video_id,
-        live_video_id: barber.live_video_id,
-        is_live: barber.is_live,
-        followers: barber.follower_count,
-        likes: barber.like_count
-      })) as BarberProfile[];
-    },
-    enabled: !battle || !barbers || barbers.length < 2
-  });
-
-  // Rotate through barber profiles every 8 seconds
-  useEffect(() => {
-    if (!battle && featuredBarbers && featuredBarbers.length > 2) {
-      const interval = setInterval(() => {
-        setRotationIndex(prev => (prev + 2) % featuredBarbers.length);
-      }, 8000);
-      return () => clearInterval(interval);
-    }
-  }, [battle, featuredBarbers]);
+  // No fallback rotation — only real battles render in VS hero
 
   // Detect if current user is a barber in this battle
   useEffect(() => {
@@ -281,19 +243,16 @@ export const DynamicBattleHero = () => {
       </div>;
   }
 
-  // Determine which barbers to display with rotation
-  let displayBarbers = barbers && barbers.length >= 2 ? barbers : [];
-  if (displayBarbers.length < 2 && featuredBarbers && featuredBarbers.length >= 2) {
-    const start = rotationIndex % featuredBarbers.length;
-    const end = (start + 1) % featuredBarbers.length;
-    displayBarbers = [featuredBarbers[start], featuredBarbers[end]];
-  }
+  // Only use real battle barbers — no fallback rotation
+  const displayBarbers = barbers && barbers.length >= 2 ? barbers : [];
 
-  // If no barbers at all
+  // If no active battle with two barbers, show a neutral CTA
   if (displayBarbers.length < 2) {
     return <div className="pt-1 sm:pt-2 pb-8 px-4 max-w-7xl mx-auto">
-        <div className="aspect-video bg-card rounded-2xl shadow-2xl border-2 border-primary/50 flex items-center justify-center">
-          <p className="text-muted-foreground">No barbers to showcase yet</p>
+        <div className="aspect-video bg-card rounded-2xl shadow-2xl border-2 border-primary/20 flex flex-col items-center justify-center gap-3">
+          <Swords className="w-10 h-10 text-primary/40" />
+          <p className="text-muted-foreground text-sm font-medium">No active battles right now</p>
+          <p className="text-muted-foreground/60 text-xs">Check out the <button onClick={() => navigate('/watch')} className="text-primary underline underline-offset-2">Watch Feed</button> for barber content</p>
         </div>
       </div>;
   }
