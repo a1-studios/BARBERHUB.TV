@@ -112,24 +112,11 @@ export default function BarberPublicProfile() {
   const imageCount = portfolio?.filter(p => p.media_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i))?.length || 0;
   const videoCount = portfolio?.filter(p => p.media_url?.match(/\.(mp4|mov|avi|webm)$/i))?.length || 0;
 
-  const handleDeletePortfolioItem = async (creationId: string, mediaUrl: string) => {
+  const handleDeletePortfolioItem = async (creationId: string) => {
     if (!confirm('Are you sure you want to delete this item?')) return;
 
     try {
-      // Extract file path from URL
-      const urlParts = mediaUrl.split('/');
-      const bucket = urlParts[urlParts.length - 2]; // 'portfolios' or 'videos'
-      const fileName = urlParts[urlParts.length - 1];
-      const filePath = `${bucket}/${fileName}`;
-
-      // Delete from storage
-      const { error: storageError } = await supabase.storage
-        .from(bucket)
-        .remove([filePath]);
-
-      if (storageError) throw storageError;
-
-      // Delete from database
+      // Delete from database only (media lives on R2, orphan is acceptable)
       const { error: dbError } = await supabase
         .from('creations')
         .delete()
@@ -164,15 +151,17 @@ export default function BarberPublicProfile() {
       toast.error('Maximum 5 images allowed');
       return;
     }
-    if (type === 'video' && videoCount >= 1) {
-      toast.error('Maximum 1 video allowed');
+    // Enforce cumulative 5GB cap across all portfolio media
+    const existingTotalSize = (portfolio || []).reduce((sum, p) => sum + (p as any).file_size_bytes || 0, 0);
+    if (existingTotalSize + file.size > 5 * 1024 * 1024 * 1024) {
+      toast.error('Portfolio storage limit reached');
       return;
     }
 
-    // Validate file size
-    const maxSize = type === 'video' ? 5 * 1024 * 1024 * 1024 : 5 * 1024 * 1024; // 5GB for video, 5MB for image
+    // Validate individual file size
+    const maxSize = type === 'video' ? 5 * 1024 * 1024 * 1024 : 10 * 1024 * 1024; // 5GB for video, 10MB for image
     if (file.size > maxSize) {
-      toast.error(`File must be under ${type === 'video' ? '5GB' : '5MB'}`);
+      toast.error(`File too large`);
       return;
     }
 
@@ -270,7 +259,7 @@ export default function BarberPublicProfile() {
           )}
           <div className="absolute inset-0 bg-gradient-to-br from-background/90 via-background/80 to-primary/20" />
           <CardContent className="relative p-8 z-10">
-            <div className="flex flex-col md:flex-row gap-6 items-start">
+            <div className="flex flex-col md:flex-row gap-6 items-center">
               <AvatarCrest
                 tier={subscriptionData?.active_subscription_tier}
                 size="lg"
@@ -485,7 +474,7 @@ export default function BarberPublicProfile() {
                     <CardTitle>Portfolio</CardTitle>
                     {isOwner && (
                       <p className="text-xs text-muted-foreground mt-1">
-                        {imageCount}/5 images • {videoCount}/1 video
+                        {imageCount} images • {videoCount} videos
                       </p>
                     )}
                   </div>
@@ -493,25 +482,23 @@ export default function BarberPublicProfile() {
                     <div className="flex gap-2">
                       <Button
                         size="sm"
-                        variant={imageCount < 5 ? "default" : "outline"}
-                        disabled={uploading || imageCount >= 5}
+                        variant="default"
+                        disabled={uploading}
                         onClick={() => document.getElementById('portfolio-image-upload')?.click()}
                         className="flex-1 sm:flex-none"
                       >
                         <ImageIcon className="w-4 h-4 mr-2" />
                         Upload Image
-                        {imageCount >= 5 && <span className="ml-1 text-xs">(Max)</span>}
                       </Button>
                       <Button
                         size="sm"
-                        variant={videoCount < 1 ? "default" : "outline"}
-                        disabled={uploading || videoCount >= 1}
+                        variant="default"
+                        disabled={uploading}
                         onClick={() => document.getElementById('portfolio-video-upload')?.click()}
                         className="flex-1 sm:flex-none"
                       >
                         <Video className="w-4 h-4 mr-2" />
                         Upload Video
-                        {videoCount >= 1 && <span className="ml-1 text-xs">(Max)</span>}
                       </Button>
                       <input
                         id="portfolio-image-upload"
@@ -574,7 +561,7 @@ export default function BarberPublicProfile() {
                                 size="icon"
                                 variant="destructive"
                                 className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8"
-                                onClick={() => handleDeletePortfolioItem(creation.id, creation.media_url)}
+                                onClick={() => handleDeletePortfolioItem(creation.id)}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -584,35 +571,25 @@ export default function BarberPublicProfile() {
                       })}
                     </div>
                     
-                    {/* Show upload prompts if under limit */}
-                    {isOwner && (imageCount < 5 || videoCount < 1) && (
+                    {/* Show upload prompt */}
+                    {isOwner && (
                       <div className="flex gap-4 pt-4 border-t border-primary/10">
-                        {imageCount < 5 && (
-                          <button
-                            onClick={() => document.getElementById('portfolio-image-upload')?.click()}
-                            disabled={uploading}
-                            className="flex-1 border-2 border-dashed border-primary/30 rounded-lg p-6 hover:border-primary/60 hover:bg-primary/5 transition-all cursor-pointer disabled:opacity-50"
-                          >
-                            <ImageIcon className="w-8 h-8 mx-auto mb-2 text-primary/60" />
-                            <p className="text-sm font-medium">Add More Images</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {5 - imageCount} slot{5 - imageCount !== 1 ? 's' : ''} left • Max 5MB
-                            </p>
-                          </button>
-                        )}
-                        {videoCount < 1 && (
-                          <button
-                            onClick={() => document.getElementById('portfolio-video-upload')?.click()}
-                            disabled={uploading}
-                            className="flex-1 border-2 border-dashed border-primary/30 rounded-lg p-6 hover:border-primary/60 hover:bg-primary/5 transition-all cursor-pointer disabled:opacity-50"
-                          >
-                            <Video className="w-8 h-8 mx-auto mb-2 text-primary/60" />
-                            <p className="text-sm font-medium">Add Video</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              1 video slot • Max 5GB
-                            </p>
-                          </button>
-                        )}
+                        <button
+                          onClick={() => document.getElementById('portfolio-image-upload')?.click()}
+                          disabled={uploading}
+                          className="flex-1 border-2 border-dashed border-primary/30 rounded-lg p-6 hover:border-primary/60 hover:bg-primary/5 transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          <ImageIcon className="w-8 h-8 mx-auto mb-2 text-primary/60" />
+                          <p className="text-sm font-medium">Add More Images</p>
+                        </button>
+                        <button
+                          onClick={() => document.getElementById('portfolio-video-upload')?.click()}
+                          disabled={uploading}
+                          className="flex-1 border-2 border-dashed border-primary/30 rounded-lg p-6 hover:border-primary/60 hover:bg-primary/5 transition-all cursor-pointer disabled:opacity-50"
+                        >
+                          <Video className="w-8 h-8 mx-auto mb-2 text-primary/60" />
+                          <p className="text-sm font-medium">Add More Videos</p>
+                        </button>
                       </div>
                     )}
                   </div>
@@ -624,7 +601,7 @@ export default function BarberPublicProfile() {
                           <Upload className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
                           <h3 className="text-lg font-semibold mb-2">Build Your Portfolio</h3>
                           <p className="text-sm text-muted-foreground">
-                            Showcase your best work with up to 5 images and 1 video
+                            Showcase your best work with images and videos
                           </p>
                         </div>
                         
@@ -636,7 +613,7 @@ export default function BarberPublicProfile() {
                           >
                             <ImageIcon className="w-10 h-10 mx-auto mb-3 text-primary" />
                             <p className="font-medium mb-1">Upload Images</p>
-                            <p className="text-xs text-muted-foreground">Max 5 photos, 5MB each</p>
+                            <p className="text-xs text-muted-foreground">Upload photos</p>
                           </button>
                           
                           <button
@@ -646,7 +623,7 @@ export default function BarberPublicProfile() {
                           >
                             <Video className="w-10 h-10 mx-auto mb-3 text-primary" />
                             <p className="font-medium mb-1">Upload Video</p>
-                            <p className="text-xs text-muted-foreground">Max 1 video, 5GB</p>
+                            <p className="text-xs text-muted-foreground">Upload videos</p>
                           </button>
                         </div>
                       </div>
