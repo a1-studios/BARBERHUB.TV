@@ -14,16 +14,51 @@ serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_ANON_KEY')!,
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      { global: { headers: { Authorization: authHeader } } }
     );
-    const { data: { user }, error } = await supabase.auth.getUser();
-    if (error || !user) throw new Error('Unauthorized');
 
-    const { key, uploadId, partNumber } = await req.json();
-    if (!key || !uploadId || !partNumber) throw new Error('key, uploadId, and partNumber are required');
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const body = await req.json();
+    const { key, uploadId, partNumber, partNumbers } = body;
+
+    if (!key || !uploadId) {
+      return new Response(JSON.stringify({ error: 'key and uploadId are required' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Support batch mode (partNumbers array) or single mode (partNumber)
+    const parts: number[] = partNumbers && Array.isArray(partNumbers)
+      ? partNumbers
+      : partNumber ? [partNumber] : [];
+
+    if (parts.length === 0) {
+      return new Response(JSON.stringify({ error: 'partNumber or partNumbers[] is required' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (parts.length > 50) {
+      return new Response(JSON.stringify({ error: 'Maximum 50 parts per batch' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const r2AccountId = Deno.env.get('R2_ACCOUNT_ID')!;
     const r2AccessKeyId = Deno.env.get('R2_ACCESS_KEY_ID')!;
@@ -36,17 +71,22 @@ serve(async (req) => {
       credentials: { accessKeyId: r2AccessKeyId, secretAccessKey: r2SecretAccessKey },
     });
 
-    const command = new UploadPartCommand({
-      Bucket: r2BucketName,
-      Key: key,
-      UploadId: uploadId,
-      PartNumber: partNumber,
-    });
-
-    const presignedUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
+    // Generate presigned URLs for all requested parts in parallel
+    const presignedUrls = await Promise.all(
+      parts.map(async (pn: number) => {
+        const command = new UploadPartCommand({
+          Bucket: r2BucketName,
+          Key: key,
+          UploadId: uploadId,
+          PartNumber: pn,
+        });
+        const presignedUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
+        return { partNumber: pn, presignedUrl };
+      })
+    );
 
     return new Response(
-      JSON.stringify({ success: true, presignedUrl, partNumber }),
+      JSON.stringify({ success: true, presignedUrls }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   } catch (error: any) {
