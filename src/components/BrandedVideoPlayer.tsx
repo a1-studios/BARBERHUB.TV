@@ -26,6 +26,7 @@ export const BrandedVideoPlayer = ({
   title,
   autoPlay = false,
   muted = true,
+  loop = true,
   className = '',
   viewerCount,
   showBranding = true,
@@ -197,6 +198,7 @@ export const BrandedVideoPlayer = ({
         autoPlay={autoPlay || isLive}
         muted={isMuted}
         playsInline
+        loop={loop}
         controls={false}
         className="w-full h-full object-cover"
         preload="metadata"

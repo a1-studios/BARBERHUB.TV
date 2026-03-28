@@ -78,8 +78,8 @@ serve(async (req) => {
           let total_b2 = 0;
           if (donations) {
             for (const d of donations) {
-              if (d.recipient_barber_id === battle.barber1_id) total_b1 += d.amount_bb;
-              else if (d.recipient_barber_id === battle.barber2_id) total_b2 += d.amount_bb;
+              if (d.barber_id === battle.barber1_id) total_b1 += d.amount_bb;
+              else if (d.barber_id === battle.barber2_id) total_b2 += d.amount_bb;
             }
           }
 

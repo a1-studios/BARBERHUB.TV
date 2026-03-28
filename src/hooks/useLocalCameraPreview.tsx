@@ -111,6 +111,44 @@ export const useLocalCameraPreview = (): UseLocalCameraPreviewReturn => {
     }
   }, []);
 
+  const switchCamera = useCallback(async () => {
+    const newMode = facingMode === 'user' ? 'environment' : 'user';
+    
+    // Stop current video tracks only
+    if (streamRef.current) {
+      streamRef.current.getVideoTracks().forEach(track => track.stop());
+    }
+
+    try {
+      const newVideoStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 },
+          frameRate: { ideal: 30, max: 30 },
+          facingMode: newMode,
+        },
+      });
+
+      const newVideoTrack = newVideoStream.getVideoTracks()[0];
+      if (streamRef.current) {
+        // Remove old video tracks and add new one
+        const oldVideoTracks = streamRef.current.getVideoTracks();
+        oldVideoTracks.forEach(t => streamRef.current!.removeTrack(t));
+        streamRef.current.addTrack(newVideoTrack);
+      }
+
+      if (videoRef.current && streamRef.current) {
+        videoRef.current.srcObject = streamRef.current;
+      }
+
+      setFacingMode(newMode);
+      setStream(streamRef.current);
+    } catch (err) {
+      console.error('Failed to switch camera:', err);
+      toast.error('Could not switch camera');
+    }
+  }, [facingMode]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -128,6 +166,8 @@ export const useLocalCameraPreview = (): UseLocalCameraPreviewReturn => {
     toggleAudio,
     startPreview,
     stopPreview,
+    switchCamera,
+    facingMode,
     isPreviewActive,
     error,
     videoRef,

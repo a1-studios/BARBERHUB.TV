@@ -29,7 +29,7 @@ const MP4Player = ({ src, className }: { src: string; className?: string }) => {
 
   return (
     <div className="relative w-full h-full">
-      <video ref={videoRef} src={src} controls autoPlay muted playsInline className={className} />
+      <video ref={videoRef} src={src} controls autoPlay muted playsInline loop className={className} />
       <Button
         variant="secondary"
         size="icon"
