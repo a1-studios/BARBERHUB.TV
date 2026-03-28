@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { HLSVideoPlayer } from "./HLSVideoPlayer";
-import { Trophy, Crown, ExternalLink } from "lucide-react";
+import { Trophy, Crown, ExternalLink, Handshake, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface BattleResultsViewProps {
@@ -28,6 +28,7 @@ interface BattleResultsViewProps {
     barber2: number;
   };
   onViewProfile: (barberId: string) => void;
+  pendingPayouts?: Array<{ user_id: string; amount_bb: number; scheduled_release_at: string; payout_type: string }>;
 }
 
 export const BattleResultsView = ({
@@ -35,20 +36,37 @@ export const BattleResultsView = ({
   barber2,
   winner,
   percentages,
-  onViewProfile
+  onViewProfile,
+  pendingPayouts = []
 }: BattleResultsViewProps) => {
   const getFlagImageUrl = (countryCode?: string) => {
     if (!countryCode) return "";
     return `https://flagcdn.com/w1600/${countryCode.toLowerCase()}.jpg`;
   };
 
-  const isWinner = (barberKey: 'barber1' | 'barber2') => winner === barberKey;
+  const isDraw = winner === 'tie';
+  const isWinner = (barberKey: 'barber1' | 'barber2') => !isDraw && winner === barberKey;
+
+  const getDaysUntilRelease = (releaseDate: string) => {
+    const now = new Date();
+    const release = new Date(releaseDate);
+    const diff = Math.ceil((release.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.max(0, diff);
+  };
+
+  const getPayoutForBarber = (userId: string) => {
+    return pendingPayouts.find(p => p.user_id === userId);
+  };
   
   const renderBarber = (barber: typeof barber1 | typeof barber2, isLeft: boolean, barberKey: 'barber1' | 'barber2') => {
     const won = isWinner(barberKey);
+    const payout = getPayoutForBarber(barber.user_id);
     
     return (
-      <div className={`relative flex-1 p-6 ${won ? 'bg-gradient-to-br from-yellow-500/20 to-yellow-600/10' : 'bg-black/40'}`}>
+      <div className={`relative flex-1 p-6 ${
+        isDraw ? 'bg-gradient-to-br from-amber-500/15 to-orange-500/10' :
+        won ? 'bg-gradient-to-br from-yellow-500/20 to-yellow-600/10' : 'bg-black/40'
+      }`}>
         {/* Flag Background */}
         <div 
           className="absolute inset-0 opacity-10"
@@ -59,7 +77,7 @@ export const BattleResultsView = ({
           }}
         />
         
-        {/* Winner Crown */}
+        {/* Winner Crown or Draw Badge */}
         {won && (
           <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20">
             <div className="bg-yellow-500 text-black px-6 py-3 rounded-full font-bold text-xl shadow-2xl flex items-center gap-2 animate-pulse">
@@ -68,27 +86,54 @@ export const BattleResultsView = ({
             </div>
           </div>
         )}
+        {isDraw && (
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20">
+            <div className="bg-amber-500 text-black px-6 py-3 rounded-full font-bold text-xl shadow-2xl flex items-center gap-2">
+              <Handshake className="w-6 h-6" />
+              DRAW
+            </div>
+          </div>
+        )}
         
         {/* Barber Info */}
-        <div className={`relative z-10 text-center mb-4 ${won ? 'mt-16' : 'mt-4'}`}>
+        <div className={`relative z-10 text-center mb-4 ${(won || isDraw) ? 'mt-16' : 'mt-4'}`}>
           <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden border-4 border-white shadow-2xl">
             <img src={barber.photo} alt={barber.name} className="w-full h-full object-cover" />
           </div>
           <h3 className="text-white text-2xl font-bold mb-2">{barber.name}</h3>
-          <Badge variant={won ? "default" : "secondary"} className={won ? "bg-yellow-500 text-black" : ""}>
+          <Badge variant={won ? "default" : isDraw ? "default" : "secondary"} className={
+            won ? "bg-yellow-500 text-black" : isDraw ? "bg-amber-500 text-black" : ""
+          }>
             <Trophy className="w-4 h-4 mr-1" />
             {barber.votes.toLocaleString()} votes
           </Badge>
         </div>
 
         {/* Vote Percentage */}
-        <div className="relative z-10 text-center mb-6">
-          <div className={`inline-block px-8 py-4 rounded-2xl ${won ? 'bg-yellow-500/20 border-2 border-yellow-500' : 'bg-white/10'}`}>
-            <span className={`text-5xl font-bold ${won ? 'text-yellow-400' : 'text-white'}`}>
+        <div className="relative z-10 text-center mb-4">
+          <div className={`inline-block px-8 py-4 rounded-2xl ${
+            won ? 'bg-yellow-500/20 border-2 border-yellow-500' :
+            isDraw ? 'bg-amber-500/20 border-2 border-amber-500' : 'bg-white/10'
+          }`}>
+            <span className={`text-5xl font-bold ${
+              won ? 'text-yellow-400' : isDraw ? 'text-amber-400' : 'text-white'
+            }`}>
               {isLeft ? percentages.barber1 : percentages.barber2}%
             </span>
           </div>
         </div>
+
+        {/* Pending Payout */}
+        {payout && (
+          <div className="relative z-10 text-center mb-4">
+            <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-lg px-4 py-2">
+              <Clock className="w-4 h-4 text-amber-400" />
+              <span className="text-sm text-amber-300">
+                {payout.amount_bb} BB — releases in {getDaysUntilRelease(payout.scheduled_release_at)} days
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Video */}
         {barber.videoUrl && (
@@ -131,18 +176,6 @@ export const BattleResultsView = ({
         <div className="h-1 bg-gradient-to-r from-primary via-white to-primary" />
         {renderBarber(barber2, false, 'barber2')}
       </div>
-
-      {/* Results Summary Overlay */}
-      {winner === 'tie' && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm z-50">
-          <div className="bg-white rounded-2xl p-8 text-center shadow-2xl">
-            <h2 className="text-4xl font-bold mb-4">It's a Tie!</h2>
-            <p className="text-xl text-muted-foreground">
-              Both barbers received {percentages.barber1}% of the votes
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
