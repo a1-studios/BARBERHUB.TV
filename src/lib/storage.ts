@@ -225,36 +225,14 @@ export function multipartUploadToR2(
   };
 }
 
-// ============ Legacy helpers (kept for backward compat) ============
+// ============ Category-aware R2 upload helpers ============
 
-export async function uploadBattleVideo(
-  file: File,
-  battleId: string,
-  onProgress?: (pct: number) => void
-): Promise<string> {
-  const ext = file.name.split('.').pop() || 'mp4';
-  const key = `battles/${battleId}/${crypto.randomUUID()}.${ext}`;
-  return uploadToR2(file, key, file.type || 'video/mp4', onProgress);
-}
+export type R2Category = 'recordings' | 'portfolios' | 'education';
 
-export async function uploadBattleImage(file: File, path: string): Promise<string> {
-  const ext = file.name.split('.').pop() || 'jpg';
-  const key = `${path}/${crypto.randomUUID()}.${ext}`;
-  return uploadToR2(file, key, file.type || 'image/jpeg');
-}
-
-export async function uploadPortfolioImage(file: File, userId: string): Promise<string> {
-  const ext = file.name.split('.').pop() || 'jpg';
-  const key = `portfolios/${userId}/${crypto.randomUUID()}.${ext}`;
-  return uploadToR2(file, key, file.type || 'image/jpeg');
-}
-
-export async function uploadEducationContent(file: File, creatorId: string): Promise<string> {
-  const ext = file.name.split('.').pop() || 'mp4';
-  const key = `education/${creatorId}/${crypto.randomUUID()}.${ext}`;
-  return uploadToR2(file, key, file.type || 'video/mp4');
-}
-
+/**
+ * Upload any file to R2 via presigned URL (single PUT, for files < 50MB).
+ * Returns the public URL.
+ */
 async function uploadToR2(
   file: File,
   key: string,
@@ -281,4 +259,76 @@ async function uploadToR2(
 
   onProgress?.(100);
   return data.publicUrl as string;
+}
+
+/**
+ * Smart upload: uses single PUT for small files, multipart for large files.
+ * Works for any R2 category (recordings, portfolios, education).
+ */
+export async function uploadFileToR2(
+  file: File,
+  category: R2Category,
+  userId: string,
+  onProgress?: (pct: number) => void,
+  options?: { battleId?: string; title?: string; description?: string }
+): Promise<string> {
+  const ext = file.name.split('.').pop() || 'mp4';
+  const timestamp = Date.now();
+  const key = category === 'recordings'
+    ? `${category}/${options?.battleId || 'general'}/${userId}-${timestamp}.${ext}`
+    : `${category}/${userId}/${timestamp}.${ext}`;
+
+  const MULTIPART_THRESHOLD = 50 * 1024 * 1024; // 50MB
+
+  if (file.size >= MULTIPART_THRESHOLD) {
+    const battleId = category === 'recordings'
+      ? (options?.battleId || `${category}-${userId}`)
+      : `${category}-${userId}`;
+
+    const controller = multipartUploadToR2(
+      file,
+      battleId,
+      (progress) => onProgress?.(progress.percentage),
+      { title: options?.title, description: options?.description }
+    );
+    return controller.promise;
+  }
+
+  return uploadToR2(file, key, file.type || 'application/octet-stream', onProgress);
+}
+
+// ============ Convenience wrappers ============
+
+export async function uploadBattleVideo(
+  file: File,
+  battleId: string,
+  onProgress?: (pct: number) => void
+): Promise<string> {
+  return uploadFileToR2(file, 'recordings', 'system', onProgress, { battleId });
+}
+
+export async function uploadPortfolioMedia(
+  file: File,
+  userId: string,
+  onProgress?: (pct: number) => void
+): Promise<string> {
+  return uploadFileToR2(file, 'portfolios', userId, onProgress);
+}
+
+export async function uploadEducationContent(
+  file: File,
+  creatorId: string,
+  onProgress?: (pct: number) => void
+): Promise<string> {
+  return uploadFileToR2(file, 'education', creatorId, onProgress);
+}
+
+export async function uploadBattleImage(file: File, path: string): Promise<string> {
+  const ext = file.name.split('.').pop() || 'jpg';
+  const key = `${path}/${crypto.randomUUID()}.${ext}`;
+  return uploadToR2(file, key, file.type || 'image/jpeg');
+}
+
+export async function uploadPortfolioImage(file: File, userId: string): Promise<string> {
+  return uploadPortfolioMedia(file, userId);
 }
