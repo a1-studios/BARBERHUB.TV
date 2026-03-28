@@ -53,7 +53,7 @@ const WatchFeed = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("public_barber_profiles")
-        .select("barber_id, barber_name, display_name, featured_video_id, avatar_url, country_code, barber_specialty")
+        .select("barber_id, barber_name, display_name, featured_video_id, avatar_url, country_code")
         .not("featured_video_id", "is", null)
         .order("barber_updated_at", { ascending: false })
         .limit(30);
