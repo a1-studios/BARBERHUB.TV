@@ -62,6 +62,7 @@ export default function CameraStudio() {
   const [mics, setMics] = useState<DeviceInfo[]>([]);
   const [selectedCamera, setSelectedCamera] = useState('');
   const [selectedMic, setSelectedMic] = useState('');
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [error, setError] = useState<string | null>(null);
 
   // Studio mode + recording
