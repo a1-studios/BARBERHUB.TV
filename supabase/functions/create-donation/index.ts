@@ -44,15 +44,27 @@ serve(async (req) => {
 
     const { creator_id, amount_cents, currency = 'usd', message } = await req.json();
     
-    if (!creator_id || !amount_cents) {
-      throw new Error("Missing required fields: creator_id, amount_cents");
+    if (!creator_id || typeof creator_id !== 'string') {
+      throw new Error("Missing required field: creator_id");
     }
-    
-    if (amount_cents < 100) {
-      throw new Error("Minimum donation is $1.00 (100 cents)");
+    if (typeof amount_cents !== 'number' || !Number.isInteger(amount_cents)) {
+      throw new Error("amount_cents must be an integer");
+    }
+    if (amount_cents < 100 || amount_cents > 100000) {
+      throw new Error("Donation must be between $1.00 and $1,000.00");
     }
 
-    logStep("Donation request", { creator_id, amount_cents, currency, message });
+    const VALID_CURRENCIES = ['usd'];
+    if (!VALID_CURRENCIES.includes(currency)) {
+      throw new Error("Invalid currency");
+    }
+
+    // Sanitize and validate message
+    const sanitizedMessage = message
+      ? String(message).replace(/<[^>]*>/g, '').slice(0, 500)
+      : undefined;
+
+    logStep("Donation request", { creator_id, amount_cents, currency, message: sanitizedMessage });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 
@@ -79,7 +91,7 @@ serve(async (req) => {
         creator_id,
         amount_cents,
         currency,
-        message,
+        message: sanitizedMessage,
         status: 'pending'
       })
       .select()

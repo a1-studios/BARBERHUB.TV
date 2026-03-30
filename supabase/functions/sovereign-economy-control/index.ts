@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const SOVEREIGN_EMAIL = 'a1studios.film@gmail.com';
+const SOVEREIGN_EMAIL = Deno.env.get('SOVEREIGN_EMAIL') || 'a1studios.film@gmail.com';
 
 interface EconomyRequest {
   action: 'mint_bb' | 'burn_bb' | 'transfer_bb' | 'mass_adjust' | 'get_ledger' | 'get_stats';

@@ -44,11 +44,37 @@ serve(async (req) => {
 
     // Get request body
     const body = await req.json();
-    const { amount = 5000, category = 'general', barber_profile_id, country_code } = body; // Default $50.00
+    const { amount = 5000, category = 'general', barber_profile_id, country_code } = body;
+
+    // Input validation
+    if (!barber_profile_id || typeof barber_profile_id !== 'string') {
+      throw new Error("barber_profile_id is required");
+    }
+    if (!country_code || typeof country_code !== 'string' || country_code.length > 5) {
+      throw new Error("country_code is required and must be valid");
+    }
+
+    const VALID_CATEGORIES = [
+      'speed_fade', 'gentleman_cut', 'creative_color',
+      'viral_styles', 'beard_scissor', 'general', 'open'
+    ];
+    if (!VALID_CATEGORIES.includes(category)) {
+      throw new Error(`Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}`);
+    }
+
+    if (typeof amount !== 'number' || amount < 100 || amount > 1000000) {
+      throw new Error("Amount must be between $1.00 and $10,000.00");
+    }
+
+    // Verify barber_profile_id exists
+    const { data: barberProfile } = await supabaseClient
+      .from('barber_profiles')
+      .select('id')
+      .eq('id', barber_profile_id)
+      .single();
+    if (!barberProfile) throw new Error("Invalid barber profile");
+
     logStep("Request body parsed", { amount, category, barber_profile_id, country_code });
-    
-    if (!barber_profile_id) throw new Error("barber_profile_id is required");
-    if (!country_code) throw new Error("country_code is required");
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 
