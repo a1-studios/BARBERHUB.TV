@@ -91,7 +91,7 @@ serve(async (req) => {
         creator_id,
         amount_cents,
         currency,
-        message,
+        message: sanitizedMessage,
         status: 'pending'
       })
       .select()
