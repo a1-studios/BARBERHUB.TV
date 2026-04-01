@@ -23,10 +23,24 @@ import { X, MessageSquare, Settings as SettingsIcon, Heart, Volume2, VolumeX } f
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
-/** Native MP4 player with muted-autoplay + unmute overlay */
-const MP4Player = ({ src, className }: { src: string; className?: string }) => {
+/** VOD player — uses Cloudflare Stream UID when available, falls back to native video */
+const VODPlayer = ({ src, streamUid, className }: { src: string; streamUid?: string | null; className?: string }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMuted, setIsMuted] = useState(true);
+
+  if (streamUid) {
+    return (
+      <CloudflareStreamPlayer
+        streamUid={streamUid}
+        fallbackUrl={src}
+        autoPlay
+        muted={isMuted}
+        loop
+        controls
+        className={className}
+      />
+    );
+  }
 
   return (
     <div className="relative w-full h-full">
