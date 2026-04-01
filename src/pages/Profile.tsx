@@ -76,7 +76,42 @@ const Profile = () => {
     enabled: !!user?.id
   });
 
-  const { data: barberStats } = useQuery({
+  // Deep-link: auto-open appointment collapsible and review modal from query params
+  useEffect(() => {
+    const appointmentId = searchParams.get('appointment_id');
+    const action = searchParams.get('action');
+    if (!appointmentId || !user?.id) return;
+
+    // Auto-open the correct collapsible
+    if (isBarber) {
+      setBarberApptOpen(true);
+    } else {
+      setApptOpen(true);
+    }
+
+    // If action=review, fetch appointment and open review modal
+    if (action === 'review') {
+      (async () => {
+        const { data: appt } = await supabase
+          .from('appointments')
+          .select('barber_user_id, client_id')
+          .eq('id', appointmentId)
+          .single();
+        if (appt) {
+          const reviewing = appt.barber_user_id === user.id;
+          setIsBarberReviewing(reviewing);
+          setRevieweeId(reviewing ? appt.client_id : appt.barber_user_id);
+          setReviewAppointmentId(appointmentId);
+          setReviewModalOpen(true);
+        }
+      })();
+    }
+
+    // Clear params so refresh doesn't re-trigger
+    setSearchParams({}, { replace: true });
+  }, [searchParams, user?.id, isBarber]);
+
+
     queryKey: ['barber-own-stats', barberProfile?.id],
     queryFn: async () => {
       if (!barberProfile?.id) return null;
