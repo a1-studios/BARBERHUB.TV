@@ -269,6 +269,8 @@ export function MyAppointments({ compact = false }: { compact?: boolean } = {}) 
               barberName={data?.barberNames[apt.barber_id] || 'Barber'}
               hasReview={data?.reviewedIds.has(apt.id) || false}
               onReview={() => setReviewTarget({ appointmentId: apt.id, revieweeId: apt.barber_user_id })}
+              onCancel={(id, isLate) => setCancelConfirm({ id, isLate })}
+              cancelPending={manageMutation.isPending}
             />
           ))
         ) : (
