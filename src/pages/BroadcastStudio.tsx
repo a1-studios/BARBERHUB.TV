@@ -3,18 +3,52 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  ArrowLeft, Mic, MicOff, Video, VideoOff, Radio, PhoneOff,
+  Mic, MicOff, Video, VideoOff, Radio, PhoneOff, SwitchCamera, Users, Clock,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { LiveKitRoom, VideoTrack, useLocalParticipant, useTracks } from '@livekit/components-react';
-import { Track } from 'livekit-client';
+import {
+  LiveKitRoom, VideoTrack, useLocalParticipant, useTracks, useRoomContext,
+} from '@livekit/components-react';
+import { Track, RoomEvent, facingModeFromLocalTrack, VideoPresets } from 'livekit-client';
 import { LIVE_BROADCAST_HEARTBEAT_MS } from '@/lib/liveBroadcast';
 
 function StudioControls({ onEnd }: { onEnd: () => void }) {
+  const room = useRoomContext();
   const { localParticipant } = useLocalParticipant();
   const [isMicOn, setIsMicOn] = useState(true);
   const [isCamOn, setIsCamOn] = useState(true);
+  const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
+  const [viewerCount, setViewerCount] = useState(0);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval>>();
+
+  // Viewer count tracking
+  useEffect(() => {
+    const update = () => setViewerCount(Math.max(0, room.numParticipants - 1));
+    update();
+    room.on(RoomEvent.ParticipantConnected, update);
+    room.on(RoomEvent.ParticipantDisconnected, update);
+    return () => {
+      room.off(RoomEvent.ParticipantConnected, update);
+      room.off(RoomEvent.ParticipantDisconnected, update);
+    };
+  }, [room]);
+
+  // Duration timer
+  useEffect(() => {
+    timerRef.current = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
+    return () => clearInterval(timerRef.current);
+  }, []);
+
+  const formatDuration = (totalSec: number) => {
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    return h > 0
+      ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+      : `${m}:${String(s).padStart(2, '0')}`;
+  };
 
   const toggleMic = useCallback(() => {
     localParticipant.setMicrophoneEnabled(!isMicOn);
@@ -25,6 +59,16 @@ function StudioControls({ onEnd }: { onEnd: () => void }) {
     localParticipant.setCameraEnabled(!isCamOn);
     setIsCamOn(!isCamOn);
   }, [localParticipant, isCamOn]);
+
+  const flipCamera = useCallback(async () => {
+    const newMode = facingMode === 'user' ? 'environment' : 'user';
+    setFacingMode(newMode);
+    // Disable then re-enable camera with the new facing mode
+    await localParticipant.setCameraEnabled(false);
+    await localParticipant.setCameraEnabled(true, {
+      facingMode: newMode,
+    });
+  }, [localParticipant, facingMode]);
 
   const tracks = useTracks([Track.Source.Camera], { onlySubscribed: false });
   const localCameraTrack = tracks.find(
@@ -39,7 +83,7 @@ function StudioControls({ onEnd }: { onEnd: () => void }) {
           <VideoTrack
             trackRef={localCameraTrack}
             className="w-full h-full object-cover"
-            style={{ transform: 'scaleX(-1)' }}
+            style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : undefined }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-muted/10">
@@ -47,17 +91,39 @@ function StudioControls({ onEnd }: { onEnd: () => void }) {
           </div>
         )}
 
-        {/* LIVE badge */}
-        <div className="absolute top-[env(safe-area-inset-top,12px)] left-4 z-10 mt-2">
-          <Badge className="bg-red-600 text-white font-bold gap-1.5 px-3 py-1">
-            <div className="h-2 w-2 rounded-full bg-white animate-pulse" />
-            LIVE
-          </Badge>
+        {/* Top metrics overlay */}
+        <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/70 to-transparent px-4 pt-[env(safe-area-inset-top,12px)] pb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Badge className="bg-red-600 text-white font-bold gap-1.5 px-3 py-1">
+                <div className="h-2 w-2 rounded-full bg-white animate-pulse" />
+                LIVE
+              </Badge>
+              <Badge variant="secondary" className="gap-1 bg-black/50 text-white border-white/20">
+                <Users className="h-3 w-3" />
+                {viewerCount}
+              </Badge>
+            </div>
+            <Badge variant="secondary" className="gap-1 bg-black/50 text-white border-white/20 font-mono">
+              <Clock className="h-3 w-3" />
+              {formatDuration(elapsedSeconds)}
+            </Badge>
+          </div>
         </div>
+
+        {/* Camera flip button (top-right) */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-[calc(env(safe-area-inset-top,12px)+48px)] right-4 z-10 rounded-full h-11 w-11 bg-black/40 text-white border border-white/20 backdrop-blur-sm"
+          onClick={flipCamera}
+        >
+          <SwitchCamera className="h-5 w-5" />
+        </Button>
       </div>
 
-      {/* Controls */}
-      <div className="bg-gradient-to-t from-black/90 to-transparent px-4 py-6 pb-[env(safe-area-inset-bottom,24px)]">
+      {/* Bottom controls */}
+      <div className="bg-gradient-to-t from-black/90 to-transparent px-4 py-5 pb-[env(safe-area-inset-bottom,24px)]">
         <div className="flex items-center justify-center gap-4">
           <Button
             variant={isMicOn ? 'ghost' : 'destructive'}
@@ -78,11 +144,11 @@ function StudioControls({ onEnd }: { onEnd: () => void }) {
           </Button>
 
           <Button
-            size="icon"
-            className="rounded-full h-14 w-14 bg-red-600 hover:bg-red-700 border-4 border-white/30"
+            className="rounded-full h-12 px-6 bg-red-600 hover:bg-red-700 border-2 border-white/30 text-white font-bold gap-2"
             onClick={onEnd}
           >
-            <PhoneOff className="h-5 w-5 text-white" />
+            <PhoneOff className="h-4 w-4" />
+            END STREAM
           </Button>
         </div>
       </div>
@@ -225,6 +291,18 @@ export default function BroadcastStudio() {
       connect={true}
       video={true}
       audio={true}
+      options={{
+        videoCaptureDefaults: {
+          resolution: VideoPresets.h720.resolution,
+          facingMode: 'user',
+        },
+        publishDefaults: {
+          videoCodec: 'h264',
+          videoSimulcastLayers: [VideoPresets.h360],
+        },
+        adaptiveStream: true,
+        dynacast: true,
+      }}
       onDisconnected={handleEndStream}
     >
       <StudioControls onEnd={handleEndStream} />
