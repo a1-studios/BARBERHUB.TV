@@ -22,10 +22,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+
+        // Handle post-OAuth role assignment
+        if (event === 'SIGNED_IN' && session?.user) {
+          const pendingRole = localStorage.getItem('pending_social_role');
+          if (pendingRole && (pendingRole === 'barber' || pendingRole === 'fan')) {
+            localStorage.removeItem('pending_social_role');
+            // Use setTimeout to avoid blocking the auth state change
+            setTimeout(async () => {
+              const { error } = await supabase.rpc('assign_social_auth_role', {
+                p_user_id: session.user.id,
+                p_role: pendingRole,
+              });
+              if (error) {
+                console.error('Role assignment error:', error);
+              }
+            }, 0);
+          }
+        }
       }
     );
 
