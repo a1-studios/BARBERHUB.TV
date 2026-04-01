@@ -40,6 +40,9 @@ import VaultOfHonor from "./pages/VaultOfHonor";
 import M4MVerify from "./pages/M4MVerify";
 import CameraStudio from "./pages/CameraStudio";
 import Rankings from "./pages/Rankings";
+import BroadcastViewer from "./pages/BroadcastViewer";
+import BroadcastStudio from "./pages/BroadcastStudio";
+import Rankings from "./pages/Rankings";
 
 const queryClient = new QueryClient();
 
