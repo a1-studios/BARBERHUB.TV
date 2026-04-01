@@ -1,41 +1,64 @@
 
+# Replace Prize Counter with Social Login Icons + Role Selection Flow
 
-# Track Creator Content Metrics (Views, Shares)
+## What Changes
 
-## Problem
-The `CreatorStatsDrawer` reads `views`, `likes`, and `shares` from the `creator_content` table, but nothing ever increments these columns. All stats show zero.
+The `WorldCupPrizeCounter` component at the top of the landing hero (lines 229-231 in `LandingHero.tsx`) gets replaced with three social login buttons: Google, Apple, and Instagram. After a user taps a social button, a role selection modal appears asking "Are you a Barber or a Fan?" before completing auth. The existing email sign-in/sign-up card below remains untouched as a fallback.
 
-## What Needs to Happen
+## Flow
 
-### 1. Database: RPC functions + likes sync trigger
-**New migration**
+1. User taps Google / Apple / Instagram icon on landing
+2. A lightweight role-picker modal appears (Barber or Fan — same two cards already in `UserTypeSelector`)
+3. User picks role → stored in `localStorage` as `pending_social_role`
+4. OAuth redirect fires via `supabase.auth.signInWithOAuth()`
+5. On return, `useAuth` detects new user (no profile yet) → reads `pending_social_role` from localStorage → creates profile + user_role row via a new edge function or the existing `handle_new_user` trigger
+6. If barber, redirect to Arena Gate for onboarding; if fan, land on home
 
-- **`increment_content_views(p_content_id UUID)`** — SQL function that does `UPDATE creator_content SET views = views + 1 WHERE id = p_content_id`
-- **`increment_content_shares(p_content_id UUID)`** — same pattern for shares
-- **Trigger on `creator_likes`** — on INSERT, increment `creator_content.likes` for the matching content; on DELETE, decrement. Since `creator_likes` tracks likes by `creator_id` (user ID) not content ID, we increment the aggregate count across all content by that creator. Alternatively, add a simpler approach: when the `CreatorStatsDrawer` fetches stats, also query `COUNT(*)` from `creator_likes` for that creator and use that as the likes count directly (no trigger needed).
+## Important Caveats
 
-Given the `creator_likes` table tracks likes per creator (not per content piece), the cleanest fix is:
-- For **likes**: query `creator_likes` count directly in `CreatorStatsDrawer` instead of relying on the denormalized column
-- For **views** and **shares**: use RPC increment functions called from the frontend
+- **Google**: Supabase supports natively — must be configured in Supabase dashboard (Auth → Providers → Google). User needs to set up Google Cloud OAuth credentials.
+- **Apple**: Supabase supports natively — requires Apple Developer account + Sign in with Apple service ID configured in Supabase dashboard.
+- **Instagram**: Supabase does **not** support Instagram as an OAuth provider. Options: (a) use Facebook/Meta OAuth (Instagram's parent), or (b) show Instagram as a "coming soon" button. Will implement Facebook OAuth as the underlying provider with Instagram branding, since Instagram accounts are Meta accounts.
 
-### 2. WatchFeed: Track views and shares
-**File: `src/pages/WatchFeed.tsx`**
+## File Changes
 
-- Add a `useRef<Set<string>>` to track which content IDs have been viewed this session
-- When a creator content item becomes active (via the intersection observer), extract the real content ID and call `increment_content_views` RPC (once per session per item)
-- In `handleShare`, after sharing, call `increment_content_shares` RPC for creator content items
+### `src/components/LandingHero.tsx`
+- **Lines 229-231**: Replace `<WorldCupPrizeCounter />` with a row of three social login icon buttons (Google, Apple, Instagram/Meta)
+- Add state `showRolePicker` and `pendingProvider` to track which OAuth provider the user selected
+- Add a `RolePickerModal` inline component — minimal dialog with the Barber/Fan cards
+- On role selection: store role in `localStorage('pending_social_role')`, then call `supabase.auth.signInWithOAuth({ provider })` with redirect
 
-### 3. CreatorStatsDrawer: Fix likes count
-**File: `src/components/creator/CreatorStatsDrawer.tsx`**
+### `src/hooks/useAuth.tsx`
+- In `onAuthStateChange`, when a new user signs in via OAuth (no existing profile role), read `pending_social_role` from localStorage
+- Call a Supabase RPC or update to assign the role to `user_roles` and `profiles` tables
+- The existing `handle_new_user` trigger already reads `raw_user_meta_data.user_type`, but OAuth users won't have this set — so we need a post-auth role assignment step
 
-- Add a separate query to count rows in `creator_likes` where `creator_id = user.id`
-- Use that count for the likes stat instead of the denormalized `creator_content.likes` column (which is never updated)
+### New: Post-OAuth role assignment
+- After OAuth callback, if `pending_social_role` exists in localStorage:
+  - Update `profiles.user_type` to the selected role
+  - Insert into `user_roles` table
+  - Create `barber_profiles` or `client_profiles` row accordingly
+  - Clear localStorage
+- This can be done via a new database function `assign_social_auth_role(p_user_id, p_role)` called from the client after auth
 
-## Files
+### Database Migration
+- New RPC function `assign_social_auth_role(p_user_id UUID, p_role TEXT)` that:
+  - Updates `profiles.user_type`
+  - Inserts into `user_roles`
+  - Creates the specialized profile (barber_profiles or client_profiles)
+  - Only runs if user doesn't already have a role assigned
 
-| File | Action |
-|------|--------|
-| New migration | `increment_content_views` + `increment_content_shares` RPC functions |
-| `src/pages/WatchFeed.tsx` | Call view/share RPCs on content interaction |
-| `src/components/creator/CreatorStatsDrawer.tsx` | Query `creator_likes` count for accurate likes |
+## Prerequisites (User Action Required)
 
+The user must configure OAuth providers in their Supabase dashboard:
+1. **Google**: Auth → Providers → Google → add Client ID + Secret from Google Cloud Console
+2. **Apple**: Auth → Providers → Apple → add Service ID + Secret Key from Apple Developer
+3. **Facebook** (for Instagram): Auth → Providers → Facebook → add App ID + Secret from Meta Developer Console
+
+## Visual Design
+
+Three circular icon buttons centered horizontally, styled with the brand colors:
+- Google: white bg with Google "G" logo
+- Apple: black bg with Apple icon
+- Instagram: gradient bg (pink/purple/orange) with Instagram icon
+- Subtitle text: "Sign in with" above the icons
