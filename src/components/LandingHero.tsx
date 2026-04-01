@@ -473,6 +473,52 @@ const LandingHero = ({ onOpenArenaGate }: LandingHeroProps) => {
         </div>
       </div>
 
+      {/* Role Picker Modal */}
+      <Dialog open={showRolePicker} onOpenChange={setShowRolePicker}>
+        <DialogContent className="sm:max-w-md bg-card border-border/50">
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl">Who are you?</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <button
+              onClick={() => completeSocialAuth('barber')}
+              disabled={socialLoading}
+              className="relative p-6 border border-border/50 bg-card/50 hover:border-primary/50 hover:shadow-[0_0_20px_hsl(var(--primary)/0.3)] transition-all duration-300 rounded-2xl"
+            >
+              <div className="flex flex-col items-center space-y-3">
+                <div className="p-3 rounded-full bg-primary text-primary-foreground">
+                  <Scissors className="w-6 h-6" />
+                </div>
+                <div className="text-center">
+                  <div className="font-bold">BARBER</div>
+                  <div className="text-xs text-muted-foreground">Professional</div>
+                </div>
+              </div>
+            </button>
+            <button
+              onClick={() => completeSocialAuth('fan')}
+              disabled={socialLoading}
+              className="relative p-6 border border-border/50 bg-card/50 hover:border-cyan-500/50 hover:shadow-[0_0_20px_rgba(0,217,255,0.3)] transition-all duration-300 rounded-2xl"
+            >
+              <div className="flex flex-col items-center space-y-3">
+                <div className="p-3 rounded-full bg-cyan-500 text-background">
+                  <Users className="w-6 h-6" />
+                </div>
+                <div className="text-center">
+                  <div className="font-bold">FAN</div>
+                  <div className="text-xs text-muted-foreground">Community</div>
+                </div>
+              </div>
+            </button>
+          </div>
+          {socialLoading && (
+            <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Redirecting...
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </section>
   );
 };
