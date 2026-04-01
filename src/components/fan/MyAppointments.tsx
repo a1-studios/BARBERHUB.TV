@@ -360,6 +360,47 @@ export function MyAppointments({ compact = false }: { compact?: boolean } = {}) 
           onSuccess={() => refetch()}
         />
       )}
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog open={!!cancelConfirm} onOpenChange={(open) => !open && setCancelConfirm(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Cancel Appointment
+            </DialogTitle>
+            <DialogDescription>
+              {cancelConfirm?.isLate
+                ? 'This appointment is less than 2 hours away. A 50% cancellation fee may apply.'
+                : 'Are you sure you want to cancel this appointment? Your escrowed BB will be refunded.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setCancelConfirm(null)}>
+              Keep Appointment
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={manageMutation.isPending}
+              onClick={() => {
+                if (!cancelConfirm) return;
+                manageMutation.mutate(
+                  { appointment_id: cancelConfirm.id, action: 'cancel' },
+                  {
+                    onSuccess: () => {
+                      setCancelConfirm(null);
+                      refetch();
+                      queryClient.invalidateQueries({ queryKey: ['barber_bucks'] });
+                    },
+                  }
+                );
+              }}
+            >
+              {manageMutation.isPending ? 'Cancelling...' : 'Yes, Cancel'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
