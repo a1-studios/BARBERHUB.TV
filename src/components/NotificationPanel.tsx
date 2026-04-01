@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, Calendar, Swords, CheckCheck, X, Clock, Ban, AlertTriangle } from 'lucide-react';
+import { Bell, Calendar, Swords, CheckCheck, X, Clock, Ban, AlertTriangle, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNotifications, Notification } from '@/hooks/useNotifications';
 import { useNavigate } from 'react-router-dom';
