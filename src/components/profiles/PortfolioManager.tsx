@@ -67,12 +67,26 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
         const publicUrl = await uploadPortfolioMedia(file, user.id);
         const category = file.type.startsWith('video/') ? 'video' : 'haircut';
 
-        await supabase.from('creations').insert({
+        const { data: newCreation, error: insertErr } = await supabase.from('creations').insert({
           barber_id: barberId,
           media_url: publicUrl,
           category,
           title: file.name.split('.')[0],
-        });
+        }).select('id').single();
+
+        if (insertErr) throw insertErr;
+
+        // Auto-ingest videos into Cloudflare Stream for adaptive playback
+        if (file.type.startsWith('video/') && newCreation?.id) {
+          toast.info('Optimizing video for playback...');
+          supabase.functions.invoke('upload-to-cloudflare-stream', {
+            body: {
+              sourceUrl: publicUrl,
+              table: 'creations',
+              recordId: newCreation.id,
+            },
+          }).catch((err: any) => console.error('Cloudflare Stream ingest queued but failed:', err));
+        }
 
         uploaded++;
       } catch (error: any) {
