@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Plus, User, Zap, Scissors, Crown } from 'lucide-react';
-import { NotificationPanel } from './NotificationPanel';
+import { Plus, User, Zap, Scissors, Crown, Bell } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import barberPole from '@/assets/barber-pole.png';
 import { cn } from '@/lib/utils';
@@ -12,6 +11,8 @@ import { AddFundsModal } from './AddFundsModal';
 import { RotatingBBCoin } from './economy/RotatingBBCoin';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useNotifications } from '@/hooks/useNotifications';
+import { NotificationPanel } from './NotificationPanel';
 
 interface QuickAction {
   id: string;
