@@ -277,7 +277,8 @@ const WatchFeed = () => {
   const [hasJumped, setHasJumped] = useState(false);
   useEffect(() => {
     if (targetVideoBarber && feed.length > 0 && !hasJumped) {
-      const idx = feed.findIndex(f => f.barber_user_id === targetVideoBarber);
+      const decodedTarget = decodeURIComponent(targetVideoBarber);
+      const idx = feed.findIndex(f => f.media_url === decodedTarget);
       if (idx >= 0) {
         setActiveIndex(idx);
         setHasJumped(true);
