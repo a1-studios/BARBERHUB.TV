@@ -29,7 +29,9 @@ const LandingHero = ({ onOpenArenaGate }: LandingHeroProps) => {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("signin");
   const [prizeBanner, setPrizeBanner] = useState<string | null>(null);
-  
+  const [showRolePicker, setShowRolePicker] = useState(false);
+  const [pendingProvider, setPendingProvider] = useState<Provider | null>(null);
+  const [socialLoading, setSocialLoading] = useState(false);
 
   // Arena Gate verified state (gate itself is rendered in Index.tsx)
   const [arenaGateVerified, setArenaGateVerified] = useState(false);
