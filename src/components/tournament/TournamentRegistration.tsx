@@ -13,6 +13,7 @@ import { useBarberBucks } from "@/hooks/useBarberBucks";
 import { TOURNAMENT_CATEGORIES } from "@/config/categories";
 import { TOURNAMENT_CONFIG, formatEntryFee, formatEntryFeeUSD } from "@/config/tournament";
 import { AddFundsModal } from "@/components/AddFundsModal";
+import { UniversalBarterGateway } from "@/components/barter/UniversalBarterGateway";
 
 export const TournamentRegistration = () => {
   const { user } = useAuth();
