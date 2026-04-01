@@ -1,58 +1,62 @@
+# Fix Live Stream Real-Time Updates, Cleanup, and Duplicate Cards
 
+## Problems Identified
 
-# Live Indicator for All Users — Followed Barber Streams with Engagement
-
-## Problem
-Fans have no visible indication when a barber they follow goes live. The `LiveBarberStreams` component only shows on the non-fan view, and the `FanArenaView` has no live stream discovery. The toast notification exists but links to the profile page, not the broadcast viewer. There are no donate/like/follow actions on the broadcast cards.
+1. **Duplicate broadcast cards**: The same barber appears multiple times in the LIVE NOW section because multiple `stream_sessions` rows exist for the same barber (old sessions not cleaned up before creating new ones). The query fetches all `connecting`/`active` sessions without deduplication.
+2. **No real-time updates on LiveBarberStreams**: The solo broadcasts query uses only `refetchInterval: 5000` with no Supabase Realtime subscription on `stream_sessions` or `barber_profiles`. When a stream ends, cards linger for up to 5 seconds.
+3. **Viewer page doesn't react when stream ends**: `BroadcastViewer` fetches `is_live` once on mount but never re-checks. If the barber ends mid-view, the viewer sees "Waiting for stream..." forever instead of "Stream ended".
+4. **Viewer count shows -1**: `room.numParticipants - 1` goes negative when the broadcaster hasn't connected yet. Needs `Math.max(0, ...)`.
+5. **Stale sessions not cleaned on new broadcast**: `generate-broadcast-token` creates a new session without ending previous ones for the same barber. 
+6. ensure users are able to donate like and comment its the full live view 
 
 ## Changes
 
-### 1. Add Live Streams Section to FanArenaView
-**File: `src/components/fan/FanArenaView.tsx`**
+### 1. Fix `generate-broadcast-token` — Clean Up Stale Sessions
 
-Import and render `LiveBarberStreams` prominently at the top of the fan view (right after `DynamicBattleHero`), before the ArenaTicker. This gives fans immediate visibility into who is live.
+**File: `supabase/functions/generate-broadcast-token/index.ts**`
 
-### 2. Create a New `LiveNowBanner` Component
-**File: `src/components/battles/LiveNowBanner.tsx`** (new)
+Before creating a new `stream_sessions` row, update any existing `connecting`/`active` sessions for this user with `stream_type = 'solo_broadcast'` to `status = 'ended'`. This prevents duplicate cards.
 
-A compact, horizontally-scrollable banner for followed barbers who are currently live. Designed for mobile-first (390px viewport):
-- Queries `barber_profiles` where `is_live = true` and the user follows them (`creator_follows`)
-- Renders a horizontal scroll of circular avatar thumbnails with a red pulsing ring and barber name
-- Tapping navigates to `/broadcast/{barber_profile_id}`
-- If no followed barbers are live, falls back to showing ALL live barbers (global discovery)
-- Uses Supabase Realtime subscription on `barber_profiles.is_live` for instant updates
+### 2. Add Realtime Subscription to `LiveBarberStreams`
 
-### 3. Enhance `LiveBarberStreams` Broadcast Cards with Engagement Actions
-**File: `src/components/battles/LiveBarberStreams.tsx`**
+**File: `src/components/battles/LiveBarberStreams.tsx**`
 
-Update solo broadcast cards to include:
-- **Heart/Like button** — toggles `creator_likes` for that barber
-- **Follow button** — toggles `creator_follows`
-- **Donate button** — opens `DonationModal` for BB tips
-- **Favorite indicator** — filled heart if already liked
-- Fetch `barber_profiles.user_id` alongside name/id so engagement mutations can target the correct user
+Add a `useEffect` with a Supabase Realtime channel listening to:
 
-### 4. Fix Toast Notification Link
-**File: `src/hooks/useFollowedBarbersNotifications.tsx`**
+- `stream_sessions` table for `INSERT`, `UPDATE`, `DELETE` events
+- `barber_profiles` table for `UPDATE` events (is_live changes)
 
-Update the "View Profile" link in the live notification toast to navigate to `/broadcast/{barber_profile_id}` instead of `/barber/{user_id}`, so fans go directly to the live stream.
+On any event, call `queryClient.invalidateQueries` for `['solo-broadcasts']` and `['live-barber-streams']`.
 
-Also need to fetch `barber_profiles.id` (the barber profile ID) alongside `user_id` to construct the broadcast URL correctly.
+### 3. Deduplicate Solo Broadcasts Query
 
-### 5. Add Live Indicator to BottomNavBar
-**File: `src/components/BottomNavBar.tsx`**
+**File: `src/components/battles/LiveBarberStreams.tsx**`
 
-Add a small red pulsing dot on the HOME tab icon when any followed barber is currently live. Uses a lightweight query: `SELECT count(*) FROM barber_profiles WHERE is_live = true AND user_id IN (followed_ids)`.
+After fetching solo broadcasts, deduplicate by `barber_id` — keep only the most recent session per barber.
+
+### 4. Fix BroadcastViewer — React to Stream End
+
+**File: `src/pages/BroadcastViewer.tsx**`
+
+Add a Supabase Realtime subscription on `barber_profiles` filtered by `id=eq.{barberId}`. When `is_live` changes to `false`, set `error = 'Stream ended'` and disconnect.
+
+### 5. Fix Viewer Count Going Negative
+
+**File: `src/pages/BroadcastViewer.tsx**`
+
+Change `room.numParticipants - 1` to `Math.max(0, room.numParticipants - 1)`.
+
+### 6. Add Realtime to LiveNowBanner
+
+**File: `src/components/battles/LiveNowBanner.tsx**`
+
+Already has a Realtime subscription — good. No changes needed.
 
 ## File Summary
 
-| Action | File |
-|--------|------|
-| New | `src/components/battles/LiveNowBanner.tsx` — horizontal scrollable live avatar strip |
-| Edit | `src/components/fan/FanArenaView.tsx` — add LiveNowBanner + LiveBarberStreams |
-| Edit | `src/components/battles/LiveBarberStreams.tsx` — add like/follow/donate to broadcast cards |
-| Edit | `src/hooks/useFollowedBarbersNotifications.tsx` — fix broadcast link in toast |
-| Edit | `src/components/BottomNavBar.tsx` — red dot when followed barbers are live |
 
-No database migrations needed — all tables (`creator_follows`, `creator_likes`, `barber_profiles.is_live`) already exist.
-
+| File                                                   | Change                                                           |
+| ------------------------------------------------------ | ---------------------------------------------------------------- |
+| `supabase/functions/generate-broadcast-token/index.ts` | End stale sessions before creating new one                       |
+| `src/components/battles/LiveBarberStreams.tsx`         | Add Realtime subscription + deduplicate broadcasts by barber_id  |
+| `src/pages/BroadcastViewer.tsx`                        | Add Realtime listener for stream end + fix negative viewer count |
