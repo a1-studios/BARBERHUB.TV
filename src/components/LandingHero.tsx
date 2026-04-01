@@ -7,15 +7,16 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
-import { Scissors, Users, Loader2, Lock, Sparkles } from "lucide-react";
+import { Scissors, Users, Loader2, Sparkles } from "lucide-react";
 import Globe3D from "@/components/Globe3D";
 import { CountrySelector } from "@/components/CountrySelector";
-import WorldCupPrizeCounter from "@/components/WorldCupPrizeCounter";
 import type { ArenaGateResult } from "@/components/auth/ArenaGateModal";
 import { toast } from "sonner";
 import { triggerCountryCelebration } from "@/utils/countryCelebration";
 import { supabase } from "@/integrations/supabase/client";
 import { Link } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import type { Provider } from "@supabase/supabase-js";
 
 
 interface LandingHeroProps {
