@@ -4,7 +4,7 @@ import { useSponsorAds } from "@/hooks/useSponsorAds";
 import { ArrowLeft, Play, GraduationCap, Flame, Volume2, VolumeX, Heart, Share2, User } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import SplitScreenBattle from "@/components/battles/SplitScreenBattle";
 import { parseSpecialties, getSpecialtyDisplay } from "@/config/specialtyTags";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
