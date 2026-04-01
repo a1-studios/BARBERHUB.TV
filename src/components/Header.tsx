@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Plus, User, Zap, Scissors, Crown } from 'lucide-react';
+import { NotificationPanel } from './NotificationPanel';
 import { useNavigate, Link } from 'react-router-dom';
 import barberPole from '@/assets/barber-pole.png';
 import { cn } from '@/lib/utils';
@@ -219,8 +220,10 @@ const Header = () => {
             </span>
           </button>
 
-          {/* Right Side - Barber Bucks Balance Dropdown */}
-          <div className="relative" ref={bbDropdownRef}>
+          {/* Right Side - Notifications + Barber Bucks */}
+          <div className="flex items-center gap-2">
+            {user && <NotificationPanel />}
+            <div className="relative" ref={bbDropdownRef}>
             <RotatingBBCoin
               avatarUrl={userProfile?.avatar_url}
               displayName={userProfile?.display_name || undefined}
@@ -268,6 +271,7 @@ const Header = () => {
                 </div>
               </div>
             )}
+            </div>
           </div>
         </div>
 

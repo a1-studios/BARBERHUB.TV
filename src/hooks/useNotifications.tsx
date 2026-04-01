@@ -100,12 +100,18 @@ export const useNotifications = () => {
           
           // Show toast for new notification
           const newNotification = payload.new as Notification;
+          const actionTarget = newNotification.data?.battle_id
+            ? `/battles/${newNotification.data.battle_id}`
+            : newNotification.data?.appointment_id
+              ? '/profile'
+              : null;
+
           toast(newNotification.title, {
             description: newNotification.message,
-            action: newNotification.data?.battle_id ? {
+            action: actionTarget ? {
               label: 'View',
               onClick: () => {
-                window.location.href = `/battles/${newNotification.data.battle_id}`;
+                window.location.href = actionTarget;
               }
             } : undefined
           });
