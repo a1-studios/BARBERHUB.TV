@@ -447,7 +447,7 @@ const WatchFeed = () => {
   const renderVideoItem = (item: FeedItem, idx: number) => (
     <div className="relative w-full h-full bg-black">
       {/* Small pill watermark at bottom-third center */}
-      <div className="absolute bottom-[33%] left-1/2 -translate-x-1/2 z-20 pointer-events-none select-none px-3 py-1 rounded-full border border-white/30 bg-black/20 backdrop-blur-sm">
+      <div className="absolute bottom-[32%] left-1/2 -translate-x-1/2 z-20 pointer-events-none select-none px-3 py-1 rounded-full border border-white/30 bg-black/20 backdrop-blur-sm">
         <span className="text-[10px] font-black tracking-[0.2em] uppercase">
           <span className="text-white/40">BARBER</span>
           <span className="text-primary/50">-HUB</span>
