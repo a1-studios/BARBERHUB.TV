@@ -328,17 +328,24 @@ export const DynamicBattleHero = () => {
             onClick={() => navigate(`/watch?video=${encodeURIComponent(fallbackVideo.featured_video_id)}`)}
             className="aspect-[9/14] md:aspect-video bg-card rounded-2xl shadow-2xl border border-primary/20 overflow-hidden relative cursor-pointer"
           >
-            <video
-              ref={fallbackVideoRef}
-              src={fallbackVideo.featured_video_id}
-              autoPlay
-              loop
-              playsInline
-              muted
-              className="absolute inset-0 w-full h-full object-cover"
-            />
+            <AnimatePresence mode="crossfade">
+              <motion.video
+                key={fallbackVideo.barber_id}
+                ref={fallbackVideoRef}
+                src={fallbackVideo.featured_video_id}
+                autoPlay
+                loop
+                playsInline
+                muted
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8 }}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            </AnimatePresence>
             {/* Bottom gradient overlay */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-10">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   {fallbackVideo.country_code && (
