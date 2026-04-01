@@ -58,6 +58,7 @@ const WatchFeed = () => {
   const [donationTarget, setDonationTarget] = useState<{ userId: string; name: string } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
+  const viewedContentIds = useRef<Set<string>>(new Set());
 
   // 1. Barber profile featured videos
   const { data: profileVideos = [] } = useQuery({
