@@ -67,6 +67,25 @@ export function useBarberAvailability(barberId: string | undefined) {
     enabled: !!barberId,
   });
 
+  // Fetch locked donated slots to exclude from availability
+  const { data: donatedSlots: lockedDonatedSlots, isLoading: donatedLoading } = useQuery({
+    queryKey: ['barber-donated-slots', barberUserId],
+    queryFn: async () => {
+      const now = new Date().toISOString();
+      const twoWeeks = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from('donated_services_inventory')
+        .select('slot_datetime')
+        .eq('barber_id', barberUserId!)
+        .eq('status', 'locked')
+        .gte('slot_datetime', now)
+        .lte('slot_datetime', twoWeeks);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!barberUserId,
+  });
+
   // Generate available time slots for a given date
   const getAvailableSlots = (date: Date) => {
     if (!availability) return [];
