@@ -17,6 +17,23 @@ export function useBarberAvailability(barberId: string | undefined) {
     enabled: !!barberId,
   });
 
+  // Get barber_user_id from barber_profiles for donated slots query
+  const { data: barberProfile } = useQuery({
+    queryKey: ['barber-profile-user-id', barberId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('barber_profiles')
+        .select('user_id')
+        .eq('id', barberId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!barberId,
+  });
+
+  const barberUserId = barberProfile?.user_id;
+
   const { data: availability, isLoading: availabilityLoading } = useQuery({
     queryKey: ['barber-availability', barberId],
     queryFn: async () => {
@@ -68,7 +85,7 @@ export function useBarberAvailability(barberId: string | undefined) {
   });
 
   // Fetch locked donated slots to exclude from availability
-  const { data: donatedSlots: lockedDonatedSlots, isLoading: donatedLoading } = useQuery({
+  const { data: lockedDonatedSlots, isLoading: donatedLoading } = useQuery({
     queryKey: ['barber-donated-slots', barberUserId],
     queryFn: async () => {
       const now = new Date().toISOString();
@@ -122,10 +139,16 @@ export function useBarberAvailability(barberId: string | undefined) {
         return slotStart.getTime() < aEnd && slotEnd.getTime() > aStart;
       });
 
+      // Check locked donated slots
+      const isDonated = lockedDonatedSlots?.some(d => {
+        const dTime = new Date(d.slot_datetime).getTime();
+        return slotStart.getTime() === dTime;
+      });
+
       // Don't show past slots
       const isPast = slotStart.getTime() < Date.now();
 
-      if (!isBlocked && !isBooked && !isPast) {
+      if (!isBlocked && !isBooked && !isDonated && !isPast) {
         slots.push(slotStart.toISOString());
       }
 
@@ -140,7 +163,8 @@ export function useBarberAvailability(barberId: string | undefined) {
     availability: availability || [],
     blockedSlots: blockedSlots || [],
     existingAppointments: existingAppointments || [],
+    lockedDonatedSlots: lockedDonatedSlots || [],
     getAvailableSlots,
-    isLoading: servicesLoading || availabilityLoading || blockedLoading || appointmentsLoading,
+    isLoading: servicesLoading || availabilityLoading || blockedLoading || appointmentsLoading || donatedLoading,
   };
 }
