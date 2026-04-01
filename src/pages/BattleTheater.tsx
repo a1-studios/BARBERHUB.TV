@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { HLSVideoPlayer } from '@/components/battles/HLSVideoPlayer';
+import { CloudflareStreamPlayer } from '@/components/CloudflareStreamPlayer';
 import { FloatingReactions, ReactionPicker } from '@/components/battles/FloatingReactions';
 import { BattleChat } from '@/components/battles/BattleChat';
 import { VoteComboIndicator } from '@/components/battles/VoteComboIndicator';
