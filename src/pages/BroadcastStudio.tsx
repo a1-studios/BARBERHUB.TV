@@ -264,13 +264,18 @@ export default function BroadcastStudio() {
       if (error) throw error;
       toast.success('Broadcast ended');
     } catch {
-      cleanupStartedRef.current = false;
-      toast.error('Failed to end broadcast');
-      setIsEnding(false);
-      return;
+      toast.error('Failed to end broadcast — redirecting anyway');
     }
     navigate('/studio');
   }, [isEnding, navigate]);
+
+  // Separate handler for LiveKit disconnect — only navigate, don't call end-broadcast again
+  const handleDisconnected = useCallback(() => {
+    if (cleanupStartedRef.current) return; // already ending via button
+    cleanupStartedRef.current = true;
+    toast.info('Broadcast disconnected');
+    navigate('/studio');
+  }, [navigate]);
 
   if (!token || !serverUrl) {
     return (
@@ -302,7 +307,7 @@ export default function BroadcastStudio() {
         adaptiveStream: true,
         dynacast: true,
       }}
-      onDisconnected={handleEndStream}
+      onDisconnected={handleDisconnected}
     >
       <StudioControls onEnd={handleEndStream} />
     </LiveKitRoom>
