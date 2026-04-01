@@ -19,7 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type StudioMode = 'idle' | 'portfolio' | 'challenge' | 'course' | 'tips';
+type StudioMode = 'idle' | 'portfolio' | 'challenge' | 'course' | 'tips' | 'livestream';
 
 interface DeviceInfo {
   deviceId: string;
@@ -31,6 +31,7 @@ const MODE_OPTIONS: { mode: StudioMode; icon: React.ReactNode; label: string; de
   { mode: 'challenge', icon: <Flame className="h-5 w-5" />, label: 'Challenge', desc: 'Issue a battle challenge' },
   { mode: 'course', icon: <GraduationCap className="h-5 w-5" />, label: 'Course', desc: 'Record a masterclass module' },
   { mode: 'tips', icon: <Lightbulb className="h-5 w-5" />, label: 'Tips', desc: 'Share a quick technique tip' },
+  { mode: 'livestream', icon: <Radio className="h-5 w-5" />, label: 'Live Stream', desc: 'Broadcast live to the Arena' },
 ];
 
 const R2_FOLDERS: Record<string, string> = {
