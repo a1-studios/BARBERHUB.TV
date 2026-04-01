@@ -1903,6 +1903,73 @@ export type Database = {
         }
         Relationships: []
       }
+      donated_services_inventory: {
+        Row: {
+          barber_id: string
+          barter_group_id: string
+          bb_value: number
+          created_at: string
+          granted_perk_category: string
+          granted_perk_details: Json | null
+          id: string
+          service_id: string
+          service_type: string
+          slot_datetime: string
+          status: string
+          time_tier: string
+        }
+        Insert: {
+          barber_id: string
+          barter_group_id: string
+          bb_value?: number
+          created_at?: string
+          granted_perk_category: string
+          granted_perk_details?: Json | null
+          id?: string
+          service_id: string
+          service_type: string
+          slot_datetime: string
+          status?: string
+          time_tier: string
+        }
+        Update: {
+          barber_id?: string
+          barter_group_id?: string
+          bb_value?: number
+          created_at?: string
+          granted_perk_category?: string
+          granted_perk_details?: Json | null
+          id?: string
+          service_id?: string
+          service_type?: string
+          slot_datetime?: string
+          status?: string
+          time_tier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "donated_services_inventory_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "donated_services_inventory_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "public_user_profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "donated_services_inventory_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "barber_services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       donations: {
         Row: {
           amount_cents: number
@@ -4141,6 +4208,16 @@ export type Database = {
           p_battle_id: string
           p_donor_id: string
           p_message?: string
+        }
+        Returns: Json
+      }
+      process_universal_barter_checkout: {
+        Args: {
+          p_barber_id: string
+          p_donated_slots: Json
+          p_perk_category: string
+          p_perk_details: Json
+          p_required_bb_value: number
         }
         Returns: Json
       }
