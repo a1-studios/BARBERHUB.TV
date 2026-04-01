@@ -210,6 +210,17 @@ const AppContent = () => {
                 </AuthGuard>
               } 
             />
+            <Route path="/broadcast/:barberId" element={<BroadcastViewer />} />
+            <Route 
+              path="/broadcast/:barberId/studio" 
+              element={
+                <AuthGuard>
+                  <BarberGuard>
+                    <BroadcastStudio />
+                  </BarberGuard>
+                </AuthGuard>
+              } 
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
     </>
