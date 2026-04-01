@@ -34,9 +34,10 @@ const tierColors = {
 
 interface BarberSubscriptionTiersProps {
   onShowAddFunds?: () => void;
+  onBarterForTier?: (tierId: string, tierName: string, bbPrice: number) => void;
 }
 
-export const BarberSubscriptionTiers = ({ onShowAddFunds }: BarberSubscriptionTiersProps) => {
+export const BarberSubscriptionTiers = ({ onShowAddFunds, onBarterForTier }: BarberSubscriptionTiersProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { barberBucks, isLoading: bbLoading } = useBarberBucks();

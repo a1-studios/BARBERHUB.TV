@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
-import { Coins, Zap, Crown, Star, Sparkles } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Coins, Zap, Crown, Star, Sparkles, HandCoins } from 'lucide-react';
 import { BarberSubscriptionTiers } from './BarberSubscriptionTiers';
 import { AddFundsModal } from '@/components/AddFundsModal';
+import { UniversalBarterGateway } from '@/components/barter/UniversalBarterGateway';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface UpgradePromptProps {
   isOpen: boolean;
@@ -40,7 +43,9 @@ export const UpgradePrompt = ({
   description: customDescription
 }: UpgradePromptProps) => {
   const [showAddFunds, setShowAddFunds] = useState(false);
+  const [barterTierId, setBarterTierId] = useState<{ id: string; name: string; bbPrice: number } | null>(null);
   const { barberBucks, isLoading: bbLoading } = useBarberBucks();
+  const { isBarber } = useUserRole();
 
   const config = REASON_CONFIG[reason];
   const Icon = config.icon;
@@ -55,9 +60,13 @@ export const UpgradePrompt = ({
     setShowAddFunds(false);
   };
 
+  const handleBarterForTier = (tierId: string, tierName: string, bbPrice: number) => {
+    setBarterTierId({ id: tierId, name: tierName, bbPrice });
+  };
+
   return (
     <>
-      <Drawer open={isOpen && !showAddFunds} onOpenChange={onClose}>
+      <Drawer open={isOpen && !showAddFunds && !barterTierId} onOpenChange={onClose}>
         <DrawerContent className="max-h-[85vh]">
           <DrawerHeader className="text-center pb-2">
             <DrawerTitle className="text-xl font-bold">Membership Plans</DrawerTitle>
@@ -80,12 +89,29 @@ export const UpgradePrompt = ({
               </span>
             </div>
 
-            <BarberSubscriptionTiers onShowAddFunds={handleShowAddFunds} />
+            <BarberSubscriptionTiers
+              onShowAddFunds={handleShowAddFunds}
+              onBarterForTier={isBarber ? handleBarterForTier : undefined}
+            />
           </div>
         </DrawerContent>
       </Drawer>
 
       <AddFundsModal isOpen={showAddFunds} onClose={handleCloseAddFunds} />
+
+      {barterTierId && (
+        <UniversalBarterGateway
+          isOpen={!!barterTierId}
+          perkCategory="subscription"
+          perkDetails={{ tier_id: barterTierId.id }}
+          requiredBBValue={barterTierId.bbPrice}
+          onSuccess={() => {
+            setBarterTierId(null);
+            onClose();
+          }}
+          onCancel={() => setBarterTierId(null)}
+        />
+      )}
     </>
   );
 };
