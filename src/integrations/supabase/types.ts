@@ -3920,6 +3920,10 @@ export type Database = {
       }
     }
     Functions: {
+      assign_social_auth_role: {
+        Args: { p_role: string; p_user_id: string }
+        Returns: undefined
+      }
       award_show_up_point: {
         Args: { p_barber_profile_id: string; p_battle_id: string }
         Returns: boolean
