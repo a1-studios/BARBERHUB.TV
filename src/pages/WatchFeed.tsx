@@ -228,7 +228,8 @@ const WatchFeed = () => {
   const { data: sponsors = [] } = useSponsorAds(true);
 
   // ─── Build unified feed ───
-  const allContent: FeedItem[] = [...profileVideos, ...creatorVideos, ...creationVideos, ...submissionVideos];
+  const allContent: FeedItem[] = [...profileVideos, ...creatorVideos, ...creationVideos, ...submissionVideos]
+    .filter(item => !(isFan && item.type === 'educator'));
 
   const feed: FeedItem[] = [];
   let sponsorIdx = 0;
