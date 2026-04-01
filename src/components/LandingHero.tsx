@@ -300,6 +300,9 @@ const LandingHero = ({ onOpenArenaGate }: LandingHeroProps) => {
                 <div className="flex-1 h-px bg-border/50" />
               </div>
             </div>
+
+            {/* Sign up section */}
+            <div className="w-full max-w-md mx-auto">
               <Card 
                 className="p-6 border border-border/50 shadow-lg backdrop-blur-sm bg-card/50 transition-all duration-300 hover:shadow-[0_0_30px_hsl(var(--primary)/0.5),inset_0_0_20px_hsl(var(--primary)/0.15)] hover:border-primary/30" 
                 style={{ borderRadius: '1.5rem' }}
