@@ -569,25 +569,37 @@ export default function CameraStudio() {
                   <Swords className="h-4 w-4" />
                 </Button>
               </DrawerTrigger>
-              <DrawerContent className="max-h-[60vh]">
+              <DrawerContent className="max-h-[80vh]">
                 <DrawerHeader><DrawerTitle>What are you recording?</DrawerTitle></DrawerHeader>
-                <div className="px-4 pb-6 space-y-2">
-                  {MODE_OPTIONS.map(opt => (
-                    <button key={opt.mode} onClick={() => handleModeSelect(opt.mode)}
-                      className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all ${
-                        studioMode === opt.mode
-                          ? 'border-primary bg-primary/10 text-foreground'
-                          : 'border-border bg-card hover:bg-muted text-foreground'
-                      }`}>
-                      <div className={`p-2.5 rounded-lg ${studioMode === opt.mode ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                        {opt.icon}
-                      </div>
-                      <div className="text-left">
-                        <p className="font-semibold text-sm">{opt.label}</p>
-                        <p className="text-xs text-muted-foreground">{opt.desc}</p>
-                      </div>
-                    </button>
-                  ))}
+                <div className="px-4 pb-6 space-y-2 overflow-y-auto max-h-[60vh]">
+                  {MODE_OPTIONS.map(opt => {
+                    const isLive = opt.mode === 'livestream';
+                    return (
+                      <button key={opt.mode} onClick={() => handleModeSelect(opt.mode)}
+                        className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all ${
+                          studioMode === opt.mode
+                            ? 'border-primary bg-primary/10 text-foreground'
+                            : isLive
+                              ? 'border-red-500/40 bg-red-500/5 hover:bg-red-500/10 text-foreground'
+                              : 'border-border bg-card hover:bg-muted text-foreground'
+                        }`}>
+                        <div className={`relative p-2.5 rounded-lg ${
+                          studioMode === opt.mode ? 'bg-primary text-primary-foreground'
+                            : isLive ? 'bg-red-500/20 text-red-500'
+                            : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {opt.icon}
+                          {isLive && (
+                            <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse ring-2 ring-background" />
+                          )}
+                        </div>
+                        <div className="text-left">
+                          <p className={`font-semibold text-sm ${isLive ? 'text-red-500' : ''}`}>{opt.label}</p>
+                          <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </DrawerContent>
             </Drawer>
