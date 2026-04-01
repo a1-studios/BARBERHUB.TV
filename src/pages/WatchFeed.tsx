@@ -392,6 +392,10 @@ const WatchFeed = () => {
     } else {
       await navigator.clipboard.writeText(url);
     }
+    // Track share for creator content
+    if (item.content_id) {
+      supabase.rpc('increment_content_shares', { p_content_id: item.content_id }).then();
+    }
   };
 
   const renderActionStack = (item: FeedItem) => {
