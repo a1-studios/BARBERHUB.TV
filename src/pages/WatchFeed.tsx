@@ -9,6 +9,7 @@ import SplitScreenBattle from "@/components/battles/SplitScreenBattle";
 import { parseSpecialties, getSpecialtyDisplay } from "@/config/specialtyTags";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { DonationModal } from "@/components/DonationModal";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface FeedItem {
   type: "video" | "sponsor" | "educator" | "platform" | "battle";
@@ -48,6 +49,7 @@ const WatchFeed = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const targetVideoBarber = searchParams.get('video');
+  const { isFan } = useUserRole();
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
   const [donationTarget, setDonationTarget] = useState<{ userId: string; name: string } | null>(null);
@@ -226,7 +228,8 @@ const WatchFeed = () => {
   const { data: sponsors = [] } = useSponsorAds(true);
 
   // ─── Build unified feed ───
-  const allContent: FeedItem[] = [...profileVideos, ...creatorVideos, ...creationVideos, ...submissionVideos];
+  const allContent: FeedItem[] = [...profileVideos, ...creatorVideos, ...creationVideos, ...submissionVideos]
+    .filter(item => !(isFan && item.type === 'educator'));
 
   const feed: FeedItem[] = [];
   let sponsorIdx = 0;
@@ -277,7 +280,8 @@ const WatchFeed = () => {
   const [hasJumped, setHasJumped] = useState(false);
   useEffect(() => {
     if (targetVideoBarber && feed.length > 0 && !hasJumped) {
-      const idx = feed.findIndex(f => f.barber_user_id === targetVideoBarber);
+      const decodedTarget = decodeURIComponent(targetVideoBarber);
+      const idx = feed.findIndex(f => f.media_url === decodedTarget);
       if (idx >= 0) {
         setActiveIndex(idx);
         setHasJumped(true);
