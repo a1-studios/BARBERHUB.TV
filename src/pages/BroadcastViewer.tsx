@@ -20,7 +20,7 @@ function ViewerContent({ barberName }: { barberName: string }) {
   const remoteVideoTrack = tracks.find((t) => !t.participant.isLocal);
 
   useEffect(() => {
-    const update = () => setViewerCount(room.numParticipants - 1);
+    const update = () => setViewerCount(Math.max(0, room.numParticipants - 1));
     update();
     room.on(RoomEvent.ParticipantConnected, update);
     room.on(RoomEvent.ParticipantDisconnected, update);
@@ -71,6 +71,34 @@ export default function BroadcastViewer() {
   const [barberName, setBarberName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Subscribe to barber's is_live status for instant stream-end detection
+  useEffect(() => {
+    if (!barberId) return;
+
+    const channel = supabase
+      .channel(`barber-live-status-${barberId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'barber_profiles',
+          filter: `id=eq.${barberId}`,
+        },
+        (payload) => {
+          if (payload.new && payload.new.is_live === false) {
+            setError('Stream ended');
+            setToken(null);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [barberId]);
 
   useEffect(() => {
     if (!barberId) return;

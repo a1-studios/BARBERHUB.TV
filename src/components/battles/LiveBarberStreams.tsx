@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ExternalLink, Swords, DollarSign, Users, Radio, Heart, UserPlus, UserCheck } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AcceptChallengeModal } from './AcceptChallengeModal';
 import { DonationModal } from '@/components/DonationModal';
 import { useNavigate } from 'react-router-dom';
@@ -169,7 +169,35 @@ export const LiveBarberStreams = () => {
   const { user } = useAuth();
   const { isBarber } = useUserRole();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [selectedChallenge, setSelectedChallenge] = useState<{ id: string; challenger_username: string; title: string } | null>(null);
+
+  // Realtime subscription for instant updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('live-streams-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'stream_sessions' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['solo-broadcasts'] });
+          queryClient.invalidateQueries({ queryKey: ['live-barber-streams'] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'barber_profiles' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['solo-broadcasts'] });
+          queryClient.invalidateQueries({ queryKey: ['live-barber-streams'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const { data: liveStreams, isLoading } = useQuery({
     queryKey: ['live-barber-streams'],
@@ -187,7 +215,7 @@ export const LiveBarberStreams = () => {
       if (error) throw error;
       return (data || []) as LiveStream[];
     },
-    refetchInterval: 5000,
+    refetchInterval: 10000,
   });
 
   const { data: soloBroadcasts } = useQuery({
@@ -201,7 +229,15 @@ export const LiveBarberStreams = () => {
         .order('started_at', { ascending: false });
       if (error) throw error;
 
-      const barberIds = (data || []).map((s: any) => s.barber_id).filter(Boolean);
+      // Deduplicate by barber_id — keep only the most recent session per barber
+      const seen = new Set<string>();
+      const unique = (data || []).filter((s: any) => {
+        if (seen.has(s.barber_id)) return false;
+        seen.add(s.barber_id);
+        return true;
+      });
+
+      const barberIds = unique.map((s: any) => s.barber_id).filter(Boolean);
       let barberMap: Record<string, { name: string; id: string; user_id: string }> = {};
       if (barberIds.length > 0) {
         const { data: barbers } = await supabase
@@ -213,12 +249,12 @@ export const LiveBarberStreams = () => {
         }
       }
 
-      return (data || []).map((s: any) => ({
+      return unique.map((s: any) => ({
         ...s,
         barber: barberMap[s.barber_id] || null,
       })) as SoloBroadcast[];
     },
-    refetchInterval: 5000,
+    refetchInterval: 10000,
   });
 
   const hasContent =
