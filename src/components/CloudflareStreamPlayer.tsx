@@ -16,6 +16,8 @@ interface CloudflareStreamPlayerProps {
   className?: string;
   /** Reason shown when neither UID nor fallback is available */
   processingMessage?: string;
+  /** Called when the video finishes playing */
+  onEnded?: () => void;
 }
 
 /**
@@ -34,6 +36,7 @@ export const CloudflareStreamPlayer = ({
   controls = true,
   className = '',
   processingMessage = 'Optimizing for high-quality playback…',
+  onEnded,
 }: CloudflareStreamPlayerProps) => {
   // Priority 1: Cloudflare Stream adaptive player
   if (streamUid) {
@@ -67,6 +70,7 @@ export const CloudflareStreamPlayer = ({
           playsInline
           className="w-full h-full object-cover"
           preload="metadata"
+          onEnded={onEnded}
         />
       </div>
     );

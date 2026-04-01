@@ -1,4 +1,15 @@
-import { Play, Upload, Loader2 } from 'lucide-react';
+import { Play, Upload, Loader2, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { BrandedVideoPlayer } from '@/components/BrandedVideoPlayer';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
@@ -213,6 +224,21 @@ export const BarberVideoSection = ({
     );
   }
 
+  const handleDeleteVideo = async () => {
+    try {
+      const { error } = await supabase
+        .from('barber_profiles')
+        .update({ featured_video_id: null, updated_at: new Date().toISOString() })
+        .eq('user_id', user?.id);
+      if (error) throw error;
+      toast.success('Featured video removed');
+      onVideoUploaded?.();
+    } catch (err) {
+      console.error('Delete error:', err);
+      toast.error('Failed to remove video');
+    }
+  };
+
   return (
     <div className={`relative ${aspectClass} ${className}`}>
       <BrandedVideoPlayer
@@ -222,6 +248,29 @@ export const BarberVideoSection = ({
         autoPlay={isLive}
         muted={isLive}
       />
+      {isOwner && user?.id === barberUserId && (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <button className="absolute top-2 right-2 z-20 p-1.5 rounded-full bg-black/50 backdrop-blur-sm border border-white/10 hover:bg-destructive/80 transition-colors">
+              <Trash2 className="w-4 h-4 text-white" />
+            </button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove featured video?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will remove your featured video from your profile. You can upload a new one anytime.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteVideo} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Remove
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 };

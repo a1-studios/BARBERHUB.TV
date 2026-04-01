@@ -4,7 +4,7 @@ import { useSponsorAds } from "@/hooks/useSponsorAds";
 import { ArrowLeft, Play, GraduationCap, Flame, Volume2, VolumeX, Heart, Share2, User } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import SplitScreenBattle from "@/components/battles/SplitScreenBattle";
 import { parseSpecialties, getSpecialtyDisplay } from "@/config/specialtyTags";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -230,8 +230,18 @@ const WatchFeed = () => {
   const { data: sponsors = [] } = useSponsorAds(true);
 
   // ─── Build unified feed ───
-  const allContent: FeedItem[] = [...profileVideos, ...creatorVideos, ...creationVideos, ...submissionVideos]
-    .filter(item => !(isFan && item.type === 'educator'));
+  // Shuffle content for a fresh feel each visit
+  const shuffledContent = useMemo(() => {
+    const arr = [...profileVideos, ...creatorVideos, ...creationVideos, ...submissionVideos]
+      .filter(item => !(isFan && item.type === 'educator'));
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }, [profileVideos, creatorVideos, creationVideos, submissionVideos, isFan]);
+
+  const allContent: FeedItem[] = shuffledContent;
 
   const feed: FeedItem[] = [];
   let sponsorIdx = 0;
@@ -353,6 +363,15 @@ const WatchFeed = () => {
     );
   };
 
+  const handleVideoEnded = useCallback((idx: number) => {
+    const next = idx + 1;
+    if (next < feed.length) {
+      const container = containerRef.current;
+      const target = container?.querySelector(`[data-index="${next}"]`);
+      target?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [feed.length]);
+
   const handleShare = async (item: FeedItem) => {
     const url = window.location.origin + "/watch";
     if (navigator.share) {
@@ -427,9 +446,9 @@ const WatchFeed = () => {
             fallbackUrl={item.media_url}
             autoPlay={activeIndex === idx}
             muted={isMuted}
-            loop
             controls={false}
             className="w-full h-full"
+            onEnded={() => handleVideoEnded(idx)}
           />
         </div>
       ) : item.media_url && (item.media_url.includes(".mp4") || item.media_url.includes(".webm") || item.media_url.startsWith("http")) ? (
@@ -439,8 +458,8 @@ const WatchFeed = () => {
           className="absolute inset-0 w-full h-full object-contain"
           autoPlay={activeIndex === idx}
           muted
-          loop
           playsInline
+          onEnded={() => handleVideoEnded(idx)}
         />
       ) : (
         <div
