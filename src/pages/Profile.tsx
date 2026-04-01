@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,7 +14,7 @@ import { Loader2, Settings, ExternalLink, Edit3, LogOut, Trash2, ChevronRight, R
 import { MyPrizesSection } from '@/components/profile/MyPrizesSection';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { AddFundsModal } from '@/components/AddFundsModal';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '@/components/Header';
 import { ClientProfileForm } from '@/components/profiles/ClientProfileForm';
 import { SponsorBoardPurchaseModal } from '@/components/fan/SponsorBoardPurchaseModal';
@@ -30,6 +30,7 @@ import { toast } from 'sonner';
 import { BottomNavBar } from '@/components/BottomNavBar';
 import { cn } from '@/lib/utils';
 import { parseSpecialties, getSpecialtyDisplay } from '@/config/specialtyTags';
+import { PostAppointmentReviewModal } from '@/components/reviews/PostAppointmentReviewModal';
 
 const Profile = () => {
   const { user, signOut } = useAuth();
