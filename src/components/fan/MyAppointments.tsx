@@ -48,12 +48,18 @@ const statusColors: Record<string, string> = {
   expired: 'bg-muted text-muted-foreground border-muted',
 };
 
-function AppointmentCard({ appointment, barberName, hasReview, onReview }: {
+function AppointmentCard({ appointment, barberName, hasReview, onReview, onCancel, cancelPending }: {
   appointment: Appointment;
   barberName: string;
   hasReview: boolean;
   onReview: () => void;
+  onCancel: (id: string, isLateCancel: boolean) => void;
+  cancelPending: boolean;
 }) {
+  const canCancel = ['pending', 'confirmed'].includes(appointment.status);
+  const hoursUntil = differenceInHours(new Date(appointment.scheduled_at), new Date());
+  const isLateCancel = hoursUntil < 2 && hoursUntil >= 0;
+
   return (
     <Card className="mb-3">
       <CardContent className="p-4 space-y-2">
@@ -84,6 +90,30 @@ function AppointmentCard({ appointment, barberName, hasReview, onReview }: {
             {appointment.status.replace('_', ' ')}
           </Badge>
         </div>
+
+        {/* Cancel & Reschedule buttons */}
+        {canCancel && (
+          <div className="flex gap-2 mt-2">
+            <Button
+              size="sm"
+              variant="destructive"
+              className="flex-1 text-xs"
+              onClick={() => onCancel(appointment.id, isLateCancel)}
+              disabled={cancelPending}
+            >
+              <X className="h-3 w-3 mr-1" /> Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 text-xs opacity-50 cursor-not-allowed"
+              disabled
+              title="Coming soon"
+            >
+              <CalendarClock className="h-3 w-3 mr-1" /> Reschedule
+            </Button>
+          </div>
+        )}
 
         {appointment.status === 'completed' && !hasReview && (
           <Button size="sm" variant="outline" className="w-full text-xs" onClick={onReview}>
