@@ -63,11 +63,12 @@ function StudioControls({ onEnd }: { onEnd: () => void }) {
   const flipCamera = useCallback(async () => {
     const newMode = facingMode === 'user' ? 'environment' : 'user';
     setFacingMode(newMode);
-    // Disable then re-enable camera with the new facing mode
-    await localParticipant.setCameraEnabled(false);
-    await localParticipant.setCameraEnabled(true, {
-      facingMode: newMode,
-    });
+    const camPub = localParticipant.getTrackPublication(Track.Source.Camera);
+    if (camPub?.track) {
+      await (camPub.track as any).restartTrack({ facingMode: newMode });
+    } else {
+      await localParticipant.setCameraEnabled(true, { facingMode: newMode });
+    }
   }, [localParticipant, facingMode]);
 
   const tracks = useTracks([Track.Source.Camera], { onlySubscribed: false });
