@@ -111,7 +111,7 @@ const Profile = () => {
     setSearchParams({}, { replace: true });
   }, [searchParams, user?.id, isBarber]);
 
-
+  const { data: barberStats } = useQuery({
     queryKey: ['barber-own-stats', barberProfile?.id],
     queryFn: async () => {
       if (!barberProfile?.id) return null;
