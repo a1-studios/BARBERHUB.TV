@@ -953,6 +953,7 @@ export type Database = {
       battle_submissions: {
         Row: {
           battle_id: string
+          cloudflare_stream_uid: string | null
           created_at: string
           description: string | null
           id: string
@@ -968,6 +969,7 @@ export type Database = {
         }
         Insert: {
           battle_id: string
+          cloudflare_stream_uid?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -983,6 +985,7 @@ export type Database = {
         }
         Update: {
           battle_id?: string
+          cloudflare_stream_uid?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1114,6 +1117,7 @@ export type Database = {
           barber2_youtube_video_id: string | null
           battle_type: string
           category: string | null
+          cloudflare_stream_uid: string | null
           cover_image_url: string | null
           created_at: string
           creation1_id: string | null
@@ -1173,6 +1177,7 @@ export type Database = {
           barber2_youtube_video_id?: string | null
           battle_type?: string
           category?: string | null
+          cloudflare_stream_uid?: string | null
           cover_image_url?: string | null
           created_at?: string
           creation1_id?: string | null
@@ -1232,6 +1237,7 @@ export type Database = {
           barber2_youtube_video_id?: string | null
           battle_type?: string
           category?: string | null
+          cloudflare_stream_uid?: string | null
           cover_image_url?: string | null
           created_at?: string
           creation1_id?: string | null
@@ -1654,6 +1660,7 @@ export type Database = {
         Row: {
           barber_id: string
           category: string | null
+          cloudflare_stream_uid: string | null
           created_at: string
           description: string | null
           id: string
@@ -1665,6 +1672,7 @@ export type Database = {
         Insert: {
           barber_id: string
           category?: string | null
+          cloudflare_stream_uid?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1676,6 +1684,7 @@ export type Database = {
         Update: {
           barber_id?: string
           category?: string | null
+          cloudflare_stream_uid?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -1711,6 +1720,7 @@ export type Database = {
       creator_content: {
         Row: {
           boost_amount_bb: number | null
+          cloudflare_stream_uid: string | null
           content_category: string | null
           content_type: string
           created_at: string
@@ -1731,6 +1741,7 @@ export type Database = {
         }
         Insert: {
           boost_amount_bb?: number | null
+          cloudflare_stream_uid?: string | null
           content_category?: string | null
           content_type: string
           created_at?: string
@@ -1751,6 +1762,7 @@ export type Database = {
         }
         Update: {
           boost_amount_bb?: number | null
+          cloudflare_stream_uid?: string | null
           content_category?: string | null
           content_type?: string
           created_at?: string

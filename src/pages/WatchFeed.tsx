@@ -10,6 +10,7 @@ import { parseSpecialties, getSpecialtyDisplay } from "@/config/specialtyTags";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { DonationModal } from "@/components/DonationModal";
 import { useUserRole } from "@/hooks/useUserRole";
+import { CloudflareStreamPlayer } from "@/components/CloudflareStreamPlayer";
 
 interface FeedItem {
   type: "video" | "sponsor" | "educator" | "platform" | "battle";
@@ -33,6 +34,7 @@ interface FeedItem {
   barber2_name?: string;
   barber2_location?: string;
   barber_user_id?: string;
+  cloudflare_stream_uid?: string | null;
 }
 
 const PLATFORM_PROMOS: FeedItem[] = [
@@ -418,7 +420,19 @@ const WatchFeed = () => {
         </span>
       </div>
 
-      {item.media_url && (item.media_url.includes(".mp4") || item.media_url.includes(".webm") || item.media_url.startsWith("http")) ? (
+      {item.cloudflare_stream_uid ? (
+        <div className="absolute inset-0 w-full h-full">
+          <CloudflareStreamPlayer
+            streamUid={item.cloudflare_stream_uid}
+            fallbackUrl={item.media_url}
+            autoPlay={activeIndex === idx}
+            muted={isMuted}
+            loop
+            controls={false}
+            className="w-full h-full"
+          />
+        </div>
+      ) : item.media_url && (item.media_url.includes(".mp4") || item.media_url.includes(".webm") || item.media_url.startsWith("http")) ? (
         <video
           ref={(el) => { if (el) videoRefs.current.set(item.id, el); }}
           src={item.media_url}

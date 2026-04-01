@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { HLSVideoPlayer } from '@/components/battles/HLSVideoPlayer';
+import { CloudflareStreamPlayer } from '@/components/CloudflareStreamPlayer';
 import { FloatingReactions, ReactionPicker } from '@/components/battles/FloatingReactions';
 import { BattleChat } from '@/components/battles/BattleChat';
 import { VoteComboIndicator } from '@/components/battles/VoteComboIndicator';
@@ -22,10 +23,24 @@ import { X, MessageSquare, Settings as SettingsIcon, Heart, Volume2, VolumeX } f
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 
-/** Native MP4 player with muted-autoplay + unmute overlay */
-const MP4Player = ({ src, className }: { src: string; className?: string }) => {
+/** VOD player — uses Cloudflare Stream UID when available, falls back to native video */
+const VODPlayer = ({ src, streamUid, className }: { src: string; streamUid?: string | null; className?: string }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isMuted, setIsMuted] = useState(true);
+
+  if (streamUid) {
+    return (
+      <CloudflareStreamPlayer
+        streamUid={streamUid}
+        fallbackUrl={src}
+        autoPlay
+        muted={isMuted}
+        loop
+        controls
+        className={className}
+      />
+    );
+  }
 
   return (
     <div className="relative w-full h-full">
@@ -302,10 +317,19 @@ export default function BattleTheater() {
 
   // ─── PROCESSING PHASE ───
   if (localPhase === 'processing') {
-    return <ProcessingArena battleId={id!} onReady={handleProcessingReady} />;
+    // If cloudflare_stream_uid is missing, show transcoding state
+    const hasStreamUid = !!(battle as any).cloudflare_stream_uid;
+    return (
+      <ProcessingArena
+        battleId={id!}
+        onReady={handleProcessingReady}
+        reason={hasStreamUid ? 'battle_processing' : 'transcoding'}
+      />
+    );
   }
 
-  // ─── VOD PHASE: Existing playback ───
+  // ─── VOD PHASE ───
+  const battleStreamUid = (battle as any).cloudflare_stream_uid as string | null;
   const barber1VideoSrc = (battle as any).ivs_playback_url || battle.barber_1_video_url || battle.stream_url || null;
   const barber2VideoSrc = battle.barber_2_video_url || null;
   const isMP4 = (url: string | null) => url?.endsWith('.mp4');
@@ -342,8 +366,10 @@ export default function BattleTheater() {
       <div className="h-full flex">
         {/* Left Side - Barber 1 */}
         <div className="flex-1 relative">
-          {isMP4(barber1VideoSrc) ? (
-            <MP4Player src={barber1VideoSrc!} className="w-full h-full object-cover" />
+          {battleStreamUid ? (
+            <CloudflareStreamPlayer streamUid={battleStreamUid} fallbackUrl={barber1VideoSrc} autoPlay muted loop />
+          ) : isMP4(barber1VideoSrc) ? (
+            <VODPlayer src={barber1VideoSrc!} className="w-full h-full object-cover" />
           ) : (
             <HLSVideoPlayer src={barber1VideoSrc} isLive={false} title={barber1?.name} size="large" autoPlay />
           )}
@@ -380,8 +406,10 @@ export default function BattleTheater() {
 
         {/* Right Side - Barber 2 */}
         <div className="flex-1 relative">
-          {isMP4(barber2VideoSrc) ? (
-            <MP4Player src={barber2VideoSrc!} className="w-full h-full object-cover" />
+          {battleStreamUid ? (
+            <CloudflareStreamPlayer streamUid={battleStreamUid} fallbackUrl={barber2VideoSrc} autoPlay muted loop />
+          ) : isMP4(barber2VideoSrc) ? (
+            <VODPlayer src={barber2VideoSrc!} className="w-full h-full object-cover" />
           ) : (
             <HLSVideoPlayer src={barber2VideoSrc} isLive={false} title={barber2?.name} size="large" autoPlay />
           )}
