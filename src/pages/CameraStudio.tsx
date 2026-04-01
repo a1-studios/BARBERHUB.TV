@@ -230,12 +230,13 @@ export default function CameraStudio() {
     const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
     const folder = R2_FOLDERS[studioMode] || 'portfolios';
     const filename = `${folder}/${Date.now()}_studio.${ext}`;
-    const contentType = mimeType.split(';')[0]; // strip codecs param
+    const contentType = mimeType.split(';')[0];
 
     setIsUploading(true);
     setUploadProgress(10);
 
     try {
+      // 1. Get presigned URL & upload to R2
       const { data: urlData, error: urlErr } = await supabase.functions.invoke('get-r2-presigned-url', {
         body: { key: filename, contentType },
       });
@@ -249,6 +250,56 @@ export default function CameraStudio() {
         body: blob,
       });
       if (!res.ok) throw new Error('Upload failed');
+
+      setUploadProgress(70);
+      const publicUrl = urlData.publicUrl as string;
+
+      // 2. Create database record so video isn't orphaned
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data: barberProfile } = await supabase
+        .from('barber_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (barberProfile) {
+        if (studioMode === 'course') {
+          // Insert into creator_content for courses
+          const { data: record } = await supabase.from('creator_content').insert({
+            creator_id: user.id,
+            title: `Studio ${studioMode} ${new Date().toLocaleDateString()}`,
+            content_type: 'course_teaser',
+            content_category: 'course',
+            media_url: publicUrl,
+            is_published: true,
+          }).select('id').single();
+
+          if (record) {
+            toast.info('Optimizing video for playback...');
+            supabase.functions.invoke('upload-to-cloudflare-stream', {
+              body: { sourceUrl: publicUrl, table: 'creator_content', recordId: record.id },
+            }).catch((err: any) => console.error('CF Stream ingest error:', err));
+          }
+        } else {
+          // Insert into creations for portfolio/tips
+          const category = studioMode === 'tips' ? 'tips' : 'haircut';
+          const { data: record } = await supabase.from('creations').insert({
+            barber_id: barberProfile.id,
+            media_url: publicUrl,
+            category,
+            title: `Studio ${studioMode} ${new Date().toLocaleDateString()}`,
+          }).select('id').single();
+
+          if (record) {
+            toast.info('Optimizing video for playback...');
+            supabase.functions.invoke('upload-to-cloudflare-stream', {
+              body: { sourceUrl: publicUrl, table: 'creations', recordId: record.id },
+            }).catch((err: any) => console.error('CF Stream ingest error:', err));
+          }
+        }
+      }
 
       setUploadProgress(100);
       toast.success(`${studioMode === 'course' ? 'Course' : studioMode === 'tips' ? 'Tip' : 'Portfolio'} video saved!`);
@@ -569,25 +620,37 @@ export default function CameraStudio() {
                   <Swords className="h-4 w-4" />
                 </Button>
               </DrawerTrigger>
-              <DrawerContent className="max-h-[60vh]">
+              <DrawerContent className="max-h-[80vh]">
                 <DrawerHeader><DrawerTitle>What are you recording?</DrawerTitle></DrawerHeader>
-                <div className="px-4 pb-6 space-y-2">
-                  {MODE_OPTIONS.map(opt => (
-                    <button key={opt.mode} onClick={() => handleModeSelect(opt.mode)}
-                      className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all ${
-                        studioMode === opt.mode
-                          ? 'border-primary bg-primary/10 text-foreground'
-                          : 'border-border bg-card hover:bg-muted text-foreground'
-                      }`}>
-                      <div className={`p-2.5 rounded-lg ${studioMode === opt.mode ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                        {opt.icon}
-                      </div>
-                      <div className="text-left">
-                        <p className="font-semibold text-sm">{opt.label}</p>
-                        <p className="text-xs text-muted-foreground">{opt.desc}</p>
-                      </div>
-                    </button>
-                  ))}
+                <div className="px-4 pb-6 space-y-2 overflow-y-auto max-h-[60vh]">
+                  {MODE_OPTIONS.map(opt => {
+                    const isLive = opt.mode === 'livestream';
+                    return (
+                      <button key={opt.mode} onClick={() => handleModeSelect(opt.mode)}
+                        className={`w-full flex items-center gap-4 p-4 rounded-xl border transition-all ${
+                          studioMode === opt.mode
+                            ? 'border-primary bg-primary/10 text-foreground'
+                            : isLive
+                              ? 'border-red-500/40 bg-red-500/5 hover:bg-red-500/10 text-foreground'
+                              : 'border-border bg-card hover:bg-muted text-foreground'
+                        }`}>
+                        <div className={`relative p-2.5 rounded-lg ${
+                          studioMode === opt.mode ? 'bg-primary text-primary-foreground'
+                            : isLive ? 'bg-red-500/20 text-red-500'
+                            : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {opt.icon}
+                          {isLive && (
+                            <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse ring-2 ring-background" />
+                          )}
+                        </div>
+                        <div className="text-left">
+                          <p className={`font-semibold text-sm ${isLive ? 'text-red-500' : ''}`}>{opt.label}</p>
+                          <p className="text-xs text-muted-foreground">{opt.desc}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </DrawerContent>
             </Drawer>

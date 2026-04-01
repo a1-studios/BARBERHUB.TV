@@ -7,6 +7,7 @@ import { Plus, Upload, Trash2, Image as ImageIcon, Video, Loader2 } from 'lucide
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadPortfolioMedia } from '@/lib/storage';
+import { CloudflareStreamPlayer } from '@/components/CloudflareStreamPlayer';
 import { toast } from 'sonner';
 
 interface PortfolioManagerProps {
@@ -186,13 +187,25 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
                 <div key={item.id} className="relative group">
                   <div className="aspect-square rounded-lg overflow-hidden bg-muted">
                     {isVid ? (
-                      <video
-                        src={mediaUrl}
-                        className="w-full h-full object-cover"
-                        muted
-                        playsInline
-                        preload="metadata"
-                      />
+                      (item as any).cloudflare_stream_uid ? (
+                        <CloudflareStreamPlayer
+                          streamUid={(item as any).cloudflare_stream_uid}
+                          fallbackUrl={mediaUrl}
+                          autoPlay={false}
+                          muted
+                          controls={false}
+                          loop={false}
+                          className="w-full h-full"
+                        />
+                      ) : (
+                        <video
+                          src={mediaUrl}
+                          className="w-full h-full object-cover"
+                          muted
+                          playsInline
+                          preload="metadata"
+                        />
+                      )
                     ) : (
                       <img
                         src={item.thumbnail_url || mediaUrl}
