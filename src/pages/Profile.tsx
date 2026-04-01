@@ -586,6 +586,14 @@ const Profile = () => {
         </AlertDialogContent>
       </AlertDialog>
 
+      <PostAppointmentReviewModal
+        open={reviewModalOpen}
+        onOpenChange={setReviewModalOpen}
+        appointmentId={reviewAppointmentId}
+        revieweeId={revieweeId}
+        isBarberReviewing={isBarberReviewing}
+      />
+
       <BottomNavBar />
     </div>
   );
