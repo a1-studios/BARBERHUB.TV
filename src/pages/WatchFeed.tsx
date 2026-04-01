@@ -107,6 +107,7 @@ const WatchFeed = () => {
         .map((c) => ({
           type: (c.content_type === "course_teaser" ? "educator" : "video") as "educator" | "video",
           id: `creator-${c.id}`,
+          content_id: c.id,
           media_url: c.media_url!,
           title: c.title,
           description: c.description,
