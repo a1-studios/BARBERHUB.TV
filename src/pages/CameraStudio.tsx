@@ -44,6 +44,7 @@ export default function CameraStudio() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const battleId = searchParams.get('battleId');
+  const { canStream, isLoading: streamPermLoading, reason: streamDeniedReason } = useStreamingPermissions();
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const opponentVideoRef = useRef<HTMLDivElement>(null);
