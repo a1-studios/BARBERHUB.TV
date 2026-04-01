@@ -100,10 +100,11 @@ export const useNotifications = () => {
           
           // Show toast for new notification
           const newNotification = payload.new as Notification;
+          const reviewTypes = ['appointment_completed', 'review_prompt'];
           const actionTarget = newNotification.data?.battle_id
             ? `/battles/${newNotification.data.battle_id}`
             : newNotification.data?.appointment_id
-              ? '/profile'
+              ? `/profile?appointment_id=${newNotification.data.appointment_id}${reviewTypes.includes(newNotification.type) ? '&action=review' : ''}`
               : null;
 
           toast(newNotification.title, {

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,7 +14,7 @@ import { Loader2, Settings, ExternalLink, Edit3, LogOut, Trash2, ChevronRight, R
 import { MyPrizesSection } from '@/components/profile/MyPrizesSection';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { AddFundsModal } from '@/components/AddFundsModal';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '@/components/Header';
 import { ClientProfileForm } from '@/components/profiles/ClientProfileForm';
 import { SponsorBoardPurchaseModal } from '@/components/fan/SponsorBoardPurchaseModal';
@@ -30,6 +30,7 @@ import { toast } from 'sonner';
 import { BottomNavBar } from '@/components/BottomNavBar';
 import { cn } from '@/lib/utils';
 import { parseSpecialties, getSpecialtyDisplay } from '@/config/specialtyTags';
+import { PostAppointmentReviewModal } from '@/components/reviews/PostAppointmentReviewModal';
 
 const Profile = () => {
   const { user, signOut } = useAuth();
@@ -45,6 +46,11 @@ const Profile = () => {
   const [apptOpen, setApptOpen] = useState(false);
   const [barberApptOpen, setBarberApptOpen] = useState(false);
   const [prizesOpen, setPrizesOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewAppointmentId, setReviewAppointmentId] = useState('');
+  const [revieweeId, setRevieweeId] = useState('');
+  const [isBarberReviewing, setIsBarberReviewing] = useState(false);
 
   const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
 
@@ -69,6 +75,41 @@ const Profile = () => {
     },
     enabled: !!user?.id
   });
+
+  // Deep-link: auto-open appointment collapsible and review modal from query params
+  useEffect(() => {
+    const appointmentId = searchParams.get('appointment_id');
+    const action = searchParams.get('action');
+    if (!appointmentId || !user?.id) return;
+
+    // Auto-open the correct collapsible
+    if (isBarber) {
+      setBarberApptOpen(true);
+    } else {
+      setApptOpen(true);
+    }
+
+    // If action=review, fetch appointment and open review modal
+    if (action === 'review') {
+      (async () => {
+        const { data: appt } = await supabase
+          .from('appointments')
+          .select('barber_user_id, client_id')
+          .eq('id', appointmentId)
+          .single();
+        if (appt) {
+          const reviewing = appt.barber_user_id === user.id;
+          setIsBarberReviewing(reviewing);
+          setRevieweeId(reviewing ? appt.client_id : appt.barber_user_id);
+          setReviewAppointmentId(appointmentId);
+          setReviewModalOpen(true);
+        }
+      })();
+    }
+
+    // Clear params so refresh doesn't re-trigger
+    setSearchParams({}, { replace: true });
+  }, [searchParams, user?.id, isBarber]);
 
   const { data: barberStats } = useQuery({
     queryKey: ['barber-own-stats', barberProfile?.id],
@@ -544,6 +585,14 @@ const Profile = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PostAppointmentReviewModal
+        open={reviewModalOpen}
+        onOpenChange={setReviewModalOpen}
+        appointmentId={reviewAppointmentId}
+        revieweeId={revieweeId}
+        isBarberReviewing={isBarberReviewing}
+      />
 
       <BottomNavBar />
     </div>

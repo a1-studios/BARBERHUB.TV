@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, Calendar, Swords, CheckCheck, X, Clock, Ban, AlertTriangle } from 'lucide-react';
+import { Bell, Calendar, Swords, CheckCheck, X, Clock, Ban, AlertTriangle, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNotifications, Notification } from '@/hooks/useNotifications';
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +18,7 @@ const notificationIconMap: Record<string, React.ReactNode> = {
   no_show: <AlertTriangle className="h-4 w-4 text-yellow-500" />,
   battle_invite: <Swords className="h-4 w-4 text-primary" />,
   battle_result: <Swords className="h-4 w-4 text-cyan" />,
+  review_prompt: <Star className="h-4 w-4 text-yellow-500" />,
 };
 
 function getIcon(type: string) {
@@ -64,7 +65,9 @@ export function NotificationPanel({ embedded, onClose }: NotificationPanelProps)
     if (n.data?.battle_id) {
       navigate(`/battles/${n.data.battle_id}`);
     } else if (n.data?.appointment_id) {
-      navigate('/profile');
+      const reviewTypes = ['appointment_completed', 'review_prompt'];
+      const action = reviewTypes.includes(n.type) ? '&action=review' : '';
+      navigate(`/profile?appointment_id=${n.data.appointment_id}${action}`);
     }
     if (embedded && onClose) onClose();
     if (!embedded) setOpen(false);
