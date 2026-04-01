@@ -132,6 +132,31 @@ const LandingHero = ({ onOpenArenaGate }: LandingHeroProps) => {
     }
   };
 
+  const handleSocialLogin = (provider: Provider) => {
+    setPendingProvider(provider);
+    setShowRolePicker(true);
+  };
+
+  const completeSocialAuth = async (role: 'barber' | 'fan') => {
+    if (!pendingProvider) return;
+    setSocialLoading(true);
+    localStorage.setItem('pending_social_role', role);
+    
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: pendingProvider,
+      options: {
+        redirectTo: window.location.origin,
+      }
+    });
+
+    if (error) {
+      toast.error(error.message);
+      localStorage.removeItem('pending_social_role');
+      setSocialLoading(false);
+    }
+    setShowRolePicker(false);
+  };
+
   const UserTypeSelector = () => (
     <div className="space-y-4">
       <Label className="text-sm font-medium">I am a:</Label>
