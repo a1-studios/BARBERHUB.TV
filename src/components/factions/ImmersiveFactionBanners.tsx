@@ -121,9 +121,9 @@ export const ImmersiveFactionBanners = () => {
       return;
     }
 
-    // Check BB balance
+    // Check BB balance — offer barter or add funds
     if ((bbBalance || 0) < TOURNAMENT_CONFIG.ENTRY_FEE_BB) {
-      toast.error(`You need ${TOURNAMENT_CONFIG.ENTRY_FEE_BB} BB to join. Please add funds.`);
+      setBarterCategory(categoryShortName);
       setShowAddFunds(true);
       return;
     }
