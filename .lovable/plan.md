@@ -1,58 +1,56 @@
 
 
-# Fix Broadcast Studio & Viewer — Camera, Controls, Metrics, Engagement, Quality
+# Fix Camera Flip & Buried Controls in BroadcastStudio
 
-## Problems
+## Root Cause
 
-1. **Camera only works on selfie (front)** — No camera flip button in BroadcastStudio; LiveKit defaults to front-facing. Need a toggle to switch `facingMode` between `user` and `environment`.
-2. **No visible End Stream button** — The red `PhoneOff` button exists but is buried at the bottom with no label. Needs to be clearly labeled "END STREAM" and more prominent.
-3. **No metrics in Studio** — Broadcaster can't see viewer count, duration, or connection quality while live.
-4. **Viewer page has no engagement actions** — When a viewer clicks into a stream, they only see the video with no like, follow, donate, or comment functionality. Need TikTok-style action buttons on the viewer page.
-5. **Low stream quality** — LiveKit defaults to low resolution. Need to configure video publish options to 720p+ with higher bitrate.
+The `VideoTrack` component from LiveKit renders a `<video>` element that creates its own stacking context, painting **over** the overlay controls (metrics bar, flip button, bottom controls). The current `z-10` on overlays is not high enough — when the camera re-enables after a flip, the fresh video element renders on top of everything, hiding the buttons.
 
 ## Changes
 
-### 1. Upgrade `BroadcastStudio.tsx` — Full Studio Controls
+### File: `src/pages/BroadcastStudio.tsx`
 
-**Camera flip**: Add a `SwitchCamera` button that calls `room.switchActiveDevice('videoinput', deviceId)` or toggles `facingMode` constraint. Use LiveKit's `localParticipant.setCameraEnabled(true, { facingMode })` pattern.
+**1. Fix z-index layering** — Pin the video at `z-0` and raise all overlay controls to `z-50`:
+- Add `relative z-0` to the `VideoTrack` component
+- Change top metrics overlay from `z-10` → `z-50`
+- Change camera flip button from `z-10` → `z-50`
+- Wrap bottom controls in a `z-50` container
+- Add `pointer-events-none` to the video container and `pointer-events-auto` to each control element so taps pass through to buttons, not the video
 
-**Metrics overlay**: Show viewer count (from `room.numParticipants - 1`), live duration (timer), and a "LIVE" badge with viewer count. Subscribe to `RoomEvent.ParticipantConnected/Disconnected`.
-
-**End Stream button**: Make it clearly labeled "END STREAM" with text, not just an icon.
-
-**Video quality**: Pass `videoCaptureDefaults` and `publishDefaults` to `LiveKitRoom` for 720p at higher bitrate:
+**2. Fix camera flip black flash** — Instead of disabling then re-enabling the camera (which causes a black frame), use LiveKit's `restartTrack` approach:
 ```typescript
-<LiveKitRoom
-  options={{
-    videoCaptureDefaults: { resolution: { width: 1280, height: 720, frameRate: 30 } },
-    publishDefaults: { videoCodec: 'h264', videoSimulcastLayers: [{ width: 640, height: 360 }] },
-  }}
-/>
+const flipCamera = useCallback(async () => {
+  const newMode = facingMode === 'user' ? 'environment' : 'user';
+  setFacingMode(newMode);
+  
+  // Get the current camera track and restart it with new facing mode
+  const camTrack = localParticipant.getTrackPublication(Track.Source.Camera);
+  if (camTrack?.track) {
+    await camTrack.track.restartTrack({ facingMode: newMode });
+  } else {
+    await localParticipant.setCameraEnabled(true, { facingMode: newMode });
+  }
+}, [localParticipant, facingMode]);
 ```
+This swaps the camera device in-place without tearing down the track, eliminating the black flash.
 
-### 2. Upgrade `BroadcastViewer.tsx` — Engagement Actions
+**3. Ensure controls are always visible** — Move the bottom control bar outside the video container's relative context and position it as a fixed overlay at the bottom of the screen with `z-50`.
 
-Add a right-side action column (TikTok-style) with:
-- **Heart/Like** toggle (using `creator_likes`)
-- **Follow** toggle (using `creator_follows`)
-- **Donate** button (opens `DonationModal`)
-- **Viewer count** badge
-- **Barber name** overlay
-
-Fetch `barber_profiles.user_id` alongside name to power engagement mutations. Reuse the `EngagementActions` pattern from `LiveBarberStreams.tsx` but styled vertically for fullscreen.
-
-### 3. Higher Quality Video Capture
-
-In both `BroadcastStudio.tsx` and `generate-broadcast-token`, ensure:
-- Client-side: `videoCaptureDefaults` set to 720p/30fps
-- Token grants: no bandwidth restrictions
+### Resulting layout structure
+```text
+┌─────────────────────────┐
+│  [LIVE] [👁 3]    [0:42] │  ← z-50 top overlay
+│                    [🔄] │  ← z-50 flip button
+│                         │
+│     <VideoTrack z-0>    │  ← video pinned behind
+│                         │
+│  [🎤] [📷] [END STREAM] │  ← z-50 bottom bar
+└─────────────────────────┘
+```
 
 ## File Summary
 
-| File | Changes |
-|------|---------|
-| `src/pages/BroadcastStudio.tsx` | Add camera flip, viewer metrics, duration timer, labeled end button, HD video options |
-| `src/pages/BroadcastViewer.tsx` | Add vertical engagement actions (like/follow/donate), fetch barber user_id |
-
-No edge function or migration changes needed.
+| File | Change |
+|------|--------|
+| `src/pages/BroadcastStudio.tsx` | Fix z-index on all overlays to z-50, pin video at z-0, use `restartTrack` for flip to avoid black flash |
 
