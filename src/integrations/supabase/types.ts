@@ -3334,6 +3334,7 @@ export type Database = {
           room_sid: string | null
           started_at: string | null
           status: string | null
+          stream_type: string
           total_views: number | null
           updated_at: string | null
           user_id: string
@@ -3356,6 +3357,7 @@ export type Database = {
           room_sid?: string | null
           started_at?: string | null
           status?: string | null
+          stream_type?: string
           total_views?: number | null
           updated_at?: string | null
           user_id: string
@@ -3378,6 +3380,7 @@ export type Database = {
           room_sid?: string | null
           started_at?: string | null
           status?: string | null
+          stream_type?: string
           total_views?: number | null
           updated_at?: string | null
           user_id?: string
