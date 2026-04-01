@@ -1,55 +1,58 @@
 
 
-# Fix Live Stream Button Visibility + Enforce Cloudflare Stream ABR + R2 Buckets
+# Live Indicator for All Users — Followed Barber Streams with Engagement
 
-## Issues Identified
+## Problem
+Fans have no visible indication when a barber they follow goes live. The `LiveBarberStreams` component only shows on the non-fan view, and the `FanArenaView` has no live stream discovery. The toast notification exists but links to the profile page, not the broadcast viewer. There are no donate/like/follow actions on the broadcast cards.
 
-1. **Live Stream button not visible**: The mode picker drawer has `max-h-[60vh]` which clips the 5th option on 390px mobile viewports. The drawer content area isn't scrollable, so "Live Stream" is cut off below the fold.
+## Changes
 
-2. **CameraStudio recordings served as raw MP4**: After recording in Portfolio/Course/Tips modes, the `handleRecordingComplete` function uploads to R2 and stops — it never triggers Cloudflare Stream ingest. Users get raw MP4 playback with no adaptive bitrate.
+### 1. Add Live Streams Section to FanArenaView
+**File: `src/components/fan/FanArenaView.tsx`**
 
-3. **No organized R2 bucket folders for all media categories**: The R2_FOLDERS map only covers `portfolio`, `course`, and `tips`. The `recordings` category used by battles isn't represented, and there's no verification that all categories route correctly.
+Import and render `LiveBarberStreams` prominently at the top of the fan view (right after `DynamicBattleHero`), before the ArenaTicker. This gives fans immediate visibility into who is live.
 
-## Plan
+### 2. Create a New `LiveNowBanner` Component
+**File: `src/components/battles/LiveNowBanner.tsx`** (new)
 
-### 1. Fix Drawer Overflow — Make Live Stream Visible
-**File: `src/pages/CameraStudio.tsx`**
+A compact, horizontally-scrollable banner for followed barbers who are currently live. Designed for mobile-first (390px viewport):
+- Queries `barber_profiles` where `is_live = true` and the user follows them (`creator_follows`)
+- Renders a horizontal scroll of circular avatar thumbnails with a red pulsing ring and barber name
+- Tapping navigates to `/broadcast/{barber_profile_id}`
+- If no followed barbers are live, falls back to showing ALL live barbers (global discovery)
+- Uses Supabase Realtime subscription on `barber_profiles.is_live` for instant updates
 
-- Change `max-h-[60vh]` on the mode picker `DrawerContent` to `max-h-[75vh]`
-- Add `overflow-y-auto` to the options container `div` so all 5 items are scrollable
-- Visually distinguish the Live Stream option with a red/live accent (pulsing dot or colored border) so it stands out from recording modes
+### 3. Enhance `LiveBarberStreams` Broadcast Cards with Engagement Actions
+**File: `src/components/battles/LiveBarberStreams.tsx`**
 
-### 2. Auto-Ingest CameraStudio Recordings to Cloudflare Stream
-**File: `src/pages/CameraStudio.tsx`**
+Update solo broadcast cards to include:
+- **Heart/Like button** — toggles `creator_likes` for that barber
+- **Follow button** — toggles `creator_follows`
+- **Donate button** — opens `DonationModal` for BB tips
+- **Favorite indicator** — filled heart if already liked
+- Fetch `barber_profiles.user_id` alongside name/id so engagement mutations can target the correct user
 
-In `handleRecordingComplete`, after the R2 upload succeeds, if the file is a video (always true for recordings):
-- Call `upload-to-cloudflare-stream` edge function with `{ sourceUrl: publicUrl, table: 'creations', recordId }` (requires inserting a `creations` record first, like PortfolioManager does)
-- Show a toast: "Optimizing video for playback..."
-- This ensures all studio-recorded content gets ABR encoding
+### 4. Fix Toast Notification Link
+**File: `src/hooks/useFollowedBarbersNotifications.tsx`**
 
-Currently `handleRecordingComplete` uploads to R2 but creates NO database record. This is a bug — the video is orphaned. Fix: insert a `creations` record (for portfolio/tips) or `creator_content` record (for courses) after upload, then trigger CF Stream ingest.
+Update the "View Profile" link in the live notification toast to navigate to `/broadcast/{barber_profile_id}` instead of `/barber/{user_id}`, so fans go directly to the live stream.
 
-### 3. Ensure All Video Playback Uses CloudflareStreamPlayer
-**File: `src/components/profiles/PortfolioManager.tsx`**
+Also need to fetch `barber_profiles.id` (the barber profile ID) alongside `user_id` to construct the broadcast URL correctly.
 
-The portfolio gallery currently renders `<video src={mediaUrl}>` for videos. Update to check for `cloudflare_stream_uid` on the creation record and use `CloudflareStreamPlayer` when available, falling back to the raw URL.
+### 5. Add Live Indicator to BottomNavBar
+**File: `src/components/BottomNavBar.tsx`**
 
-### 4. Database Record Creation in CameraStudio
-**File: `src/pages/CameraStudio.tsx`**
+Add a small red pulsing dot on the HOME tab icon when any followed barber is currently live. Uses a lightweight query: `SELECT count(*) FROM barber_profiles WHERE is_live = true AND user_id IN (followed_ids)`.
 
-After successful R2 upload in `handleRecordingComplete`:
-- For `portfolio` and `tips` modes: insert into `creations` table with `barber_id`, `media_url`, `category`
-- For `course` mode: insert into `creator_content` table with appropriate fields
-- Then trigger CF Stream ingest for the inserted record
+## File Summary
 
-This requires fetching the user's `barber_profile.id` — add a query at component mount.
+| Action | File |
+|--------|------|
+| New | `src/components/battles/LiveNowBanner.tsx` — horizontal scrollable live avatar strip |
+| Edit | `src/components/fan/FanArenaView.tsx` — add LiveNowBanner + LiveBarberStreams |
+| Edit | `src/components/battles/LiveBarberStreams.tsx` — add like/follow/donate to broadcast cards |
+| Edit | `src/hooks/useFollowedBarbersNotifications.tsx` — fix broadcast link in toast |
+| Edit | `src/components/BottomNavBar.tsx` — red dot when followed barbers are live |
 
-### 5. Summary of File Changes
-
-| File | Change |
-|------|--------|
-| `src/pages/CameraStudio.tsx` | Fix drawer max-height, add scroll, add Live Stream visual accent, insert DB records after recording, trigger CF Stream ingest |
-| `src/components/profiles/PortfolioManager.tsx` | Use `CloudflareStreamPlayer` for videos with `cloudflare_stream_uid` |
-
-No new edge functions or migrations needed — the `upload-to-cloudflare-stream` function and `cloudflare_stream_uid` columns already exist on all relevant tables.
+No database migrations needed — all tables (`creator_follows`, `creator_likes`, `barber_profiles.is_live`) already exist.
 
