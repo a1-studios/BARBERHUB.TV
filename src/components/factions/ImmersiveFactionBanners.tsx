@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { ImmersiveBannerCard } from './ImmersiveBannerCard';
 import { ArenaTicker } from './ArenaTicker';
 import { AddFundsModal } from '@/components/AddFundsModal';
+import { UniversalBarterGateway } from '@/components/barter/UniversalBarterGateway';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
