@@ -1,62 +1,58 @@
-# Fix Live Stream Real-Time Updates, Cleanup, and Duplicate Cards
 
-## Problems Identified
 
-1. **Duplicate broadcast cards**: The same barber appears multiple times in the LIVE NOW section because multiple `stream_sessions` rows exist for the same barber (old sessions not cleaned up before creating new ones). The query fetches all `connecting`/`active` sessions without deduplication.
-2. **No real-time updates on LiveBarberStreams**: The solo broadcasts query uses only `refetchInterval: 5000` with no Supabase Realtime subscription on `stream_sessions` or `barber_profiles`. When a stream ends, cards linger for up to 5 seconds.
-3. **Viewer page doesn't react when stream ends**: `BroadcastViewer` fetches `is_live` once on mount but never re-checks. If the barber ends mid-view, the viewer sees "Waiting for stream..." forever instead of "Stream ended".
-4. **Viewer count shows -1**: `room.numParticipants - 1` goes negative when the broadcaster hasn't connected yet. Needs `Math.max(0, ...)`.
-5. **Stale sessions not cleaned on new broadcast**: `generate-broadcast-token` creates a new session without ending previous ones for the same barber. 
-6. ensure users are able to donate like and comment its the full live view 
+# Fix Broadcast Studio & Viewer — Camera, Controls, Metrics, Engagement, Quality
+
+## Problems
+
+1. **Camera only works on selfie (front)** — No camera flip button in BroadcastStudio; LiveKit defaults to front-facing. Need a toggle to switch `facingMode` between `user` and `environment`.
+2. **No visible End Stream button** — The red `PhoneOff` button exists but is buried at the bottom with no label. Needs to be clearly labeled "END STREAM" and more prominent.
+3. **No metrics in Studio** — Broadcaster can't see viewer count, duration, or connection quality while live.
+4. **Viewer page has no engagement actions** — When a viewer clicks into a stream, they only see the video with no like, follow, donate, or comment functionality. Need TikTok-style action buttons on the viewer page.
+5. **Low stream quality** — LiveKit defaults to low resolution. Need to configure video publish options to 720p+ with higher bitrate.
 
 ## Changes
 
-### 1. Fix `generate-broadcast-token` — Clean Up Stale Sessions
+### 1. Upgrade `BroadcastStudio.tsx` — Full Studio Controls
 
-**File: `supabase/functions/generate-broadcast-token/index.ts**`
+**Camera flip**: Add a `SwitchCamera` button that calls `room.switchActiveDevice('videoinput', deviceId)` or toggles `facingMode` constraint. Use LiveKit's `localParticipant.setCameraEnabled(true, { facingMode })` pattern.
 
-Before creating a new `stream_sessions` row, update any existing `connecting`/`active` sessions for this user with `stream_type = 'solo_broadcast'` to `status = 'ended'`. This prevents duplicate cards.
+**Metrics overlay**: Show viewer count (from `room.numParticipants - 1`), live duration (timer), and a "LIVE" badge with viewer count. Subscribe to `RoomEvent.ParticipantConnected/Disconnected`.
 
-### 2. Add Realtime Subscription to `LiveBarberStreams`
+**End Stream button**: Make it clearly labeled "END STREAM" with text, not just an icon.
 
-**File: `src/components/battles/LiveBarberStreams.tsx**`
+**Video quality**: Pass `videoCaptureDefaults` and `publishDefaults` to `LiveKitRoom` for 720p at higher bitrate:
+```typescript
+<LiveKitRoom
+  options={{
+    videoCaptureDefaults: { resolution: { width: 1280, height: 720, frameRate: 30 } },
+    publishDefaults: { videoCodec: 'h264', videoSimulcastLayers: [{ width: 640, height: 360 }] },
+  }}
+/>
+```
 
-Add a `useEffect` with a Supabase Realtime channel listening to:
+### 2. Upgrade `BroadcastViewer.tsx` — Engagement Actions
 
-- `stream_sessions` table for `INSERT`, `UPDATE`, `DELETE` events
-- `barber_profiles` table for `UPDATE` events (is_live changes)
+Add a right-side action column (TikTok-style) with:
+- **Heart/Like** toggle (using `creator_likes`)
+- **Follow** toggle (using `creator_follows`)
+- **Donate** button (opens `DonationModal`)
+- **Viewer count** badge
+- **Barber name** overlay
 
-On any event, call `queryClient.invalidateQueries` for `['solo-broadcasts']` and `['live-barber-streams']`.
+Fetch `barber_profiles.user_id` alongside name to power engagement mutations. Reuse the `EngagementActions` pattern from `LiveBarberStreams.tsx` but styled vertically for fullscreen.
 
-### 3. Deduplicate Solo Broadcasts Query
+### 3. Higher Quality Video Capture
 
-**File: `src/components/battles/LiveBarberStreams.tsx**`
-
-After fetching solo broadcasts, deduplicate by `barber_id` — keep only the most recent session per barber.
-
-### 4. Fix BroadcastViewer — React to Stream End
-
-**File: `src/pages/BroadcastViewer.tsx**`
-
-Add a Supabase Realtime subscription on `barber_profiles` filtered by `id=eq.{barberId}`. When `is_live` changes to `false`, set `error = 'Stream ended'` and disconnect.
-
-### 5. Fix Viewer Count Going Negative
-
-**File: `src/pages/BroadcastViewer.tsx**`
-
-Change `room.numParticipants - 1` to `Math.max(0, room.numParticipants - 1)`.
-
-### 6. Add Realtime to LiveNowBanner
-
-**File: `src/components/battles/LiveNowBanner.tsx**`
-
-Already has a Realtime subscription — good. No changes needed.
+In both `BroadcastStudio.tsx` and `generate-broadcast-token`, ensure:
+- Client-side: `videoCaptureDefaults` set to 720p/30fps
+- Token grants: no bandwidth restrictions
 
 ## File Summary
 
+| File | Changes |
+|------|---------|
+| `src/pages/BroadcastStudio.tsx` | Add camera flip, viewer metrics, duration timer, labeled end button, HD video options |
+| `src/pages/BroadcastViewer.tsx` | Add vertical engagement actions (like/follow/donate), fetch barber user_id |
 
-| File                                                   | Change                                                           |
-| ------------------------------------------------------ | ---------------------------------------------------------------- |
-| `supabase/functions/generate-broadcast-token/index.ts` | End stale sessions before creating new one                       |
-| `src/components/battles/LiveBarberStreams.tsx`         | Add Realtime subscription + deduplicate broadcasts by barber_id  |
-| `src/pages/BroadcastViewer.tsx`                        | Add Realtime listener for stream end + fix negative viewer count |
+No edge function or migration changes needed.
+
