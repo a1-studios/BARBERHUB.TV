@@ -16,6 +16,8 @@ interface CloudflareStreamPlayerProps {
   className?: string;
   /** Reason shown when neither UID nor fallback is available */
   processingMessage?: string;
+  /** Called when the video finishes playing */
+  onEnded?: () => void;
 }
 
 /**
