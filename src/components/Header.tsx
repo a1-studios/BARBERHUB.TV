@@ -2,8 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Plus, User, Zap, Scissors, Crown } from 'lucide-react';
-import { NotificationPanel } from './NotificationPanel';
+import { Plus, User, Zap, Scissors, Crown, Bell } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import barberPole from '@/assets/barber-pole.png';
 import { cn } from '@/lib/utils';
@@ -12,6 +11,8 @@ import { AddFundsModal } from './AddFundsModal';
 import { RotatingBBCoin } from './economy/RotatingBBCoin';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useNotifications } from '@/hooks/useNotifications';
+import { NotificationPanel } from './NotificationPanel';
 
 interface QuickAction {
   id: string;
@@ -34,6 +35,8 @@ const Header = () => {
   const bbDropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
+  const { unreadCount } = useNotifications();
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // Fetch user profile for avatar
   const { data: userProfile } = useQuery({
@@ -220,57 +223,89 @@ const Header = () => {
             </span>
           </button>
 
-          {/* Right Side - Notifications + Barber Bucks */}
+          {/* Right Side - Profile Coin with notification badge */}
           <div className="flex items-center gap-2">
-            {user && <NotificationPanel />}
             <div className="relative" ref={bbDropdownRef}>
-            <RotatingBBCoin
-              avatarUrl={userProfile?.avatar_url}
-              displayName={userProfile?.display_name || undefined}
-              size="xs"
-              animate={true}
-              onClick={() => setBbDropdownOpen(!bbDropdownOpen)}
-            />
-
-            {/* BB Dropdown Menu */}
-            {bbDropdownOpen && (
-              <div className="absolute top-full right-0 mt-2 z-50 animate-scale-in">
-                <div className="w-48 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
-                  {/* Balance Header */}
-                  <div className="px-3 py-3 bg-primary/10 border-b border-border/30">
-                    <p className="text-xs text-muted-foreground">Your Balance</p>
-                    <p className="text-lg font-bold">
-                      <span className="text-primary">{barberBucks.toLocaleString()}</span>
-                      <span className="text-cyan text-sm ml-1">BB</span>
-                    </p>
-                  </div>
-                  
-                  {/* Actions */}
-                  <div className="p-1.5 space-y-1">
-                    <button
-                      onClick={() => {
-                        setShowAddFundsModal(true);
-                        setBbDropdownOpen(false);
-                      }}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-primary/10 transition-colors"
-                    >
-                      <Plus className="h-4 w-4 text-primary" />
-                      <span>Add Funds</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        navigate('/profile');
-                        setBbDropdownOpen(false);
-                      }}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-primary/10 transition-colors"
-                    >
-                      <User className="h-4 w-4 text-cyan" />
-                      <span>Profile</span>
-                    </button>
-                  </div>
-                </div>
+              <div className="relative">
+                <RotatingBBCoin
+                  avatarUrl={userProfile?.avatar_url}
+                  displayName={userProfile?.display_name || undefined}
+                  size="xs"
+                  animate={true}
+                  onClick={() => { setBbDropdownOpen(!bbDropdownOpen); setShowNotifications(false); }}
+                />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold px-1 pointer-events-none animate-scale-in">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
               </div>
-            )}
+
+              {/* BB Dropdown Menu */}
+              {bbDropdownOpen && (
+                <div className="absolute top-full right-0 mt-2 z-50 animate-scale-in">
+                  {showNotifications ? (
+                    <div className="w-80">
+                      <div className="bg-card border border-border rounded-lg shadow-xl overflow-hidden">
+                        <button
+                          onClick={() => setShowNotifications(false)}
+                          className="w-full flex items-center gap-2 px-4 py-2 text-xs text-muted-foreground hover:text-foreground border-b border-border/30 transition-colors"
+                        >
+                          ← Back to Wallet
+                        </button>
+                        <NotificationPanel embedded onClose={() => { setBbDropdownOpen(false); setShowNotifications(false); }} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-48 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+                      {/* Balance Header */}
+                      <div className="px-3 py-3 bg-primary/10 border-b border-border/30">
+                        <p className="text-xs text-muted-foreground">Your Balance</p>
+                        <p className="text-lg font-bold">
+                          <span className="text-primary">{barberBucks.toLocaleString()}</span>
+                          <span className="text-cyan text-sm ml-1">BB</span>
+                        </p>
+                      </div>
+                      
+                      {/* Actions */}
+                      <div className="p-1.5 space-y-1">
+                        <button
+                          onClick={() => setShowNotifications(true)}
+                          className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-primary/10 transition-colors"
+                        >
+                          <Bell className="h-4 w-4 text-primary" />
+                          <span>Notifications</span>
+                          {unreadCount > 0 && (
+                            <span className="ml-auto flex items-center justify-center min-w-[20px] h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold px-1">
+                              {unreadCount > 99 ? '99+' : unreadCount}
+                            </span>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setShowAddFundsModal(true);
+                            setBbDropdownOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-primary/10 transition-colors"
+                        >
+                          <Plus className="h-4 w-4 text-primary" />
+                          <span>Add Funds</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            navigate('/profile');
+                            setBbDropdownOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-primary/10 transition-colors"
+                        >
+                          <User className="h-4 w-4 text-cyan" />
+                          <span>Profile</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

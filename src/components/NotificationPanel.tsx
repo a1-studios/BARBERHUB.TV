@@ -3,7 +3,6 @@ import { Bell, Calendar, Swords, CheckCheck, X, Clock, Ban, AlertTriangle } from
 import { cn } from '@/lib/utils';
 import { useNotifications, Notification } from '@/hooks/useNotifications';
 import { useNavigate } from 'react-router-dom';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
@@ -25,7 +24,12 @@ function getIcon(type: string) {
   return notificationIconMap[type] ?? <Bell className="h-4 w-4 text-muted-foreground" />;
 }
 
-export function NotificationPanel() {
+interface NotificationPanelProps {
+  embedded?: boolean;
+  onClose?: () => void;
+}
+
+export function NotificationPanel({ embedded, onClose }: NotificationPanelProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -38,7 +42,9 @@ export function NotificationPanel() {
     isMarkingAllRead,
   } = useNotifications();
 
+  // Standalone mode: own open/close with outside click
   useEffect(() => {
+    if (embedded) return;
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
@@ -51,7 +57,7 @@ export function NotificationPanel() {
       document.removeEventListener('mousedown', handler);
       document.removeEventListener('keydown', esc);
     };
-  }, [open]);
+  }, [open, embedded]);
 
   const handleClick = (n: Notification) => {
     if (!n.read) markAsRead(n.id);
@@ -60,9 +66,74 @@ export function NotificationPanel() {
     } else if (n.data?.appointment_id) {
       navigate('/profile');
     }
-    setOpen(false);
+    if (embedded && onClose) onClose();
+    if (!embedded) setOpen(false);
   };
 
+  const renderList = () => (
+    <>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-primary/5">
+        <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
+        {unreadCount > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs h-7 text-muted-foreground hover:text-foreground"
+            onClick={() => markAllAsRead()}
+            disabled={isMarkingAllRead}
+          >
+            Mark all read
+          </Button>
+        )}
+      </div>
+
+      {/* List */}
+      <ScrollArea className="max-h-[320px]">
+        {isLoading ? (
+          <div className="p-6 text-center text-muted-foreground text-sm">Loading…</div>
+        ) : notifications.length === 0 ? (
+          <div className="p-8 text-center">
+            <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
+            <p className="text-sm text-muted-foreground">No notifications yet</p>
+          </div>
+        ) : (
+          notifications.map((n) => (
+            <button
+              key={n.id}
+              onClick={() => handleClick(n)}
+              className={cn(
+                'w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-accent/50',
+                !n.read && 'bg-primary/5'
+              )}
+            >
+              <div className="mt-0.5 shrink-0">{getIcon(n.type)}</div>
+              <div className="flex-1 min-w-0">
+                <p className={cn('text-sm leading-tight', !n.read ? 'font-semibold text-foreground' : 'text-muted-foreground')}>
+                  {n.title}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+                <div className="flex items-center gap-1 mt-1">
+                  <Clock className="h-3 w-3 text-muted-foreground/60" />
+                  <span className="text-[10px] text-muted-foreground/60">
+                    {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                  </span>
+                </div>
+              </div>
+              {!n.read && <span className="mt-2 h-2 w-2 rounded-full bg-primary shrink-0" />}
+            </button>
+          ))
+        )}
+      </ScrollArea>
+    </>
+  );
+
+  // Embedded mode: just render the list directly
+  if (embedded) {
+    return renderList();
+  }
+
+  // Standalone mode (fallback, not used in current header)
   return (
     <div className="relative" ref={ref}>
       <button
@@ -80,59 +151,7 @@ export function NotificationPanel() {
 
       {open && (
         <div className="absolute top-full right-0 mt-2 z-50 w-80 bg-card border border-border rounded-lg shadow-xl overflow-hidden animate-scale-in">
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 bg-primary/5">
-            <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
-            {unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs h-7 text-muted-foreground hover:text-foreground"
-                onClick={() => markAllAsRead()}
-                disabled={isMarkingAllRead}
-              >
-                Mark all read
-              </Button>
-            )}
-          </div>
-
-          {/* List */}
-          <ScrollArea className="max-h-[360px]">
-            {isLoading ? (
-              <div className="p-6 text-center text-muted-foreground text-sm">Loading…</div>
-            ) : notifications.length === 0 ? (
-              <div className="p-8 text-center">
-                <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">No notifications yet</p>
-              </div>
-            ) : (
-              notifications.map((n) => (
-                <button
-                  key={n.id}
-                  onClick={() => handleClick(n)}
-                  className={cn(
-                    'w-full flex items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-accent/50',
-                    !n.read && 'bg-primary/5'
-                  )}
-                >
-                  <div className="mt-0.5 shrink-0">{getIcon(n.type)}</div>
-                  <div className="flex-1 min-w-0">
-                    <p className={cn('text-sm leading-tight', !n.read ? 'font-semibold text-foreground' : 'text-muted-foreground')}>
-                      {n.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Clock className="h-3 w-3 text-muted-foreground/60" />
-                      <span className="text-[10px] text-muted-foreground/60">
-                        {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-                      </span>
-                    </div>
-                  </div>
-                  {!n.read && <span className="mt-2 h-2 w-2 rounded-full bg-primary shrink-0" />}
-                </button>
-              ))
-            )}
-          </ScrollArea>
+          {renderList()}
         </div>
       )}
     </div>
