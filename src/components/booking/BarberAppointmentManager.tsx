@@ -263,8 +263,16 @@ export function BarberAppointmentManager() {
                         </Button>
                         <Button
                           size="sm"
+                          variant="outline"
+                          className="opacity-50 cursor-not-allowed"
+                          disabled
+                          title="Coming soon"
+                        >
+                          Reschedule
+                        </Button>
+                        <Button
+                          size="sm"
                           variant="destructive"
-                          className="flex-1"
                           onClick={() => manageMutation.mutate({ appointment_id: appt.id, action: 'no_show' }, { onSuccess: () => refetchAppointments() })}
                           disabled={manageMutation.isPending}
                         >
