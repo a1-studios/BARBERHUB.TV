@@ -1,49 +1,41 @@
 
 
-# Deep-Link Notifications to Specific Appointments + Review Flow Routing
+# Track Creator Content Metrics (Views, Shares)
 
-## Problems
+## Problem
+The `CreatorStatsDrawer` reads `views`, `likes`, and `shares` from the `creator_content` table, but nothing ever increments these columns. All stats show zero.
 
-1. **Dead routing**: Clicking any appointment notification navigates to `/profile` generically — barbers land on their profile but the "Manage Appointments" collapsible is closed and they have to find the appointment manually.
-2. **Completed appointment is a dead end**: When a client gets "Appointment Complete" notification, clicking it goes to `/profile` with no prompt to leave a review. The `review_prompt` notification type (fired by DB trigger `notify_review_prompt`) is also not handled in the UI.
-3. **No notification icon mapping for `review_prompt`**: The `NotificationPanel` icon map doesn't include it.
+## What Needs to Happen
 
-## Plan
+### 1. Database: RPC functions + likes sync trigger
+**New migration**
 
-### 1. Add query-param-based deep linking on Profile page
+- **`increment_content_views(p_content_id UUID)`** — SQL function that does `UPDATE creator_content SET views = views + 1 WHERE id = p_content_id`
+- **`increment_content_shares(p_content_id UUID)`** — same pattern for shares
+- **Trigger on `creator_likes`** — on INSERT, increment `creator_content.likes` for the matching content; on DELETE, decrement. Since `creator_likes` tracks likes by `creator_id` (user ID) not content ID, we increment the aggregate count across all content by that creator. Alternatively, add a simpler approach: when the `CreatorStatsDrawer` fetches stats, also query `COUNT(*)` from `creator_likes` for that creator and use that as the likes count directly (no trigger needed).
 
-**File: `src/pages/Profile.tsx`**
+Given the `creator_likes` table tracks likes per creator (not per content piece), the cleanest fix is:
+- For **likes**: query `creator_likes` count directly in `CreatorStatsDrawer` instead of relying on the denormalized column
+- For **views** and **shares**: use RPC increment functions called from the frontend
 
-- Import `useSearchParams` from react-router-dom
-- Read `?appointment_id=...&action=review` from URL on mount
-- If `appointment_id` is present:
-  - Auto-open the correct collapsible (`barberApptOpen` for barbers, `apptOpen` for fans)
-  - If `action=review`, auto-open the `PostAppointmentReviewModal` with the appointment details (fetch appointment to get `reviewee_id`)
-- Add state for `reviewModalOpen`, `reviewAppointmentId`, `revieweeId`, `isBarberReviewing`
+### 2. WatchFeed: Track views and shares
+**File: `src/pages/WatchFeed.tsx`**
 
-### 2. Update notification click routing
+- Add a `useRef<Set<string>>` to track which content IDs have been viewed this session
+- When a creator content item becomes active (via the intersection observer), extract the real content ID and call `increment_content_views` RPC (once per session per item)
+- In `handleShare`, after sharing, call `increment_content_shares` RPC for creator content items
 
-**File: `src/components/NotificationPanel.tsx`**
+### 3. CreatorStatsDrawer: Fix likes count
+**File: `src/components/creator/CreatorStatsDrawer.tsx`**
 
-- Update `handleClick` to build smarter URLs:
-  - `new_appointment` → `/profile?appointment_id={id}` (opens barber's appointment manager to that item)
-  - `appointment_accepted` / `appointment_confirmed` → `/profile?appointment_id={id}`
-  - `appointment_completed` / `review_prompt` → `/profile?appointment_id={id}&action=review` (opens review modal)
-  - `appointment_denied`, `appointment_cancelled`, `no_show` → `/profile?appointment_id={id}`
-- Add `review_prompt` to the icon map (Star icon)
+- Add a separate query to count rows in `creator_likes` where `creator_id = user.id`
+- Use that count for the likes stat instead of the denormalized `creator_content.likes` column (which is never updated)
 
-### 3. Update Realtime toast routing
+## Files
 
-**File: `src/hooks/useNotifications.tsx`**
-
-- Update the toast "View" action to use the same smart URL pattern instead of bare `/profile`
-- Route `review_prompt` and `appointment_completed` to `/profile?appointment_id={id}&action=review`
-
-## Files to Modify
-
-| File | Change |
+| File | Action |
 |------|--------|
-| `src/pages/Profile.tsx` | Read `appointment_id` + `action` search params; auto-open collapsible and review modal |
-| `src/components/NotificationPanel.tsx` | Smart URL routing per notification type; add `review_prompt` icon |
-| `src/hooks/useNotifications.tsx` | Update Realtime toast action URLs |
+| New migration | `increment_content_views` + `increment_content_shares` RPC functions |
+| `src/pages/WatchFeed.tsx` | Call view/share RPCs on content interaction |
+| `src/components/creator/CreatorStatsDrawer.tsx` | Query `creator_likes` count for accurate likes |
 
