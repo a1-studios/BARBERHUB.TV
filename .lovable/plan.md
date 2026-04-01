@@ -1,94 +1,111 @@
 
 
-# Universal Cloudflare Stream Auto-Ingest (D-1 Fix + UGC Pipeline)
+# Live Stream Feature — Full Architecture Plan
 
-## Problem
-All video content currently serves raw MP4 files from R2, causing buffering for global users. Cloudflare Stream exists but is never automatically triggered — it requires manual invocation.
+## Overview
+Add a "Live Stream" option to the CameraStudio recording mode picker. When selected, the barber creates a solo LiveKit broadcast room. Any user (barber or fan, authenticated or not) can discover and watch active streams globally via the existing `LiveBarberStreams` component and a new dedicated viewer page.
 
-## What Changes
+## What Exists Today
+- `CameraStudio.tsx` has a 4-option mode drawer (Portfolio, Challenge, Course, Tips)
+- `barber_profiles` already has `is_live` (boolean) and `live_video_id` (string) columns
+- `stream_sessions` table tracks LiveKit sessions (tied to `battle_id` currently)
+- `generate-livekit-token` creates publisher tokens (currently battle-scoped)
+- `get-livekit-viewer-token` creates subscriber tokens (currently battle-scoped, auth required)
+- `LiveBarberStreams.tsx` shows live battles on the landing page
+- `LiveKitArena.tsx` renders dual-stream battle views
+- `platform_state` table stores key-value feature flags
 
-### PATCH 1: Automated Battle Pipeline (D-1 Fix)
-**File: `supabase/functions/livekit-egress-webhook/index.ts`**
+## Changes Required
 
-After the webhook successfully writes `barber_1_video_url` to the `battles` table (line 146-149), add a server-to-server call to the Cloudflare Stream API (`POST /stream/copy`) directly inline. This avoids needing an auth token to invoke `upload-to-cloudflare-stream` (which requires a Bearer token). The webhook already has access to `SUPABASE_SERVICE_ROLE_KEY` and runs server-side, so it will:
+### 1. Database Migration
+- Add `is_premium_streaming_enforced` row to `platform_state` with value `false`
+- Make `stream_sessions.battle_id` nullable (it already is per types — confirm)
+- Add `stream_type` column to `stream_sessions` (`'battle'` | `'solo_broadcast'`, default `'battle'`)
 
-1. Read `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_STREAM_API_TOKEN` from env
-2. POST the R2 public URL to Cloudflare Stream copy endpoint
-3. On success, update `battles.cloudflare_stream_uid` with the returned UID
-4. Log but do NOT fail the webhook if Stream ingest fails (the R2 fallback still works)
+### 2. New Edge Function: `generate-broadcast-token`
+Creates a LiveKit publisher token for solo broadcasts (no battle required):
+- Authenticate the user, verify they have a barber profile
+- Check `platform_state.is_premium_streaming_enforced` — if `true`, verify the barber has an active subscription tier
+- Create a LiveKit room named `broadcast-{barber_profile_id}`
+- Generate a publisher token with `canPublish: true`
+- Insert a `stream_sessions` row with `stream_type: 'solo_broadcast'`, `battle_id: null`
+- Set `barber_profiles.is_live = true`, `live_video_id = barber_profile_id`
+- Return token + serverUrl + roomName
 
-This is fire-and-await with graceful degradation — battle status transitions happen regardless.
+### 3. New Edge Function: `get-broadcast-viewer-token`
+Creates a subscribe-only LiveKit token for ANY user (no auth required for public viewing):
+- Accept `roomName` in the request body
+- If auth header present, use user identity; otherwise generate anonymous viewer identity (`anon-{random}`)
+- Verify the room exists by checking `stream_sessions` where `room_name = roomName` and `status = 'connecting' or 'active'`
+- Generate a subscriber-only token (`canPublish: false`)
+- Return token + serverUrl
 
-### PATCH 2: User-Generated Content — Battle Submissions via `submit-battle-video`
-**File: `supabase/functions/submit-battle-video/index.ts`**
+### 4. New Edge Function: `end-broadcast`
+Cleanly ends a solo broadcast:
+- Authenticate user, verify they own the active stream session
+- Update `stream_sessions` status to `'ended'`, set `ended_at`
+- Set `barber_profiles.is_live = false`, `live_video_id = null`
 
-After the video URL is saved to `battle_submissions` and `battles` (lines 140-176), add the same Cloudflare Stream copy logic. The submission's `media_url` is sent to Stream, and `battle_submissions.cloudflare_stream_uid` is updated. Only triggered when the URL looks like a video (ends in `.mp4`, `.mov`, `.webm`, or contains `/recordings/`).
-
-### PATCH 3: User-Generated Content — Multipart Upload Completion
-**File: `supabase/functions/complete-multipart-upload/index.ts`**
-
-After the R2 multipart upload completes and `battle_submissions` is inserted (line 86-93), add the Cloudflare Stream copy call for the resulting R2 URL. The `key` already tells us it's a video (from the `recordings/` prefix and file extension). Update `battle_submissions.cloudflare_stream_uid`.
-
-### PATCH 4: Portfolio Video Uploads (Frontend)
-**File: `src/components/profiles/PortfolioManager.tsx`**
-
-After `uploadPortfolioMedia` succeeds and the `creations` record is inserted (lines 67-75), if the file is a video (`file.type.startsWith('video/')`), invoke `upload-to-cloudflare-stream` with `{ sourceUrl, table: 'creations', recordId }`. Requires fetching the inserted record's ID via `.select().single()` on the insert.
-
-### PATCH 5: Educator Upload (Already Partially Done — Verify)
-**File: `src/components/creator/EducatorUpload.tsx`**
-
-This component already calls `upload-to-cloudflare-stream` at lines 132-139. No changes needed — already correctly guarded by `isVideo` check. Confirmed working.
-
-### NOT Touched (Image-Only Components)
-- `CreationUpload.tsx` — only accepts images (`accept="image/*"`, 5MB limit). No Stream ingest needed.
-
-## Shared Helper Pattern (Edge Functions)
-To avoid code duplication across the 3 edge functions, each will use an inline async helper:
-
+### 5. Frontend: `useStreamingPermissions` Hook
 ```typescript
-async function ingestToCloudflareStream(
-  sourceUrl: string, 
-  table: string, 
-  recordId: string, 
-  supabaseAdmin: any
-): Promise<string | null> {
-  const cfAccountId = Deno.env.get('CLOUDFLARE_ACCOUNT_ID');
-  const cfApiToken = Deno.env.get('CLOUDFLARE_STREAM_API_TOKEN');
-  if (!cfAccountId || !cfApiToken) {
-    console.warn('[CF-STREAM] Secrets not configured, skipping ingest');
-    return null;
-  }
-  // Only ingest video files
-  const videoExts = ['.mp4', '.mov', '.webm', '.avi', '.mkv'];
-  const isVideo = videoExts.some(ext => sourceUrl.toLowerCase().includes(ext));
-  if (!isVideo) {
-    console.log('[CF-STREAM] Skipping non-video URL:', sourceUrl);
-    return null;
-  }
-  // POST to Cloudflare Stream copy API
-  // On success: update table.cloudflare_stream_uid
-  // On failure: log and return null (graceful degradation)
-}
+// src/hooks/useStreamingPermissions.tsx
+// Queries platform_state for 'is_premium_streaming_enforced'
+// If true, checks barber's active_subscription_tier
+// Returns { canStream: boolean, isLoading: boolean, reason?: string }
 ```
 
-## Database Consideration
-The `battle_submissions` table already has a `cloudflare_stream_uid` column (confirmed in types). The `battles` table also has it. The `creations` table needs verification — if missing, a migration will add `cloudflare_stream_uid TEXT` to `creations`.
+### 6. Frontend: Update CameraStudio Mode Picker
+- Add `StudioMode` type: `'idle' | 'portfolio' | 'challenge' | 'course' | 'tips' | 'livestream'`
+- Add 5th option to `MODE_OPTIONS`: icon `Radio`, label "Live Stream", desc "Broadcast live to the Arena"
+- In `handleModeSelect`, when `mode === 'livestream'`:
+  - Check `useStreamingPermissions` — if denied, show toast and return
+  - Call `generate-broadcast-token` edge function
+  - On success, navigate to `/broadcast/{barber_profile_id}` passing token/serverUrl via route state
 
-## UI Updates
-- **PortfolioManager**: After a video upload, show a brief toast: "Video uploaded — optimizing for playback..." No blocking spinner needed since the Stream ingest happens asynchronously.
-- **VideoSubmissionModal**: The existing upload flow already shows success. The Stream ingest happens server-side in the edge function, so no UI change needed — the `CloudflareStreamPlayer` in `BattleTheater` already handles the fallback gracefully.
+### 7. New Page: `BroadcastViewer.tsx` (`/broadcast/:barberId`)
+A public page (no AuthGuard) that:
+- Fetches barber profile info (name, avatar, country)
+- Calls `get-broadcast-viewer-token` with `roomName: broadcast-{barberId}`
+- Renders a single-stream LiveKit viewer using `@livekit/components-react` (`LiveKitRoom` + `VideoTrack`)
+- Shows barber name overlay, live viewer count, and a chat/reaction area
+- If the stream is offline, shows "This barber is not currently live"
 
-## Prerequisites
-The following Supabase secrets must be configured:
-- `CLOUDFLARE_ACCOUNT_ID`
-- `CLOUDFLARE_STREAM_API_TOKEN`
+### 8. New Page: `BroadcastStudio.tsx` (`/broadcast/:barberId/studio`)
+A barber-only page (BarberGuard) that:
+- Receives LiveKit token from route state (or re-fetches from `generate-broadcast-token`)
+- Connects to LiveKit room as publisher
+- Shows full-screen camera preview with stream controls (mute, video toggle, end stream)
+- "End Stream" button calls `end-broadcast` edge function and navigates back to `/studio`
 
-These are already referenced by `upload-to-cloudflare-stream` — if that function works, these secrets exist.
+### 9. Update `LiveBarberStreams.tsx`
+- Query `stream_sessions` where `stream_type = 'solo_broadcast'` AND `status IN ('connecting', 'active')`, joining `barber_profiles` for name/avatar
+- Render solo broadcast cards alongside battle cards
+- "Watch" button navigates to `/broadcast/{barberId}`
 
-## Summary of Files Modified
-1. `supabase/functions/livekit-egress-webhook/index.ts` — add inline CF Stream ingest after battle update
-2. `supabase/functions/submit-battle-video/index.ts` — add inline CF Stream ingest after submission save
-3. `supabase/functions/complete-multipart-upload/index.ts` — add inline CF Stream ingest after multipart completion
-4. `src/components/profiles/PortfolioManager.tsx` — add client-side CF Stream invoke for video portfolio uploads
-5. Migration (if needed) — add `cloudflare_stream_uid` column to `creations` table
+### 10. Route Registration (`App.tsx`)
+- Add `/broadcast/:barberId` → `BroadcastViewer` (public, no guard)
+- Add `/broadcast/:barberId/studio` → `BroadcastStudio` (AuthGuard + BarberGuard)
+
+## File Summary
+
+| Action | File |
+|--------|------|
+| Migration | Add `platform_state` row + `stream_type` column to `stream_sessions` |
+| New | `supabase/functions/generate-broadcast-token/index.ts` |
+| New | `supabase/functions/get-broadcast-viewer-token/index.ts` |
+| New | `supabase/functions/end-broadcast/index.ts` |
+| New | `src/hooks/useStreamingPermissions.tsx` |
+| New | `src/pages/BroadcastViewer.tsx` |
+| New | `src/pages/BroadcastStudio.tsx` |
+| Edit | `src/pages/CameraStudio.tsx` — add livestream mode + routing |
+| Edit | `src/components/battles/LiveBarberStreams.tsx` — include solo broadcasts |
+| Edit | `src/App.tsx` — add broadcast routes |
+
+## Technical Details
+
+- Solo broadcasts use room name `broadcast-{barber_profile_id}` to avoid collision with battle rooms (`battle-{id}`)
+- Viewer tokens for broadcasts do NOT require authentication — anonymous viewers get a generated identity
+- The `is_premium_streaming_enforced` flag defaults to `false` (open access for launch)
+- Supabase Realtime subscription on `stream_sessions` powers the live indicator on the landing page
+- Stream sessions are cleaned up via the `end-broadcast` function and a future cron for stale sessions
 
