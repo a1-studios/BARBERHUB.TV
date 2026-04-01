@@ -1,111 +1,55 @@
 
 
-# Live Stream Feature — Full Architecture Plan
+# Fix Live Stream Button Visibility + Enforce Cloudflare Stream ABR + R2 Buckets
 
-## Overview
-Add a "Live Stream" option to the CameraStudio recording mode picker. When selected, the barber creates a solo LiveKit broadcast room. Any user (barber or fan, authenticated or not) can discover and watch active streams globally via the existing `LiveBarberStreams` component and a new dedicated viewer page.
+## Issues Identified
 
-## What Exists Today
-- `CameraStudio.tsx` has a 4-option mode drawer (Portfolio, Challenge, Course, Tips)
-- `barber_profiles` already has `is_live` (boolean) and `live_video_id` (string) columns
-- `stream_sessions` table tracks LiveKit sessions (tied to `battle_id` currently)
-- `generate-livekit-token` creates publisher tokens (currently battle-scoped)
-- `get-livekit-viewer-token` creates subscriber tokens (currently battle-scoped, auth required)
-- `LiveBarberStreams.tsx` shows live battles on the landing page
-- `LiveKitArena.tsx` renders dual-stream battle views
-- `platform_state` table stores key-value feature flags
+1. **Live Stream button not visible**: The mode picker drawer has `max-h-[60vh]` which clips the 5th option on 390px mobile viewports. The drawer content area isn't scrollable, so "Live Stream" is cut off below the fold.
 
-## Changes Required
+2. **CameraStudio recordings served as raw MP4**: After recording in Portfolio/Course/Tips modes, the `handleRecordingComplete` function uploads to R2 and stops — it never triggers Cloudflare Stream ingest. Users get raw MP4 playback with no adaptive bitrate.
 
-### 1. Database Migration
-- Add `is_premium_streaming_enforced` row to `platform_state` with value `false`
-- Make `stream_sessions.battle_id` nullable (it already is per types — confirm)
-- Add `stream_type` column to `stream_sessions` (`'battle'` | `'solo_broadcast'`, default `'battle'`)
+3. **No organized R2 bucket folders for all media categories**: The R2_FOLDERS map only covers `portfolio`, `course`, and `tips`. The `recordings` category used by battles isn't represented, and there's no verification that all categories route correctly.
 
-### 2. New Edge Function: `generate-broadcast-token`
-Creates a LiveKit publisher token for solo broadcasts (no battle required):
-- Authenticate the user, verify they have a barber profile
-- Check `platform_state.is_premium_streaming_enforced` — if `true`, verify the barber has an active subscription tier
-- Create a LiveKit room named `broadcast-{barber_profile_id}`
-- Generate a publisher token with `canPublish: true`
-- Insert a `stream_sessions` row with `stream_type: 'solo_broadcast'`, `battle_id: null`
-- Set `barber_profiles.is_live = true`, `live_video_id = barber_profile_id`
-- Return token + serverUrl + roomName
+## Plan
 
-### 3. New Edge Function: `get-broadcast-viewer-token`
-Creates a subscribe-only LiveKit token for ANY user (no auth required for public viewing):
-- Accept `roomName` in the request body
-- If auth header present, use user identity; otherwise generate anonymous viewer identity (`anon-{random}`)
-- Verify the room exists by checking `stream_sessions` where `room_name = roomName` and `status = 'connecting' or 'active'`
-- Generate a subscriber-only token (`canPublish: false`)
-- Return token + serverUrl
+### 1. Fix Drawer Overflow — Make Live Stream Visible
+**File: `src/pages/CameraStudio.tsx`**
 
-### 4. New Edge Function: `end-broadcast`
-Cleanly ends a solo broadcast:
-- Authenticate user, verify they own the active stream session
-- Update `stream_sessions` status to `'ended'`, set `ended_at`
-- Set `barber_profiles.is_live = false`, `live_video_id = null`
+- Change `max-h-[60vh]` on the mode picker `DrawerContent` to `max-h-[75vh]`
+- Add `overflow-y-auto` to the options container `div` so all 5 items are scrollable
+- Visually distinguish the Live Stream option with a red/live accent (pulsing dot or colored border) so it stands out from recording modes
 
-### 5. Frontend: `useStreamingPermissions` Hook
-```typescript
-// src/hooks/useStreamingPermissions.tsx
-// Queries platform_state for 'is_premium_streaming_enforced'
-// If true, checks barber's active_subscription_tier
-// Returns { canStream: boolean, isLoading: boolean, reason?: string }
-```
+### 2. Auto-Ingest CameraStudio Recordings to Cloudflare Stream
+**File: `src/pages/CameraStudio.tsx`**
 
-### 6. Frontend: Update CameraStudio Mode Picker
-- Add `StudioMode` type: `'idle' | 'portfolio' | 'challenge' | 'course' | 'tips' | 'livestream'`
-- Add 5th option to `MODE_OPTIONS`: icon `Radio`, label "Live Stream", desc "Broadcast live to the Arena"
-- In `handleModeSelect`, when `mode === 'livestream'`:
-  - Check `useStreamingPermissions` — if denied, show toast and return
-  - Call `generate-broadcast-token` edge function
-  - On success, navigate to `/broadcast/{barber_profile_id}` passing token/serverUrl via route state
+In `handleRecordingComplete`, after the R2 upload succeeds, if the file is a video (always true for recordings):
+- Call `upload-to-cloudflare-stream` edge function with `{ sourceUrl: publicUrl, table: 'creations', recordId }` (requires inserting a `creations` record first, like PortfolioManager does)
+- Show a toast: "Optimizing video for playback..."
+- This ensures all studio-recorded content gets ABR encoding
 
-### 7. New Page: `BroadcastViewer.tsx` (`/broadcast/:barberId`)
-A public page (no AuthGuard) that:
-- Fetches barber profile info (name, avatar, country)
-- Calls `get-broadcast-viewer-token` with `roomName: broadcast-{barberId}`
-- Renders a single-stream LiveKit viewer using `@livekit/components-react` (`LiveKitRoom` + `VideoTrack`)
-- Shows barber name overlay, live viewer count, and a chat/reaction area
-- If the stream is offline, shows "This barber is not currently live"
+Currently `handleRecordingComplete` uploads to R2 but creates NO database record. This is a bug — the video is orphaned. Fix: insert a `creations` record (for portfolio/tips) or `creator_content` record (for courses) after upload, then trigger CF Stream ingest.
 
-### 8. New Page: `BroadcastStudio.tsx` (`/broadcast/:barberId/studio`)
-A barber-only page (BarberGuard) that:
-- Receives LiveKit token from route state (or re-fetches from `generate-broadcast-token`)
-- Connects to LiveKit room as publisher
-- Shows full-screen camera preview with stream controls (mute, video toggle, end stream)
-- "End Stream" button calls `end-broadcast` edge function and navigates back to `/studio`
+### 3. Ensure All Video Playback Uses CloudflareStreamPlayer
+**File: `src/components/profiles/PortfolioManager.tsx`**
 
-### 9. Update `LiveBarberStreams.tsx`
-- Query `stream_sessions` where `stream_type = 'solo_broadcast'` AND `status IN ('connecting', 'active')`, joining `barber_profiles` for name/avatar
-- Render solo broadcast cards alongside battle cards
-- "Watch" button navigates to `/broadcast/{barberId}`
+The portfolio gallery currently renders `<video src={mediaUrl}>` for videos. Update to check for `cloudflare_stream_uid` on the creation record and use `CloudflareStreamPlayer` when available, falling back to the raw URL.
 
-### 10. Route Registration (`App.tsx`)
-- Add `/broadcast/:barberId` → `BroadcastViewer` (public, no guard)
-- Add `/broadcast/:barberId/studio` → `BroadcastStudio` (AuthGuard + BarberGuard)
+### 4. Database Record Creation in CameraStudio
+**File: `src/pages/CameraStudio.tsx`**
 
-## File Summary
+After successful R2 upload in `handleRecordingComplete`:
+- For `portfolio` and `tips` modes: insert into `creations` table with `barber_id`, `media_url`, `category`
+- For `course` mode: insert into `creator_content` table with appropriate fields
+- Then trigger CF Stream ingest for the inserted record
 
-| Action | File |
-|--------|------|
-| Migration | Add `platform_state` row + `stream_type` column to `stream_sessions` |
-| New | `supabase/functions/generate-broadcast-token/index.ts` |
-| New | `supabase/functions/get-broadcast-viewer-token/index.ts` |
-| New | `supabase/functions/end-broadcast/index.ts` |
-| New | `src/hooks/useStreamingPermissions.tsx` |
-| New | `src/pages/BroadcastViewer.tsx` |
-| New | `src/pages/BroadcastStudio.tsx` |
-| Edit | `src/pages/CameraStudio.tsx` — add livestream mode + routing |
-| Edit | `src/components/battles/LiveBarberStreams.tsx` — include solo broadcasts |
-| Edit | `src/App.tsx` — add broadcast routes |
+This requires fetching the user's `barber_profile.id` — add a query at component mount.
 
-## Technical Details
+### 5. Summary of File Changes
 
-- Solo broadcasts use room name `broadcast-{barber_profile_id}` to avoid collision with battle rooms (`battle-{id}`)
-- Viewer tokens for broadcasts do NOT require authentication — anonymous viewers get a generated identity
-- The `is_premium_streaming_enforced` flag defaults to `false` (open access for launch)
-- Supabase Realtime subscription on `stream_sessions` powers the live indicator on the landing page
-- Stream sessions are cleaned up via the `end-broadcast` function and a future cron for stale sessions
+| File | Change |
+|------|--------|
+| `src/pages/CameraStudio.tsx` | Fix drawer max-height, add scroll, add Live Stream visual accent, insert DB records after recording, trigger CF Stream ingest |
+| `src/components/profiles/PortfolioManager.tsx` | Use `CloudflareStreamPlayer` for videos with `cloudflare_stream_uid` |
+
+No new edge functions or migrations needed — the `upload-to-cloudflare-stream` function and `cloudflare_stream_uid` columns already exist on all relevant tables.
 
