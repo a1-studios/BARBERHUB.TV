@@ -23,6 +23,7 @@ export const TournamentRegistration = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [showAddFunds, setShowAddFunds] = useState(false);
+  const [showBarter, setShowBarter] = useState(false);
 
   // Fetch barber profile for country_code
   const { data: barberProfile } = useQuery({
