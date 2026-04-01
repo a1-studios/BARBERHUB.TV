@@ -70,6 +70,7 @@ export const CloudflareStreamPlayer = ({
           playsInline
           className="w-full h-full object-cover"
           preload="metadata"
+          onEnded={onEnded}
         />
       </div>
     );

@@ -328,7 +328,7 @@ export const DynamicBattleHero = () => {
             onClick={() => navigate(`/watch?video=${encodeURIComponent(fallbackVideo.featured_video_id)}`)}
             className="aspect-[9/14] md:aspect-video bg-card rounded-2xl shadow-2xl border border-primary/20 overflow-hidden relative cursor-pointer"
           >
-            <AnimatePresence mode="crossfade">
+            <AnimatePresence mode="wait">
               <motion.video
                 key={fallbackVideo.barber_id}
                 ref={fallbackVideoRef}
