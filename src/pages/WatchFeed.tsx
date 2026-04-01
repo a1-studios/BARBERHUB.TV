@@ -312,7 +312,7 @@ const WatchFeed = () => {
     }
   }, [targetVideoBarber, feed.length, hasJumped]);
 
-  // Snap scrolling observer
+  // Snap scrolling observer + view tracking
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -321,7 +321,15 @@ const WatchFeed = () => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const idx = Number(entry.target.getAttribute("data-index"));
-            if (!isNaN(idx)) setActiveIndex(idx);
+            if (!isNaN(idx)) {
+              setActiveIndex(idx);
+              // Track view for creator content
+              const item = feed[idx];
+              if (item?.content_id && !viewedContentIds.current.has(item.content_id)) {
+                viewedContentIds.current.add(item.content_id);
+                supabase.rpc('increment_content_views', { p_content_id: item.content_id }).then();
+              }
+            }
           }
         });
       },
