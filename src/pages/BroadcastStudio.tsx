@@ -63,11 +63,12 @@ function StudioControls({ onEnd }: { onEnd: () => void }) {
   const flipCamera = useCallback(async () => {
     const newMode = facingMode === 'user' ? 'environment' : 'user';
     setFacingMode(newMode);
-    // Disable then re-enable camera with the new facing mode
-    await localParticipant.setCameraEnabled(false);
-    await localParticipant.setCameraEnabled(true, {
-      facingMode: newMode,
-    });
+    const camPub = localParticipant.getTrackPublication(Track.Source.Camera);
+    if (camPub?.track) {
+      await (camPub.track as any).restartTrack({ facingMode: newMode });
+    } else {
+      await localParticipant.setCameraEnabled(true, { facingMode: newMode });
+    }
   }, [localParticipant, facingMode]);
 
   const tracks = useTracks([Track.Source.Camera], { onlySubscribed: false });
@@ -76,54 +77,52 @@ function StudioControls({ onEnd }: { onEnd: () => void }) {
   );
 
   return (
-    <div className="fixed inset-0 bg-black flex flex-col">
-      {/* Video */}
-      <div className="flex-1 relative">
-        {localCameraTrack?.publication?.track ? (
-          <VideoTrack
-            trackRef={localCameraTrack}
-            className="w-full h-full object-cover"
-            style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : undefined }}
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-muted/10">
-            <VideoOff className="h-16 w-16 text-muted-foreground/30" />
-          </div>
-        )}
+    <div className="fixed inset-0 bg-black">
+      {/* Video — pinned behind everything */}
+      {localCameraTrack?.publication?.track ? (
+        <VideoTrack
+          trackRef={localCameraTrack}
+          className="absolute inset-0 w-full h-full object-cover z-0"
+          style={{ transform: facingMode === 'user' ? 'scaleX(-1)' : undefined }}
+        />
+      ) : (
+        <div className="absolute inset-0 w-full h-full flex items-center justify-center bg-muted/10 z-0">
+          <VideoOff className="h-16 w-16 text-muted-foreground/30" />
+        </div>
+      )}
 
-        {/* Top metrics overlay */}
-        <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/70 to-transparent px-4 pt-[env(safe-area-inset-top,12px)] pb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Badge className="bg-red-600 text-white font-bold gap-1.5 px-3 py-1">
-                <div className="h-2 w-2 rounded-full bg-white animate-pulse" />
-                LIVE
-              </Badge>
-              <Badge variant="secondary" className="gap-1 bg-black/50 text-white border-white/20">
-                <Users className="h-3 w-3" />
-                {viewerCount}
-              </Badge>
-            </div>
-            <Badge variant="secondary" className="gap-1 bg-black/50 text-white border-white/20 font-mono">
-              <Clock className="h-3 w-3" />
-              {formatDuration(elapsedSeconds)}
+      {/* Top metrics overlay */}
+      <div className="absolute top-0 left-0 right-0 z-50 bg-gradient-to-b from-black/70 to-transparent px-4 pt-[env(safe-area-inset-top,12px)] pb-8 pointer-events-none">
+        <div className="flex items-center justify-between pointer-events-auto">
+          <div className="flex items-center gap-2">
+            <Badge className="bg-red-600 text-white font-bold gap-1.5 px-3 py-1">
+              <div className="h-2 w-2 rounded-full bg-white animate-pulse" />
+              LIVE
+            </Badge>
+            <Badge variant="secondary" className="gap-1 bg-black/50 text-white border-white/20">
+              <Users className="h-3 w-3" />
+              {viewerCount}
             </Badge>
           </div>
+          <Badge variant="secondary" className="gap-1 bg-black/50 text-white border-white/20 font-mono">
+            <Clock className="h-3 w-3" />
+            {formatDuration(elapsedSeconds)}
+          </Badge>
         </div>
-
-        {/* Camera flip button (top-right) */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-[calc(env(safe-area-inset-top,12px)+48px)] right-4 z-10 rounded-full h-11 w-11 bg-black/40 text-white border border-white/20 backdrop-blur-sm"
-          onClick={flipCamera}
-        >
-          <SwitchCamera className="h-5 w-5" />
-        </Button>
       </div>
 
+      {/* Camera flip button (top-right) */}
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute top-[calc(env(safe-area-inset-top,12px)+48px)] right-4 z-50 rounded-full h-11 w-11 bg-black/40 text-white border border-white/20 backdrop-blur-sm"
+        onClick={flipCamera}
+      >
+        <SwitchCamera className="h-5 w-5" />
+      </Button>
+
       {/* Bottom controls */}
-      <div className="bg-gradient-to-t from-black/90 to-transparent px-4 py-5 pb-[env(safe-area-inset-bottom,24px)]">
+      <div className="absolute bottom-0 left-0 right-0 z-50 bg-gradient-to-t from-black/90 to-transparent px-4 py-5 pb-[env(safe-area-inset-bottom,24px)]">
         <div className="flex items-center justify-center gap-4">
           <Button
             variant={isMicOn ? 'ghost' : 'destructive'}
