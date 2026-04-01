@@ -422,20 +422,15 @@ const WatchFeed = () => {
 
       {item.cloudflare_stream_uid ? (
         <div className="absolute inset-0 w-full h-full">
-          {(() => {
-            const { CloudflareStreamPlayer } = require('@/components/CloudflareStreamPlayer');
-            return (
-              <CloudflareStreamPlayer
-                streamUid={item.cloudflare_stream_uid}
-                fallbackUrl={item.media_url}
-                autoPlay={activeIndex === idx}
-                muted={isMuted}
-                loop
-                controls={false}
-                className="w-full h-full"
-              />
-            );
-          })()}
+          <CloudflareStreamPlayer
+            streamUid={item.cloudflare_stream_uid}
+            fallbackUrl={item.media_url}
+            autoPlay={activeIndex === idx}
+            muted={isMuted}
+            loop
+            controls={false}
+            className="w-full h-full"
+          />
         </div>
       ) : item.media_url && (item.media_url.includes(".mp4") || item.media_url.includes(".webm") || item.media_url.startsWith("http")) ? (
         <video
