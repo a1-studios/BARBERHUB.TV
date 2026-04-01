@@ -225,6 +225,8 @@ export const BarberSubscriptionTiers = ({ onShowAddFunds, onBarterForTier }: Bar
                     </button>
                   )}
                 </div>
+              )}
+            </Card>
           );
         })}
       </div>
