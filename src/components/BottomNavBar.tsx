@@ -2,6 +2,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Home, Plus, BarChart3, User, Play, Scissors } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 const barberTabs = [
   { icon: Home, label: 'HOME', path: '/' },
@@ -23,6 +26,32 @@ export function BottomNavBar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isBarber } = useUserRole();
+  const { user } = useAuth();
+
+  // Check if any followed barber is live
+  const { data: hasLiveFollowed } = useQuery({
+    queryKey: ['followed-live-count', user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const { data: follows } = await supabase
+        .from('creator_follows')
+        .select('creator_id')
+        .eq('follower_id', user.id);
+
+      if (!follows || follows.length === 0) return false;
+
+      const followedIds = follows.map(f => f.creator_id);
+      const { count } = await supabase
+        .from('barber_profiles')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_live', true)
+        .in('user_id', followedIds);
+
+      return (count || 0) > 0;
+    },
+    enabled: !!user,
+    refetchInterval: 15000,
+  });
 
   const tabs = isBarber ? barberTabs : fanTabs;
 
@@ -67,6 +96,7 @@ export function BottomNavBar() {
 
           const { icon: Icon, label, path } = tab as { icon: typeof Home; label: string; path: string };
           const active = isActive(path);
+          const showLiveDot = path === '/' && hasLiveFollowed;
 
           return (
             <button
@@ -79,7 +109,12 @@ export function BottomNavBar() {
               )}
               aria-label={label}
             >
-              <Icon className="w-3.5 h-3.5" strokeWidth={active ? 2.5 : 2} />
+              <div className="relative">
+                <Icon className="w-3.5 h-3.5" strokeWidth={active ? 2.5 : 2} />
+                {showLiveDot && (
+                  <div className="absolute -top-0.5 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse border border-background" />
+                )}
+              </div>
               <span className="text-[8px] font-semibold tracking-wide">{label}</span>
             </button>
           );

@@ -4,6 +4,8 @@ import { LiveBattleFeed } from '@/components/LiveBattleFeed';
 import { GlobalLeagueDashboard } from '@/components/GlobalLeagueDashboard';
 import { ArenaTicker } from '@/components/factions/ArenaTicker';
 import { useCategoryPrizePools } from '@/hooks/useCategoryPrizePools';
+import { LiveNowBanner } from '@/components/battles/LiveNowBanner';
+import { LiveBarberStreams } from '@/components/battles/LiveBarberStreams';
 
 export const FanArenaView = () => {
   const navigate = useNavigate();
@@ -13,6 +15,12 @@ export const FanArenaView = () => {
     <main className="space-y-4 pb-24">
       {/* Featured Battle Hero */}
       <DynamicBattleHero />
+
+      {/* Live Now — followed barber avatars */}
+      <LiveNowBanner />
+
+      {/* Live Streams — full cards with engagement */}
+      <LiveBarberStreams />
 
       {/* Grand Prize Banner — below the video feed */}
       <section className="px-3 sm:px-6">
