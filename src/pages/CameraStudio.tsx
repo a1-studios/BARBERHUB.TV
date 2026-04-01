@@ -11,7 +11,7 @@ import {
 import {
   ArrowLeft, Camera, Mic, MicOff, Video, VideoOff, Sun, Volume2,
   RefreshCw, CheckCircle2, Settings, Swords, Wifi, WifiOff, Play,
-  Circle, Square, Image, GraduationCap, Lightbulb, Flame, Upload,
+  Circle, Square, Image, GraduationCap, Lightbulb, Flame, Upload, Radio,
 } from 'lucide-react';
 import { useBattleVideoRoom } from '@/hooks/useBattleVideoRoom';
 import { ChallengeModal } from '@/components/battles/ChallengeModal';
