@@ -104,6 +104,14 @@ serve(async (req) => {
     });
     const token = await at.toJwt();
 
+    // End any stale sessions for this barber before creating a new one
+    await supabaseAdmin
+      .from("stream_sessions")
+      .update({ status: "ended", ended_at: new Date().toISOString() })
+      .eq("barber_id", barber.id)
+      .eq("stream_type", "solo_broadcast")
+      .in("status", ["connecting", "active"]);
+
     // Insert stream session
     await supabaseAdmin.from("stream_sessions").insert({
       user_id: user.id,
