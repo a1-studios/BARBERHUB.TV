@@ -230,12 +230,13 @@ export default function CameraStudio() {
     const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
     const folder = R2_FOLDERS[studioMode] || 'portfolios';
     const filename = `${folder}/${Date.now()}_studio.${ext}`;
-    const contentType = mimeType.split(';')[0]; // strip codecs param
+    const contentType = mimeType.split(';')[0];
 
     setIsUploading(true);
     setUploadProgress(10);
 
     try {
+      // 1. Get presigned URL & upload to R2
       const { data: urlData, error: urlErr } = await supabase.functions.invoke('get-r2-presigned-url', {
         body: { key: filename, contentType },
       });
@@ -249,6 +250,56 @@ export default function CameraStudio() {
         body: blob,
       });
       if (!res.ok) throw new Error('Upload failed');
+
+      setUploadProgress(70);
+      const publicUrl = urlData.publicUrl as string;
+
+      // 2. Create database record so video isn't orphaned
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data: barberProfile } = await supabase
+        .from('barber_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (barberProfile) {
+        if (studioMode === 'course') {
+          // Insert into creator_content for courses
+          const { data: record } = await supabase.from('creator_content').insert({
+            creator_id: user.id,
+            title: `Studio ${studioMode} ${new Date().toLocaleDateString()}`,
+            content_type: 'course_teaser',
+            content_category: 'course',
+            media_url: publicUrl,
+            is_published: true,
+          }).select('id').single();
+
+          if (record) {
+            toast.info('Optimizing video for playback...');
+            supabase.functions.invoke('upload-to-cloudflare-stream', {
+              body: { sourceUrl: publicUrl, table: 'creator_content', recordId: record.id },
+            }).catch((err: any) => console.error('CF Stream ingest error:', err));
+          }
+        } else {
+          // Insert into creations for portfolio/tips
+          const category = studioMode === 'tips' ? 'tips' : 'haircut';
+          const { data: record } = await supabase.from('creations').insert({
+            barber_id: barberProfile.id,
+            media_url: publicUrl,
+            category,
+            title: `Studio ${studioMode} ${new Date().toLocaleDateString()}`,
+          }).select('id').single();
+
+          if (record) {
+            toast.info('Optimizing video for playback...');
+            supabase.functions.invoke('upload-to-cloudflare-stream', {
+              body: { sourceUrl: publicUrl, table: 'creations', recordId: record.id },
+            }).catch((err: any) => console.error('CF Stream ingest error:', err));
+          }
+        }
+      }
 
       setUploadProgress(100);
       toast.success(`${studioMode === 'course' ? 'Course' : studioMode === 'tips' ? 'Tip' : 'Portfolio'} video saved!`);
