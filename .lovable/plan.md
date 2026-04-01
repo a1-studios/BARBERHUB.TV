@@ -1,70 +1,55 @@
 
 
-# Fix "Pay with Services" Visibility + Enhance Appointment System
+# In-App Notification Bell + Appointment Notification Wiring
 
-## Problems Identified
+## Current State (Already Done)
 
-1. **"Pay with Services" not showing**: The `ImmersiveFactionBanners` (Portal page) shows `AddFundsModal` directly when a barber has insufficient BB for tournament entry. It never offers the barter option. Same issue in `TournamentRegistration`, `Header`, and other places that use `AddFundsModal` standalone.
+The foundation is already built:
+- **`notifications` table** exists in Supabase with `id`, `user_id`, `type`, `title`, `message`, `data` (jsonb), `read` (boolean), `created_at`
+- **`useNotifications` hook** exists with Realtime subscription, mark-as-read, mark-all-as-read, and unread count
+- **`book-appointment` edge function** already inserts a notification for the barber on booking
+- **`manage-appointment` edge function** already inserts notifications for the client on accept, deny, complete, cancel, and no-show
 
-2. **Barter only works for subscriptions**: The `UniversalBarterGateway` is only wired into `UpgradePrompt` for subscription tiers. It was supposed to also be injected into `CreateBattleDrawer` and tournament entry flows but the tournament entry flow on the Portal page bypasses `UpgradePrompt` entirely.
+What's missing: the notification bell UI is not rendered anywhere. The `useNotifications` hook is never imported by any component.
 
-3. **Appointment system lacks client-side cancel button**: Fan's `MyAppointments` shows appointments but has no cancel action for pending/confirmed ones. The barber side has accept/deny/complete/no-show but no reschedule.
+## Changes Required
 
-## Plan
+### 1. Create NotificationPanel Component
+**New file: `src/components/NotificationPanel.tsx`**
 
-### Step 1: Add "Pay with Services" to AddFundsModal for Barbers
+A dropdown/sheet component triggered by a Bell icon:
+- Bell icon with unread count badge (red dot with number)
+- On click, opens a scrollable panel showing recent notifications
+- Each notification row: icon by type, title, message, relative time, read/unread styling
+- Appointment-related notifications (types: `new_appointment`, `appointment_accepted`, `appointment_denied`, `appointment_completed`, `no_show`) get a special appointment icon and route to the profile/appointments section on click
+- "Mark all as read" button at the top
+- Clicking a notification marks it as read and navigates based on `data.appointment_id` or `data.battle_id`
 
-**File: `src/components/AddFundsModal.tsx`**
+### 2. Add Bell to Header
+**File: `src/components/Header.tsx`**
 
-- Import `UniversalBarterGateway` and `useUserRole`
-- When user `isBarber`, add a "Pay with Services" tab/button at the top of the modal that opens the barter gateway
-- Accept an optional `barterContext` prop (`{ perkCategory, perkDetails, requiredBBValue }`) so callers can pass the specific perk being purchased
-- When no `barterContext` is provided (generic "add funds"), show a general "Donate slots for BB credit" option (or hide barter)
+- Import `NotificationPanel` and render it in the header bar (next to the BB coin dropdown) for authenticated users
+- Shows bell icon with unread badge counter from `useNotifications`
 
-### Step 2: Wire Barter into Tournament Entry (ImmersiveFactionBanners)
+### 3. Add Bell to BottomNavBar (Mobile)
+**File: `src/components/BottomNavBar.tsx`**
 
-**File: `src/components/factions/ImmersiveFactionBanners.tsx`**
+- Replace or augment one tab (e.g., add a notification bell between RANKS and PROFILE, or overlay a badge on the profile icon)
+- Alternative: add bell to Header only since BottomNavBar is minimal — keep it in Header which is visible on mobile too
 
-- When BB is insufficient for tournament entry (line 122-126), instead of only showing `AddFundsModal`, also offer the barter option
-- Add state for `showBarter` and render `<UniversalBarterGateway perkCategory="battle_entry" perkDetails={{ category }} requiredBBValue={TOURNAMENT_CONFIG.ENTRY_FEE_BB} />`
-- Show both options: "Add BB" and "Pay with Services" as two buttons in a small chooser dialog
+### 4. Enhance Realtime Toast Actions for Appointments
+**File: `src/hooks/useNotifications.tsx`**
 
-### Step 3: Wire Barter into TournamentRegistration
+- Update the Realtime toast handler to also handle `appointment_id` in notification data (not just `battle_id`)
+- When a new appointment notification arrives, the toast "View" button navigates to `/profile` (where MyAppointments lives)
 
-**File: `src/components/tournament/TournamentRegistration.tsx`**
+## Files Summary
 
-- Same pattern as Step 2 — add barter gateway as alternative payment for tournament entry
-
-### Step 4: Add Client Cancel Button to MyAppointments
-
-**File: `src/components/fan/MyAppointments.tsx`**
-
-- For appointments with status `pending` or `confirmed`, show a "Cancel" button
-- On click, call `manageMutation` with `action: 'cancel'`
-- Show confirmation dialog before canceling (warn about 50% fee if < 2 hours before scheduled time)
-- Refetch appointments on success
-
-### Step 5: Add Reschedule Placeholder + Webhook Note
-
-- Add a disabled "Reschedule" button with tooltip "Coming soon" on confirmed appointments
-- Note: Webhook integration for appointment notifications (SMS/email on request, confirmation, cancellation) should be added via n8n or a Supabase webhook — will prompt user to configure this separately
-
-## Technical Details
-
-The key fix is that `ImmersiveFactionBanners` line 122-126 currently does:
-```tsx
-toast.error('You need 250 BB to join. Please add funds.');
-setShowAddFunds(true);
-```
-
-It needs to instead show a chooser: "Buy BB" or "Pay with Services" (for barbers only), where the latter opens `UniversalBarterGateway` with `perkCategory="battle_entry"`.
-
-## Files to Modify
-
-| File | Change |
+| File | Action |
 |------|--------|
-| `src/components/factions/ImmersiveFactionBanners.tsx` | Add barter gateway for tournament entry |
-| `src/components/tournament/TournamentRegistration.tsx` | Add barter gateway for tournament entry |
-| `src/components/fan/MyAppointments.tsx` | Add cancel button with confirmation for pending/confirmed appointments |
-| `src/components/booking/BarberAppointmentManager.tsx` | Minor: add reschedule placeholder |
+| `src/components/NotificationPanel.tsx` | New — Bell icon + dropdown with notification list |
+| `src/components/Header.tsx` | Edit — Add `NotificationPanel` to header |
+| `src/hooks/useNotifications.tsx` | Edit — Add appointment routing to toast actions |
+
+No database changes needed — everything is already wired in the edge functions.
 
