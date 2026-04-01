@@ -13,6 +13,7 @@ import { useBarberBucks } from "@/hooks/useBarberBucks";
 import { TOURNAMENT_CATEGORIES } from "@/config/categories";
 import { TOURNAMENT_CONFIG, formatEntryFee, formatEntryFeeUSD } from "@/config/tournament";
 import { AddFundsModal } from "@/components/AddFundsModal";
+import { UniversalBarterGateway } from "@/components/barter/UniversalBarterGateway";
 
 export const TournamentRegistration = () => {
   const { user } = useAuth();
@@ -22,6 +23,7 @@ export const TournamentRegistration = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [showAddFunds, setShowAddFunds] = useState(false);
+  const [showBarter, setShowBarter] = useState(false);
 
   // Fetch barber profile for country_code
   const { data: barberProfile } = useQuery({
@@ -256,7 +258,30 @@ export const TournamentRegistration = () => {
         </DialogContent>
       </Dialog>
 
-      <AddFundsModal isOpen={showAddFunds} onClose={() => setShowAddFunds(false)} />
+      <AddFundsModal
+        isOpen={showAddFunds}
+        onClose={() => setShowAddFunds(false)}
+        barterContext={{
+          perkCategory: 'battle_entry',
+          perkDetails: { category: selectedCategory },
+          requiredBBValue: TOURNAMENT_CONFIG.ENTRY_FEE_BB,
+        }}
+      />
+
+      <UniversalBarterGateway
+        isOpen={showBarter}
+        perkCategory="battle_entry"
+        perkDetails={{ category: selectedCategory }}
+        requiredBBValue={TOURNAMENT_CONFIG.ENTRY_FEE_BB}
+        onSuccess={() => {
+          setShowBarter(false);
+          queryClient.invalidateQueries({ queryKey: ['tournament-queue-entries'] });
+          queryClient.invalidateQueries({ queryKey: ['barber_bucks'] });
+          setIsDialogOpen(false);
+          setSelectedCategory('');
+        }}
+        onCancel={() => setShowBarter(false)}
+      />
     </>
   );
 };

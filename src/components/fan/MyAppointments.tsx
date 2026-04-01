@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useBookAppointment } from '@/hooks/useBookAppointment';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CalendarDays, Clock, Coins, Star, Home, X } from 'lucide-react';
-import { format, isPast, formatDistanceToNow } from 'date-fns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { CalendarDays, Clock, Coins, Star, Home, X, AlertTriangle, CalendarClock } from 'lucide-react';
+import { format, isPast, formatDistanceToNow, differenceInHours } from 'date-fns';
 import { PostAppointmentReviewModal } from '@/components/reviews/PostAppointmentReviewModal';
 import { HouseCallBountyWidget } from '@/components/booking/HouseCallBountyWidget';
 import { toast } from 'sonner';
@@ -46,12 +48,18 @@ const statusColors: Record<string, string> = {
   expired: 'bg-muted text-muted-foreground border-muted',
 };
 
-function AppointmentCard({ appointment, barberName, hasReview, onReview }: {
+function AppointmentCard({ appointment, barberName, hasReview, onReview, onCancel, cancelPending }: {
   appointment: Appointment;
   barberName: string;
   hasReview: boolean;
   onReview: () => void;
+  onCancel: (id: string, isLateCancel: boolean) => void;
+  cancelPending: boolean;
 }) {
+  const canCancel = ['pending', 'confirmed'].includes(appointment.status);
+  const hoursUntil = differenceInHours(new Date(appointment.scheduled_at), new Date());
+  const isLateCancel = hoursUntil < 2 && hoursUntil >= 0;
+
   return (
     <Card className="mb-3">
       <CardContent className="p-4 space-y-2">
@@ -83,6 +91,30 @@ function AppointmentCard({ appointment, barberName, hasReview, onReview }: {
           </Badge>
         </div>
 
+        {/* Cancel & Reschedule buttons */}
+        {canCancel && (
+          <div className="flex gap-2 mt-2">
+            <Button
+              size="sm"
+              variant="destructive"
+              className="flex-1 text-xs"
+              onClick={() => onCancel(appointment.id, isLateCancel)}
+              disabled={cancelPending}
+            >
+              <X className="h-3 w-3 mr-1" /> Cancel
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 text-xs opacity-50 cursor-not-allowed"
+              disabled
+              title="Coming soon"
+            >
+              <CalendarClock className="h-3 w-3 mr-1" /> Reschedule
+            </Button>
+          </div>
+        )}
+
         {appointment.status === 'completed' && !hasReview && (
           <Button size="sm" variant="outline" className="w-full text-xs" onClick={onReview}>
             <Star className="h-3 w-3 mr-1" /> Rate Your Barber
@@ -96,7 +128,9 @@ function AppointmentCard({ appointment, barberName, hasReview, onReview }: {
 export function MyAppointments({ compact = false }: { compact?: boolean } = {}) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { manageMutation } = useBookAppointment();
   const [reviewTarget, setReviewTarget] = useState<{ appointmentId: string; revieweeId: string } | null>(null);
+  const [cancelConfirm, setCancelConfirm] = useState<{ id: string; isLate: boolean } | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['my-appointments', user?.id],
@@ -215,6 +249,8 @@ export function MyAppointments({ compact = false }: { compact?: boolean } = {}) 
                 barberName={data?.barberNames[apt.barber_id] || 'Barber'}
                 hasReview={false}
                 onReview={() => {}}
+                onCancel={(id, isLate) => setCancelConfirm({ id, isLate })}
+                cancelPending={manageMutation.isPending}
               />
             ))
         ) : (
@@ -233,6 +269,8 @@ export function MyAppointments({ compact = false }: { compact?: boolean } = {}) 
               barberName={data?.barberNames[apt.barber_id] || 'Barber'}
               hasReview={data?.reviewedIds.has(apt.id) || false}
               onReview={() => setReviewTarget({ appointmentId: apt.id, revieweeId: apt.barber_user_id })}
+              onCancel={(id, isLate) => setCancelConfirm({ id, isLate })}
+              cancelPending={manageMutation.isPending}
             />
           ))
         ) : (
@@ -322,6 +360,47 @@ export function MyAppointments({ compact = false }: { compact?: boolean } = {}) 
           onSuccess={() => refetch()}
         />
       )}
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog open={!!cancelConfirm} onOpenChange={(open) => !open && setCancelConfirm(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Cancel Appointment
+            </DialogTitle>
+            <DialogDescription>
+              {cancelConfirm?.isLate
+                ? 'This appointment is less than 2 hours away. A 50% cancellation fee may apply.'
+                : 'Are you sure you want to cancel this appointment? Your escrowed BB will be refunded.'}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button variant="outline" onClick={() => setCancelConfirm(null)}>
+              Keep Appointment
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={manageMutation.isPending}
+              onClick={() => {
+                if (!cancelConfirm) return;
+                manageMutation.mutate(
+                  { appointment_id: cancelConfirm.id, action: 'cancel' },
+                  {
+                    onSuccess: () => {
+                      setCancelConfirm(null);
+                      refetch();
+                      queryClient.invalidateQueries({ queryKey: ['barber_bucks'] });
+                    },
+                  }
+                );
+              }}
+            >
+              {manageMutation.isPending ? 'Cancelling...' : 'Yes, Cancel'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { ImmersiveBannerCard } from './ImmersiveBannerCard';
 import { ArenaTicker } from './ArenaTicker';
 import { AddFundsModal } from '@/components/AddFundsModal';
+import { UniversalBarterGateway } from '@/components/barter/UniversalBarterGateway';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -25,6 +26,8 @@ export const ImmersiveFactionBanners = () => {
   const { isBarber } = useUserRole();
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
   const [showAddFunds, setShowAddFunds] = useState(false);
+  const [showBarter, setShowBarter] = useState(false);
+  const [barterCategory, setBarterCategory] = useState<string>('');
   const [joiningCategory, setJoiningCategory] = useState<string | null>(null);
 
   // Fetch barber profile
@@ -118,9 +121,9 @@ export const ImmersiveFactionBanners = () => {
       return;
     }
 
-    // Check BB balance
+    // Check BB balance — offer barter or add funds
     if ((bbBalance || 0) < TOURNAMENT_CONFIG.ENTRY_FEE_BB) {
-      toast.error(`You need ${TOURNAMENT_CONFIG.ENTRY_FEE_BB} BB to join. Please add funds.`);
+      setBarterCategory(categoryShortName);
       setShowAddFunds(true);
       return;
     }
@@ -217,8 +220,29 @@ export const ImmersiveFactionBanners = () => {
         </motion.div>
       </div>
 
-      {/* Add Funds Modal */}
-      <AddFundsModal isOpen={showAddFunds} onClose={() => setShowAddFunds(false)} />
+      {/* Add Funds Modal with barter context for tournament entry */}
+      <AddFundsModal
+        isOpen={showAddFunds}
+        onClose={() => setShowAddFunds(false)}
+        barterContext={barterCategory ? {
+          perkCategory: 'battle_entry',
+          perkDetails: { category: barterCategory },
+          requiredBBValue: TOURNAMENT_CONFIG.ENTRY_FEE_BB,
+        } : undefined}
+      />
+
+      {/* Standalone Barter Gateway */}
+      <UniversalBarterGateway
+        isOpen={showBarter}
+        perkCategory="battle_entry"
+        perkDetails={{ category: barterCategory }}
+        requiredBBValue={TOURNAMENT_CONFIG.ENTRY_FEE_BB}
+        onSuccess={() => {
+          setShowBarter(false);
+          queryClient.invalidateQueries({ queryKey: ['tournament-queue-banner'] });
+        }}
+        onCancel={() => setShowBarter(false)}
+      />
     </section>
   );
 };
