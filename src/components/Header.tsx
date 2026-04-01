@@ -35,6 +35,8 @@ const Header = () => {
   const bbDropdownRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
+  const { unreadCount } = useNotifications();
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // Fetch user profile for avatar
   const { data: userProfile } = useQuery({
