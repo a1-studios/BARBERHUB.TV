@@ -230,8 +230,18 @@ const WatchFeed = () => {
   const { data: sponsors = [] } = useSponsorAds(true);
 
   // ─── Build unified feed ───
-  const allContent: FeedItem[] = [...profileVideos, ...creatorVideos, ...creationVideos, ...submissionVideos]
-    .filter(item => !(isFan && item.type === 'educator'));
+  // Shuffle content for a fresh feel each visit
+  const shuffledContent = useMemo(() => {
+    const arr = [...profileVideos, ...creatorVideos, ...creationVideos, ...submissionVideos]
+      .filter(item => !(isFan && item.type === 'educator'));
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }, [profileVideos, creatorVideos, creationVideos, submissionVideos, isFan]);
+
+  const allContent: FeedItem[] = shuffledContent;
 
   const feed: FeedItem[] = [];
   let sponsorIdx = 0;
