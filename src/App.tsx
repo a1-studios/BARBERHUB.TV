@@ -40,6 +40,8 @@ import VaultOfHonor from "./pages/VaultOfHonor";
 import M4MVerify from "./pages/M4MVerify";
 import CameraStudio from "./pages/CameraStudio";
 import Rankings from "./pages/Rankings";
+import BroadcastViewer from "./pages/BroadcastViewer";
+import BroadcastStudio from "./pages/BroadcastStudio";
 
 const queryClient = new QueryClient();
 
@@ -203,6 +205,17 @@ const AppContent = () => {
                 <AuthGuard>
                   <BarberGuard>
                     <CameraStudio />
+                  </BarberGuard>
+                </AuthGuard>
+              } 
+            />
+            <Route path="/broadcast/:barberId" element={<BroadcastViewer />} />
+            <Route 
+              path="/broadcast/:barberId/studio" 
+              element={
+                <AuthGuard>
+                  <BarberGuard>
+                    <BroadcastStudio />
                   </BarberGuard>
                 </AuthGuard>
               } 

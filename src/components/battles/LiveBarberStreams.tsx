@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, Swords, DollarSign, Users } from 'lucide-react';
+import { ExternalLink, Swords, DollarSign, Users, Radio } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useState } from 'react';
@@ -25,6 +25,16 @@ interface LiveStream {
   barber1?: { name: string; user_id: string };
   barber2?: { name: string; user_id: string };
   challenge?: Array<{ id: string; challenger_username: string; bounty_description: string | null }>;
+}
+
+interface SoloBroadcast {
+  id: string;
+  barber_id: string;
+  room_name: string;
+  status: string;
+  started_at: string | null;
+  peak_viewers: number;
+  barber?: { name: string; id: string };
 }
 
 export const LiveBarberStreams = () => {
@@ -50,10 +60,46 @@ export const LiveBarberStreams = () => {
       return (data || []) as LiveStream[];
     },
     refetchInterval: 5000,
-    enabled: !!user,
   });
 
-  if (!user || isLoading || !liveStreams || liveStreams.length === 0) return null;
+  // Solo broadcasts — visible to everyone
+  const { data: soloBroadcasts } = useQuery({
+    queryKey: ['solo-broadcasts'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('stream_sessions')
+        .select('id, barber_id, room_name, status, started_at, peak_viewers')
+        .eq('stream_type', 'solo_broadcast')
+        .in('status', ['connecting', 'active'])
+        .order('started_at', { ascending: false });
+      if (error) throw error;
+
+      // Fetch barber names
+      const barberIds = (data || []).map((s: any) => s.barber_id).filter(Boolean);
+      let barberMap: Record<string, { name: string; id: string }> = {};
+      if (barberIds.length > 0) {
+        const { data: barbers } = await supabase
+          .from('barber_profiles')
+          .select('id, name')
+          .in('id', barberIds);
+        if (barbers) {
+          barberMap = Object.fromEntries(barbers.map((b: any) => [b.id, b]));
+        }
+      }
+
+      return (data || []).map((s: any) => ({
+        ...s,
+        barber: barberMap[s.barber_id] || null,
+      })) as SoloBroadcast[];
+    },
+    refetchInterval: 5000,
+  });
+
+  const hasContent =
+    (liveStreams && liveStreams.length > 0) ||
+    (soloBroadcasts && soloBroadcasts.length > 0);
+
+  if (isLoading || !hasContent) return null;
 
   return (
     <section className="py-12 px-4 bg-gradient-to-b from-background to-muted/20">
@@ -63,14 +109,45 @@ export const LiveBarberStreams = () => {
             <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
             <h2 className="text-3xl font-bold text-foreground">LIVE NOW</h2>
             <Badge variant="destructive" className="text-lg px-3 py-1">
-              {liveStreams.length} {liveStreams.length === 1 ? 'Barber' : 'Barbers'} Streaming
+              {(liveStreams?.length || 0) + (soloBroadcasts?.length || 0)} Streaming
             </Badge>
           </div>
-          <p className="text-muted-foreground">Watch live battles and accept open challenges</p>
+          <p className="text-muted-foreground">Watch live battles and broadcasts</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {liveStreams.map((stream) => {
+          {/* Solo Broadcasts */}
+          {soloBroadcasts?.map((broadcast) => (
+            <Card key={broadcast.id} className="overflow-hidden hover:shadow-lg transition-all relative group">
+              <div className="relative aspect-video bg-muted flex items-center justify-center">
+                <div className="text-center text-muted-foreground">
+                  <div className="w-12 h-12 mx-auto mb-2 rounded-full bg-primary/20 flex items-center justify-center">
+                    <Radio className="w-5 h-5 text-primary" />
+                  </div>
+                  <p className="text-xs">Solo Broadcast</p>
+                </div>
+                <div className="absolute top-2 left-2 flex items-center gap-2 px-2 py-1 bg-red-600 rounded text-white text-xs font-bold">
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse" />LIVE
+                </div>
+              </div>
+
+              <div className="p-4 space-y-3">
+                <div>
+                  <h3 className="font-bold text-foreground line-clamp-1">{broadcast.barber?.name || 'Barber'}</h3>
+                  <p className="text-sm text-muted-foreground">Live broadcast</p>
+                </div>
+                <Badge variant="outline" className="border-primary text-primary">
+                  <Radio className="w-3 h-3 mr-1" />Broadcasting
+                </Badge>
+                <Button variant="outline" size="sm" className="w-full" onClick={() => navigate(`/broadcast/${broadcast.barber_id}`)}>
+                  <ExternalLink className="w-4 h-4 mr-2" />Watch
+                </Button>
+              </div>
+            </Card>
+          ))}
+
+          {/* Battle Streams */}
+          {liveStreams?.map((stream) => {
             const isOwnStream = user?.id === stream.barber1_id;
             const canAccept = isBarber && !isOwnStream && stream.status === 'waiting_for_opponent';
             const isWaiting = stream.status === 'waiting_for_opponent';

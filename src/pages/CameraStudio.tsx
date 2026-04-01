@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useStreamingPermissions } from '@/hooks/useStreamingPermissions';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -10,7 +11,7 @@ import {
 import {
   ArrowLeft, Camera, Mic, MicOff, Video, VideoOff, Sun, Volume2,
   RefreshCw, CheckCircle2, Settings, Swords, Wifi, WifiOff, Play,
-  Circle, Square, Image, GraduationCap, Lightbulb, Flame, Upload,
+  Circle, Square, Image, GraduationCap, Lightbulb, Flame, Upload, Radio,
 } from 'lucide-react';
 import { useBattleVideoRoom } from '@/hooks/useBattleVideoRoom';
 import { ChallengeModal } from '@/components/battles/ChallengeModal';
@@ -18,7 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type StudioMode = 'idle' | 'portfolio' | 'challenge' | 'course' | 'tips';
+type StudioMode = 'idle' | 'portfolio' | 'challenge' | 'course' | 'tips' | 'livestream';
 
 interface DeviceInfo {
   deviceId: string;
@@ -30,6 +31,7 @@ const MODE_OPTIONS: { mode: StudioMode; icon: React.ReactNode; label: string; de
   { mode: 'challenge', icon: <Flame className="h-5 w-5" />, label: 'Challenge', desc: 'Issue a battle challenge' },
   { mode: 'course', icon: <GraduationCap className="h-5 w-5" />, label: 'Course', desc: 'Record a masterclass module' },
   { mode: 'tips', icon: <Lightbulb className="h-5 w-5" />, label: 'Tips', desc: 'Share a quick technique tip' },
+  { mode: 'livestream', icon: <Radio className="h-5 w-5" />, label: 'Live Stream', desc: 'Broadcast live to the Arena' },
 ];
 
 const R2_FOLDERS: Record<string, string> = {
@@ -42,6 +44,7 @@ export default function CameraStudio() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const battleId = searchParams.get('battleId');
+  const { canStream, isLoading: streamPermLoading, reason: streamDeniedReason } = useStreamingPermissions();
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const opponentVideoRef = useRef<HTMLDivElement>(null);
@@ -263,8 +266,32 @@ export default function CameraStudio() {
     return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
   };
 
-  const handleModeSelect = (mode: StudioMode) => {
+  const handleModeSelect = async (mode: StudioMode) => {
     setIsModeDrawerOpen(false);
+
+    if (mode === 'livestream') {
+      if (streamPermLoading) {
+        toast.info('Checking streaming permissions...');
+        return;
+      }
+      if (!canStream) {
+        toast.error(streamDeniedReason || 'Live streaming is not available');
+        return;
+      }
+      // Get broadcast token and navigate to studio
+      toast.loading('Starting broadcast...', { id: 'broadcast-start' });
+      const { data, error } = await supabase.functions.invoke('generate-broadcast-token');
+      toast.dismiss('broadcast-start');
+      if (error || !data?.token) {
+        toast.error(data?.error || 'Failed to start broadcast');
+        return;
+      }
+      navigate(`/broadcast/${data.barberId}/studio`, {
+        state: { token: data.token, serverUrl: data.serverUrl },
+      });
+      return;
+    }
+
     if (mode === 'challenge') {
       setChallengeModalOpen(true);
       setStudioMode('challenge');
