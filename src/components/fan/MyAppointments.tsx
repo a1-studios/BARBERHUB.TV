@@ -128,7 +128,9 @@ function AppointmentCard({ appointment, barberName, hasReview, onReview, onCance
 export function MyAppointments({ compact = false }: { compact?: boolean } = {}) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { manageMutation } = useBookAppointment();
   const [reviewTarget, setReviewTarget] = useState<{ appointmentId: string; revieweeId: string } | null>(null);
+  const [cancelConfirm, setCancelConfirm] = useState<{ id: string; isLate: boolean } | null>(null);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['my-appointments', user?.id],
