@@ -220,8 +220,10 @@ const Header = () => {
             </span>
           </button>
 
-          {/* Right Side - Barber Bucks Balance Dropdown */}
-          <div className="relative" ref={bbDropdownRef}>
+          {/* Right Side - Notifications + Barber Bucks */}
+          <div className="flex items-center gap-2">
+            {user && <NotificationPanel />}
+            <div className="relative" ref={bbDropdownRef}>
             <RotatingBBCoin
               avatarUrl={userProfile?.avatar_url}
               displayName={userProfile?.display_name || undefined}
