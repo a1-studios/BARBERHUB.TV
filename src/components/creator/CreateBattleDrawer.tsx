@@ -342,16 +342,18 @@ export function CreateBattleDrawer({ isOpen, onClose }: CreateBattleDrawerProps)
                 {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Zap className="w-4 h-4 mr-2" />}
                 {canCreateBattle ? 'Create & Publish Battle' : 'Upgrade to Publish'}
               </Button>
-              <p className="text-[10px] text-muted-foreground text-center">
-                Non-premium battles are saved as unofficial and won't propagate in the network feed.
-                <button
-                  type="button"
-                  onClick={() => setShowUpgrade(true)}
-                  className="text-primary ml-1 underline"
-                >
-                  Upgrade for network reach
-                </button>
-              </p>
+              <div className="flex items-center justify-center gap-2">
+                <p className="text-[10px] text-muted-foreground text-center">
+                  Non-premium battles are saved as unofficial.
+                  <button
+                    type="button"
+                    onClick={() => setShowUpgrade(true)}
+                    className="text-primary ml-1 underline"
+                  >
+                    Upgrade for network reach
+                  </button>
+                </p>
+              </div>
             </div>
           </div>
         </DrawerContent>

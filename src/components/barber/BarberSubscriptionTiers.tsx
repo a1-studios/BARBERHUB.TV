@@ -34,9 +34,10 @@ const tierColors = {
 
 interface BarberSubscriptionTiersProps {
   onShowAddFunds?: () => void;
+  onBarterForTier?: (tierId: string, tierName: string, bbPrice: number) => void;
 }
 
-export const BarberSubscriptionTiers = ({ onShowAddFunds }: BarberSubscriptionTiersProps) => {
+export const BarberSubscriptionTiers = ({ onShowAddFunds, onBarterForTier }: BarberSubscriptionTiersProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { barberBucks, isLoading: bbLoading } = useBarberBucks();
@@ -199,20 +200,31 @@ export const BarberSubscriptionTiers = ({ onShowAddFunds }: BarberSubscriptionTi
                   Manage Subscription
                 </Button>
               ) : (
-                <Button
-                  onClick={() => handleSubscribeClick(tier.id, tier.tier_name, tier.display_name, tier.price_monthly_cents)}
-                  disabled={processingTier === tier.tier_name}
-                  className="w-full"
-                >
-                  {processingTier === tier.tier_name ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    'Upgrade'
+                <div className="space-y-2">
+                  <Button
+                    onClick={() => handleSubscribeClick(tier.id, tier.tier_name, tier.display_name, tier.price_monthly_cents)}
+                    disabled={processingTier === tier.tier_name}
+                    className="w-full"
+                  >
+                    {processingTier === tier.tier_name ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      'Upgrade'
+                    )}
+                  </Button>
+                  {onBarterForTier && (
+                    <button
+                      type="button"
+                      onClick={() => onBarterForTier(tier.id, tier.display_name, bbPrice)}
+                      className="w-full text-xs text-primary hover:underline py-1"
+                    >
+                      Or pay with services →
+                    </button>
                   )}
-                </Button>
+                </div>
               )}
             </Card>
           );
