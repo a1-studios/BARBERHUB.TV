@@ -104,28 +104,44 @@ serve(async (req) => {
     });
     const token = await at.toJwt();
 
+    const now = new Date().toISOString();
+
     // End any stale sessions for this barber before creating a new one
-    await supabaseAdmin
+    const { error: cleanupError } = await supabaseAdmin
       .from("stream_sessions")
-      .update({ status: "ended", ended_at: new Date().toISOString() })
+      .update({ status: "ended", ended_at: now })
       .eq("barber_id", barber.id)
+      .eq("user_id", user.id)
       .eq("stream_type", "solo_broadcast")
       .in("status", ["connecting", "active"]);
 
+    if (cleanupError) {
+      throw cleanupError;
+    }
+
     // Insert stream session
-    await supabaseAdmin.from("stream_sessions").insert({
+    const { error: sessionInsertError } = await supabaseAdmin.from("stream_sessions").insert({
       user_id: user.id,
       barber_id: barber.id,
       room_name: roomName,
       status: "connecting",
+      started_at: now,
       stream_type: "solo_broadcast",
     });
 
+    if (sessionInsertError) {
+      throw sessionInsertError;
+    }
+
     // Set barber as live
-    await supabaseAdmin
+    const { error: barberUpdateError } = await supabaseAdmin
       .from("barber_profiles")
-      .update({ is_live: true, live_video_id: barber.id })
+      .update({ is_live: true, live_video_id: barber.id, last_live_check: now })
       .eq("id", barber.id);
+
+    if (barberUpdateError) {
+      throw barberUpdateError;
+    }
 
     return new Response(
       JSON.stringify({

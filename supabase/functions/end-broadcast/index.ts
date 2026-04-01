@@ -39,54 +39,79 @@ serve(async (req) => {
       });
     }
 
-    // Find active broadcast session owned by this user
-    const { data: session, error: sessionError } = await supabaseAdmin
-      .from("stream_sessions")
-      .select("id, barber_id, started_at")
+    const { data: barber, error: barberError } = await supabaseAdmin
+      .from("barber_profiles")
+      .select("id")
       .eq("user_id", user.id)
-      .eq("stream_type", "solo_broadcast")
-      .in("status", ["connecting", "active"])
-      .order("created_at", { ascending: false })
-      .limit(1)
       .single();
 
-    if (sessionError || !session) {
+    if (barberError || !barber) {
       return new Response(
-        JSON.stringify({ error: "No active broadcast found" }),
+        JSON.stringify({ error: "Barber profile not found" }),
         {
-          status: 404,
+          status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
 
+    // Find all active or connecting broadcast sessions owned by this user
+    const { data: sessions, error: sessionError } = await supabaseAdmin
+      .from("stream_sessions")
+      .select("id, started_at, created_at")
+      .eq("user_id", user.id)
+      .eq("barber_id", barber.id)
+      .eq("stream_type", "solo_broadcast")
+      .in("status", ["connecting", "active"])
+      .order("created_at", { ascending: false });
+
+    if (sessionError) {
+      throw sessionError;
+    }
+
     const now = new Date().toISOString();
-    const durationSeconds = session.started_at
+    const latestSession = sessions?.[0];
+    const referenceStartTime = latestSession?.started_at || latestSession?.created_at;
+    const durationSeconds = referenceStartTime
       ? Math.floor(
-          (Date.now() - new Date(session.started_at).getTime()) / 1000
+          (Date.now() - new Date(referenceStartTime).getTime()) / 1000
         )
       : 0;
 
-    // End the session
-    await supabaseAdmin
-      .from("stream_sessions")
-      .update({
-        status: "ended",
-        ended_at: now,
-        duration_seconds: durationSeconds,
-      })
-      .eq("id", session.id);
+    if (sessions && sessions.length > 0) {
+      const { error: endSessionsError } = await supabaseAdmin
+        .from("stream_sessions")
+        .update({
+          status: "ended",
+          ended_at: now,
+          duration_seconds: durationSeconds,
+        })
+        .eq("user_id", user.id)
+        .eq("barber_id", barber.id)
+        .eq("stream_type", "solo_broadcast")
+        .in("status", ["connecting", "active"]);
+
+      if (endSessionsError) {
+        throw endSessionsError;
+      }
+    }
 
     // Set barber offline
-    if (session.barber_id) {
-      await supabaseAdmin
-        .from("barber_profiles")
-        .update({ is_live: false, live_video_id: null })
-        .eq("id", session.barber_id);
+    const { error: barberUpdateError } = await supabaseAdmin
+      .from("barber_profiles")
+      .update({ is_live: false, live_video_id: null, last_live_check: now })
+      .eq("id", barber.id);
+
+    if (barberUpdateError) {
+      throw barberUpdateError;
     }
 
     return new Response(
-      JSON.stringify({ success: true, duration_seconds: durationSeconds }),
+      JSON.stringify({
+        success: true,
+        duration_seconds: durationSeconds,
+        sessions_ended: sessions?.length ?? 0,
+      }),
       {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

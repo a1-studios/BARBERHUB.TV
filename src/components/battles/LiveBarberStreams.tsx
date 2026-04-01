@@ -11,6 +11,7 @@ import { AcceptChallengeModal } from './AcceptChallengeModal';
 import { DonationModal } from '@/components/DonationModal';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { isFreshLiveBroadcast } from '@/lib/liveBroadcast';
 
 interface LiveStream {
   id: string;
@@ -242,19 +243,27 @@ export const LiveBarberStreams = () => {
       if (barberIds.length > 0) {
         const { data: barbers } = await supabase
           .from('barber_profiles')
-          .select('id, name, user_id')
+          .select('id, name, user_id, is_live, last_live_check, updated_at')
           .in('id', barberIds);
         if (barbers) {
-          barberMap = Object.fromEntries(barbers.map((b: any) => [b.id, b]));
+          barberMap = Object.fromEntries(
+            barbers
+              .filter((barber: any) =>
+                barber.is_live && isFreshLiveBroadcast(barber.last_live_check, barber.updated_at)
+              )
+              .map((b: any) => [b.id, b])
+          );
         }
       }
 
-      return unique.map((s: any) => ({
-        ...s,
-        barber: barberMap[s.barber_id] || null,
-      })) as SoloBroadcast[];
+      return unique
+        .map((s: any) => ({
+          ...s,
+          barber: barberMap[s.barber_id] || null,
+        }))
+        .filter((broadcast: SoloBroadcast) => !!broadcast.barber) as SoloBroadcast[];
     },
-    refetchInterval: 10000,
+    refetchInterval: 5000,
   });
 
   const hasContent =
