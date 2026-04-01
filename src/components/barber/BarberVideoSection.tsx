@@ -1,4 +1,15 @@
-import { Play, Upload, Loader2 } from 'lucide-react';
+import { Play, Upload, Loader2, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { BrandedVideoPlayer } from '@/components/BrandedVideoPlayer';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
