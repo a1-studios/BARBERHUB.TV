@@ -105,22 +105,38 @@ export const DynamicBattleHero = () => {
     refetchInterval: 10000
   });
 
-  // Fetch a fallback featured video when no battle exists
-  const { data: fallbackVideo } = useQuery({
-    queryKey: ['fallbackHeroVideo'],
+  // Fetch fallback featured videos — full shuffled pool
+  const { data: fallbackVideos = [] } = useQuery({
+    queryKey: ['fallbackHeroVideos'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('public_barber_profiles')
         .select('barber_id, barber_name, display_name, featured_video_id, avatar_url, country_code')
         .not('featured_video_id', 'is', null)
-        .order('barber_updated_at', { ascending: false })
-        .limit(10);
+        .limit(20);
       if (error) throw error;
       const valid = (data || []).filter(b => b.featured_video_id?.startsWith('http'));
-      return valid.length > 0 ? valid[Math.floor(Math.random() * valid.length)] : null;
+      // Fisher-Yates shuffle
+      for (let i = valid.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [valid[i], valid[j]] = [valid[j], valid[i]];
+      }
+      return valid;
     },
     enabled: !battle,
   });
+
+  // Rotate through fallback videos every 8 seconds
+  const [fallbackIdx, setFallbackIdx] = useState(0);
+  useEffect(() => {
+    if (!fallbackVideos.length || fallbackVideos.length <= 1 || battle) return;
+    const timer = setInterval(() => {
+      setFallbackIdx(prev => (prev + 1) % fallbackVideos.length);
+    }, 8000);
+    return () => clearInterval(timer);
+  }, [fallbackVideos.length, battle]);
+
+  const fallbackVideo = fallbackVideos.length > 0 ? fallbackVideos[fallbackIdx % fallbackVideos.length] : null;
 
   // Fetch barber profiles for the battle using unified view
   const {
