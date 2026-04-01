@@ -9,6 +9,7 @@ import SplitScreenBattle from "@/components/battles/SplitScreenBattle";
 import { parseSpecialties, getSpecialtyDisplay } from "@/config/specialtyTags";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { DonationModal } from "@/components/DonationModal";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface FeedItem {
   type: "video" | "sponsor" | "educator" | "platform" | "battle";
