@@ -266,8 +266,32 @@ export default function CameraStudio() {
     return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
   };
 
-  const handleModeSelect = (mode: StudioMode) => {
+  const handleModeSelect = async (mode: StudioMode) => {
     setIsModeDrawerOpen(false);
+
+    if (mode === 'livestream') {
+      if (streamPermLoading) {
+        toast.info('Checking streaming permissions...');
+        return;
+      }
+      if (!canStream) {
+        toast.error(streamDeniedReason || 'Live streaming is not available');
+        return;
+      }
+      // Get broadcast token and navigate to studio
+      toast.loading('Starting broadcast...', { id: 'broadcast-start' });
+      const { data, error } = await supabase.functions.invoke('generate-broadcast-token');
+      toast.dismiss('broadcast-start');
+      if (error || !data?.token) {
+        toast.error(data?.error || 'Failed to start broadcast');
+        return;
+      }
+      navigate(`/broadcast/${data.barberId}/studio`, {
+        state: { token: data.token, serverUrl: data.serverUrl },
+      });
+      return;
+    }
+
     if (mode === 'challenge') {
       setChallengeModalOpen(true);
       setStudioMode('challenge');
