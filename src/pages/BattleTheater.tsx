@@ -317,10 +317,19 @@ export default function BattleTheater() {
 
   // ─── PROCESSING PHASE ───
   if (localPhase === 'processing') {
-    return <ProcessingArena battleId={id!} onReady={handleProcessingReady} />;
+    // If cloudflare_stream_uid is missing, show transcoding state
+    const hasStreamUid = !!(battle as any).cloudflare_stream_uid;
+    return (
+      <ProcessingArena
+        battleId={id!}
+        onReady={handleProcessingReady}
+        reason={hasStreamUid ? 'battle_processing' : 'transcoding'}
+      />
+    );
   }
 
-  // ─── VOD PHASE: Existing playback ───
+  // ─── VOD PHASE ───
+  const battleStreamUid = (battle as any).cloudflare_stream_uid as string | null;
   const barber1VideoSrc = (battle as any).ivs_playback_url || battle.barber_1_video_url || battle.stream_url || null;
   const barber2VideoSrc = battle.barber_2_video_url || null;
   const isMP4 = (url: string | null) => url?.endsWith('.mp4');
