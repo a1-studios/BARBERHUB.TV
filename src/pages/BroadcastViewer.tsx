@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Radio, Users, WifiOff } from 'lucide-react';
+import { ArrowLeft, Radio, Users, WifiOff, Heart, UserPlus, UserCheck, Gift } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useLikes } from '@/hooks/useLikes';
+import { DonationModal } from '@/components/DonationModal';
 import {
   LiveKitRoom,
   VideoTrack,
@@ -12,14 +15,29 @@ import {
 } from '@livekit/components-react';
 import { Track, RoomEvent } from 'livekit-client';
 import { isFreshLiveBroadcast } from '@/lib/liveBroadcast';
+import { toast } from 'sonner';
 
-function ViewerContent({ barberName }: { barberName: string }) {
+function ViewerContent({
+  barberName,
+  barberUserId,
+  barberId,
+}: {
+  barberName: string;
+  barberUserId: string | null;
+  barberId: string;
+}) {
   const room = useRoomContext();
+  const { user } = useAuth();
+  const { hasUserLiked, toggleLike } = useLikes();
   const [viewerCount, setViewerCount] = useState(0);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
+  const [showDonation, setShowDonation] = useState(false);
 
   const tracks = useTracks([Track.Source.Camera], { onlySubscribed: true });
   const remoteVideoTrack = tracks.find((t) => !t.participant.isLocal);
 
+  // Viewer count
   useEffect(() => {
     const update = () => setViewerCount(Math.max(0, room.numParticipants - 1));
     update();
@@ -30,6 +48,54 @@ function ViewerContent({ barberName }: { barberName: string }) {
       room.off(RoomEvent.ParticipantDisconnected, update);
     };
   }, [room]);
+
+  // Check follow status
+  useEffect(() => {
+    if (!user || !barberUserId) return;
+    supabase
+      .from('creator_follows')
+      .select('id')
+      .eq('creator_id', barberUserId)
+      .eq('follower_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => setIsFollowing(!!data));
+  }, [user, barberUserId]);
+
+  const likeQuery = barberUserId ? hasUserLiked(barberUserId) : { data: false };
+  const isLiked = likeQuery.data ?? false;
+
+  const handleToggleLike = () => {
+    if (!user) return toast.error('Sign in to like');
+    if (!barberUserId) return;
+    toggleLike.mutate({ creatorId: barberUserId, isLiked });
+  };
+
+  const handleToggleFollow = async () => {
+    if (!user) return toast.error('Sign in to follow');
+    if (!barberUserId || followLoading) return;
+    setFollowLoading(true);
+    try {
+      if (isFollowing) {
+        await supabase
+          .from('creator_follows')
+          .delete()
+          .eq('creator_id', barberUserId)
+          .eq('follower_id', user.id);
+        setIsFollowing(false);
+        toast.success('Unfollowed');
+      } else {
+        await supabase
+          .from('creator_follows')
+          .insert({ creator_id: barberUserId, follower_id: user.id });
+        setIsFollowing(true);
+        toast.success('Following!');
+      }
+    } catch {
+      toast.error('Failed to update follow');
+    } finally {
+      setFollowLoading(false);
+    }
+  };
 
   return (
     <div className="flex-1 relative bg-black">
@@ -44,21 +110,79 @@ function ViewerContent({ barberName }: { barberName: string }) {
         </div>
       )}
 
-      {/* Overlays */}
-      <div className="absolute top-4 left-4 flex items-center gap-2">
+      {/* Top-left: LIVE + viewers */}
+      <div className="absolute top-4 left-4 flex items-center gap-2 z-10">
         <Badge className="bg-red-600 text-white font-bold gap-1.5 px-3 py-1">
           <div className="h-2 w-2 rounded-full bg-white animate-pulse" />
           LIVE
         </Badge>
-        <Badge variant="secondary" className="gap-1">
+        <Badge variant="secondary" className="gap-1 bg-black/50 text-white border-white/20">
           <Users className="h-3 w-3" />
           {viewerCount}
         </Badge>
       </div>
 
-      <div className="absolute bottom-4 left-4">
+      {/* Bottom-left: barber name */}
+      <div className="absolute bottom-6 left-4 z-10">
         <p className="text-white font-bold text-lg drop-shadow-lg">{barberName}</p>
+        <p className="text-white/50 text-xs">Live now</p>
       </div>
+
+      {/* Right-side TikTok-style engagement actions */}
+      <div className="absolute right-3 bottom-20 z-10 flex flex-col items-center gap-5">
+        {/* Like */}
+        <button
+          onClick={handleToggleLike}
+          className="flex flex-col items-center gap-1"
+        >
+          <div className={`rounded-full p-2.5 backdrop-blur-sm ${isLiked ? 'bg-red-500/80' : 'bg-black/40'}`}>
+            <Heart className={`h-6 w-6 ${isLiked ? 'text-white fill-white' : 'text-white'}`} />
+          </div>
+          <span className="text-white text-[10px] font-medium drop-shadow">Like</span>
+        </button>
+
+        {/* Follow */}
+        <button
+          onClick={handleToggleFollow}
+          className="flex flex-col items-center gap-1"
+          disabled={followLoading}
+        >
+          <div className={`rounded-full p-2.5 backdrop-blur-sm ${isFollowing ? 'bg-primary/80' : 'bg-black/40'}`}>
+            {isFollowing ? (
+              <UserCheck className="h-6 w-6 text-white" />
+            ) : (
+              <UserPlus className="h-6 w-6 text-white" />
+            )}
+          </div>
+          <span className="text-white text-[10px] font-medium drop-shadow">
+            {isFollowing ? 'Following' : 'Follow'}
+          </span>
+        </button>
+
+        {/* Donate */}
+        <button
+          onClick={() => {
+            if (!user) return toast.error('Sign in to donate');
+            setShowDonation(true);
+          }}
+          className="flex flex-col items-center gap-1"
+        >
+          <div className="rounded-full p-2.5 bg-black/40 backdrop-blur-sm">
+            <Gift className="h-6 w-6 text-white" />
+          </div>
+          <span className="text-white text-[10px] font-medium drop-shadow">Donate</span>
+        </button>
+      </div>
+
+      {/* Donation Modal */}
+      {showDonation && barberUserId && (
+        <DonationModal
+          creatorId={barberUserId}
+          creatorName={barberName}
+          isOpen={showDonation}
+          onClose={() => setShowDonation(false)}
+        />
+      )}
     </div>
   );
 }
@@ -70,6 +194,7 @@ export default function BroadcastViewer() {
   const [token, setToken] = useState<string | null>(null);
   const [serverUrl, setServerUrl] = useState<string | null>(null);
   const [barberName, setBarberName] = useState('');
+  const [barberUserId, setBarberUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -105,14 +230,14 @@ export default function BroadcastViewer() {
     if (!barberId) return;
 
     (async () => {
-      // Fetch barber info
       const { data: barber } = await supabase
         .from('barber_profiles')
-        .select('name, is_live, last_live_check, updated_at')
+        .select('name, user_id, is_live, last_live_check, updated_at')
         .eq('id', barberId)
         .single();
 
       setBarberName(barber?.name || 'Barber');
+      setBarberUserId(barber?.user_id || null);
 
       if (!barber?.is_live || !isFreshLiveBroadcast(barber.last_live_check, barber.updated_at)) {
         setError('This barber is not currently live');
@@ -120,7 +245,6 @@ export default function BroadcastViewer() {
         return;
       }
 
-      // Get viewer token
       const roomName = `broadcast-${barberId}`;
       const { data, error: fnError } = await supabase.functions.invoke(
         'get-broadcast-viewer-token',
@@ -139,6 +263,7 @@ export default function BroadcastViewer() {
     })();
   }, [barberId]);
 
+  // Polling fallback
   useEffect(() => {
     if (!barberId) return;
 
@@ -206,7 +331,11 @@ export default function BroadcastViewer() {
           setToken(null);
         }}
       >
-        <ViewerContent barberName={barberName} />
+        <ViewerContent
+          barberName={barberName}
+          barberUserId={barberUserId}
+          barberId={barberId || ''}
+        />
       </LiveKitRoom>
     </div>
   );
