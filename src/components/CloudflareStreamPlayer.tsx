@@ -36,6 +36,7 @@ export const CloudflareStreamPlayer = ({
   controls = true,
   className = '',
   processingMessage = 'Optimizing for high-quality playback…',
+  onEnded,
 }: CloudflareStreamPlayerProps) => {
   // Priority 1: Cloudflare Stream adaptive player
   if (streamUid) {
