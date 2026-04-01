@@ -33,6 +33,7 @@ interface FeedItem {
   barber2_name?: string;
   barber2_location?: string;
   barber_user_id?: string;
+  cloudflare_stream_uid?: string | null;
 }
 
 const PLATFORM_PROMOS: FeedItem[] = [
