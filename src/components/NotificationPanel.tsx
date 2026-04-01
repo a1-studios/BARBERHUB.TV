@@ -65,7 +65,9 @@ export function NotificationPanel({ embedded, onClose }: NotificationPanelProps)
     if (n.data?.battle_id) {
       navigate(`/battles/${n.data.battle_id}`);
     } else if (n.data?.appointment_id) {
-      navigate('/profile');
+      const reviewTypes = ['appointment_completed', 'review_prompt'];
+      const action = reviewTypes.includes(n.type) ? '&action=review' : '';
+      navigate(`/profile?appointment_id=${n.data.appointment_id}${action}`);
     }
     if (embedded && onClose) onClose();
     if (!embedded) setOpen(false);

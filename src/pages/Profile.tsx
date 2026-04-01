@@ -46,6 +46,11 @@ const Profile = () => {
   const [apptOpen, setApptOpen] = useState(false);
   const [barberApptOpen, setBarberApptOpen] = useState(false);
   const [prizesOpen, setPrizesOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewAppointmentId, setReviewAppointmentId] = useState('');
+  const [revieweeId, setRevieweeId] = useState('');
+  const [isBarberReviewing, setIsBarberReviewing] = useState(false);
 
   const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
 
