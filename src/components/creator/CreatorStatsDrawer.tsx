@@ -40,15 +40,23 @@ export function CreatorStatsDrawer({ isOpen, onClose }: CreatorStatsDrawerProps)
       .select('views, likes, shares, earnings')
       .eq('creator_id', user.id);
 
-    if (content) {
-      setStats(content.reduce((acc, c) => ({
-        total_content: acc.total_content + 1,
-        total_views: acc.total_views + (c.views || 0),
-        total_likes: acc.total_likes + (c.likes || 0),
-        total_shares: acc.total_shares + (c.shares || 0),
-        total_earnings: acc.total_earnings + (c.earnings || 0),
-      }), { total_content: 0, total_views: 0, total_likes: 0, total_shares: 0, total_earnings: 0 }));
-    }
+    const contentStats = content ? content.reduce((acc, c) => ({
+      total_content: acc.total_content + 1,
+      total_views: acc.total_views + (c.views || 0),
+      total_likes: acc.total_likes,
+      total_shares: acc.total_shares + (c.shares || 0),
+      total_earnings: acc.total_earnings + (c.earnings || 0),
+    }), { total_content: 0, total_views: 0, total_likes: 0, total_shares: 0, total_earnings: 0 }) 
+    : { total_content: 0, total_views: 0, total_likes: 0, total_shares: 0, total_earnings: 0 };
+
+    // Fetch real likes count from creator_likes table
+    const { count: likesCount } = await supabase
+      .from('creator_likes')
+      .select('id', { count: 'exact', head: true })
+      .eq('creator_id', user.id);
+
+    contentStats.total_likes = likesCount || 0;
+    setStats(contentStats);
 
     // Fetch referral code
     const { data: profile } = await supabase

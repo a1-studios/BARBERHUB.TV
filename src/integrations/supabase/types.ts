@@ -4155,6 +4155,14 @@ export type Database = {
         Args: { p_client_id: string; p_is_no_show?: boolean }
         Returns: undefined
       }
+      increment_content_shares: {
+        Args: { p_content_id: string }
+        Returns: undefined
+      }
+      increment_content_views: {
+        Args: { p_content_id: string }
+        Returns: undefined
+      }
       increment_no_show_count: {
         Args: { barber_user_id: string }
         Returns: undefined
