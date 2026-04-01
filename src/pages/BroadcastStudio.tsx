@@ -184,6 +184,10 @@ export default function BroadcastStudio() {
     return () => subscription.unsubscribe();
   }, []);
 
+  const navigateToStudio = useCallback(() => {
+    navigate('/studio', { replace: true });
+  }, [navigate]);
+
   // If no token from route state, fetch one
   useEffect(() => {
     if (token && serverUrl) return;
@@ -194,13 +198,13 @@ export default function BroadcastStudio() {
       );
       if (error || !data?.token) {
         toast.error(data?.error || 'Failed to start broadcast');
-        navigate('/studio');
+        navigateToStudio();
         return;
       }
       setToken(data.token);
       setServerUrl(data.serverUrl);
     })();
-  }, [token, serverUrl, navigate]);
+  }, [token, serverUrl, navigateToStudio]);
 
   useEffect(() => {
     if (!barberId || !token || !serverUrl) return;
@@ -266,16 +270,16 @@ export default function BroadcastStudio() {
     } catch {
       toast.error('Failed to end broadcast — redirecting anyway');
     }
-    navigate('/studio');
-  }, [isEnding, navigate]);
+    navigateToStudio();
+  }, [isEnding, navigateToStudio]);
 
   // Separate handler for LiveKit disconnect — only navigate, don't call end-broadcast again
   const handleDisconnected = useCallback(() => {
     if (cleanupStartedRef.current) return; // already ending via button
     cleanupStartedRef.current = true;
     toast.info('Broadcast disconnected');
-    navigate('/studio');
-  }, [navigate]);
+    navigateToStudio();
+  }, [navigateToStudio]);
 
   if (!token || !serverUrl) {
     return (

@@ -190,6 +190,7 @@ function ViewerContent({
 export default function BroadcastViewer() {
   const { barberId } = useParams<{ barberId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [token, setToken] = useState<string | null>(null);
   const [serverUrl, setServerUrl] = useState<string | null>(null);
@@ -197,6 +198,15 @@ export default function BroadcastViewer() {
   const [barberUserId, setBarberUserId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const handleExitViewer = () => {
+    if (user && barberUserId && user.id === barberUserId) {
+      navigate('/studio', { replace: true });
+      return;
+    }
+
+    navigate('/watch', { replace: true });
+  };
 
   // Subscribe to barber's is_live status for instant stream-end detection
   useEffect(() => {
@@ -297,7 +307,7 @@ export default function BroadcastViewer() {
         <WifiOff className="h-16 w-16 text-muted-foreground/30" />
         <p className="text-white/60 text-lg font-medium">{error || 'Stream unavailable'}</p>
         <p className="text-muted-foreground text-sm">{barberName}</p>
-        <Button variant="outline" onClick={() => navigate(-1)}>
+        <Button variant="outline" onClick={handleExitViewer}>
           <ArrowLeft className="h-4 w-4 mr-2" /> Go Back
         </Button>
       </div>
@@ -313,7 +323,7 @@ export default function BroadcastViewer() {
             variant="ghost"
             size="icon"
             className="text-white/80 h-9 w-9"
-            onClick={() => navigate(-1)}
+            onClick={handleExitViewer}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
