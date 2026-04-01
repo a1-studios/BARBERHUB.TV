@@ -26,6 +26,8 @@ export const ImmersiveFactionBanners = () => {
   const { isBarber } = useUserRole();
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
   const [showAddFunds, setShowAddFunds] = useState(false);
+  const [showBarter, setShowBarter] = useState(false);
+  const [barterCategory, setBarterCategory] = useState<string>('');
   const [joiningCategory, setJoiningCategory] = useState<string | null>(null);
 
   // Fetch barber profile
