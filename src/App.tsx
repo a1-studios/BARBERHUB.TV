@@ -42,7 +42,6 @@ import CameraStudio from "./pages/CameraStudio";
 import Rankings from "./pages/Rankings";
 import BroadcastViewer from "./pages/BroadcastViewer";
 import BroadcastStudio from "./pages/BroadcastStudio";
-import Rankings from "./pages/Rankings";
 
 const queryClient = new QueryClient();
 
