@@ -1,68 +1,122 @@
 
 
-# Fix Spectator RLS, B2B Educational Gating, and Portfolio Routing Bug
+# Cloudflare Stream VOD Swap + B2B Academy RBAC
 
-## Step 1: Battle Spectator RLS (Database Migration)
+## Current State
 
-Replace the current `USING (true)` public policy on `stream_sessions` with an authenticated-only policy. Confirm `battles` already allows authenticated reads (it does — verified).
+- **No `cloudflare_stream_uid` columns exist** in the database. Videos are stored as raw R2 URLs in `barber_1_video_url`, `barber_2_video_url`, `featured_video_id`, `media_url` (creations, creator_content, battle_submissions).
+- **No Cloudflare Stream secrets** found in Supabase Edge Function secrets. User claims they've been added — needs verification. The secrets required: `CLOUDFLARE_STREAM_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+- **`@cloudflare/stream-react`** is not installed.
+- All VOD playback uses native `<video>` elements across: `BrandedVideoPlayer`, `HLSVideoPlayer`, `VideoPlayer`, `MP4Player` (BattleTheater), and inline `<video>` in `WatchFeed`.
+- The `BattleTheater` already has correct live/processing/vod phase routing via `localPhase`.
+- The `creator_content` table already has the course gating RLS from the previous migration. The `WatchFeed` already filters educator items for fans. `CreatorHub` already redirects non-barbers.
 
-```sql
-DROP POLICY IF EXISTS "Anyone can view stream sessions" ON stream_sessions;
-CREATE POLICY "Authenticated users can view stream sessions"
-  ON stream_sessions FOR SELECT TO authenticated USING (true);
-```
+## Pre-Requisite: Secrets Verification
 
-## Step 2: B2B Educational Gating (Database + Frontend)
+Before proceeding, verify that `CLOUDFLARE_STREAM_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are available as Supabase Edge Function secrets. If not, they must be added before the edge function can work.
 
-**Database**: Tighten `creator_content` SELECT so `course_teaser` rows require the barber role. Non-course content stays visible to all.
+## Plan
 
-```sql
-DROP POLICY IF EXISTS "Content is viewable by everyone" ON creator_content;
-CREATE POLICY "Content is viewable by everyone"
-  ON creator_content FOR SELECT TO authenticated
-  USING (
-    content_type != 'course_teaser'
-    OR public.has_role(auth.uid(), 'barber')
-  );
-```
+### Step 1: Database Migration — Add `cloudflare_stream_uid` columns
 
-**Frontend** (`WatchFeed.tsx`): Import `useUserRole`, filter out `educator` type items when user `isFan`.
+Add a `cloudflare_stream_uid TEXT` column to:
+- `battles` — for the combined replay UID after egress processing
+- `battle_submissions` — per-barber VOD UID
+- `creator_content` — for course/tutorial VOD UID
+- `creations` — for portfolio VOD UID
 
-## Step 3: Fix Portfolio Routing Bug (Corrected Approach)
+These columns store the Cloudflare Stream video UID returned after upload. The existing `media_url`/`barber_X_video_url` fields remain as the R2 source URL, while `cloudflare_stream_uid` holds the Cloudflare-assigned UID for the `<Stream>` component.
 
-The user correctly identified the flaw: passing any user-level ID (`user_id` or `barber_id`) to `?video=` is wrong because it doesn't uniquely identify which video was clicked. The fix requires passing the actual video identifier and matching on it.
+### Step 2: Edge Function — `upload-to-cloudflare-stream`
 
-**Current broken flow**:
-- `DynamicBattleHero` passes `barber_id` → `?video=<barber_id>`
-- `WatchFeed` tries to match against `barber_user_id` (a different field)
-- Result: mismatch or no match
+Create a new Supabase Edge Function that:
+1. Accepts `{ sourceUrl, table, recordId }` from authenticated requests
+2. Calls Cloudflare Stream's "Upload via URL" API using stored secrets
+3. Returns the `uid` to the caller
+4. Updates the appropriate table's `cloudflare_stream_uid` column
 
-**Corrected flow**:
-- `DynamicBattleHero` passes the actual video URL: `?video=${encodeURIComponent(fallbackVideo.featured_video_id)}`
-- `WatchFeed` matches feed items by `media_url` instead of `barber_user_id`
+This function will be called:
+- By the `livekit-egress-webhook` after battle recording is finalized (auto-upload replay)
+- By `EducatorUpload` after uploading a course video to R2
+- By portfolio upload flows after uploading to R2
 
-### Changes in `DynamicBattleHero.tsx`:
-```tsx
-// Line 312: pass the actual video URL
-onClick={() => navigate(`/watch?video=${encodeURIComponent(fallbackVideo.featured_video_id)}`)}
-```
+### Step 3: Install `@cloudflare/stream-react`
 
-### Changes in `WatchFeed.tsx`:
-```tsx
-// Line 280: match by media_url instead of barber_user_id
-const decodedTarget = targetVideoBarber ? decodeURIComponent(targetVideoBarber) : null;
+Add the npm dependency.
 
-// In the useEffect:
-const idx = feed.findIndex(f => f.media_url === decodedTarget);
-```
+### Step 4: Create `CloudflareStreamPlayer` wrapper component
 
-This ensures: User clicks Thumbnail A (with video URL X) → WatchFeed finds the feed item whose `media_url === X` → plays exactly that video.
+A new component `src/components/CloudflareStreamPlayer.tsx` that:
+- Accepts `streamUid: string | null | undefined` and optional `fallbackUrl`
+- If `streamUid` is set, renders `<Stream src={streamUid} controls responsive />`
+- If `streamUid` is null but `fallbackUrl` exists, falls back to native `<video>` (backwards compat)
+- If neither, shows a "Video Processing..." transcoding UI with a spinner and message
 
-## Files to Modify
+### Step 5: Replace VOD `<video>` elements with `CloudflareStreamPlayer`
 
-| File | Change |
+**Files to update:**
+
+| Component | Current player | Change |
+|-----------|---------------|--------|
+| `BattleTheater.tsx` (VOD phase) | `MP4Player` / `HLSVideoPlayer` | Use `CloudflareStreamPlayer` with `battle.cloudflare_stream_uid` or per-barber UIDs, falling back to existing URLs |
+| `WatchFeed.tsx` (`renderVideoItem`) | Inline `<video>` | Use `CloudflareStreamPlayer` with `item.cloudflare_stream_uid`, fallback to `item.media_url` |
+| `BrandedVideoPlayer.tsx` | Native `<video>` | Add `streamUid` prop; when set, render `<Stream>` instead of `<video>` |
+| `BarberVideoSection.tsx` | `BrandedVideoPlayer` | Pass through `cloudflare_stream_uid` if available |
+| `HLSVideoPlayer.tsx` | Native `<video>` | Add `streamUid` prop; when set, render `<Stream>` |
+
+**Not touched**: LiveKit components, ContenderVideoPreview, CameraStudio, HaircutAdvisorModal (these are live camera/WebRTC, not VOD).
+
+### Step 6: BattleTheater Phase Routing Refinement
+
+The existing `localPhase` state machine (`live` → `processing` → `vod`) is already correct. Refinements:
+- In the VOD phase, read `battle.cloudflare_stream_uid` (or per-submission UIDs)
+- If UID exists, render `CloudflareStreamPlayer` with adaptive HLS
+- If UID is null (still transcoding), show the Processing/Transcoding fallback UI from Step 4
+
+### Step 7: Processing/Transcoding Fallback UI
+
+Enhance `ProcessingArena.tsx` to also serve as the transcoding state:
+- Add a `reason` prop: `'battle_processing' | 'transcoding'`
+- For transcoding: show "Optimizing for high-quality playback..." with a polished animation
+- Subscribe to realtime updates on `cloudflare_stream_uid` column changes to auto-transition
+
+### Step 8: Academy/Education RBAC (Frontend Hardening)
+
+The database RLS was already applied in the previous migration. Frontend hardening:
+- `WatchFeed.tsx` already filters educator items for fans (done in previous change)
+- `CreatorHub.tsx` already redirects non-barbers (already implemented)
+- Add explicit toast + redirect if a fan navigates directly to an educator content URL
+- Ensure `BottomNavBar` has no Academy tab (confirmed — it doesn't have one currently)
+
+## Files to Create/Modify
+
+| File | Action |
 |------|--------|
-| New migration | `stream_sessions` authenticated-only SELECT; `creator_content` course gating |
-| `src/components/DynamicBattleHero.tsx` | Pass `featured_video_id` (not `barber_id`) in `?video=` param |
-| `src/pages/WatchFeed.tsx` | Match `?video=` param against `media_url`; filter educator items for fans |
+| New migration SQL | Add `cloudflare_stream_uid` to 4 tables |
+| `supabase/functions/upload-to-cloudflare-stream/index.ts` | New edge function |
+| `src/components/CloudflareStreamPlayer.tsx` | New wrapper component |
+| `src/pages/BattleTheater.tsx` | Use CloudflareStreamPlayer in VOD phase |
+| `src/pages/WatchFeed.tsx` | Use CloudflareStreamPlayer in feed items |
+| `src/components/BrandedVideoPlayer.tsx` | Add streamUid prop |
+| `src/components/battles/HLSVideoPlayer.tsx` | Add streamUid prop |
+| `src/components/battles/ProcessingArena.tsx` | Add transcoding variant |
+| `src/components/creator/EducatorUpload.tsx` | Call upload-to-cloudflare-stream after R2 upload |
+| `package.json` | Add `@cloudflare/stream-react` |
+
+## Technical Details
+
+```text
+VOD Playback Pipeline:
+  1. Video uploaded to R2 → raw URL stored in media_url
+  2. Edge function calls Cloudflare Stream "copy from URL" API
+  3. Cloudflare returns uid → stored in cloudflare_stream_uid column
+  4. Frontend reads cloudflare_stream_uid → renders <Stream src={uid} />
+  5. If uid is null → show transcoding fallback UI
+  6. Once uid appears (via realtime) → auto-mount Stream player
+
+Battle Phase Routing:
+  status === 'live'       → LiveKit Subscriber (untouched)
+  status === 'processing' → ProcessingArena (transcoding UI)
+  status === 'voting/completed' → CloudflareStreamPlayer (HLS VOD)
+```
 
