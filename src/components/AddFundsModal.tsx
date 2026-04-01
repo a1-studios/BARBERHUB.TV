@@ -8,24 +8,33 @@ import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { AlertCircle, User, Globe, X, ExternalLink } from "lucide-react";
+import { AlertCircle, User, Globe, X, ExternalLink, HandCoins } from "lucide-react";
 import { CountrySelector } from "./CountrySelector";
 import { RotatingBBCoin } from "./economy/RotatingBBCoin";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
+import { UniversalBarterGateway } from "@/components/barter/UniversalBarterGateway";
+
+interface BarterContext {
+  perkCategory: 'subscription' | 'battle_entry' | 'visibility_boost';
+  perkDetails: Record<string, any>;
+  requiredBBValue: number;
+}
 
 interface AddFundsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  barterContext?: BarterContext;
 }
 
-export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
+export const AddFundsModal = ({ isOpen, onClose, barterContext }: AddFundsModalProps) => {
   const { purchaseBucks } = useBarberBucks();
   const { user } = useAuth();
-  const { isFan, isLoading: rolesLoading } = useUserRole();
+  const { isFan, isBarber, isLoading: rolesLoading } = useUserRole();
   const [mounted, setMounted] = useState(false);
   const [showProfilePrompt, setShowProfilePrompt] = useState(false);
   const [pendingCheckoutUrl, setPendingCheckoutUrl] = useState<string | null>(null);
+  const [showBarter, setShowBarter] = useState(false);
   const [profileData, setProfileData] = useState({
     display_name: '',
     country_code: ''
@@ -52,6 +61,12 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
     setMounted(true);
     return () => setMounted(false);
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setShowBarter(false);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen || !user || rolesLoading) return;
@@ -123,7 +138,7 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
     try {
       return window.self !== window.top;
     } catch {
-      return true; // cross-origin iframe
+      return true;
     }
   };
 
@@ -131,7 +146,6 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
     setPendingCheckoutUrl(null);
     purchaseBucks.mutate(usdAmount, {
       onSuccess: (data) => {
-        // Store pending purchase in localStorage for recovery
         try {
           localStorage.setItem('pending_bb_purchase', JSON.stringify({
             session_id: data.session_id,
@@ -148,7 +162,6 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
             onClose();
             toast.success('Stripe checkout opened in a new tab. Complete your purchase there!');
           } else {
-            // Popup blocked — show manual link
             setPendingCheckoutUrl(data.url);
             toast.error('Popup blocked — use the link below to open checkout.');
           }
@@ -170,27 +183,37 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
 
   if (!isOpen || !mounted) return null;
 
+  // If barter mode is active, show the UniversalBarterGateway
+  if (showBarter && barterContext) {
+    return (
+      <UniversalBarterGateway
+        isOpen={true}
+        perkCategory={barterContext.perkCategory}
+        perkDetails={barterContext.perkDetails}
+        requiredBBValue={barterContext.requiredBBValue}
+        onSuccess={() => {
+          setShowBarter(false);
+          onClose();
+        }}
+        onCancel={() => setShowBarter(false)}
+      />
+    );
+  }
+
   return createPortal(
     <div 
       className="fixed inset-0 z-[60] flex items-center justify-center p-4 pt-20"
       style={{ backgroundColor: 'rgba(0, 0, 0, 0.88)', pointerEvents: 'auto' }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      {/* Modal Container - perfectly centered */}
       <div className="relative w-[280px] max-w-[90vw]">
-        {/* Outer glow for prominence */}
         <div className="absolute -inset-3 bg-gradient-to-r from-primary/40 via-cyan/30 to-primary/40 rounded-2xl blur-xl opacity-80" />
-        
-        {/* Energy border glow */}
         <div className="absolute -inset-0.5 bg-gradient-to-r from-primary via-cyan to-primary rounded-xl blur-sm opacity-70 animate-pulse" />
         
-        {/* Main modal - brighter background */}
         <div className="relative bg-card rounded-xl border border-cyan/50 overflow-hidden shadow-[0_0_40px_rgba(0,217,255,0.15)]">
-          {/* Header with energy gradient */}
+          {/* Header */}
           <div className="relative px-4 py-3 bg-gradient-to-r from-primary/20 via-cyan/10 to-primary/20 border-b border-primary/30">
-            {/* Animated energy line */}
             <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan to-transparent animate-pulse" />
-            
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <RotatingBBCoin 
@@ -214,6 +237,23 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
           </div>
 
           <div className="p-3">
+            {/* Pay with Services button for barbers */}
+            {isBarber && barterContext && (
+              <button
+                onClick={() => setShowBarter(true)}
+                className={cn(
+                  "w-full mb-3 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg",
+                  "bg-gradient-to-r from-amber-500/20 via-orange-500/15 to-amber-500/20",
+                  "border border-amber-500/40 hover:border-amber-400/60",
+                  "transition-all duration-200 hover:shadow-[0_0_12px_rgba(245,158,11,0.25)]",
+                  "text-sm font-semibold text-amber-400"
+                )}
+              >
+                <HandCoins className="h-4 w-4" />
+                Pay with Services Instead
+              </button>
+            )}
+
             {/* Profile Prompt for Fans */}
             {showProfilePrompt && !checkingProfile && (
               <div className="mb-3 bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
@@ -274,7 +314,7 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
 
             {!rolesLoading && (!showProfilePrompt || !isFan) && !checkingProfile && (
               <div className="space-y-3">
-                {/* Conversion Rate - Compact */}
+                {/* Conversion Rate */}
                 <div className="flex items-center justify-center gap-2 py-1.5 px-3 bg-muted/30 rounded-lg border border-border/30">
                   <span className="text-[10px] text-muted-foreground">Rate:</span>
                   <span className="text-xs font-bold">
@@ -284,7 +324,7 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
                   </span>
                 </div>
                 
-                {/* Package Grid - Compact */}
+                {/* Package Grid */}
                 <div className="grid grid-cols-3 gap-1.5">
                   {quickAmounts.slice(0, 3).map(({ bb, usd, bonus }) => (
                     <button
@@ -309,7 +349,7 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
                   ))}
                 </div>
 
-                {/* Larger packages - horizontal */}
+                {/* Larger packages */}
                 <div className="grid grid-cols-2 gap-1.5">
                   {quickAmounts.slice(3).map(({ bb, usd, bonus }) => (
                     <button
@@ -338,7 +378,7 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
                   ))}
                 </div>
 
-                {/* Fallback checkout link when popup is blocked */}
+                {/* Fallback checkout link */}
                 {pendingCheckoutUrl && (
                   <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-center space-y-2">
                     <p className="text-xs text-muted-foreground">Popup was blocked. Click below to open checkout:</p>
@@ -354,7 +394,6 @@ export const AddFundsModal = ({ isOpen, onClose }: AddFundsModalProps) => {
                   </div>
                 )}
 
-                {/* Cancel button - minimal */}
                 <button 
                   onClick={onClose} 
                   className="w-full py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"

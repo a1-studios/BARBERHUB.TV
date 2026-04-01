@@ -220,8 +220,29 @@ export const ImmersiveFactionBanners = () => {
         </motion.div>
       </div>
 
-      {/* Add Funds Modal */}
-      <AddFundsModal isOpen={showAddFunds} onClose={() => setShowAddFunds(false)} />
+      {/* Add Funds Modal with barter context for tournament entry */}
+      <AddFundsModal
+        isOpen={showAddFunds}
+        onClose={() => setShowAddFunds(false)}
+        barterContext={barterCategory ? {
+          perkCategory: 'battle_entry',
+          perkDetails: { category: barterCategory },
+          requiredBBValue: TOURNAMENT_CONFIG.ENTRY_FEE_BB,
+        } : undefined}
+      />
+
+      {/* Standalone Barter Gateway */}
+      <UniversalBarterGateway
+        isOpen={showBarter}
+        perkCategory="battle_entry"
+        perkDetails={{ category: barterCategory }}
+        requiredBBValue={TOURNAMENT_CONFIG.ENTRY_FEE_BB}
+        onSuccess={() => {
+          setShowBarter(false);
+          queryClient.invalidateQueries({ queryKey: ['tournament-queue-banner'] });
+        }}
+        onCancel={() => setShowBarter(false)}
+      />
     </section>
   );
 };
