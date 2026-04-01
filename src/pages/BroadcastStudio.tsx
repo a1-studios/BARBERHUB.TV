@@ -307,7 +307,7 @@ export default function BroadcastStudio() {
         adaptiveStream: true,
         dynacast: true,
       }}
-      onDisconnected={handleEndStream}
+      onDisconnected={handleDisconnected}
     >
       <StudioControls onEnd={handleEndStream} />
     </LiveKitRoom>
