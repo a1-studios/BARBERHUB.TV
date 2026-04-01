@@ -18,6 +18,7 @@ const notificationIconMap: Record<string, React.ReactNode> = {
   no_show: <AlertTriangle className="h-4 w-4 text-yellow-500" />,
   battle_invite: <Swords className="h-4 w-4 text-primary" />,
   battle_result: <Swords className="h-4 w-4 text-cyan" />,
+  review_prompt: <Star className="h-4 w-4 text-yellow-500" />,
 };
 
 function getIcon(type: string) {
