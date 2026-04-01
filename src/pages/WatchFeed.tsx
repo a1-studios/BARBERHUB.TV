@@ -363,6 +363,15 @@ const WatchFeed = () => {
     );
   };
 
+  const handleVideoEnded = useCallback((idx: number) => {
+    const next = idx + 1;
+    if (next < feed.length) {
+      const container = containerRef.current;
+      const target = container?.querySelector(`[data-index="${next}"]`);
+      target?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [feed.length]);
+
   const handleShare = async (item: FeedItem) => {
     const url = window.location.origin + "/watch";
     if (navigator.share) {
