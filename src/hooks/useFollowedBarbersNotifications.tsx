@@ -14,12 +14,11 @@ interface BarberLiveStatus {
 export const useFollowedBarbersNotifications = () => {
   const { user } = useAuth();
   const [followedBarberIds, setFollowedBarberIds] = useState<string[]>([]);
-  const [liveStatusMap, setLiveStatusMap] = useState<Map<string, boolean>>(new Map());
+  const [liveStatusMap, setLiveStatusMap] = useState<Map<string, { isLive: boolean; barberProfileId: string }>>(new Map());
 
   useEffect(() => {
     if (!user) return;
 
-    // Fetch followed barbers
     const fetchFollowedBarbers = async () => {
       const { data: follows } = await supabase
         .from('creator_follows')
@@ -30,7 +29,6 @@ export const useFollowedBarbersNotifications = () => {
         const barberIds = follows.map(f => f.creator_id);
         setFollowedBarberIds(barberIds);
 
-        // Fetch initial live status for all followed barbers
         if (barberIds.length > 0) {
           const { data: barbers } = await supabase
             .from('barber_profiles')
@@ -38,9 +36,12 @@ export const useFollowedBarbersNotifications = () => {
             .in('user_id', barberIds);
 
           if (barbers) {
-            const statusMap = new Map<string, boolean>();
+            const statusMap = new Map<string, { isLive: boolean; barberProfileId: string }>();
             barbers.forEach((barber: BarberLiveStatus) => {
-              statusMap.set(barber.user_id, barber.is_live || false);
+              statusMap.set(barber.user_id, {
+                isLive: barber.is_live || false,
+                barberProfileId: barber.id,
+              });
             });
             setLiveStatusMap(statusMap);
           }
@@ -54,7 +55,6 @@ export const useFollowedBarbersNotifications = () => {
   useEffect(() => {
     if (followedBarberIds.length === 0) return;
 
-    // Subscribe to updates for all followed barbers
     const subscription = supabase
       .channel('followed-barbers-live')
       .on('postgres_changes', {
@@ -64,10 +64,10 @@ export const useFollowedBarbersNotifications = () => {
         filter: `user_id=in.(${followedBarberIds.join(',')})`
       }, async (payload) => {
         const barberData = payload.new as BarberLiveStatus;
-        const wasLive = liveStatusMap.get(barberData.user_id);
+        const prev = liveStatusMap.get(barberData.user_id);
+        const wasLive = prev?.isLive ?? false;
         const isNowLive = barberData.is_live || false;
 
-        // Only notify if barber just went live (wasn't live before, but is now)
         if (!wasLive && isNowLive) {
           toast({
             title: "🔴 LIVE NOW!",
@@ -75,10 +75,10 @@ export const useFollowedBarbersNotifications = () => {
               <div className="flex flex-col gap-2">
                 <p>{barberData.name} is now streaming live!</p>
                 <button 
-                  onClick={() => window.location.href = `/barber/${barberData.user_id}`}
+                  onClick={() => window.location.href = `/broadcast/${barberData.id}`}
                   className="text-sm text-primary hover:underline text-left"
                 >
-                  View Profile →
+                  Watch Live →
                 </button>
               </div>
             ),
@@ -86,10 +86,12 @@ export const useFollowedBarbersNotifications = () => {
           });
         }
 
-        // Update the status map
         setLiveStatusMap(prev => {
           const newMap = new Map(prev);
-          newMap.set(barberData.user_id, isNowLive);
+          newMap.set(barberData.user_id, {
+            isLive: isNowLive,
+            barberProfileId: barberData.id,
+          });
           return newMap;
         });
       })
