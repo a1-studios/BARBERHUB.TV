@@ -128,6 +128,17 @@ export function EducatorUpload() {
 
       if (insertError) throw insertError;
 
+      // Trigger Cloudflare Stream transcoding for video content
+      if (isVideo && content) {
+        supabase.functions.invoke('upload-to-cloudflare-stream', {
+          body: {
+            sourceUrl: mediaUrl,
+            table: 'creator_content',
+            recordId: (content as any).id,
+          },
+        }).catch((err: any) => console.error('Cloudflare Stream upload queued but failed:', err));
+      }
+
       // If promoting to feed, create feed_items entry
       if (promoteToFeed && content) {
         await supabase.from('feed_items').insert({

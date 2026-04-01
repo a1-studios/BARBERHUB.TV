@@ -4,17 +4,27 @@ import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ProcessingArenaProps {
-  battleId: string;
-  onReady: () => void;
+  battleId?: string;
+  onReady?: () => void;
+  /** 'battle_processing' = waiting for egress; 'transcoding' = waiting for Cloudflare Stream */
+  reason?: 'battle_processing' | 'transcoding';
 }
 
 /**
- * ProcessingArena — Shown when battle.status === 'processing'
- * Animated "Generating Replay..." state with Realtime subscription
- * that auto-transitions to VOD playback when status changes to 'voting'.
+ * ProcessingArena — Shown when battle.status === 'processing' or video is transcoding.
+ * Animated loading state with Realtime subscription that auto-transitions.
  */
-export const ProcessingArena = ({ battleId, onReady }: ProcessingArenaProps) => {
+export const ProcessingArena = ({ battleId, onReady, reason = 'battle_processing' }: ProcessingArenaProps) => {
   const [dots, setDots] = useState('');
+
+  const isTranscoding = reason === 'transcoding';
+  const heading = isTranscoding ? 'Optimizing Video' : 'Generating Replay';
+  const subtitle = isTranscoding
+    ? 'Preparing adaptive high-quality playback…'
+    : 'The battle recording is being finalized';
+  const footer = isTranscoding
+    ? 'This usually takes 1-5 minutes'
+    : 'This usually takes 1-3 minutes';
 
   // Animate dots
   useEffect(() => {
@@ -24,8 +34,10 @@ export const ProcessingArena = ({ battleId, onReady }: ProcessingArenaProps) => 
     return () => clearInterval(interval);
   }, []);
 
-  // Watch for status change
+  // Watch for status change (battle processing → voting)
   useEffect(() => {
+    if (!battleId || !onReady) return;
+
     const channel = supabase
       .channel(`processing-${battleId}`)
       .on(
@@ -37,8 +49,9 @@ export const ProcessingArena = ({ battleId, onReady }: ProcessingArenaProps) => 
           filter: `id=eq.${battleId}`,
         },
         (payload) => {
-          const newStatus = (payload.new as any).status;
-          if (newStatus === 'voting' || newStatus === 'completed') {
+          const row = payload.new as any;
+          // Transition on status change OR cloudflare_stream_uid appearing
+          if (row.status === 'voting' || row.status === 'completed' || row.cloudflare_stream_uid) {
             onReady();
           }
         }
@@ -65,10 +78,10 @@ export const ProcessingArena = ({ battleId, onReady }: ProcessingArenaProps) => 
 
         <div>
           <h2 className="text-3xl font-bold text-white mb-2">
-            Generating Replay{dots}
+            {heading}{dots}
           </h2>
           <p className="text-white/60 text-lg">
-            The battle recording is being finalized
+            {subtitle}
           </p>
         </div>
 
@@ -84,7 +97,7 @@ export const ProcessingArena = ({ battleId, onReady }: ProcessingArenaProps) => 
         </motion.div>
 
         <p className="text-white/30 text-sm">
-          This usually takes 1-3 minutes
+          {footer}
         </p>
       </motion.div>
     </div>

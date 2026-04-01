@@ -406,8 +406,10 @@ export default function BattleTheater() {
 
         {/* Right Side - Barber 2 */}
         <div className="flex-1 relative">
-          {isMP4(barber2VideoSrc) ? (
-            <MP4Player src={barber2VideoSrc!} className="w-full h-full object-cover" />
+          {battleStreamUid ? (
+            <CloudflareStreamPlayer streamUid={battleStreamUid} fallbackUrl={barber2VideoSrc} autoPlay muted loop />
+          ) : isMP4(barber2VideoSrc) ? (
+            <VODPlayer src={barber2VideoSrc!} className="w-full h-full object-cover" />
           ) : (
             <HLSVideoPlayer src={barber2VideoSrc} isLive={false} title={barber2?.name} size="large" autoPlay />
           )}
