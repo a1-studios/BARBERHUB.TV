@@ -7,6 +7,73 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+/**
+ * Ingest a video URL into Cloudflare Stream for adaptive HLS delivery.
+ * Gracefully degrades — logs errors but never throws.
+ */
+async function ingestToCloudflareStream(
+  sourceUrl: string,
+  table: string,
+  recordId: string,
+  supabaseAdmin: any
+): Promise<string | null> {
+  const cfAccountId = Deno.env.get('CLOUDFLARE_ACCOUNT_ID');
+  const cfApiToken = Deno.env.get('CLOUDFLARE_STREAM_API_TOKEN');
+  if (!cfAccountId || !cfApiToken) {
+    console.warn('[CF-STREAM] Secrets not configured, skipping ingest');
+    return null;
+  }
+
+  const videoExts = ['.mp4', '.mov', '.webm', '.avi', '.mkv'];
+  const lowerUrl = sourceUrl.toLowerCase();
+  const isVideo = videoExts.some((ext) => lowerUrl.includes(ext)) || lowerUrl.includes('/recordings/');
+  if (!isVideo) {
+    console.log('[CF-STREAM] Skipping non-video URL:', sourceUrl);
+    return null;
+  }
+
+  try {
+    console.log(`[CF-STREAM] Ingesting ${sourceUrl} into Cloudflare Stream...`);
+    const cfResponse = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/stream/copy`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${cfApiToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          url: sourceUrl,
+          meta: { name: `${table}/${recordId}` },
+        }),
+      }
+    );
+
+    const cfData = await cfResponse.json();
+    if (!cfData.success || !cfData.result?.uid) {
+      console.error('[CF-STREAM] Cloudflare Stream copy failed:', cfData.errors);
+      return null;
+    }
+
+    const streamUid = cfData.result.uid;
+    console.log(`[CF-STREAM] Stream UID: ${streamUid} — updating ${table}.${recordId}`);
+
+    const { error: updateError } = await supabaseAdmin
+      .from(table)
+      .update({ cloudflare_stream_uid: streamUid })
+      .eq('id', recordId);
+
+    if (updateError) {
+      console.error('[CF-STREAM] DB update failed:', updateError);
+    }
+
+    return streamUid;
+  } catch (err) {
+    console.error('[CF-STREAM] Ingest error (non-fatal):', err);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -77,20 +144,23 @@ serve(async (req) => {
       : key;
 
     // DB sync: insert battle_submissions record if battleId provided
+    let submissionId: string | null = null;
     if (battleId) {
       const serviceClient = createClient(
         Deno.env.get('SUPABASE_URL')!,
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
       );
 
-      await serviceClient.from('battle_submissions').insert({
+      const { data: newSub } = await serviceClient.from('battle_submissions').insert({
         battle_id: battleId,
         user_id: user.id,
         media_url: publicUrl,
         title: title || null,
         description: description || null,
         status: 'submitted',
-      });
+      }).select('id').single();
+
+      submissionId = newSub?.id || null;
 
       // Check if both barbers submitted → transition to voting
       const { count } = await serviceClient
@@ -103,6 +173,12 @@ serve(async (req) => {
           status: 'voting',
           voting_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
         }).eq('id', battleId).in('status', ['awaiting_submissions', 'active']);
+      }
+
+      // ── Cloudflare Stream auto-ingest for battle submission ──
+      if (submissionId) {
+        ingestToCloudflareStream(publicUrl, 'battle_submissions', submissionId, serviceClient)
+          .catch((e) => console.error('[CF-STREAM] Background ingest failed:', e));
       }
     }
 

@@ -8,6 +8,74 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+/**
+ * Ingest a video URL into Cloudflare Stream for adaptive HLS delivery.
+ * Gracefully degrades — logs errors but never throws.
+ */
+async function ingestToCloudflareStream(
+  sourceUrl: string,
+  table: string,
+  recordId: string,
+  supabaseAdmin: any
+): Promise<string | null> {
+  const cfAccountId = Deno.env.get("CLOUDFLARE_ACCOUNT_ID");
+  const cfApiToken = Deno.env.get("CLOUDFLARE_STREAM_API_TOKEN");
+  if (!cfAccountId || !cfApiToken) {
+    console.warn("[CF-STREAM] Secrets not configured, skipping ingest");
+    return null;
+  }
+
+  // Only ingest video files
+  const videoExts = [".mp4", ".mov", ".webm", ".avi", ".mkv"];
+  const isVideo = videoExts.some((ext) => sourceUrl.toLowerCase().includes(ext));
+  if (!isVideo) {
+    console.log("[CF-STREAM] Skipping non-video URL:", sourceUrl);
+    return null;
+  }
+
+  try {
+    console.log(`[CF-STREAM] Ingesting ${sourceUrl} into Cloudflare Stream...`);
+    const cfResponse = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/stream/copy`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${cfApiToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          url: sourceUrl,
+          meta: { name: `${table}/${recordId}` },
+        }),
+      }
+    );
+
+    const cfData = await cfResponse.json();
+
+    if (!cfData.success || !cfData.result?.uid) {
+      console.error("[CF-STREAM] Cloudflare Stream copy failed:", cfData.errors);
+      return null;
+    }
+
+    const streamUid = cfData.result.uid;
+    console.log(`[CF-STREAM] Stream UID: ${streamUid} — updating ${table}.${recordId}`);
+
+    const { error: updateError } = await supabaseAdmin
+      .from(table)
+      .update({ cloudflare_stream_uid: streamUid })
+      .eq("id", recordId);
+
+    if (updateError) {
+      console.error("[CF-STREAM] DB update failed:", updateError);
+    }
+
+    return streamUid;
+  } catch (err) {
+    console.error("[CF-STREAM] Ingest error (non-fatal):", err);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -158,12 +226,21 @@ serve(async (req) => {
 
     console.log(`Battle ${battleId} updated with recording URL: ${publicUrl}`);
 
+    // ── PATCH D-1: Auto-ingest R2 recording into Cloudflare Stream ──
+    const streamUid = await ingestToCloudflareStream(
+      publicUrl,
+      "battles",
+      battleId,
+      supabaseAdmin
+    );
+
     return new Response(
       JSON.stringify({
         success: true,
         battleId,
         videoUrl: publicUrl,
         transitioned: shouldTransition,
+        cloudflareStreamUid: streamUid,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
