@@ -10,6 +10,7 @@ import { parseSpecialties, getSpecialtyDisplay } from "@/config/specialtyTags";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { DonationModal } from "@/components/DonationModal";
 import { useUserRole } from "@/hooks/useUserRole";
+import { CloudflareStreamPlayer } from "@/components/CloudflareStreamPlayer";
 
 interface FeedItem {
   type: "video" | "sponsor" | "educator" | "platform" | "battle";
