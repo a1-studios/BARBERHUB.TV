@@ -1,29 +1,49 @@
 
 
-# Move Notification Bell into BB Dropdown Widget
+# Deep-Link Notifications to Specific Appointments + Review Flow Routing
 
-## What Changes
+## Problems
 
-1. **Remove bell from header bar** — delete the standalone `<NotificationPanel />` from the header's right side
-2. **Add bell inside BB dropdown** — place a Notifications row (with bell icon + unread badge) inside the BB balance dropdown widget, between the balance header and "Add Funds"
-3. **Keep unread count on the profile coin** — overlay the unread notification count badge on the `RotatingBBCoin` component so users see the count without opening anything
+1. **Dead routing**: Clicking any appointment notification navigates to `/profile` generically — barbers land on their profile but the "Manage Appointments" collapsible is closed and they have to find the appointment manually.
+2. **Completed appointment is a dead end**: When a client gets "Appointment Complete" notification, clicking it goes to `/profile` with no prompt to leave a review. The `review_prompt` notification type (fired by DB trigger `notify_review_prompt`) is also not handled in the UI.
+3. **No notification icon mapping for `review_prompt`**: The `NotificationPanel` icon map doesn't include it.
 
-## File Changes
+## Plan
 
-### `src/components/Header.tsx`
-- Remove `{user && <NotificationPanel />}` from line 225
-- Keep `NotificationPanel` import — it will be used inside the dropdown
-- Add a "Notifications" button row inside the BB dropdown (lines 249-269) that opens the notification panel inline or navigates
-- Add unread count badge overlay on the `RotatingBBCoin` wrapper div using `useNotifications` hook
+### 1. Add query-param-based deep linking on Profile page
 
-### `src/components/NotificationPanel.tsx`
-- No structural changes needed — the component already works as a self-contained dropdown with its own open/close state
-- Will be embedded inside the BB dropdown as a nested item, or we render just the notification list inline
+**File: `src/pages/Profile.tsx`**
 
-## Approach
+- Import `useSearchParams` from react-router-dom
+- Read `?appointment_id=...&action=review` from URL on mount
+- If `appointment_id` is present:
+  - Auto-open the correct collapsible (`barberApptOpen` for barbers, `apptOpen` for fans)
+  - If `action=review`, auto-open the `PostAppointmentReviewModal` with the appointment details (fetch appointment to get `reviewee_id`)
+- Add state for `reviewModalOpen`, `reviewAppointmentId`, `revieweeId`, `isBarberReviewing`
 
-The simplest clean approach: 
-- The `RotatingBBCoin` gets an unread badge overlaid on it (in Header, not in the coin component itself)
-- Inside the BB dropdown, add a "Notifications" button with bell icon + count that, when clicked, opens a full notification list (either inline-expanding the dropdown or replacing the dropdown content with the notification list)
-- Clicking the bell row toggles between "wallet view" and "notifications view" within the same dropdown
+### 2. Update notification click routing
+
+**File: `src/components/NotificationPanel.tsx`**
+
+- Update `handleClick` to build smarter URLs:
+  - `new_appointment` → `/profile?appointment_id={id}` (opens barber's appointment manager to that item)
+  - `appointment_accepted` / `appointment_confirmed` → `/profile?appointment_id={id}`
+  - `appointment_completed` / `review_prompt` → `/profile?appointment_id={id}&action=review` (opens review modal)
+  - `appointment_denied`, `appointment_cancelled`, `no_show` → `/profile?appointment_id={id}`
+- Add `review_prompt` to the icon map (Star icon)
+
+### 3. Update Realtime toast routing
+
+**File: `src/hooks/useNotifications.tsx`**
+
+- Update the toast "View" action to use the same smart URL pattern instead of bare `/profile`
+- Route `review_prompt` and `appointment_completed` to `/profile?appointment_id={id}&action=review`
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/pages/Profile.tsx` | Read `appointment_id` + `action` search params; auto-open collapsible and review modal |
+| `src/components/NotificationPanel.tsx` | Smart URL routing per notification type; add `review_prompt` icon |
+| `src/hooks/useNotifications.tsx` | Update Realtime toast action URLs |
 
