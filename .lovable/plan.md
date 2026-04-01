@@ -1,79 +1,68 @@
 
 
-# Fix Portfolio Upload, Delete, and Video Tab Integration
+# Fix Spectator RLS, B2B Educational Gating, and Portfolio Routing Bug
 
-## Root Causes Found
+## Step 1: Battle Spectator RLS (Database Migration)
 
-After auditing the code and database:
+Replace the current `USING (true)` public policy on `stream_sessions` with an authenticated-only policy. Confirm `battles` already allows authenticated reads (it does — verified).
 
-1. **Upload only works once on mobile**: The hidden file inputs use static `id` attributes (`portfolio-video-upload`, `portfolio-image-upload`) and `document.getElementById()` to trigger clicks. After the first upload completes and `event.target.value = ''` resets the input, mobile browsers (especially Safari) often refuse to re-trigger the same input element. Fix: use React `useRef` and force re-mount with a `key` prop tied to an upload counter.
-
-2. **Video tab doesn't create portfolio items**: `BarberVideoSection` (the Video tab) only writes to `barber_profiles.featured_video_id`. It never inserts into the `creations` table. So videos uploaded from the Video tab don't appear in the Portfolio tab. Fix: after updating `featured_video_id`, also insert a `creations` row so it shows in the portfolio grid.
-
-3. **Delete button hidden behind native video controls**: Portfolio video items render `<video controls>` which places native browser controls over the entire video surface. The delete button at `top-2 left-2` gets trapped behind these native controls and is untappable. Fix: remove `controls` from the portfolio grid thumbnails (they're just previews) and show a play icon overlay instead.
-
-4. **Extension-based video detection is fragile**: The regex `\.(mp4|mov|avi|webm)$/i` works for R2 URLs without query params, but `category` is set to `'haircut'` for all portfolio uploads from the image button and `'video'` only if explicitly passed. Fix: also check `category === 'video'` in addition to the extension regex.
-
-## Changes
-
-### File: `src/pages/BarberPublicProfile.tsx`
-
-**A. Replace static file input IDs with refs + re-mount key**
-- Add `useRef` for image and video file inputs
-- Add `uploadKey` state counter, incremented after each upload
-- Use `key={uploadKey}` on the file inputs so they re-mount after each upload
-- Replace all `document.getElementById('portfolio-...')?.click()` with `ref.current?.click()`
-
-**B. Fix video detection in portfolio grid**
-- Change `creation.media_url?.match(/\.(mp4|mov|avi|webm)$/i)` to also check `creation.category === 'video'`
-- Same for `imageCount` / `videoCount` counters
-
-**C. Remove `controls` from portfolio video thumbnails**
-- Remove `controls` attribute from `<video>` in the portfolio grid
-- Add a centered play icon overlay so users know it's a video
-- This ensures the delete button is always tappable
-
-**D. Make delete button more prominent**
-- Increase size slightly and add `z-20` to ensure it's above any overlay
-
-### File: `src/components/barber/BarberVideoSection.tsx`
-
-**E. Also create a `creations` record on Video tab upload**
-- After successfully writing `featured_video_id` to `barber_profiles`, also insert into `creations` with `category: 'video'` and `title: 'Featured Video'`
-- This requires passing `barberProfileId` (the `barber_profiles.id`) as a prop
-- Query it from `barber_profiles` using `user_id` if not already available
-
-### File: `src/pages/BarberPublicProfile.tsx` (Video tab section)
-
-**F. Pass barber profile ID to BarberVideoSection**
-- Pass `barberProfileId={barberData?.barber_id}` so the Video tab can insert into `creations`
-
-## Technical Details
-
-```text
-Upload flow (fixed):
-  1. User taps "Upload Video" button
-  2. ref.current.click() opens file picker
-  3. File selected -> upload to R2 -> insert into creations table
-  4. uploadKey++ forces input re-mount
-  5. User can immediately upload another file
-
-Video tab flow (new):
-  1. User uploads from Video tab
-  2. File uploaded to R2 -> barber_profiles.featured_video_id updated
-  3. NEW: Also insert into creations (barber_id, media_url, category='video')
-  4. Portfolio tab now shows the video too
-
-Delete flow (fixed):
-  1. Portfolio grid shows video thumbnail WITHOUT native controls
-  2. Delete button always visible, z-20, not blocked by controls
-  3. User taps delete -> confirm -> DELETE FROM creations -> refetch
+```sql
+DROP POLICY IF EXISTS "Anyone can view stream sessions" ON stream_sessions;
+CREATE POLICY "Authenticated users can view stream sessions"
+  ON stream_sessions FOR SELECT TO authenticated USING (true);
 ```
+
+## Step 2: B2B Educational Gating (Database + Frontend)
+
+**Database**: Tighten `creator_content` SELECT so `course_teaser` rows require the barber role. Non-course content stays visible to all.
+
+```sql
+DROP POLICY IF EXISTS "Content is viewable by everyone" ON creator_content;
+CREATE POLICY "Content is viewable by everyone"
+  ON creator_content FOR SELECT TO authenticated
+  USING (
+    content_type != 'course_teaser'
+    OR public.has_role(auth.uid(), 'barber')
+  );
+```
+
+**Frontend** (`WatchFeed.tsx`): Import `useUserRole`, filter out `educator` type items when user `isFan`.
+
+## Step 3: Fix Portfolio Routing Bug (Corrected Approach)
+
+The user correctly identified the flaw: passing any user-level ID (`user_id` or `barber_id`) to `?video=` is wrong because it doesn't uniquely identify which video was clicked. The fix requires passing the actual video identifier and matching on it.
+
+**Current broken flow**:
+- `DynamicBattleHero` passes `barber_id` → `?video=<barber_id>`
+- `WatchFeed` tries to match against `barber_user_id` (a different field)
+- Result: mismatch or no match
+
+**Corrected flow**:
+- `DynamicBattleHero` passes the actual video URL: `?video=${encodeURIComponent(fallbackVideo.featured_video_id)}`
+- `WatchFeed` matches feed items by `media_url` instead of `barber_user_id`
+
+### Changes in `DynamicBattleHero.tsx`:
+```tsx
+// Line 312: pass the actual video URL
+onClick={() => navigate(`/watch?video=${encodeURIComponent(fallbackVideo.featured_video_id)}`)}
+```
+
+### Changes in `WatchFeed.tsx`:
+```tsx
+// Line 280: match by media_url instead of barber_user_id
+const decodedTarget = targetVideoBarber ? decodeURIComponent(targetVideoBarber) : null;
+
+// In the useEffect:
+const idx = feed.findIndex(f => f.media_url === decodedTarget);
+```
+
+This ensures: User clicks Thumbnail A (with video URL X) → WatchFeed finds the feed item whose `media_url === X` → plays exactly that video.
 
 ## Files to Modify
 
-| File | Changes |
-|------|---------|
-| `src/pages/BarberPublicProfile.tsx` | Replace static IDs with refs, add re-mount key, fix video detection, remove native controls from thumbnails, pass barberProfileId to VideoSection |
-| `src/components/barber/BarberVideoSection.tsx` | Accept barberProfileId prop, insert creations record on upload |
+| File | Change |
+|------|--------|
+| New migration | `stream_sessions` authenticated-only SELECT; `creator_content` course gating |
+| `src/components/DynamicBattleHero.tsx` | Pass `featured_video_id` (not `barber_id`) in `?video=` param |
+| `src/pages/WatchFeed.tsx` | Match `?video=` param against `media_url`; filter educator items for fans |
 
