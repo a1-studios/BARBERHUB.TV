@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Radio } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { isFreshLiveBroadcast } from '@/lib/liveBroadcast';
 
 interface LiveBarber {
   id: string;
@@ -37,13 +38,19 @@ export const LiveNowBanner = () => {
     queryFn: async () => {
       const { data: barbers } = await supabase
         .from('barber_profiles')
-        .select('id, name, user_id')
+        .select('id, name, user_id, last_live_check, updated_at')
         .eq('is_live', true);
 
       if (!barbers || barbers.length === 0) return [];
 
+      const freshBarbers = barbers.filter((barber) =>
+        isFreshLiveBroadcast(barber.last_live_check, barber.updated_at)
+      );
+
+      if (freshBarbers.length === 0) return [];
+
       // Fetch avatars from profiles
-      const userIds = barbers.map(b => b.user_id);
+      const userIds = freshBarbers.map(b => b.user_id);
       const { data: profiles } = await supabase
         .from('profiles')
         .select('user_id, avatar_url')
@@ -51,7 +58,7 @@ export const LiveNowBanner = () => {
 
       const avatarMap = new Map(profiles?.map(p => [p.user_id, p.avatar_url]) || []);
 
-      const result: LiveBarber[] = barbers.map(b => ({
+      const result: LiveBarber[] = freshBarbers.map(b => ({
         ...b,
         avatar_url: avatarMap.get(b.user_id) || null,
       }));
@@ -68,7 +75,7 @@ export const LiveNowBanner = () => {
 
       return result;
     },
-    refetchInterval: 10000,
+    refetchInterval: 5000,
   });
 
   // Realtime subscription for instant updates

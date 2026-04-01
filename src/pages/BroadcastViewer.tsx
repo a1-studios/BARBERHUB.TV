@@ -11,6 +11,7 @@ import {
   useRoomContext,
 } from '@livekit/components-react';
 import { Track, RoomEvent } from 'livekit-client';
+import { isFreshLiveBroadcast } from '@/lib/liveBroadcast';
 
 function ViewerContent({ barberName }: { barberName: string }) {
   const room = useRoomContext();
@@ -87,7 +88,7 @@ export default function BroadcastViewer() {
           filter: `id=eq.${barberId}`,
         },
         (payload) => {
-          if (payload.new && payload.new.is_live === false) {
+          if (payload.new && !isFreshLiveBroadcast(payload.new.last_live_check, payload.new.updated_at)) {
             setError('Stream ended');
             setToken(null);
           }
@@ -107,13 +108,13 @@ export default function BroadcastViewer() {
       // Fetch barber info
       const { data: barber } = await supabase
         .from('barber_profiles')
-        .select('name, is_live')
+        .select('name, is_live, last_live_check, updated_at')
         .eq('id', barberId)
         .single();
 
       setBarberName(barber?.name || 'Barber');
 
-      if (!barber?.is_live) {
+      if (!barber?.is_live || !isFreshLiveBroadcast(barber.last_live_check, barber.updated_at)) {
         setError('This barber is not currently live');
         setIsLoading(false);
         return;
@@ -136,6 +137,25 @@ export default function BroadcastViewer() {
       setServerUrl(data.serverUrl);
       setIsLoading(false);
     })();
+  }, [barberId]);
+
+  useEffect(() => {
+    if (!barberId) return;
+
+    const interval = window.setInterval(async () => {
+      const { data: barber } = await supabase
+        .from('barber_profiles')
+        .select('is_live, last_live_check, updated_at')
+        .eq('id', barberId)
+        .maybeSingle();
+
+      if (!barber?.is_live || !isFreshLiveBroadcast(barber.last_live_check, barber.updated_at)) {
+        setError('Stream ended');
+        setToken(null);
+      }
+    }, 10000);
+
+    return () => window.clearInterval(interval);
   }, [barberId]);
 
   if (isLoading) {

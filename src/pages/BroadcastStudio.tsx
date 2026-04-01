@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { LiveKitRoom, VideoTrack, useLocalParticipant, useTracks } from '@livekit/components-react';
 import { Track } from 'livekit-client';
+import { LIVE_BROADCAST_HEARTBEAT_MS } from '@/lib/liveBroadcast';
 
 function StudioControls({ onEnd }: { onEnd: () => void }) {
   const { localParticipant } = useLocalParticipant();
@@ -93,6 +94,8 @@ export default function BroadcastStudio() {
   const navigate = useNavigate();
   const { barberId } = useParams<{ barberId: string }>();
   const location = useLocation();
+  const cleanupStartedRef = useRef(false);
+  const accessTokenRef = useRef<string | null>(null);
 
   const [token, setToken] = useState<string | null>(
     (location.state as any)?.token || null
@@ -101,6 +104,20 @@ export default function BroadcastStudio() {
     (location.state as any)?.serverUrl || null
   );
   const [isEnding, setIsEnding] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      accessTokenRef.current = data.session?.access_token || null;
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      accessTokenRef.current = session?.access_token || null;
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // If no token from route state, fetch one
   useEffect(() => {
@@ -120,14 +137,72 @@ export default function BroadcastStudio() {
     })();
   }, [token, serverUrl, navigate]);
 
+  useEffect(() => {
+    if (!barberId || !token || !serverUrl) return;
+
+    const sendHeartbeat = async () => {
+      await supabase
+        .from('barber_profiles')
+        .update({ last_live_check: new Date().toISOString() })
+        .eq('id', barberId);
+    };
+
+    void sendHeartbeat();
+    const interval = window.setInterval(sendHeartbeat, LIVE_BROADCAST_HEARTBEAT_MS);
+
+    return () => window.clearInterval(interval);
+  }, [barberId, token, serverUrl]);
+
+  const sendEndBroadcastKeepalive = useCallback(() => {
+    if (cleanupStartedRef.current) return;
+
+    const accessToken = accessTokenRef.current;
+    if (!accessToken) return;
+
+    cleanupStartedRef.current = true;
+
+    void fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/end-broadcast`, {
+      method: 'POST',
+      keepalive: true,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: '{}',
+    }).catch(() => {
+      cleanupStartedRef.current = false;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!token || !serverUrl) return;
+
+    const handlePageExit = () => sendEndBroadcastKeepalive();
+
+    window.addEventListener('pagehide', handlePageExit);
+    window.addEventListener('beforeunload', handlePageExit);
+
+    return () => {
+      window.removeEventListener('pagehide', handlePageExit);
+      window.removeEventListener('beforeunload', handlePageExit);
+      sendEndBroadcastKeepalive();
+    };
+  }, [token, serverUrl, sendEndBroadcastKeepalive]);
+
   const handleEndStream = useCallback(async () => {
-    if (isEnding) return;
+    if (isEnding || cleanupStartedRef.current) return;
+    cleanupStartedRef.current = true;
     setIsEnding(true);
     try {
-      await supabase.functions.invoke('end-broadcast');
+      const { error } = await supabase.functions.invoke('end-broadcast');
+      if (error) throw error;
       toast.success('Broadcast ended');
     } catch {
+      cleanupStartedRef.current = false;
       toast.error('Failed to end broadcast');
+      setIsEnding(false);
+      return;
     }
     navigate('/studio');
   }, [isEnding, navigate]);
