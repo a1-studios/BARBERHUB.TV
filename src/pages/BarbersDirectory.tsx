@@ -123,13 +123,33 @@ export default function BarbersDirectory() {
         <BackButton className="mb-6" />
 
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">
-            <span className="text-primary">Barber</span> Directory
-          </h1>
-          <p className="text-muted-foreground">
-            Discover talented barbers from around the world
-          </p>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-white mb-2">
+              <span className="text-primary">Barber</span> Directory
+            </h1>
+            <p className="text-muted-foreground">
+              Discover talented barbers from around the world
+            </p>
+          </div>
+          <div className="flex gap-1 bg-muted rounded-lg p-1">
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setViewMode('list')}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'map' ? 'default' : 'ghost'}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setViewMode('map')}
+            >
+              <Map className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Quick Book Banner */}
