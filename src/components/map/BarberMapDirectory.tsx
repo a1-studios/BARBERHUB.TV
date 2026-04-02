@@ -51,8 +51,8 @@ export function BarberMapDirectory() {
 
     const map = new maplibregl.Map({
       container: mapContainer.current,
-      style: TILE_URL,
-      center: [-98.5795, 39.8283], // Center of US
+      style: DARK_STYLE,
+      center: [-98.5795, 39.8283],
       zoom: 3,
     });
 
