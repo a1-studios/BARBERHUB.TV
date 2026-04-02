@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { supabase } from '@/integrations/supabase/client';
@@ -33,10 +33,42 @@ const DARK_STYLE: maplibregl.StyleSpecification = {
   layers: [{ id: 'carto-dark-layer', type: 'raster', source: 'carto-dark' }],
 };
 
+const RADIUS_MILES = 15;
+
+/** Build a GeoJSON circle polygon from a center point and radius in miles */
+function createCircleGeoJSON(center: [number, number], radiusMiles: number, steps = 64): GeoJSON.Feature<GeoJSON.Polygon> {
+  const km = radiusMiles * 1.60934;
+  const coords: [number, number][] = [];
+  for (let i = 0; i <= steps; i++) {
+    const angle = (i / steps) * 2 * Math.PI;
+    const dx = km * Math.cos(angle);
+    const dy = km * Math.sin(angle);
+    const lat = center[1] + (dy / 111.32);
+    const lng = center[0] + (dx / (111.32 * Math.cos((center[1] * Math.PI) / 180)));
+    coords.push([lng, lat]);
+  }
+  return { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [coords] } };
+}
+
+/** Get tier-based CSS for pin glow */
+function getTierStyle(tier: string | null): string {
+  switch (tier) {
+    case 'diamond':
+      return 'box-shadow: 0 0 10px hsla(200,80%,75%,0.7); border-color: hsl(200,80%,75%);';
+    case 'gold':
+      return 'box-shadow: 0 0 10px hsla(45,100%,55%,0.7); border-color: hsl(45,100%,55%);';
+    case 'silver':
+      return 'box-shadow: 0 0 10px hsla(210,20%,80%,0.6); border-color: hsl(210,20%,80%);';
+    default:
+      return 'box-shadow: 0 0 8px hsla(25,95%,53%,0.5); border-color: hsl(25,95%,70%);';
+  }
+}
+
 export function BarberMapDirectory() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markersRef = useRef<maplibregl.Marker[]>([]);
+  const userMarkerRef = useRef<maplibregl.Marker | null>(null);
   const [zipInput, setZipInput] = useState('');
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [barbers, setBarbers] = useState<NearbyBarber[]>([]);
@@ -65,25 +97,91 @@ export function BarberMapDirectory() {
     };
   }, []);
 
+  /** Draw/update the 15-mile radius circle on the map */
+  const drawRadiusCircle = useCallback((lng: number, lat: number) => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const circleData = createCircleGeoJSON([lng, lat], RADIUS_MILES);
+
+    if (map.getSource('radius-circle')) {
+      (map.getSource('radius-circle') as maplibregl.GeoJSONSource).setData(circleData);
+    } else {
+      // Wait for style to load if needed
+      const addLayers = () => {
+        if (map.getSource('radius-circle')) return;
+        map.addSource('radius-circle', { type: 'geojson', data: circleData });
+        map.addLayer({
+          id: 'radius-circle-fill',
+          type: 'fill',
+          source: 'radius-circle',
+          paint: {
+            'fill-color': 'hsl(25, 95%, 53%)',
+            'fill-opacity': 0.08,
+          },
+        });
+        map.addLayer({
+          id: 'radius-circle-stroke',
+          type: 'line',
+          source: 'radius-circle',
+          paint: {
+            'line-color': 'hsl(25, 95%, 53%)',
+            'line-opacity': 0.4,
+            'line-width': 1.5,
+            'line-dasharray': [4, 3],
+          },
+        });
+      };
+
+      if (map.isStyleLoaded()) addLayers();
+      else map.once('styledata', addLayers);
+    }
+  }, []);
+
+  /** Place the blue user-location dot */
+  const placeUserMarker = useCallback((lng: number, lat: number) => {
+    if (!mapRef.current) return;
+    userMarkerRef.current?.remove();
+
+    const el = document.createElement('div');
+    el.className = 'user-location-pin';
+    el.style.cssText = `
+      width: 16px; height: 16px; border-radius: 50%;
+      background: hsl(210, 100%, 60%);
+      border: 3px solid hsl(210, 100%, 80%);
+      box-shadow: 0 0 12px hsla(210,100%,60%,0.6);
+      animation: pulse-pin 2s ease-in-out infinite;
+    `;
+
+    userMarkerRef.current = new maplibregl.Marker({ element: el })
+      .setLngLat([lng, lat])
+      .addTo(mapRef.current);
+  }, []);
+
   // Place markers when barbers change
   useEffect(() => {
     if (!mapRef.current) return;
 
-    // Clear existing markers
+    // Clear existing barber markers
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
 
     barbers.forEach((barber) => {
       const el = document.createElement('div');
+      const tierStyle = getTierStyle(barber.active_subscription_tier);
       el.className = 'barber-map-pin';
       el.style.cssText = `
-        width: 28px; height: 28px; border-radius: 50%;
+        width: 32px; height: 32px; border-radius: 50%;
         background: hsl(25, 95%, 53%);
-        border: 2px solid hsl(25, 95%, 70%);
+        border: 2.5px solid;
         cursor: pointer;
-        box-shadow: 0 0 8px hsla(25, 95%, 53%, 0.5);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 14px; line-height: 1;
+        animation: pulse-pin 2.5s ease-in-out infinite;
         transition: transform 0.2s;
+        ${tierStyle}
       `;
+      el.innerHTML = '✂';
       el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.3)'; });
       el.addEventListener('mouseleave', () => { el.style.transform = 'scale(1)'; });
 
@@ -122,13 +220,20 @@ export function BarberMapDirectory() {
     }
   }, [barbers, userCoords]);
 
+  // Draw radius circle & user dot whenever userCoords changes
+  useEffect(() => {
+    if (!userCoords) return;
+    drawRadiusCircle(userCoords.lng, userCoords.lat);
+    placeUserMarker(userCoords.lng, userCoords.lat);
+  }, [userCoords, drawRadiusCircle, placeUserMarker]);
+
   const searchNearby = async (lat: number, lng: number) => {
     setLoading(true);
     try {
       const { data, error } = await supabase.rpc('find_barbers_nearby', {
         p_lat: lat,
         p_lng: lng,
-        p_radius_miles: 15,
+        p_radius_miles: RADIUS_MILES,
         p_enforce_tiers: enforceTiers,
       });
       if (error) throw error;
@@ -155,8 +260,8 @@ export function BarberMapDirectory() {
         searchNearby(coords.lat, coords.lng);
         setGeoLoading(false);
       },
-      (err) => {
-        toast.error('Location access denied');
+      () => {
+        toast.error('Location access denied. Please enter a zip code instead.');
         setGeoLoading(false);
       },
       { enableHighAccuracy: true, timeout: 10000 }
@@ -200,7 +305,7 @@ export function BarberMapDirectory() {
         <div className="relative flex-1">
           <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Enter zip code..."
+            placeholder="Enter zip code or city..."
             value={zipInput}
             onChange={(e) => setZipInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleZipSearch()}
@@ -234,19 +339,25 @@ export function BarberMapDirectory() {
         </div>
       )}
 
-      {/* Results count */}
-      {barbers.length > 0 && (
-        <p className="text-sm text-muted-foreground">
-          {barbers.length} barber{barbers.length !== 1 ? 's' : ''} found within 15 miles
-        </p>
-      )}
+      {/* Map wrapper */}
+      <div className="relative">
+        {/* Barber count badge */}
+        {barbers.length > 0 && (
+          <div className="absolute top-3 left-3 z-10 bg-card/90 backdrop-blur border border-primary/30 rounded-lg px-3 py-1.5 flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+            <span className="text-xs font-semibold text-foreground">
+              {barbers.length} barber{barbers.length !== 1 ? 's' : ''} nearby
+            </span>
+          </div>
+        )}
 
-      {/* Map */}
-      <div
-        ref={mapContainer}
-        className="w-full rounded-xl border border-border overflow-hidden"
-        style={{ height: '500px' }}
-      />
+        {/* Map */}
+        <div
+          ref={mapContainer}
+          className="w-full rounded-xl border border-border overflow-hidden"
+          style={{ height: '500px' }}
+        />
+      </div>
     </div>
   );
 }
