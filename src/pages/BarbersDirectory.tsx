@@ -336,10 +336,9 @@ export default function BarbersDirectory() {
             </CardContent>
           </Card>
         )}
-      </div>
-
         </>
         )}
+      </div>
 
       <Footer />
     </div>
