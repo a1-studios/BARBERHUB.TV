@@ -1,0 +1,1 @@
+INSERT INTO platform_state (key, value) VALUES ('affiliate_network_enabled', 'false') ON CONFLICT DO NOTHING;
