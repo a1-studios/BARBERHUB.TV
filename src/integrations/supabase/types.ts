@@ -44,6 +44,45 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliate_products: {
+        Row: {
+          created_at: string
+          display_order: number
+          external_link: string
+          id: string
+          image_url: string
+          is_active: boolean
+          price_cents: number
+          product_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          external_link: string
+          id?: string
+          image_url: string
+          is_active?: boolean
+          price_cents: number
+          product_type?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          external_link?: string
+          id?: string
+          image_url?: string
+          is_active?: boolean
+          price_cents?: number
+          product_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       appointment_reviews: {
         Row: {
           appointment_id: string
