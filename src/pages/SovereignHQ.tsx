@@ -14,6 +14,7 @@ import TournamentQueuePanel from '@/components/sovereign/TournamentQueuePanel';
 import TournamentManagerPanel from '@/components/sovereign/TournamentManagerPanel';
 import VaultMetricsPanel from '@/components/sovereign/VaultMetricsPanel';
 import M4MFundPanel from '@/components/sovereign/M4MFundPanel';
+import AffiliateControlPanel from '@/components/sovereign/AffiliateControlPanel';
 
 const SovereignHQ = () => {
   const { user } = useAuth();
