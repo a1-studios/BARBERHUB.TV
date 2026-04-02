@@ -166,6 +166,36 @@ const KillSwitchPanel = ({ platformState, onRefresh }: KillSwitchPanelProps) => 
               {maintenanceMode ? 'Exit' : 'Enable'}
             </Button>
           </div>
+
+          {/* Tier Enforcement */}
+          <div className="p-4 rounded-lg bg-[#0a0a0f] border border-white/[0.06]">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-white/40 uppercase tracking-wider">Tier Enforcement</span>
+              <div className="flex items-center gap-1.5">
+                <div className={`h-1.5 w-1.5 rounded-full ${tiersEnforced ? 'bg-green-500' : 'bg-orange-500'}`} />
+                <span className={`text-[10px] ${tiersEnforced ? 'text-green-400' : 'text-orange-500'}`}>
+                  {tiersEnforced ? 'ENFORCED' : 'TESTING'}
+                </span>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full border-white/10 text-white hover:bg-white/[0.04] bg-transparent"
+              disabled={loading}
+              onClick={() => openConfirmDialog(
+                tiersEnforced ? 'enforce_tiers_off' : 'enforce_tiers_on',
+                tiersEnforced ? 'Disable Tier Enforcement' : 'Enable Tier Enforcement',
+                tiersEnforced
+                  ? 'This will show ALL barbers on map regardless of subscription tier (QA mode).'
+                  : 'This will restrict map & booking to Silver+ tier barbers only. Type ENFORCE to confirm.',
+                tiersEnforced ? 'TESTING' : 'ENFORCE'
+              )}
+            >
+              <ShieldCheck className="h-3 w-3 mr-2" />
+              {tiersEnforced ? 'Switch to Testing' : 'Enforce Tiers'}
+            </Button>
+          </div>
         </div>
       </div>
 

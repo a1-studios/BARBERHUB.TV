@@ -254,6 +254,34 @@ serve(async (req) => {
         break;
       }
 
+      case 'enforce_tiers_on': {
+        beforeState = { enforce_tiers: false };
+        severity = 'critical';
+
+        await supabase
+          .from('platform_state')
+          .update({ value: 'true', updated_at: new Date().toISOString(), updated_by: user.id })
+          .eq('key', 'enforce_tiers');
+
+        afterState = { enforce_tiers: true };
+        result = { success: true, message: 'Tier enforcement enabled. Only Silver+ barbers visible on map.' };
+        break;
+      }
+
+      case 'enforce_tiers_off': {
+        beforeState = { enforce_tiers: true };
+        severity = 'normal';
+
+        await supabase
+          .from('platform_state')
+          .update({ value: 'false', updated_at: new Date().toISOString(), updated_by: user.id })
+          .eq('key', 'enforce_tiers');
+
+        afterState = { enforce_tiers: false };
+        result = { success: true, message: 'Tier enforcement disabled. All barbers visible (testing mode).' };
+        break;
+      }
+
       default:
         throw new Error(`Unknown action: ${action}`);
     }

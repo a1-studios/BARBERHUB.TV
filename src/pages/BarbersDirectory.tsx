@@ -338,6 +338,9 @@ export default function BarbersDirectory() {
         )}
       </div>
 
+        </>
+        )}
+
       <Footer />
     </div>
   );
