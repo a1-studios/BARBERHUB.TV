@@ -167,18 +167,24 @@ export function BarberMapDirectory() {
     if (!zipInput.trim()) return;
     setLoading(true);
     try {
-      // Use free geocoding API
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        toast.error('Google Maps API key is not configured');
+        setLoading(false);
+        return;
+      }
       const res = await fetch(
-        `https://api.bigdatacloud.net/data/zipcode-to-location?zipCode=${encodeURIComponent(zipInput)}&countryCode=US`
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(zipInput)}&key=${apiKey}`
       );
       const data = await res.json();
-      if (data.latitude && data.longitude) {
-        const coords = { lat: data.latitude, lng: data.longitude };
+      if (data.status === 'OK' && data.results?.length > 0) {
+        const { lat, lng } = data.results[0].geometry.location;
+        const coords = { lat, lng };
         setUserCoords(coords);
-        mapRef.current?.flyTo({ center: [coords.lng, coords.lat], zoom: 10 });
-        await searchNearby(coords.lat, coords.lng);
+        mapRef.current?.flyTo({ center: [lng, lat], zoom: 12 });
+        await searchNearby(lat, lng);
       } else {
-        toast.error('Could not find that zip code');
+        toast.error('Could not find that location');
         setLoading(false);
       }
     } catch {
