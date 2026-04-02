@@ -75,6 +75,10 @@ export const ProductShelf = () => {
             </button>
           ))}
         </div>
+        <div className="flex items-center justify-center gap-1.5 mt-1">
+          <ShoppingBag className="h-3 w-3 text-orange-500" />
+          <h3 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Official Gear</h3>
+        </div>
       </section>
 
       <GearPurchaseModal
