@@ -6,6 +6,7 @@ import { ArenaTicker } from '@/components/factions/ArenaTicker';
 import { useCategoryPrizePools } from '@/hooks/useCategoryPrizePools';
 import { LiveNowBanner } from '@/components/battles/LiveNowBanner';
 import { LiveBarberStreams } from '@/components/battles/LiveBarberStreams';
+import { ProductShelf } from '@/components/ProductShelf';
 
 export const FanArenaView = () => {
   const navigate = useNavigate();
