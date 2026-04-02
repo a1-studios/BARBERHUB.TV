@@ -1,123 +1,93 @@
-import { useEffect, useState } from 'react';
-import { ShoppingBag } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState } from "react";
+import { ShoppingBag } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { RotatingBBCoin } from "./economy/RotatingBBCoin";
+import { GearPurchaseModal } from "./GearPurchaseModal";
+import { AuthDialog } from "./auth/AuthDialog";
 
-interface Product {
+interface GearProduct {
   id: string;
-  title: string;
-  priceCents: number;
-  imageUrl: string;
-  externalLink: string;
-  type: 'proprietary' | 'affiliate';
+  name: string;
+  price_bb: number;
+  image_url: string | null;
 }
 
-const PROPRIETARY_PRODUCTS: Product[] = [
-  {
-    id: 'prop-cape',
-    title: 'Barber-Hub Cape',
-    priceCents: 3999,
-    imageUrl: 'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?w=300&h=300&fit=crop',
-    externalLink: '#',
-    type: 'proprietary',
-  },
-  {
-    id: 'prop-hat',
-    title: 'Barber-Hub Snapback',
-    priceCents: 2999,
-    imageUrl: 'https://images.unsplash.com/photo-1588850561407-ed78c334e67a?w=300&h=300&fit=crop',
-    externalLink: '#',
-    type: 'proprietary',
-  },
-  {
-    id: 'prop-razor',
-    title: 'Precision Razor',
-    priceCents: 4999,
-    imageUrl: 'https://images.unsplash.com/photo-1621607512214-68297480165e?w=300&h=300&fit=crop',
-    externalLink: '#',
-    type: 'proprietary',
-  },
-];
-
 export const ProductShelf = () => {
-  const [affiliateProducts, setAffiliateProducts] = useState<Product[]>([]);
-  const [affiliateEnabled, setAffiliateEnabled] = useState(false);
+  const { user } = useAuth();
+  const [selectedProduct, setSelectedProduct] = useState<GearProduct | null>(null);
+  const [showAuth, setShowAuth] = useState(false);
 
-  useEffect(() => {
-    const fetchConfig = async () => {
-      const { data } = await supabase
-        .from('platform_state')
-        .select('value')
-        .eq('key', 'affiliate_network_enabled')
-        .single();
+  const { data: products = [] } = useQuery({
+    queryKey: ["gear_products"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name, price_bb, image_url")
+        .eq("category", "gear")
+        .eq("is_active", true)
+        .order("price_bb", { ascending: true });
 
-      const enabled = data?.value === 'true';
-      setAffiliateEnabled(enabled);
+      if (error) throw error;
+      return (data || []) as GearProduct[];
+    },
+  });
 
-      if (enabled) {
-        const { data: products } = await supabase
-          .from('affiliate_products')
-          .select('*')
-          .eq('is_active', true)
-          .order('display_order', { ascending: true });
-
-        if (products) {
-          setAffiliateProducts(
-            products.map((p: any) => ({
-              id: p.id,
-              title: p.title,
-              priceCents: p.price_cents,
-              imageUrl: p.image_url,
-              externalLink: p.external_link,
-              type: 'affiliate' as const,
-            }))
-          );
-        }
-      }
-    };
-
-    fetchConfig();
-  }, []);
-
-  const allProducts = affiliateEnabled
-    ? [...PROPRIETARY_PRODUCTS, ...affiliateProducts]
-    : PROPRIETARY_PRODUCTS;
-
-  const formatPrice = (cents: number) =>
-    `$${(cents / 100).toFixed(2)}`;
+  const handleTap = (product: GearProduct) => {
+    if (!user) {
+      setShowAuth(true);
+      return;
+    }
+    setSelectedProduct(product);
+  };
 
   return (
-    <section className="px-3 sm:px-6 py-2">
-      <div className="flex items-center gap-1.5 mb-1.5">
-        <ShoppingBag className="h-3 w-3 text-orange-500" />
-        <h3 className="text-xs font-bold text-foreground">Official Gear</h3>
-      </div>
+    <>
+      <section className="px-3 sm:px-6 py-2">
+        <div className="flex items-center gap-1.5 mb-1.5">
+          <ShoppingBag className="h-3 w-3 text-orange-500" />
+          <h3 className="text-xs font-bold text-foreground">Official Gear</h3>
+        </div>
 
-      <div className="grid grid-cols-3 gap-2">
-        {allProducts.map((product) => (
-          <a
-            key={product.id}
-            href={product.externalLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex flex-col items-center gap-1 rounded-lg bg-card border border-border p-2 transition-colors hover:bg-accent"
-          >
-            <div className="w-10 h-10 rounded-md overflow-hidden bg-muted shrink-0">
-              <img
-                src={product.imageUrl}
-                alt={product.title}
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
-            </div>
-            <p className="text-[10px] font-semibold text-foreground truncate w-full text-center leading-tight">
-              {product.title}
-            </p>
-            <p className="text-[10px] text-orange-500 font-bold leading-none">
-              {formatPrice(product.priceCents)}
-            </p>
-          </a>
-        ))}
-      </div>
-    </section>
+        <div className="grid grid-cols-3 gap-2">
+          {products.map((product) => (
+            <button
+              key={product.id}
+              onClick={() => handleTap(product)}
+              className="flex flex-col items-center gap-1 rounded-lg bg-card border border-border p-2 transition-colors hover:bg-accent text-left"
+            >
+              <div className="w-10 h-10 rounded-md overflow-hidden bg-muted shrink-0">
+                {product.image_url && (
+                  <img
+                    src={product.image_url}
+                    alt={product.name}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
+                )}
+              </div>
+              <p className="text-[10px] font-semibold text-foreground truncate w-full text-center leading-tight">
+                {product.name}
+              </p>
+              <div className="flex items-center gap-0.5">
+                <RotatingBBCoin size={10} />
+                <p className="text-[10px] text-orange-500 font-bold leading-none">
+                  {product.price_bb} BB
+                </p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <GearPurchaseModal
+        isOpen={!!selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+        product={selectedProduct || { id: "", name: "", price_bb: 0, image_url: null }}
+      />
+
+      <AuthDialog open={showAuth} onOpenChange={setShowAuth} />
+    </>
   );
 };
