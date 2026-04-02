@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { X, ShoppingBag, Coins, AlertCircle } from "lucide-react";
+import { X, Coins, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useBarberBucks } from "@/hooks/useBarberBucks";
 import { useAuth } from "@/hooks/useAuth";
@@ -99,7 +99,7 @@ export const GearPurchaseModal = ({ isOpen, onClose, product }: GearPurchaseModa
               <div>
                 <h3 className="text-sm font-bold text-foreground">{product.name}</h3>
                 <div className="flex items-center gap-1 mt-0.5">
-                  <RotatingBBCoin size={16} />
+                  <RotatingBBCoin size="xs" />
                   <span className="text-sm font-bold text-orange-500">
                     {product.price_bb} BB
                   </span>
@@ -134,7 +134,7 @@ export const GearPurchaseModal = ({ isOpen, onClose, product }: GearPurchaseModa
             {!hasEnough && (
               <div className="flex items-start gap-2 rounded-lg bg-orange-500/10 border border-orange-500/20 p-3 mb-4">
                 <AlertCircle className="h-4 w-4 text-orange-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-orange-300">
+                <p className="text-xs text-muted-foreground">
                   You need <span className="font-bold text-orange-500">{deficit} more BB</span> to
                   get this gear.
                 </p>

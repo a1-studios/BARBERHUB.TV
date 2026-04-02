@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { RotatingBBCoin } from "./economy/RotatingBBCoin";
 import { GearPurchaseModal } from "./GearPurchaseModal";
-import { AuthDialog } from "./auth/AuthDialog";
+import { toast } from "sonner";
 
 interface GearProduct {
   id: string;
@@ -17,7 +17,6 @@ interface GearProduct {
 export const ProductShelf = () => {
   const { user } = useAuth();
   const [selectedProduct, setSelectedProduct] = useState<GearProduct | null>(null);
-  const [showAuth, setShowAuth] = useState(false);
 
   const { data: products = [] } = useQuery({
     queryKey: ["gear_products"],
@@ -36,11 +35,13 @@ export const ProductShelf = () => {
 
   const handleTap = (product: GearProduct) => {
     if (!user) {
-      setShowAuth(true);
+      toast.error("Please sign in to purchase gear");
       return;
     }
     setSelectedProduct(product);
   };
+
+  if (products.length === 0) return null;
 
   return (
     <>
@@ -71,7 +72,7 @@ export const ProductShelf = () => {
                 {product.name}
               </p>
               <div className="flex items-center gap-0.5">
-                <RotatingBBCoin size={10} />
+                <RotatingBBCoin size="xs" />
                 <p className="text-[10px] text-orange-500 font-bold leading-none">
                   {product.price_bb} BB
                 </p>
@@ -86,8 +87,6 @@ export const ProductShelf = () => {
         onClose={() => setSelectedProduct(null)}
         product={selectedProduct || { id: "", name: "", price_bb: 0, image_url: null }}
       />
-
-      <AuthDialog open={showAuth} onOpenChange={setShowAuth} />
     </>
   );
 };
