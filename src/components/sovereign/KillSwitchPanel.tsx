@@ -39,6 +39,7 @@ const KillSwitchPanel = ({ platformState, onRefresh }: KillSwitchPanelProps) => 
   const battlesPaused = platformState?.battles_paused?.value === 'true';
   const economyFrozen = platformState?.economy_frozen?.value === 'true';
   const maintenanceMode = platformState?.maintenance_mode?.value === 'true';
+  const tiersEnforced = platformState?.enforce_tiers?.value === 'true';
 
   const executeAction = async (action: string) => {
     setLoading(true);
