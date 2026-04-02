@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, Pause, Play, Lock, Unlock, Wrench } from 'lucide-react';
+import { AlertTriangle, Pause, Play, Lock, Unlock, Wrench, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
