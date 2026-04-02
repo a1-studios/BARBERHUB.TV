@@ -32,7 +32,9 @@ import {
   MapPin,
   Loader2,
   Save,
-  Navigation
+  Navigation,
+  RefreshCw,
+  CheckCircle
 } from 'lucide-react';
 
 interface BarberSettingsProps {
@@ -560,36 +562,128 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
                   </div>
 
                   {/* Location Sharing Toggle */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label htmlFor="location_sharing" className="flex items-center gap-2">
-                        <MapPin className="h-3.5 w-3.5 text-primary" />
-                        Share My Location
-                      </Label>
-                      <p className="text-sm text-muted-foreground">
-                        {(barberProfile as any)?.location_sharing_enabled ? 'Visible on map' : 'Hidden from map'}
-                      </p>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="location_sharing" className="flex items-center gap-2">
+                          <MapPin className="h-3.5 w-3.5 text-primary" />
+                          Share My Location
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                          Show your shop on the barber finder map
+                        </p>
+                      </div>
+                      <Switch
+                        id="location_sharing"
+                        checked={(barberProfile as any)?.location_sharing_enabled || false}
+                        disabled={gettingLocation}
+                        onCheckedChange={async (checked) => {
+                          if (!user?.id) return;
+
+                          if (checked) {
+                            const hasCoords = !!(barberProfile as any)?.latitude && !!(barberProfile as any)?.longitude;
+
+                            if (hasCoords) {
+                              // Coords already saved — just flip the flag
+                              const { error } = await supabase
+                                .from('barber_profiles')
+                                .update({ location_sharing_enabled: true } as any)
+                                .eq('user_id', user.id);
+                              if (error) toast.error('Failed to enable');
+                              else {
+                                toast.success('You\'re now visible on the map!');
+                                queryClient.invalidateQueries({ queryKey: ['barberProfile', user.id] });
+                              }
+                            } else {
+                              // First time — request GPS
+                              if (!navigator.geolocation) {
+                                toast.error('Geolocation is not supported by your browser');
+                                return;
+                              }
+                              setGettingLocation(true);
+                              navigator.geolocation.getCurrentPosition(
+                                async (pos) => {
+                                  const { error } = await supabase
+                                    .from('barber_profiles')
+                                    .update({
+                                      location_sharing_enabled: true,
+                                      latitude: pos.coords.latitude,
+                                      longitude: pos.coords.longitude,
+                                    } as any)
+                                    .eq('user_id', user.id);
+                                  if (error) toast.error('Failed to save location');
+                                  else {
+                                    toast.success('Location saved — you\'re now visible on the map!');
+                                    queryClient.invalidateQueries({ queryKey: ['barberProfile', user.id] });
+                                  }
+                                  setGettingLocation(false);
+                                },
+                                () => {
+                                  toast.error('Location access denied. Please allow location in your browser settings.');
+                                  setGettingLocation(false);
+                                },
+                                { enableHighAccuracy: true, timeout: 10000 }
+                              );
+                            }
+                          } else {
+                            // Turning OFF — keep saved coords, just hide
+                            const { error } = await supabase
+                              .from('barber_profiles')
+                              .update({ location_sharing_enabled: false } as any)
+                              .eq('user_id', user.id);
+                            if (error) toast.error('Failed to update');
+                            else {
+                              toast.success('Location hidden from map');
+                              queryClient.invalidateQueries({ queryKey: ['barberProfile', user.id] });
+                            }
+                          }
+                        }}
+                      />
                     </div>
-                    <Switch
-                      id="location_sharing"
-                      checked={(barberProfile as any)?.location_sharing_enabled || false}
-                      onCheckedChange={async (checked) => {
-                        if (!user?.id) return;
-                        if (checked && navigator.geolocation) {
+
+                    {/* Status indicator */}
+                    <div className="flex items-center gap-2 text-xs">
+                      {(barberProfile as any)?.location_sharing_enabled ? (
+                        <>
+                          <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                          <span className="text-green-400">Live on map</span>
+                          {(barberProfile as any)?.latitude && (
+                            <span className="text-muted-foreground ml-1 flex items-center gap-1">
+                              <CheckCircle className="h-3 w-3" /> Location saved
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          <span className="h-2 w-2 rounded-full bg-muted-foreground" />
+                          <span className="text-muted-foreground">Hidden</span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Refresh Location button — only when sharing is ON */}
+                    {(barberProfile as any)?.location_sharing_enabled && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={gettingLocation}
+                        className="text-xs gap-1.5"
+                        onClick={() => {
+                          if (!navigator.geolocation || !user?.id) return;
                           setGettingLocation(true);
                           navigator.geolocation.getCurrentPosition(
                             async (pos) => {
                               const { error } = await supabase
                                 .from('barber_profiles')
                                 .update({
-                                  location_sharing_enabled: true,
                                   latitude: pos.coords.latitude,
                                   longitude: pos.coords.longitude,
                                 } as any)
                                 .eq('user_id', user.id);
-                              if (error) toast.error('Failed to save location');
+                              if (error) toast.error('Failed to update location');
                               else {
-                                toast.success('Location shared — you\'re now visible on the map!');
+                                toast.success('Location refreshed!');
                                 queryClient.invalidateQueries({ queryKey: ['barberProfile', user.id] });
                               }
                               setGettingLocation(false);
@@ -600,19 +694,12 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
                             },
                             { enableHighAccuracy: true, timeout: 10000 }
                           );
-                        } else {
-                          const { error } = await supabase
-                            .from('barber_profiles')
-                            .update({ location_sharing_enabled: false } as any)
-                            .eq('user_id', user.id);
-                          if (error) toast.error('Failed to update');
-                          else {
-                            toast.success('Location hidden from map');
-                            queryClient.invalidateQueries({ queryKey: ['barberProfile', user.id] });
-                          }
-                        }
-                      }}
-                    />
+                        }}
+                      >
+                        {gettingLocation ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                        Refresh Location
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>

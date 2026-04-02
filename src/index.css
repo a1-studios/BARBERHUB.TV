@@ -352,6 +352,12 @@
   animation: energyRise 1s ease-out infinite;
 }
 
+  /* Map pin pulse animation */
+  @keyframes pulse-pin {
+    0%, 100% { box-shadow: 0 0 8px hsla(25, 95%, 53%, 0.5); }
+    50% { box-shadow: 0 0 18px hsla(25, 95%, 53%, 0.8); }
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
