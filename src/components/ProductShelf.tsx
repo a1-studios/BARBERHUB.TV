@@ -45,13 +45,8 @@ export const ProductShelf = () => {
 
   return (
     <>
-      <section className="px-3 sm:px-6 py-2">
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <ShoppingBag className="h-3 w-3 text-orange-500" />
-          <h3 className="text-xs font-bold text-foreground">Official Gear</h3>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2">
+      <section className="px-3 sm:px-6 pt-0 pb-1">
+        <div className="grid grid-cols-3 gap-1.5">
           {products.map((product) => (
             <button
               key={product.id}
