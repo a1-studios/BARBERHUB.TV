@@ -105,26 +105,120 @@ export const DynamicBattleHero = () => {
     refetchInterval: 10000
   });
 
-  // Fetch fallback featured videos — full shuffled pool
-  const { data: fallbackVideos = [] } = useQuery({
-    queryKey: ['fallbackHeroVideos'],
+  // Fetch fallback videos from ALL sources — unified shuffled pool
+  const { data: profileVideos = [] } = useQuery({
+    queryKey: ['fallbackHero-profiles'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('public_barber_profiles')
         .select('barber_id, barber_name, display_name, featured_video_id, avatar_url, country_code')
         .not('featured_video_id', 'is', null)
-        .limit(20);
+        .limit(100);
       if (error) throw error;
-      const valid = (data || []).filter(b => b.featured_video_id?.startsWith('http'));
-      // Fisher-Yates shuffle
-      for (let i = valid.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [valid[i], valid[j]] = [valid[j], valid[i]];
-      }
-      return valid;
+      return (data || [])
+        .filter(b => b.featured_video_id?.startsWith('http'))
+        .map(b => ({
+          id: `profile-${b.barber_id}`,
+          featured_video_id: b.featured_video_id!,
+          barber_name: b.barber_name,
+          display_name: b.display_name || b.barber_name,
+          avatar_url: b.avatar_url,
+          country_code: b.country_code,
+          barber_id: b.barber_id,
+        }));
     },
     enabled: !battle,
   });
+
+  const { data: creatorHeroVideos = [] } = useQuery({
+    queryKey: ['fallbackHero-creator'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('creator_content')
+        .select('id, title, media_url, creator_id')
+        .eq('status', 'published')
+        .not('media_url', 'is', null)
+        .limit(100);
+      if (error) throw error;
+      return (data || [])
+        .filter(c => c.media_url?.startsWith('http'))
+        .map(c => ({
+          id: `creator-${c.id}`,
+          featured_video_id: c.media_url!,
+          barber_name: 'Creator',
+          display_name: c.title || 'Creator',
+          avatar_url: null as string | null,
+          country_code: null as string | null,
+          barber_id: c.id,
+        }));
+    },
+    enabled: !battle,
+  });
+
+  const { data: creationHeroVideos = [] } = useQuery({
+    queryKey: ['fallbackHero-creations'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('creations')
+        .select('id, title, media_url, barber_id')
+        .not('media_url', 'is', null)
+        .limit(100);
+      if (error) throw error;
+      const barberIds = [...new Set((data || []).map(c => c.barber_id).filter(Boolean))] as string[];
+      let nameMap: Record<string, string> = {};
+      if (barberIds.length > 0) {
+        const { data: profiles } = await supabase.from('barber_profiles').select('id, name').in('id', barberIds);
+        profiles?.forEach(p => { nameMap[p.id] = p.name || 'Barber'; });
+      }
+      return (data || [])
+        .filter(c => c.media_url?.startsWith('http'))
+        .map(c => ({
+          id: `creation-${c.id}`,
+          featured_video_id: c.media_url!,
+          barber_name: nameMap[c.barber_id] || 'Barber',
+          display_name: c.title || nameMap[c.barber_id] || 'Barber',
+          avatar_url: null as string | null,
+          country_code: null as string | null,
+          barber_id: c.id,
+        }));
+    },
+    enabled: !battle,
+  });
+
+  const { data: submissionHeroVideos = [] } = useQuery({
+    queryKey: ['fallbackHero-submissions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('battle_submissions')
+        .select('id, title, media_url, user_id')
+        .not('media_url', 'is', null)
+        .limit(100);
+      if (error) throw error;
+      return (data || [])
+        .filter(s => s.media_url?.startsWith('http'))
+        .map(s => ({
+          id: `submission-${s.id}`,
+          featured_video_id: s.media_url!,
+          barber_name: 'Competitor',
+          display_name: s.title || 'Competitor',
+          avatar_url: null as string | null,
+          country_code: null as string | null,
+          barber_id: s.id,
+        }));
+    },
+    enabled: !battle,
+  });
+
+  // Merge all sources and shuffle once
+  const fallbackVideos = useMemo(() => {
+    const all = [...profileVideos, ...creatorHeroVideos, ...creationHeroVideos, ...submissionHeroVideos];
+    // Fisher-Yates shuffle
+    for (let i = all.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [all[i], all[j]] = [all[j], all[i]];
+    }
+    return all;
+  }, [profileVideos, creatorHeroVideos, creationHeroVideos, submissionHeroVideos]);
 
   // Rotate through fallback videos every 8 seconds
   const [fallbackIdx, setFallbackIdx] = useState(0);
