@@ -86,41 +86,35 @@ export const ProductShelf = () => {
     `$${(cents / 100).toFixed(2)}`;
 
   return (
-    <section className="px-3 sm:px-6 py-3">
-      <div className="flex items-center gap-2 mb-2">
-        <ShoppingBag className="h-4 w-4 text-orange-500" />
-        <h3 className="text-sm font-bold text-foreground">Official Gear</h3>
+    <section className="px-3 sm:px-6 py-2">
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <ShoppingBag className="h-3 w-3 text-orange-500" />
+        <h3 className="text-xs font-bold text-foreground">Official Gear</h3>
       </div>
 
-      <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-2 -mx-1 px-1">
+      <div className="grid grid-cols-3 gap-2">
         {allProducts.map((product) => (
           <a
             key={product.id}
             href={product.externalLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="snap-start shrink-0 w-[140px] rounded-xl bg-[hsl(var(--card))] border border-[hsl(var(--border))] overflow-hidden group transition-transform hover:scale-[1.02]"
+            className="flex flex-col items-center gap-1 rounded-lg bg-card border border-border p-2 transition-colors hover:bg-accent"
           >
-            <div className="h-[100px] overflow-hidden bg-black/20">
+            <div className="w-10 h-10 rounded-md overflow-hidden bg-muted shrink-0">
               <img
                 src={product.imageUrl}
                 alt={product.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                className="w-full h-full object-cover"
                 loading="lazy"
               />
             </div>
-            <div className="p-2 space-y-1">
-              <p className="text-xs font-semibold text-foreground truncate">
-                {product.title}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {formatPrice(product.priceCents)}
-              </p>
-              <div className="flex items-center justify-center gap-1 bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-bold rounded-md py-1 transition-colors">
-                Buy Now
-                <ExternalLink className="h-3 w-3" />
-              </div>
-            </div>
+            <p className="text-[10px] font-semibold text-foreground truncate w-full text-center leading-tight">
+              {product.title}
+            </p>
+            <p className="text-[10px] text-orange-500 font-bold leading-none">
+              {formatPrice(product.priceCents)}
+            </p>
           </a>
         ))}
       </div>
