@@ -24,6 +24,7 @@ export default function BarbersDirectory() {
   const [liveFilter, setLiveFilter] = useState('all');
   const [tierFilter, setTierFilter] = useState('all');
   const [sortBy, setSortBy] = useState('tier');
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
   // Pre-populate filters from URL params
   useEffect(() => {
