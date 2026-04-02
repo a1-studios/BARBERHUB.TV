@@ -1,62 +1,30 @@
 
 
-# Persistent Location Toggle + Visual Map Indicators
+# Enable Fan Location Search (Zip Code + Geolocation)
 
-## Overview
-Two changes: (1) Make the barber's "Share My Location" toggle persistent and always-on by default once enabled — it stays active across sessions without requiring re-capture each time. (2) Add clear visual indicators on the map showing barber pins with pulsing animations and a 15-mile radius circle around the user's search point.
+## Problem
+The zip code and "Use My Location" search controls only appear in the **map view**. When fans land on `/barbers` they see the **list view** by default with no location-based search option. The search bar only filters by name/specialty text.
 
----
+## Changes
 
-## 1. Persistent Location Toggle — `BarberSettings.tsx`
+### 1. Add location search bar to the list view — `BarbersDirectory.tsx`
+- Add a zip code input + "Use My Location" button above the existing filters in list view
+- When a fan enters a zip code or grants geolocation, geocode with Google Maps REST API, then filter the list to show only barbers within 15 miles using the `find_barbers_nearby` RPC
+- Show a "Showing barbers near [location]" badge with a clear/reset button
+- When location filter is active, sort by distance instead of tier by default
 
-**Current problem**: The toggle reads from the database but re-requests GPS every time it's turned on. Once enabled, it should stay on indefinitely without re-prompting.
+### 2. Auto-switch to map view on location search (optional UX boost)
+- When a fan searches by zip or taps "Use My Location" from list view, auto-switch to map view to show the visual radius and pins
+- Add a small prompt: "Switch to map view to see barbers near you"
 
-**Changes**:
-- Only request GPS coordinates the **first time** the toggle is turned ON (when lat/lng are null in the DB)
-- If lat/lng already exist in the database, just flip `location_sharing_enabled = true` without re-prompting for GPS
-- Add a "Refresh Location" button that appears only when location sharing is already ON, allowing the barber to update their coordinates manually
-- Add a visual indicator below the toggle showing current status: green dot + "Live on map" when ON, gray dot + "Hidden" when OFF
-- Show the barber's saved coordinates as a subtle text hint (e.g., "Location saved ✓") so they know it persists
-
----
-
-## 2. Map Visual Indicators — `BarberMapDirectory.tsx`
-
-**Add a 15-mile radius circle**:
-- After a search or geolocation, draw a translucent orange circle on the map centered on the user's coordinates with a 15-mile radius
-- Use MapLibre's `addSource`/`addLayer` with a GeoJSON circle polygon (computed from the center point)
-- Style: orange fill at 8% opacity, orange stroke at 40% opacity
-
-**Enhance barber pin markers**:
-- Add a CSS pulsing animation to the orange dot markers so they visually "breathe"
-- Add a small scissors icon or initials inside each pin for better identification
-- Differentiate tier levels visually: Diamond = cyan glow, Gold = yellow glow, Silver = white glow, Bronze/Free = default orange
-
-**Add a user location marker**:
-- When the user searches or uses geolocation, place a distinct blue pulsing dot at their position so they can see where they are relative to barbers
-
-**Add a barber count badge overlay on the map**:
-- Small floating badge in the top-left corner of the map showing "X barbers nearby"
-
----
-
-## 3. Inject CSS Animation — `src/index.css`
-
-Add a `@keyframes pulse-pin` animation for the map markers:
-```css
-@keyframes pulse-pin {
-  0%, 100% { box-shadow: 0 0 8px hsla(25,95%,53%,0.5); }
-  50% { box-shadow: 0 0 16px hsla(25,95%,53%,0.8); }
-}
-```
-
----
-
-## File Summary
+### 3. Shared location search component — new `BarberLocationSearch.tsx`
+- Extract the zip input + geolocation button into a reusable component used by both list and map views
+- Props: `onLocationFound(lat, lng, label)`, `loading`
+- Keeps the Google geocoding logic in one place
 
 | File | Change |
 |------|--------|
-| `src/components/profiles/BarberSettings.tsx` | Make toggle persistent — skip GPS re-prompt if coords exist, add refresh button, add green/gray status dot |
-| `src/components/map/BarberMapDirectory.tsx` | Add 15-mile radius circle, user location blue dot, pulsing pin animation, tier-based glow colors, barber count badge |
-| `src/index.css` | Add `pulse-pin` keyframe animation |
+| `src/components/map/BarberLocationSearch.tsx` | New shared component: zip input + Use My Location button + Google geocoding |
+| `src/pages/BarbersDirectory.tsx` | Add location search bar to list view header, call `find_barbers_nearby` when location is set, show distance-sorted results |
+| `src/components/map/BarberMapDirectory.tsx` | Refactor to use the shared `BarberLocationSearch` component |
 
