@@ -558,6 +558,62 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
                       onCheckedChange={(checked) => setBarberForm(prev => ({ ...prev, available_for_battles: checked }))}
                     />
                   </div>
+
+                  {/* Location Sharing Toggle */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label htmlFor="location_sharing" className="flex items-center gap-2">
+                        <MapPin className="h-3.5 w-3.5 text-primary" />
+                        Share My Location
+                      </Label>
+                      <p className="text-sm text-muted-foreground">
+                        {(barberProfile as any)?.location_sharing_enabled ? 'Visible on map' : 'Hidden from map'}
+                      </p>
+                    </div>
+                    <Switch
+                      id="location_sharing"
+                      checked={(barberProfile as any)?.location_sharing_enabled || false}
+                      onCheckedChange={async (checked) => {
+                        if (!user?.id) return;
+                        if (checked && navigator.geolocation) {
+                          setGettingLocation(true);
+                          navigator.geolocation.getCurrentPosition(
+                            async (pos) => {
+                              const { error } = await supabase
+                                .from('barber_profiles')
+                                .update({
+                                  location_sharing_enabled: true,
+                                  latitude: pos.coords.latitude,
+                                  longitude: pos.coords.longitude,
+                                } as any)
+                                .eq('user_id', user.id);
+                              if (error) toast.error('Failed to save location');
+                              else {
+                                toast.success('Location shared — you\'re now visible on the map!');
+                                queryClient.invalidateQueries({ queryKey: ['barberProfile', user.id] });
+                              }
+                              setGettingLocation(false);
+                            },
+                            () => {
+                              toast.error('Location access denied');
+                              setGettingLocation(false);
+                            },
+                            { enableHighAccuracy: true, timeout: 10000 }
+                          );
+                        } else {
+                          const { error } = await supabase
+                            .from('barber_profiles')
+                            .update({ location_sharing_enabled: false } as any)
+                            .eq('user_id', user.id);
+                          if (error) toast.error('Failed to update');
+                          else {
+                            toast.success('Location hidden from map');
+                            queryClient.invalidateQueries({ queryKey: ['barberProfile', user.id] });
+                          }
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
 

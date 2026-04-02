@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, Pause, Play, Lock, Unlock, Wrench } from 'lucide-react';
+import { AlertTriangle, Pause, Play, Lock, Unlock, Wrench, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -20,6 +20,7 @@ interface KillSwitchPanelProps {
     battles_paused?: { value: string };
     economy_frozen?: { value: string };
     maintenance_mode?: { value: string };
+    enforce_tiers?: { value: string };
   };
   onRefresh: () => void;
 }
@@ -38,6 +39,7 @@ const KillSwitchPanel = ({ platformState, onRefresh }: KillSwitchPanelProps) => 
   const battlesPaused = platformState?.battles_paused?.value === 'true';
   const economyFrozen = platformState?.economy_frozen?.value === 'true';
   const maintenanceMode = platformState?.maintenance_mode?.value === 'true';
+  const tiersEnforced = platformState?.enforce_tiers?.value === 'true';
 
   const executeAction = async (action: string) => {
     setLoading(true);
@@ -74,7 +76,7 @@ const KillSwitchPanel = ({ platformState, onRefresh }: KillSwitchPanelProps) => 
           <h3 className="text-sm font-semibold text-white">Kill Switches</h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Battles Kill Switch */}
           <div className="p-4 rounded-lg bg-[#0a0a0f] border border-white/[0.06]">
             <div className="flex items-center justify-between mb-3">
@@ -162,6 +164,36 @@ const KillSwitchPanel = ({ platformState, onRefresh }: KillSwitchPanelProps) => 
             >
               <Wrench className="h-3 w-3 mr-2" />
               {maintenanceMode ? 'Exit' : 'Enable'}
+            </Button>
+          </div>
+
+          {/* Tier Enforcement */}
+          <div className="p-4 rounded-lg bg-[#0a0a0f] border border-white/[0.06]">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-white/40 uppercase tracking-wider">Tier Enforcement</span>
+              <div className="flex items-center gap-1.5">
+                <div className={`h-1.5 w-1.5 rounded-full ${tiersEnforced ? 'bg-green-500' : 'bg-orange-500'}`} />
+                <span className={`text-[10px] ${tiersEnforced ? 'text-green-400' : 'text-orange-500'}`}>
+                  {tiersEnforced ? 'ENFORCED' : 'TESTING'}
+                </span>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full border-white/10 text-white hover:bg-white/[0.04] bg-transparent"
+              disabled={loading}
+              onClick={() => openConfirmDialog(
+                tiersEnforced ? 'enforce_tiers_off' : 'enforce_tiers_on',
+                tiersEnforced ? 'Disable Tier Enforcement' : 'Enable Tier Enforcement',
+                tiersEnforced
+                  ? 'This will show ALL barbers on map regardless of subscription tier (QA mode).'
+                  : 'This will restrict map & booking to Silver+ tier barbers only. Type ENFORCE to confirm.',
+                tiersEnforced ? 'TESTING' : 'ENFORCE'
+              )}
+            >
+              <ShieldCheck className="h-3 w-3 mr-2" />
+              {tiersEnforced ? 'Switch to Testing' : 'Enforce Tiers'}
             </Button>
           </div>
         </div>

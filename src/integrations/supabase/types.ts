@@ -445,8 +445,11 @@ export type Database = {
           is_live: boolean | null
           last_battle_reset: string
           last_live_check: string | null
+          latitude: number | null
           live_video_id: string | null
           location: string | null
+          location_sharing_enabled: boolean
+          longitude: number | null
           m4m_certified: boolean
           m4m_lives_touched: number
           m4m_paid: boolean
@@ -485,8 +488,11 @@ export type Database = {
           is_live?: boolean | null
           last_battle_reset?: string
           last_live_check?: string | null
+          latitude?: number | null
           live_video_id?: string | null
           location?: string | null
+          location_sharing_enabled?: boolean
+          longitude?: number | null
           m4m_certified?: boolean
           m4m_lives_touched?: number
           m4m_paid?: boolean
@@ -525,8 +531,11 @@ export type Database = {
           is_live?: boolean | null
           last_battle_reset?: string
           last_live_check?: string | null
+          latitude?: number | null
           live_video_id?: string | null
           location?: string | null
+          location_sharing_enabled?: boolean
+          longitude?: number | null
           m4m_certified?: boolean
           m4m_lives_touched?: number
           m4m_paid?: boolean
@@ -4051,6 +4060,26 @@ export type Database = {
           p_winner_id: string
         }
         Returns: Json
+      }
+      find_barbers_nearby: {
+        Args: {
+          p_enforce_tiers?: boolean
+          p_lat: number
+          p_lng: number
+          p_radius_miles?: number
+        }
+        Returns: {
+          active_subscription_tier: string
+          avatar_url: string
+          barber_id: string
+          distance_miles: number
+          latitude: number
+          location: string
+          longitude: number
+          name: string
+          specialty: string
+          user_id: string
+        }[]
       }
       generate_elimination_bracket: {
         Args: { num_participants?: number; tournament_id_param: string }

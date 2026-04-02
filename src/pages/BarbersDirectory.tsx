@@ -7,12 +7,14 @@ import Footer from '@/components/Footer';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { Search, Scissors, Crown, Sparkles, Star, Diamond } from 'lucide-react';
+import { Search, Scissors, Crown, Sparkles, Star, Diamond, Map as MapIcon, List } from 'lucide-react';
 import { BarberProfileCard } from '@/components/barber/BarberProfileCard';
 import { BackButton } from '@/components/ui/BackButton';
 import { QuickBookBanner } from '@/components/fan/QuickBookBanner';
 import { SPECIALTY_TAGS, parseSpecialties } from '@/config/specialtyTags';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { BarberMapDirectory } from '@/components/map/BarberMapDirectory';
 
 export default function BarbersDirectory() {
   const [searchParams] = useSearchParams();
@@ -22,6 +24,7 @@ export default function BarbersDirectory() {
   const [liveFilter, setLiveFilter] = useState('all');
   const [tierFilter, setTierFilter] = useState('all');
   const [sortBy, setSortBy] = useState('tier');
+  const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
 
   // Pre-populate filters from URL params
   useEffect(() => {
@@ -120,18 +123,48 @@ export default function BarbersDirectory() {
         <BackButton className="mb-6" />
 
         {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white mb-2">
-            <span className="text-primary">Barber</span> Directory
-          </h1>
-          <p className="text-muted-foreground">
-            Discover talented barbers from around the world
-          </p>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-white mb-2">
+              <span className="text-primary">Barber</span> Directory
+            </h1>
+            <p className="text-muted-foreground">
+              Discover talented barbers from around the world
+            </p>
+          </div>
+          <div className="flex gap-1 bg-muted rounded-lg p-1">
+            <Button
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setViewMode('list')}
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'map' ? 'default' : 'ghost'}
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setViewMode('map')}
+            >
+              <MapIcon className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Quick Book Banner */}
         <QuickBookBanner />
 
+        {/* Map View */}
+        {viewMode === 'map' && (
+          <div className="mb-8">
+            <BarberMapDirectory />
+          </div>
+        )}
+
+        {/* Filters — only in list mode */}
+        {viewMode === 'list' && (
+        <>
         {/* Filters */}
         <Card className="mb-8">
           <CardContent className="p-6">
@@ -302,6 +335,8 @@ export default function BarbersDirectory() {
               </p>
             </CardContent>
           </Card>
+        )}
+        </>
         )}
       </div>
 

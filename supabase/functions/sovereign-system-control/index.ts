@@ -9,7 +9,7 @@ const corsHeaders = {
 const SOVEREIGN_EMAIL = Deno.env.get('SOVEREIGN_EMAIL') || 'a1studios.film@gmail.com';
 
 interface SystemRequest {
-  action: 'get_status' | 'pause_battles' | 'resume_battles' | 'freeze_economy' | 'unfreeze_economy' | 'maintenance_mode' | 'exit_maintenance' | 'get_audit_log' | 'get_platform_stats';
+  action: 'get_status' | 'pause_battles' | 'resume_battles' | 'freeze_economy' | 'unfreeze_economy' | 'maintenance_mode' | 'exit_maintenance' | 'get_audit_log' | 'get_platform_stats' | 'enforce_tiers_on' | 'enforce_tiers_off';
   reason?: string;
   notes?: string;
   limit?: number;
@@ -251,6 +251,34 @@ serve(async (req) => {
 
         afterState = { maintenance_mode: false, battles_paused: false, economy_frozen: false };
         result = { success: true, message: 'Maintenance mode disabled. Platform fully operational.' };
+        break;
+      }
+
+      case 'enforce_tiers_on': {
+        beforeState = { enforce_tiers: false };
+        severity = 'critical';
+
+        await supabase
+          .from('platform_state')
+          .update({ value: 'true', updated_at: new Date().toISOString(), updated_by: user.id })
+          .eq('key', 'enforce_tiers');
+
+        afterState = { enforce_tiers: true };
+        result = { success: true, message: 'Tier enforcement enabled. Only Silver+ barbers visible on map.' };
+        break;
+      }
+
+      case 'enforce_tiers_off': {
+        beforeState = { enforce_tiers: true };
+        severity = 'normal';
+
+        await supabase
+          .from('platform_state')
+          .update({ value: 'false', updated_at: new Date().toISOString(), updated_by: user.id })
+          .eq('key', 'enforce_tiers');
+
+        afterState = { enforce_tiers: false };
+        result = { success: true, message: 'Tier enforcement disabled. All barbers visible (testing mode).' };
         break;
       }
 
