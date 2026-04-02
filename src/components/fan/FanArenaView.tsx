@@ -17,6 +17,9 @@ export const FanArenaView = () => {
       {/* Featured Battle Hero */}
       <DynamicBattleHero />
 
+      {/* Official Gear Shelf */}
+      <ProductShelf />
+
       {/* Live Now — followed barber avatars */}
       <LiveNowBanner />
 

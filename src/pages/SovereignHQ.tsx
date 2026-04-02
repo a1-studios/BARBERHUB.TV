@@ -104,6 +104,9 @@ const SovereignHQ = () => {
         {/* Sponsor Board Control */}
         <SponsorControlPanel onRefresh={refresh} />
 
+        {/* Affiliate Network Control */}
+        <AffiliateControlPanel onRefresh={refresh} />
+
         {/* M4M Fund */}
         <M4MFundPanel />
 
