@@ -1,106 +1,62 @@
 
 
-# Sovereign HQ — Minimalist Fintech Redesign
+# Persistent Location Toggle + Visual Map Indicators
 
-## Problem
-The current Sovereign HQ uses a cluttered, rainbow-colored design (red, yellow, blue, purple, green, cyan, orange all competing). It looks like a hacker terminal, not a clean fintech dashboard. The user wants a Robinhood-inspired minimalist look using the brand palette: **deep black background**, **orange** (primary accent), **white** (text), and **cyan/Zion blue** (secondary accent).
+## Overview
+Two changes: (1) Make the barber's "Share My Location" toggle persistent and always-on by default once enabled — it stays active across sessions without requiring re-capture each time. (2) Add clear visual indicators on the map showing barber pins with pulsing animations and a 15-mile radius circle around the user's search point.
 
-## Design System
+---
 
-Color tokens used across ALL panels:
-- **Background**: `#0a0a0f` (near-black) — page bg
-- **Card surface**: `#12121a` — card bg (subtle lift)
-- **Card border**: `border-white/[0.06]` — barely visible separation
-- **Primary text**: `text-white`
-- **Secondary text**: `text-white/40`
-- **Stat numbers**: `text-white` (large, clean)
-- **Primary accent**: `text-orange-500` — section icons, active badges, primary buttons
-- **Secondary accent**: `text-cyan-400` — live indicators, secondary highlights
-- **Buttons**: ghost-style with `border-white/10`, white text; primary actions use `bg-orange-500`
-- **Danger states**: `text-red-400` only for kill switches — no other red
-- **No colored section headers** — all headers are white, icons are orange or cyan
+## 1. Persistent Location Toggle — `BarberSettings.tsx`
 
-## Files Changed
+**Current problem**: The toggle reads from the database but re-requests GPS every time it's turned on. Once enabled, it should stay on indefinitely without re-prompting.
 
-### 1. `src/pages/SovereignHQ.tsx`
-- Change page bg to `bg-[#0a0a0f]`
-- Simplify header: remove gradient icon box, use clean `text-white` title with small orange dot indicator
-- Remove "GOD MODE ACTIVE" badge, replace with a subtle green dot + "Live" text
-- Add a collapsible sidebar nav (or top tab bar) for quick-jumping between sections
-- Clean spacing: `space-y-4` instead of `space-y-6`, tighter feel
+**Changes**:
+- Only request GPS coordinates the **first time** the toggle is turned ON (when lat/lng are null in the DB)
+- If lat/lng already exist in the database, just flip `location_sharing_enabled = true` without re-prompting for GPS
+- Add a "Refresh Location" button that appears only when location sharing is already ON, allowing the barber to update their coordinates manually
+- Add a visual indicator below the toggle showing current status: green dot + "Live on map" when ON, gray dot + "Hidden" when OFF
+- Show the barber's saved coordinates as a subtle text hint (e.g., "Location saved ✓") so they know it persists
 
-### 2. `src/components/sovereign/KillSwitchPanel.tsx`
-- Card bg `bg-[#12121a]`, border `border-white/[0.06]`
-- Remove red border tinting. Use a small red dot indicator for paused state
-- Status pills: simple `bg-white/[0.06] text-white/60` when active, `bg-red-500/10 text-red-400` when paused
-- Buttons: ghost outline `border-white/10 text-white hover:bg-white/[0.04]`
-- Header icon orange, title white
+---
 
-### 3. `src/components/sovereign/LivePulseMonitor.tsx`
-- Same card treatment. Stat values in large white `text-2xl font-semibold` (not colored per-stat)
-- Labels in `text-white/40 text-xs uppercase tracking-widest`
-- Pulse dot uses cyan for the live indicator
+## 2. Map Visual Indicators — `BarberMapDirectory.tsx`
 
-### 4. `src/components/sovereign/EconomyControlPanel.tsx`
-- Clean card. All stat numbers white. Labels `text-white/40`
-- Action buttons: ghost with `border-white/10`, icons in orange
-- Modal dialogs: `bg-[#12121a] border-white/[0.06]`, inputs `bg-[#0a0a0f] border-white/10`
+**Add a 15-mile radius circle**:
+- After a search or geolocation, draw a translucent orange circle on the map centered on the user's coordinates with a 15-mile radius
+- Use MapLibre's `addSource`/`addLayer` with a GeoJSON circle polygon (computed from the center point)
+- Style: orange fill at 8% opacity, orange stroke at 40% opacity
 
-### 5. `src/components/sovereign/BattleControlPanel.tsx`
-- Same treatment. All stat numbers white. Remove per-stat coloring (green/yellow/red)
-- Action buttons uniform ghost style
+**Enhance barber pin markers**:
+- Add a CSS pulsing animation to the orange dot markers so they visually "breathe"
+- Add a small scissors icon or initials inside each pin for better identification
+- Differentiate tier levels visually: Diamond = cyan glow, Gold = yellow glow, Silver = white glow, Bronze/Free = default orange
 
-### 6. `src/components/sovereign/UserControlPanel.tsx`
-- Same card/stat treatment
-- Search/directory modals get the same dark fintech theme
-- Profile inspector modal uses same palette
+**Add a user location marker**:
+- When the user searches or uses geolocation, place a distinct blue pulsing dot at their position so they can see where they are relative to barbers
 
-### 7. `src/components/sovereign/SponsorControlPanel.tsx`
-- Remove purple gradient icon box. Use orange icon
-- Stats in white, labels muted
-- Engagement metrics section: same clean card nesting
-- Sponsor list items: `bg-[#0a0a0f] border-white/[0.06]`
+**Add a barber count badge overlay on the map**:
+- Small floating badge in the top-left corner of the map showing "X barbers nearby"
 
-### 8. `src/components/sovereign/AffiliateControlPanel.tsx`
-- Same fintech card treatment
+---
 
-### 9. `src/components/sovereign/M4MFundPanel.tsx`
-- Same treatment. Heart icon in cyan (charity distinction)
+## 3. Inject CSS Animation — `src/index.css`
 
-### 10. `src/components/sovereign/VaultMetricsPanel.tsx`
-- Same treatment
-
-### 11. `src/components/sovereign/BattleDirectoryPanel.tsx`
-- Table styling: `bg-[#0a0a0f]` rows, `border-white/[0.06]` separators
-- Status badges: small rounded pills, muted colors
-- Modals: same dark fintech theme
-
-### 12. `src/components/sovereign/TournamentQueuePanel.tsx`
-- Same table/card treatment
-
-### 13. `src/components/sovereign/TournamentManagerPanel.tsx`
-- Same treatment
-
-### 14. `src/components/sovereign/AuditLogViewer.tsx`
-- Clean log entries with white text, muted timestamps
-- Severity indicators: small colored dots (not full icons)
-
-## Design Pattern (applies to every panel)
-
-```text
-┌─────────────────────────────────────────────┐
-│  ● Section Title                    [Action]│  ← orange dot, white title, ghost button
-│                                             │
-│  ┌──────┐  ┌──────┐  ┌──────┐              │
-│  │ 1,204 │  │   38 │  │   12 │              │  ← big white numbers
-│  │ Total │  │ Today│  │ Live │              │  ← muted labels
-│  └──────┘  └──────┘  └──────┘              │
-│                                             │
-│  [Action 1]  [Action 2]  [Action 3]        │  ← ghost bordered buttons
-└─────────────────────────────────────────────┘
-   bg-[#12121a]  border-white/[0.06]  rounded-xl
+Add a `@keyframes pulse-pin` animation for the map markers:
+```css
+@keyframes pulse-pin {
+  0%, 100% { box-shadow: 0 0 8px hsla(25,95%,53%,0.5); }
+  50% { box-shadow: 0 0 16px hsla(25,95%,53%,0.8); }
+}
 ```
 
-## Scope
-14 files total. All changes are purely visual (className swaps). Zero logic changes. Full CRUD capability is preserved exactly as-is.
+---
+
+## File Summary
+
+| File | Change |
+|------|--------|
+| `src/components/profiles/BarberSettings.tsx` | Make toggle persistent — skip GPS re-prompt if coords exist, add refresh button, add green/gray status dot |
+| `src/components/map/BarberMapDirectory.tsx` | Add 15-mile radius circle, user location blue dot, pulsing pin animation, tier-based glow colors, barber count badge |
+| `src/index.css` | Add `pulse-pin` keyframe animation |
 
