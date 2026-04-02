@@ -26,7 +26,7 @@ export const useFollowedBarbersNotifications = () => {
         .eq('follower_id', user.id);
 
       if (follows) {
-        const barberIds = follows.map(f => f.creator_id);
+        const barberIds = follows.map(f => f.creator_id).filter(id => id !== user.id);
         setFollowedBarberIds(barberIds);
 
         if (barberIds.length > 0) {
