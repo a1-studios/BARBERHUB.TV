@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ShoppingBag, ExternalLink } from 'lucide-react';
+import { ShoppingBag } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Product {
