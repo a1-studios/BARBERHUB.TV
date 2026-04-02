@@ -21,7 +21,17 @@ interface NearbyBarber {
   distance_miles: number;
 }
 
-const TILE_URL = import.meta.env.VITE_MAP_TILE_URL || 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+const DARK_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    'carto-dark': {
+      type: 'raster',
+      tiles: ['https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png'],
+      tileSize: 256,
+    },
+  },
+  layers: [{ id: 'carto-dark-layer', type: 'raster', source: 'carto-dark' }],
+};
 
 export function BarberMapDirectory() {
   const mapContainer = useRef<HTMLDivElement>(null);
