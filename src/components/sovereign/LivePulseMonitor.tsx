@@ -22,7 +22,6 @@ const LivePulseMonitor = ({ refreshTrigger }: LivePulseMonitorProps) => {
       const response = await supabase.functions.invoke('sovereign-system-control', {
         body: { action: 'get_platform_stats' }
       });
-
       if (response.error) throw response.error;
       setStats(response.data);
     } catch (error) {
@@ -34,60 +33,41 @@ const LivePulseMonitor = ({ refreshTrigger }: LivePulseMonitorProps) => {
 
   useEffect(() => {
     fetchStats();
-    const interval = setInterval(fetchStats, 30000); // Refresh every 30 seconds
+    const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
   }, [refreshTrigger]);
 
   return (
-    <div className="bg-[#1a1a2e] border border-cyan-900/50 rounded-lg p-4">
+    <div className="bg-[#12121a] border border-white/[0.06] rounded-xl p-4">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Activity className="h-5 w-5 text-cyan-500 animate-pulse" />
-          <h3 className="text-lg font-bold text-cyan-400">LIVE PULSE</h3>
+          <div className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+          <h3 className="text-sm font-semibold text-white">Live Pulse</h3>
         </div>
         <Button
           variant="ghost"
           size="sm"
           onClick={fetchStats}
           disabled={loading}
-          className="text-gray-400 hover:text-white"
+          className="text-white/30 hover:text-white hover:bg-white/[0.04]"
         >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
         </Button>
       </div>
 
       <div className="grid grid-cols-4 gap-3">
-        <div className="bg-[#0f0f1a] p-3 rounded-lg border border-gray-800 text-center">
-          <div className="flex items-center justify-center gap-1 mb-1">
-            <Activity className="h-4 w-4 text-green-400" />
+        {[
+          { icon: Activity, label: 'Active Battles', value: stats.active_battles },
+          { icon: Vote, label: 'Votes (5min)', value: stats.recent_vote_activity },
+          { icon: Users, label: 'Active Streams', value: stats.active_streams },
+          { icon: Activity, label: 'Txns (1hr)', value: stats.transactions_last_hour },
+        ].map((item, i) => (
+          <div key={i} className="bg-[#0a0a0f] p-3 rounded-lg border border-white/[0.06] text-center">
+            <item.icon className="h-3.5 w-3.5 text-white/20 mx-auto mb-2" />
+            <div className="text-2xl font-semibold text-white">{item.value}</div>
+            <div className="text-[10px] text-white/30 uppercase tracking-wider mt-0.5">{item.label}</div>
           </div>
-          <div className="text-xl font-mono text-green-400">{stats.active_battles}</div>
-          <div className="text-xs text-gray-500">Active Battles</div>
-        </div>
-
-        <div className="bg-[#0f0f1a] p-3 rounded-lg border border-gray-800 text-center">
-          <div className="flex items-center justify-center gap-1 mb-1">
-            <Vote className="h-4 w-4 text-blue-400" />
-          </div>
-          <div className="text-xl font-mono text-blue-400">{stats.recent_vote_activity}</div>
-          <div className="text-xs text-gray-500">Votes (5min)</div>
-        </div>
-
-        <div className="bg-[#0f0f1a] p-3 rounded-lg border border-gray-800 text-center">
-          <div className="flex items-center justify-center gap-1 mb-1">
-            <Users className="h-4 w-4 text-yellow-400" />
-          </div>
-          <div className="text-xl font-mono text-yellow-400">{stats.active_streams}</div>
-          <div className="text-xs text-gray-500">Active Streams</div>
-        </div>
-
-        <div className="bg-[#0f0f1a] p-3 rounded-lg border border-gray-800 text-center">
-          <div className="flex items-center justify-center gap-1 mb-1">
-            <Activity className="h-4 w-4 text-purple-400" />
-          </div>
-          <div className="text-xl font-mono text-purple-400">{stats.transactions_last_hour}</div>
-          <div className="text-xs text-gray-500">Txns (1hr)</div>
-        </div>
+        ))}
       </div>
     </div>
   );

@@ -68,52 +68,58 @@ const KillSwitchPanel = ({ platformState, onRefresh }: KillSwitchPanelProps) => 
 
   return (
     <>
-      <div className="bg-[#1a1a2e] border border-red-900/50 rounded-lg p-4">
+      <div className="bg-[#12121a] border border-white/[0.06] rounded-xl p-4">
         <div className="flex items-center gap-2 mb-4">
-          <AlertTriangle className="h-5 w-5 text-red-500" />
-          <h3 className="text-lg font-bold text-red-400">KILL SWITCHES</h3>
+          <AlertTriangle className="h-4 w-4 text-orange-500" />
+          <h3 className="text-sm font-semibold text-white">Kill Switches</h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {/* Battles Kill Switch */}
-          <div className={`p-4 rounded-lg border ${battlesPaused ? 'bg-red-950/30 border-red-700' : 'bg-[#0f0f1a] border-gray-800'}`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-400">Battles</span>
-              <span className={`text-xs px-2 py-1 rounded ${battlesPaused ? 'bg-red-600 text-white' : 'bg-green-600 text-white'}`}>
-                {battlesPaused ? 'PAUSED' : 'ACTIVE'}
-              </span>
+          <div className="p-4 rounded-lg bg-[#0a0a0f] border border-white/[0.06]">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-white/40 uppercase tracking-wider">Battles</span>
+              <div className="flex items-center gap-1.5">
+                <div className={`h-1.5 w-1.5 rounded-full ${battlesPaused ? 'bg-red-400' : 'bg-green-500'}`} />
+                <span className={`text-[10px] ${battlesPaused ? 'text-red-400' : 'text-white/50'}`}>
+                  {battlesPaused ? 'PAUSED' : 'ACTIVE'}
+                </span>
+              </div>
             </div>
             <Button
-              variant={battlesPaused ? 'default' : 'destructive'}
+              variant="outline"
               size="sm"
-              className="w-full"
+              className="w-full border-white/10 text-white hover:bg-white/[0.04] bg-transparent"
               disabled={loading}
               onClick={() => openConfirmDialog(
                 battlesPaused ? 'resume_battles' : 'pause_battles',
                 battlesPaused ? 'Resume Battles' : 'Pause All Battles',
                 battlesPaused 
-                  ? 'This will allow new battles to start. Paused battles must be restarted manually.'
+                  ? 'This will allow new battles to start.'
                   : 'This will immediately pause ALL active battles. Type PAUSE to confirm.',
                 battlesPaused ? 'RESUME' : 'PAUSE'
               )}
             >
-              {battlesPaused ? <Play className="h-4 w-4 mr-2" /> : <Pause className="h-4 w-4 mr-2" />}
+              {battlesPaused ? <Play className="h-3 w-3 mr-2" /> : <Pause className="h-3 w-3 mr-2" />}
               {battlesPaused ? 'Resume' : 'Pause All'}
             </Button>
           </div>
 
           {/* Economy Kill Switch */}
-          <div className={`p-4 rounded-lg border ${economyFrozen ? 'bg-red-950/30 border-red-700' : 'bg-[#0f0f1a] border-gray-800'}`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-400">Economy</span>
-              <span className={`text-xs px-2 py-1 rounded ${economyFrozen ? 'bg-red-600 text-white' : 'bg-green-600 text-white'}`}>
-                {economyFrozen ? 'FROZEN' : 'ACTIVE'}
-              </span>
+          <div className="p-4 rounded-lg bg-[#0a0a0f] border border-white/[0.06]">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-white/40 uppercase tracking-wider">Economy</span>
+              <div className="flex items-center gap-1.5">
+                <div className={`h-1.5 w-1.5 rounded-full ${economyFrozen ? 'bg-red-400' : 'bg-green-500'}`} />
+                <span className={`text-[10px] ${economyFrozen ? 'text-red-400' : 'text-white/50'}`}>
+                  {economyFrozen ? 'FROZEN' : 'ACTIVE'}
+                </span>
+              </div>
             </div>
             <Button
-              variant={economyFrozen ? 'default' : 'destructive'}
+              variant="outline"
               size="sm"
-              className="w-full"
+              className="w-full border-white/10 text-white hover:bg-white/[0.04] bg-transparent"
               disabled={loading}
               onClick={() => openConfirmDialog(
                 economyFrozen ? 'unfreeze_economy' : 'freeze_economy',
@@ -124,34 +130,37 @@ const KillSwitchPanel = ({ platformState, onRefresh }: KillSwitchPanelProps) => 
                 economyFrozen ? 'UNFREEZE' : 'FREEZE'
               )}
             >
-              {economyFrozen ? <Unlock className="h-4 w-4 mr-2" /> : <Lock className="h-4 w-4 mr-2" />}
+              {economyFrozen ? <Unlock className="h-3 w-3 mr-2" /> : <Lock className="h-3 w-3 mr-2" />}
               {economyFrozen ? 'Unfreeze' : 'Freeze'}
             </Button>
           </div>
 
           {/* Maintenance Mode */}
-          <div className={`p-4 rounded-lg border ${maintenanceMode ? 'bg-orange-950/30 border-orange-700' : 'bg-[#0f0f1a] border-gray-800'}`}>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-gray-400">Maintenance</span>
-              <span className={`text-xs px-2 py-1 rounded ${maintenanceMode ? 'bg-orange-600 text-white' : 'bg-green-600 text-white'}`}>
-                {maintenanceMode ? 'ON' : 'OFF'}
-              </span>
+          <div className="p-4 rounded-lg bg-[#0a0a0f] border border-white/[0.06]">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-white/40 uppercase tracking-wider">Maintenance</span>
+              <div className="flex items-center gap-1.5">
+                <div className={`h-1.5 w-1.5 rounded-full ${maintenanceMode ? 'bg-red-400' : 'bg-green-500'}`} />
+                <span className={`text-[10px] ${maintenanceMode ? 'text-red-400' : 'text-white/50'}`}>
+                  {maintenanceMode ? 'ON' : 'OFF'}
+                </span>
+              </div>
             </div>
             <Button
-              variant={maintenanceMode ? 'default' : 'destructive'}
+              variant="outline"
               size="sm"
-              className="w-full"
+              className="w-full border-white/10 text-white hover:bg-white/[0.04] bg-transparent"
               disabled={loading}
               onClick={() => openConfirmDialog(
                 maintenanceMode ? 'exit_maintenance' : 'maintenance_mode',
                 maintenanceMode ? 'Exit Maintenance' : 'Enable Maintenance Mode',
                 maintenanceMode 
                   ? 'This will restore full platform operations.'
-                  : 'This will freeze ALL operations (battles + economy). Type MAINTENANCE to confirm.',
+                  : 'This will freeze ALL operations. Type MAINTENANCE to confirm.',
                 maintenanceMode ? 'EXIT' : 'MAINTENANCE'
               )}
             >
-              <Wrench className="h-4 w-4 mr-2" />
+              <Wrench className="h-3 w-3 mr-2" />
               {maintenanceMode ? 'Exit' : 'Enable'}
             </Button>
           </div>
@@ -160,10 +169,10 @@ const KillSwitchPanel = ({ platformState, onRefresh }: KillSwitchPanelProps) => 
 
       {/* Confirmation Dialog */}
       <AlertDialog open={confirmDialog?.open} onOpenChange={() => setConfirmDialog(null)}>
-        <AlertDialogContent className="bg-[#1a1a2e] border-red-900/50">
+        <AlertDialogContent className="bg-[#12121a] border-white/[0.06]">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-red-400">{confirmDialog?.title}</AlertDialogTitle>
-            <AlertDialogDescription className="text-gray-400">
+            <AlertDialogTitle className="text-white">{confirmDialog?.title}</AlertDialogTitle>
+            <AlertDialogDescription className="text-white/40">
               {confirmDialog?.description}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -172,13 +181,13 @@ const KillSwitchPanel = ({ platformState, onRefresh }: KillSwitchPanelProps) => 
               placeholder={`Type ${confirmDialog?.confirmText} to confirm`}
               value={confirmInput}
               onChange={(e) => setConfirmInput(e.target.value.toUpperCase())}
-              className="bg-[#0f0f1a] border-gray-700 text-white"
+              className="bg-[#0a0a0f] border-white/10 text-white"
             />
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-gray-800 text-gray-300 hover:bg-gray-700">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="bg-transparent border-white/10 text-white/60 hover:bg-white/[0.04]">Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-500 hover:bg-red-600 text-white"
               disabled={confirmInput !== confirmDialog?.confirmText || loading}
               onClick={() => confirmDialog && executeAction(confirmDialog.action)}
             >
