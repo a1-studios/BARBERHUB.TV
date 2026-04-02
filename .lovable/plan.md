@@ -1,36 +1,62 @@
 
 
-# Show All Available Videos Randomly on the Landing Page
+# E-Commerce Product Shelf + Affiliate Toggle
 
-## Problem
-The `DynamicBattleHero` component (the main video player on the landing page when no battle is active) only pulls from one source — `public_barber_profiles.featured_video_id` — with a hard limit of 20. This means creator content, portfolio creations, and battle submissions are completely ignored, and users see the same small set of videos repeatedly.
+## Overview
+Add a horizontal product carousel below the video player on the landing page, showing 3 hardcoded Barber-Hub Shopify products. Build a backend `affiliate_products` table and a Sovereign HQ toggle to control whether affiliate products also render.
 
-## Solution
-Expand the fallback video pool in `DynamicBattleHero` to pull from **all four video sources** (the same ones the Watch Feed uses), remove the artificial limit, shuffle them together, and rotate through the entire pool.
+## Database Changes (1 migration)
 
-## Changes
+**New table: `affiliate_products`**
+- `id` UUID PK
+- `title` TEXT NOT NULL
+- `price_cents` INTEGER NOT NULL
+- `image_url` TEXT NOT NULL
+- `external_link` TEXT NOT NULL
+- `product_type` TEXT NOT NULL DEFAULT `'affiliate'` (values: `'proprietary'`, `'affiliate'`)
+- `is_active` BOOLEAN DEFAULT true
+- `display_order` INTEGER DEFAULT 0
+- `created_at` / `updated_at` TIMESTAMPTZ
 
-### File: `src/components/DynamicBattleHero.tsx`
+**New row in `platform_state`** (via insert tool):
+- key: `affiliate_network_enabled`, value: `false`
 
-**1. Replace the single `fallbackHeroVideos` query with four parallel queries:**
-- `public_barber_profiles` — featured videos (remove `.limit(20)`, use `.limit(100)`)
-- `creator_content` — published creator videos
-- `creations` — portfolio upload videos
-- `battle_submissions` — battle submission videos
+RLS: Public SELECT for active products. INSERT/UPDATE/DELETE restricted to sovereign role via `has_role()`.
 
-**2. Merge and shuffle all sources into one pool:**
-- Combine all four arrays into a unified list with a common shape (`{ id, videoUrl, name, avatarUrl, countryCode }`)
-- Apply Fisher-Yates shuffle once on mount (via `useMemo`)
-- Remove the `.limit(20)` cap — use a generous limit (100 per source) so all current content is included
+## Frontend Changes
 
-**3. Keep existing rotation logic unchanged:**
-- The 8-second rotation timer and crossfade animation stay the same
-- The `fallbackIdx` counter rotates through the now-larger shuffled pool
-- Tapping still navigates to the Watch Feed with the video URL
+### 1. New component: `src/components/ProductShelf.tsx`
+- Horizontal scrollable container (snap scroll, no embla needed -- simple `overflow-x-auto` with `snap-x`)
+- 3 hardcoded proprietary product cards (Cape, Hat, Razor) with placeholder images, prices, and Shopify checkout links
+- Fetches `platform_state` key `affiliate_network_enabled`; if ON, also fetches `affiliate_products` where `is_active = true` and `product_type = 'affiliate'`
+- Dark charcoal cards (`bg-[#1a1a2e]`), brand orange `bg-orange-500` "Buy Now" buttons
+- Each card: product image, title, price, CTA button linking to external Shopify/affiliate URL
+- Compact height (~140px cards) to avoid pushing content
 
-### Summary of key numbers changing:
-- **Before**: ~20 videos from 1 source
-- **After**: Up to ~400 videos from 4 sources (in practice, all available content)
+### 2. Insert into `FanArenaView.tsx`
+- Place `<ProductShelf />` immediately after `<DynamicBattleHero />`
 
-No other files need changes — this only affects the hero section on the landing page.
+### 3. Insert into `Index.tsx` (barber view)
+- Place `<ProductShelf />` immediately after `<DynamicBattleHero />`
+
+### 4. New Sovereign panel: `src/components/sovereign/AffiliateControlPanel.tsx`
+- Toggle switch for `affiliate_network_enabled` platform_state key
+- Mini CRUD list for affiliate products (add/edit/remove) with fields: title, price, image URL, external link
+- Uses `sovereign-system-control` edge function pattern for the toggle
+- Direct Supabase queries for product CRUD (sovereign-only RLS)
+
+### 5. Add to `SovereignHQ.tsx`
+- Import and render `<AffiliateControlPanel />` in the main grid
+
+## File Summary
+
+| Action | File | Description |
+|--------|------|-------------|
+| Migration | SQL | Create `affiliate_products` table + RLS policies |
+| Insert | `platform_state` | Add `affiliate_network_enabled = false` row |
+| Create | `src/components/ProductShelf.tsx` | Horizontal product carousel component |
+| Create | `src/components/sovereign/AffiliateControlPanel.tsx` | Sovereign toggle + affiliate product CRUD |
+| Edit | `src/components/fan/FanArenaView.tsx` | Add ProductShelf after DynamicBattleHero |
+| Edit | `src/pages/Index.tsx` | Add ProductShelf after DynamicBattleHero (barber view) |
+| Edit | `src/pages/SovereignHQ.tsx` | Add AffiliateControlPanel |
 
