@@ -76,7 +76,7 @@ const KillSwitchPanel = ({ platformState, onRefresh }: KillSwitchPanelProps) => 
           <h3 className="text-sm font-semibold text-white">Kill Switches</h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Battles Kill Switch */}
           <div className="p-4 rounded-lg bg-[#0a0a0f] border border-white/[0.06]">
             <div className="flex items-center justify-between mb-3">
