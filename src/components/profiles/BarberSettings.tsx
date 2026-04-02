@@ -32,7 +32,9 @@ import {
   MapPin,
   Loader2,
   Save,
-  Navigation
+  Navigation,
+  RefreshCw,
+  CheckCircle
 } from 'lucide-react';
 
 interface BarberSettingsProps {
