@@ -21,7 +21,17 @@ interface NearbyBarber {
   distance_miles: number;
 }
 
-const TILE_URL = import.meta.env.VITE_MAP_TILE_URL || 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+const DARK_STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    'carto-dark': {
+      type: 'raster',
+      tiles: ['https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png'],
+      tileSize: 256,
+    },
+  },
+  layers: [{ id: 'carto-dark-layer', type: 'raster', source: 'carto-dark' }],
+};
 
 export function BarberMapDirectory() {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -41,8 +51,8 @@ export function BarberMapDirectory() {
 
     const map = new maplibregl.Map({
       container: mapContainer.current,
-      style: TILE_URL,
-      center: [-98.5795, 39.8283], // Center of US
+      style: DARK_STYLE,
+      center: [-98.5795, 39.8283],
       zoom: 3,
     });
 
@@ -157,18 +167,24 @@ export function BarberMapDirectory() {
     if (!zipInput.trim()) return;
     setLoading(true);
     try {
-      // Use free geocoding API
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        toast.error('Google Maps API key is not configured');
+        setLoading(false);
+        return;
+      }
       const res = await fetch(
-        `https://api.bigdatacloud.net/data/zipcode-to-location?zipCode=${encodeURIComponent(zipInput)}&countryCode=US`
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(zipInput)}&key=${apiKey}`
       );
       const data = await res.json();
-      if (data.latitude && data.longitude) {
-        const coords = { lat: data.latitude, lng: data.longitude };
+      if (data.status === 'OK' && data.results?.length > 0) {
+        const { lat, lng } = data.results[0].geometry.location;
+        const coords = { lat, lng };
         setUserCoords(coords);
-        mapRef.current?.flyTo({ center: [coords.lng, coords.lat], zoom: 10 });
-        await searchNearby(coords.lat, coords.lng);
+        mapRef.current?.flyTo({ center: [lng, lat], zoom: 12 });
+        await searchNearby(lat, lng);
       } else {
-        toast.error('Could not find that zip code');
+        toast.error('Could not find that location');
         setLoading(false);
       }
     } catch {
