@@ -20,6 +20,7 @@ interface KillSwitchPanelProps {
     battles_paused?: { value: string };
     economy_frozen?: { value: string };
     maintenance_mode?: { value: string };
+    enforce_tiers?: { value: string };
   };
   onRefresh: () => void;
 }
