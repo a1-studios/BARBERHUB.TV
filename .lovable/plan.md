@@ -1,62 +1,34 @@
 
 
-# E-Commerce Product Shelf + Affiliate Toggle
+# Compact Product Shelf — Single Row, Icon-Sized
 
-## Overview
-Add a horizontal product carousel below the video player on the landing page, showing 3 hardcoded Barber-Hub Shopify products. Build a backend `affiliate_products` table and a Sovereign HQ toggle to control whether affiliate products also render.
+## Problem
+The current product shelf cards are too large (140px wide, 100px image height + text + button). They overflow and require horizontal scrolling. The user wants all 3 products visible in a single row, much smaller — icon-sized images with a clean, official look.
 
-## Database Changes (1 migration)
+## Changes
 
-**New table: `affiliate_products`**
-- `id` UUID PK
-- `title` TEXT NOT NULL
-- `price_cents` INTEGER NOT NULL
-- `image_url` TEXT NOT NULL
-- `external_link` TEXT NOT NULL
-- `product_type` TEXT NOT NULL DEFAULT `'affiliate'` (values: `'proprietary'`, `'affiliate'`)
-- `is_active` BOOLEAN DEFAULT true
-- `display_order` INTEGER DEFAULT 0
-- `created_at` / `updated_at` TIMESTAMPTZ
+### File: `src/components/ProductShelf.tsx`
 
-**New row in `platform_state`** (via insert tool):
-- key: `affiliate_network_enabled`, value: `false`
+Redesign the layout to be a compact, non-scrollable single row:
 
-RLS: Public SELECT for active products. INSERT/UPDATE/DELETE restricted to sovereign role via `has_role()`.
+1. **Remove horizontal scroll** — replace `overflow-x-auto snap-x` with a simple `flex` row that fits all 3 items equally across the viewport
+2. **Shrink product cards dramatically** — each card becomes a small pill/tile:
+   - Thumbnail image: ~40x40px rounded square (icon-sized)
+   - Product name in tiny text beside or below the icon
+   - Price as small muted text
+   - Small "Shop" link or tap the whole card
+3. **Remove the large "Buy Now" button** — the entire compact card is tappable as a link
+4. **Layout**: 3 equal-width columns in a single row using `grid grid-cols-3 gap-2`, each item centered
+5. **Keep the "Official Gear" header** but make it smaller (text-xs)
+6. **Total section height**: ~70-80px max including header
 
-## Frontend Changes
+Visual structure per item:
+```text
+┌──────────────┐
+│  [40px img]  │
+│  Cape  $39   │
+└──────────────┘
+```
 
-### 1. New component: `src/components/ProductShelf.tsx`
-- Horizontal scrollable container (snap scroll, no embla needed -- simple `overflow-x-auto` with `snap-x`)
-- 3 hardcoded proprietary product cards (Cape, Hat, Razor) with placeholder images, prices, and Shopify checkout links
-- Fetches `platform_state` key `affiliate_network_enabled`; if ON, also fetches `affiliate_products` where `is_active = true` and `product_type = 'affiliate'`
-- Dark charcoal cards (`bg-[#1a1a2e]`), brand orange `bg-orange-500` "Buy Now" buttons
-- Each card: product image, title, price, CTA button linking to external Shopify/affiliate URL
-- Compact height (~140px cards) to avoid pushing content
-
-### 2. Insert into `FanArenaView.tsx`
-- Place `<ProductShelf />` immediately after `<DynamicBattleHero />`
-
-### 3. Insert into `Index.tsx` (barber view)
-- Place `<ProductShelf />` immediately after `<DynamicBattleHero />`
-
-### 4. New Sovereign panel: `src/components/sovereign/AffiliateControlPanel.tsx`
-- Toggle switch for `affiliate_network_enabled` platform_state key
-- Mini CRUD list for affiliate products (add/edit/remove) with fields: title, price, image URL, external link
-- Uses `sovereign-system-control` edge function pattern for the toggle
-- Direct Supabase queries for product CRUD (sovereign-only RLS)
-
-### 5. Add to `SovereignHQ.tsx`
-- Import and render `<AffiliateControlPanel />` in the main grid
-
-## File Summary
-
-| Action | File | Description |
-|--------|------|-------------|
-| Migration | SQL | Create `affiliate_products` table + RLS policies |
-| Insert | `platform_state` | Add `affiliate_network_enabled = false` row |
-| Create | `src/components/ProductShelf.tsx` | Horizontal product carousel component |
-| Create | `src/components/sovereign/AffiliateControlPanel.tsx` | Sovereign toggle + affiliate product CRUD |
-| Edit | `src/components/fan/FanArenaView.tsx` | Add ProductShelf after DynamicBattleHero |
-| Edit | `src/pages/Index.tsx` | Add ProductShelf after DynamicBattleHero (barber view) |
-| Edit | `src/pages/SovereignHQ.tsx` | Add AffiliateControlPanel |
+No other files change — only `ProductShelf.tsx`.
 
