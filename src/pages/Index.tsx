@@ -25,6 +25,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { FanIntroSequence } from "@/components/fan/FanIntroSequence";
 import { FanArenaView } from "@/components/fan/FanArenaView";
 import { ArenaGateModal } from "@/components/auth/ArenaGateModal";
+import { ProductShelf } from "@/components/ProductShelf";
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -187,6 +188,9 @@ const Index = () => {
               
               {/* Head-to-Head Battle Hero */}
               <DynamicBattleHero />
+
+              {/* Official Gear Shelf */}
+              <ProductShelf />
               
               {/* Immersive Faction Banners - Full Screen Selection */}
               <ImmersiveFactionBanners />

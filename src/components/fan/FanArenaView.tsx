@@ -6,6 +6,7 @@ import { ArenaTicker } from '@/components/factions/ArenaTicker';
 import { useCategoryPrizePools } from '@/hooks/useCategoryPrizePools';
 import { LiveNowBanner } from '@/components/battles/LiveNowBanner';
 import { LiveBarberStreams } from '@/components/battles/LiveBarberStreams';
+import { ProductShelf } from '@/components/ProductShelf';
 
 export const FanArenaView = () => {
   const navigate = useNavigate();
@@ -15,6 +16,9 @@ export const FanArenaView = () => {
     <main className="space-y-4 pb-24">
       {/* Featured Battle Hero */}
       <DynamicBattleHero />
+
+      {/* Official Gear Shelf */}
+      <ProductShelf />
 
       {/* Live Now — followed barber avatars */}
       <LiveNowBanner />
