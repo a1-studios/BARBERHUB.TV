@@ -7,7 +7,7 @@ import Footer from '@/components/Footer';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { Search, Scissors, Crown, Sparkles, Star, Diamond, Map, List } from 'lucide-react';
+import { Search, Scissors, Crown, Sparkles, Star, Diamond, Map as MapIcon, List } from 'lucide-react';
 import { BarberProfileCard } from '@/components/barber/BarberProfileCard';
 import { BackButton } from '@/components/ui/BackButton';
 import { QuickBookBanner } from '@/components/fan/QuickBookBanner';
