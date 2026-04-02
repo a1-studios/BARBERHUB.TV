@@ -188,6 +188,9 @@ const Index = () => {
               
               {/* Head-to-Head Battle Hero */}
               <DynamicBattleHero />
+
+              {/* Official Gear Shelf */}
+              <ProductShelf />
               
               {/* Immersive Faction Banners - Full Screen Selection */}
               <ImmersiveFactionBanners />
