@@ -155,6 +155,16 @@ export default function BarbersDirectory() {
         {/* Quick Book Banner */}
         <QuickBookBanner />
 
+        {/* Map View */}
+        {viewMode === 'map' && (
+          <div className="mb-8">
+            <BarberMapDirectory />
+          </div>
+        )}
+
+        {/* Filters — only in list mode */}
+        {viewMode === 'list' && (
+        <>
         {/* Filters */}
         <Card className="mb-8">
           <CardContent className="p-6">
