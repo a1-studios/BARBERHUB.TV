@@ -3948,21 +3948,45 @@ export type Database = {
       public_user_profiles: {
         Row: {
           avatar_url: string | null
+          bio: string | null
+          country_code: string | null
+          created_at: string | null
+          creator_level: string | null
           display_name: string | null
+          favorite_creator_id: string | null
+          is_creator: boolean | null
+          is_verified_by_competition: boolean | null
+          sub_category: string | null
           user_id: string | null
           user_type: string | null
           username: string | null
         }
         Insert: {
           avatar_url?: string | null
+          bio?: string | null
+          country_code?: string | null
+          created_at?: string | null
+          creator_level?: string | null
           display_name?: string | null
+          favorite_creator_id?: string | null
+          is_creator?: boolean | null
+          is_verified_by_competition?: boolean | null
+          sub_category?: string | null
           user_id?: string | null
           user_type?: string | null
           username?: string | null
         }
         Update: {
           avatar_url?: string | null
+          bio?: string | null
+          country_code?: string | null
+          created_at?: string | null
+          creator_level?: string | null
           display_name?: string | null
+          favorite_creator_id?: string | null
+          is_creator?: boolean | null
+          is_verified_by_competition?: boolean | null
+          sub_category?: string | null
           user_id?: string | null
           user_type?: string | null
           username?: string | null
