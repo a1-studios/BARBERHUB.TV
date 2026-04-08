@@ -1,0 +1,1 @@
+ALTER VIEW public.public_user_profiles SET (security_invoker = on);
