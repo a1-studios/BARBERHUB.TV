@@ -26,7 +26,7 @@ export function useQuickPlayConfig() {
         .in('key', ['quick_play_enabled', 'quick_play_feed_publish']);
       if (error) throw error;
       const map = (data || []).reduce<Record<string, string>>((acc, row) => {
-        acc[row.key] = row.value;
+        acc[row.key] = String(row.value ?? '');
         return acc;
       }, {});
       return map;

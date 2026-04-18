@@ -9,7 +9,7 @@ const corsHeaders = {
 const SOVEREIGN_EMAIL = Deno.env.get('SOVEREIGN_EMAIL') || 'a1studios.film@gmail.com';
 
 interface SystemRequest {
-  action: 'get_status' | 'pause_battles' | 'resume_battles' | 'freeze_economy' | 'unfreeze_economy' | 'maintenance_mode' | 'exit_maintenance' | 'get_audit_log' | 'get_platform_stats' | 'enforce_tiers_on' | 'enforce_tiers_off' | 'tiers_enable' | 'tiers_disable' | 'challenge_stakes_enable' | 'challenge_stakes_disable' | 'challenge_set_min_stake';
+  action: 'get_status' | 'pause_battles' | 'resume_battles' | 'freeze_economy' | 'unfreeze_economy' | 'maintenance_mode' | 'exit_maintenance' | 'get_audit_log' | 'get_platform_stats' | 'enforce_tiers_on' | 'enforce_tiers_off' | 'tiers_enable' | 'tiers_disable' | 'challenge_stakes_enable' | 'challenge_stakes_disable' | 'challenge_set_min_stake' | 'quick_play_enable' | 'quick_play_disable' | 'quick_play_feed_enable' | 'quick_play_feed_disable';
   reason?: string;
   notes?: string;
   limit?: number;
@@ -332,6 +332,50 @@ serve(async (req) => {
 
         afterState = { challenge_stakes_enabled: false };
         result = { success: true, message: 'Challenge stakes DISABLED. Barbers can challenge each other for free; viewer donations build the pot.' };
+        break;
+      }
+
+      case 'quick_play_enable': {
+        beforeState = { quick_play_enabled: false };
+        severity = 'normal';
+        await supabase
+          .from('platform_state')
+          .upsert({ key: 'quick_play_enabled', value: 'true', updated_at: new Date().toISOString(), updated_by: user.id }, { onConflict: 'key' });
+        afterState = { quick_play_enabled: true };
+        result = { success: true, message: 'Quick Play ENABLED. Barbers can challenge each other into unranked matches.' };
+        break;
+      }
+
+      case 'quick_play_disable': {
+        beforeState = { quick_play_enabled: true };
+        severity = 'critical';
+        await supabase
+          .from('platform_state')
+          .upsert({ key: 'quick_play_enabled', value: 'false', updated_at: new Date().toISOString(), updated_by: user.id }, { onConflict: 'key' });
+        afterState = { quick_play_enabled: false };
+        result = { success: true, message: 'Quick Play DISABLED. Challenge entry points hidden; in-flight challenges expire normally.' };
+        break;
+      }
+
+      case 'quick_play_feed_enable': {
+        beforeState = { quick_play_feed_publish: false };
+        severity = 'normal';
+        await supabase
+          .from('platform_state')
+          .upsert({ key: 'quick_play_feed_publish', value: 'true', updated_at: new Date().toISOString(), updated_by: user.id }, { onConflict: 'key' });
+        afterState = { quick_play_feed_publish: true };
+        result = { success: true, message: 'Quick Play matches will now be published to the watch feed.' };
+        break;
+      }
+
+      case 'quick_play_feed_disable': {
+        beforeState = { quick_play_feed_publish: true };
+        severity = 'normal';
+        await supabase
+          .from('platform_state')
+          .upsert({ key: 'quick_play_feed_publish', value: 'false', updated_at: new Date().toISOString(), updated_by: user.id }, { onConflict: 'key' });
+        afterState = { quick_play_feed_publish: false };
+        result = { success: true, message: 'Quick Play matches will NOT be published to the watch feed.' };
         break;
       }
 

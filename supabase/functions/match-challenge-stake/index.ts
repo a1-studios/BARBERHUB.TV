@@ -40,6 +40,20 @@ serve(async (req) => {
 
     console.log(`Matching challenge: ${challenge_id} by ${user.id}`);
 
+    // Quick Play master switch — reject if Sovereign disabled it.
+    const { data: qpRow } = await supabase
+      .from('platform_state')
+      .select('value')
+      .eq('key', 'quick_play_enabled')
+      .maybeSingle();
+    const quickPlayEnabled = (String(qpRow?.value ?? 'true')) !== 'false';
+    if (!quickPlayEnabled) {
+      return new Response(
+        JSON.stringify({ error: 'Quick Play is currently disabled by the platform.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      );
+    }
+
     // Get challenge first to determine if a stake is required
     const { data: challenge, error: challengeError } = await supabase
       .from('open_challenges')
