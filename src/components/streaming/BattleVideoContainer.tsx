@@ -323,11 +323,11 @@ export const BattleVideoContainer = ({
     );
   }
 
-  // Split layout - side by side 50/50
+  // Split layout - vertical stack on mobile, side-by-side 50/50 on desktop
   return (
     <div className={cn("relative w-full h-full bg-black overflow-hidden", className)}>
-      <div className="flex h-full">
-        <div id="local-video-container" className="relative w-1/2 border-r border-white/10">
+      <div className="flex flex-col md:flex-row h-full">
+        <div id="local-video-container" className="relative w-full h-1/2 md:w-1/2 md:h-full border-b md:border-b-0 md:border-r border-white/10">
           {localTrack ? (
             <VideoAttach track={localTrack} className="w-full h-full" muted />
           ) : (
@@ -367,7 +367,7 @@ export const BattleVideoContainer = ({
           </div>
         </div>
 
-        <div id="remote-video-container" className="relative w-1/2">
+        <div id="remote-video-container" className="relative w-full h-1/2 md:w-1/2 md:h-full">
           {hasOpponent && remoteTrack ? (
             <VideoAttach track={remoteTrack} className="w-full h-full" />
           ) : (
