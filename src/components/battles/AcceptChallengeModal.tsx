@@ -43,6 +43,7 @@ export const AcceptChallengeModal = ({ challenge, isOpen, onClose }: AcceptChall
   const [isDeclining, setIsDeclining] = useState(false);
 
   const handleAccept = async () => {
+    console.log('[AcceptChallengeModal] Accept clicked', { challengeId: challenge.id, hasEnoughBalance, isSilverPlus, isExpired });
     if (!hasEnoughBalance || !isSilverPlus || isExpired) return;
 
     setIsSubmitting(true);

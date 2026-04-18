@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
-import { AcceptChallengeModal } from '@/components/battles/AcceptChallengeModal';
 import { supabase } from '@/integrations/supabase/client';
 
 const notificationIconMap: Record<string, React.ReactNode> = {
@@ -32,13 +31,13 @@ function getIcon(type: string) {
 interface NotificationPanelProps {
   embedded?: boolean;
   onClose?: () => void;
+  onOpenAcceptModal?: (challenge: any) => void;
 }
 
-export function NotificationPanel({ embedded, onClose }: NotificationPanelProps) {
+export function NotificationPanel({ embedded, onClose, onOpenAcceptModal }: NotificationPanelProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const [acceptChallenge, setAcceptChallenge] = useState<any | null>(null);
   const {
     notifications,
     unreadCount,
@@ -81,7 +80,7 @@ export function NotificationPanel({ embedded, onClose }: NotificationPanelProps)
         .eq('id', n.data.challenge_id)
         .maybeSingle();
       if (ch) {
-        setAcceptChallenge(ch);
+        onOpenAcceptModal?.(ch);
         closeSelf();
         return;
       }
@@ -162,22 +161,9 @@ export function NotificationPanel({ embedded, onClose }: NotificationPanelProps)
     </>
   );
 
-  const challengeModal = acceptChallenge ? (
-    <AcceptChallengeModal
-      challenge={acceptChallenge}
-      isOpen={!!acceptChallenge}
-      onClose={() => setAcceptChallenge(null)}
-    />
-  ) : null;
-
   // Embedded mode: just render the list directly
   if (embedded) {
-    return (
-      <>
-        {renderList()}
-        {challengeModal}
-      </>
-    );
+    return <>{renderList()}</>;
   }
 
   // Standalone mode (fallback, not used in current header)
@@ -201,7 +187,6 @@ export function NotificationPanel({ embedded, onClose }: NotificationPanelProps)
           {renderList()}
         </div>
       )}
-      {challengeModal}
     </div>
   );
 }

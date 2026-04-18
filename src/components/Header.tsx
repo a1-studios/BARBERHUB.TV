@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useNotifications } from '@/hooks/useNotifications';
 import { NotificationPanel } from './NotificationPanel';
+import { AcceptChallengeModal } from './battles/AcceptChallengeModal';
 
 interface QuickAction {
   id: string;
@@ -37,6 +38,7 @@ const Header = () => {
   const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
   const { unreadCount } = useNotifications();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [acceptChallenge, setAcceptChallenge] = useState<any | null>(null);
 
   // Allow toasts (e.g. challenge_received) to programmatically open the notification panel
   useEffect(() => {
@@ -263,7 +265,11 @@ const Header = () => {
                         >
                           ← Back to Wallet
                         </button>
-                        <NotificationPanel embedded onClose={() => { setBbDropdownOpen(false); setShowNotifications(false); }} />
+                        <NotificationPanel
+                          embedded
+                          onClose={() => { setBbDropdownOpen(false); setShowNotifications(false); }}
+                          onOpenAcceptModal={(ch) => setAcceptChallenge(ch)}
+                        />
                       </div>
                     </div>
                   ) : (
@@ -327,6 +333,15 @@ const Header = () => {
         isOpen={showAddFundsModal} 
         onClose={() => setShowAddFundsModal(false)} 
       />
+
+      {/* Accept Challenge Modal — lifted out of dropdown so it survives dropdown unmount */}
+      {acceptChallenge && (
+        <AcceptChallengeModal
+          challenge={acceptChallenge}
+          isOpen={!!acceptChallenge}
+          onClose={() => setAcceptChallenge(null)}
+        />
+      )}
     </header>
   );
 };
