@@ -1,98 +1,95 @@
 
 
-# Audit Findings & Master Tier Toggle Plan
+# Challenge Stake Toggle — Make Stakes Optional with Sovereign Override
 
-## Audit Results
+## Goal
+Remove the mandatory 100 BB stake from barber-vs-barber challenges. Barbers can challenge each other freely; viewers can still donate into a winner-takes-all bucket. Add a Sovereign HQ switch to re-enable stakes and configure any minimum amount.
 
-**Defined tiers** (in `barber_subscription_tiers` DB table + `useSubscriptionLimits.tsx`):
-- `free` (implicit fallback, 2 battles/mo)
-- `bronze` — Bronze Creator, 1000¢/mo, 4 battles
-- `silver` — Silver Master, 2500¢/mo, 8 battles
-- `gold` — Gold Elite, 5000¢/mo, 16 battles
-- `diamond` — referenced in code (TIER_LIMITS, BarbersDirectory filter, TierRing) but **NOT in DB** (orphaned tier — exists in UI only)
+## Architecture
 
-**Existing tier-related toggle**: `platform_state.enforce_tiers` (currently `false`) — only restricts map/booking visibility to Silver+. There is **no master ON/OFF for the entire tier system**.
+### New Sovereign-controlled platform_state keys
+- `challenge_stakes_enabled` — `'false'` (default after this change). When `'true'`, stakes are required again.
+- `challenge_min_stake_bb` — `'100'` (default). Configurable minimum when stakes are re-enabled.
 
-**Tier-coupled UI surfaces** (need conditional gating):
-- `BarberSubscriptionTiers.tsx` — pricing cards
-- `TierRing.tsx` / `AvatarCrest.tsx` — visual tier rings around avatars
-- `BarberPublicProfile.tsx` — tier badges
-- `BarbersDirectory.tsx` — tier filter dropdown + tier-priority sort
-- `BattleCard.tsx` — tier rings on contenders
-- `MyBattlesSection.tsx`, `BarberDashboard.tsx`, `UpgradePrompt.tsx` — upgrade prompts
-- `useSubscriptionLimits.tsx` — battle quota gating
-- `useStreamingPermissions.tsx` — streaming gate
-- `ChallengeFeed.tsx` — Silver+ challenge gate
-- `BarberMapDirectory.tsx` — tier-styled pins
-- `purchase-product-bb` edge function — tier-gated products
+### Data model — already supports the new behavior
+`open_challenges` already has `donations_total` and `pot_total`. When stakes are off:
+- `stake_amount = 0`
+- `pot_total` starts at `0` and grows purely from viewer donations (via existing `donate-to-battle` flow)
+- Winner takes the donated pot minus 5% (existing `auto-close-voting` / `distribute-pot` logic already handles `pot_total` regardless of source)
 
-## Implementation Plan
+### Frontend changes (read `useChallengeStakeConfig` hook)
 
-### 1. New platform_state key — `tiers_enabled`
-Migration adds row `('tiers_enabled', 'true', ...)` to `platform_state` (default ON for backward compatibility).
-
-### 2. Edge function — extend `sovereign-system-control`
-Add two actions: `tiers_enable` / `tiers_disable` that flip `tiers_enabled` and write to `sovereign_audit_log`. Mirror the existing `enforce_tiers_on/off` pattern.
-
-### 3. New hook — `useTiersEnabled()`
-Wraps `usePlatformState('tiers_enabled')` + subscribes to Supabase Realtime on `platform_state` table for the `tiers_enabled` row. On change, invalidates the query so all consumers re-render instantly across active sessions.
+**New hook** `src/hooks/useChallengeStakeConfig.tsx` — reads both `platform_state` keys with realtime sync (mirrors `useTiersEnabled` pattern):
 ```ts
-const { enabled, loading } = useTiersEnabled(); // boolean, defaults true
+{ stakesEnabled: boolean, minStake: number, loading: boolean }
 ```
 
-### 4. Wrap tier-specific UI
-Add `if (!tiersEnabled) return null;` (or fallback "Standard" label) in:
-- `BarberSubscriptionTiers` → render "Tiers Coming Soon" card
-- `TierRing` → render children without tier ring/glow
-- `BarbersDirectory` → hide tier filter dropdown, skip tier-priority sort
-- `BarberMapDirectory` → uniform pin style (no tier color)
-- `BarberPublicProfile` → hide tier badge
-- `BattleCard` → plain avatar (no tier ring)
-- `UpgradePrompt`, `MyBattlesSection` upgrade CTAs → return null
-- `ChallengeFeed` → bypass Silver+ gate when disabled
-- `useSubscriptionLimits` → return `isUnlimited: true` when disabled
-- `useStreamingPermissions` → grant `canStream: true` when disabled
+**`ChallengeModal.tsx` (Direct Challenge)**
+- When `stakesEnabled === false`: hide the stake slider + balance row entirely. Replace CTA with `⚔️ Challenge {Name}` (no BB amount). Submit with `stake_amount: 0`.
+- When `stakesEnabled === true`: show slider with `min={minStake}` (configurable, not hardcoded 100).
 
-### 5. Server-side enforcement (security)
-Edge functions (`subscribe-with-bb`, `purchase-product-bb`) check `platform_state.tiers_enabled` first — if `false`, return early "Tiers disabled" so the API can't be hit even if UI is bypassed.
+**`ChallengeFeed.tsx`**
+- `QUICK_PRESETS`: when stakes off, render preset cards without the BB amount badge; submit `stake_amount: 0`.
+- `CustomChallengeForm`: hide stake slider + balance check when off.
+- Open challenge cards: hide "Match stake" / "Total pot" block when `stake_amount === 0`. Show "Donations: {pot_total} BB" instead (live viewer-funded pot).
+- Remove the `.gt('stake_amount', 0)` filter on the query so zero-stake challenges appear.
 
-### 6. Master Tier Toggle UI — `KillSwitchPanel.tsx`
-Add a 5th switch tile labeled **"Tier System"** alongside the existing 4 kill switches. Cyber-industrial styling already matches:
-- ON state: Neon Orange (`bg-orange-500`) dot + "ENABLED" label
-- OFF state: Dark grey dot + "DISABLED" label
-- Confirmation dialog requires typing `DISABLE` / `ENABLE`
-- Status pulled from `platform_state.tiers_enabled`
+**`AcceptChallengeModal.tsx`**
+- When `stake_amount === 0`: hide the entire stake/balance block. CTA becomes `⚔️ Accept Challenge` (no balance check, no matching).
 
-### 7. Realtime broadcast
-Enable Supabase Realtime on `platform_state` table (migration: `ALTER PUBLICATION supabase_realtime ADD TABLE platform_state`). `useTiersEnabled` subscribes to `postgres_changes` filtered on `key=eq.tiers_enabled` and invalidates the React Query cache → instant update across all clients without refresh.
+### Backend changes
 
-### 8. Security
-- Toggle write path is gated by existing Sovereign-only checks in `sovereign-system-control` (email + `has_role('sovereign')`).
-- Read path is public (anon SELECT on `platform_state` already permitted for `enforce_tiers` reads).
+**`create-challenge-stake/index.ts`**
+- Read `challenge_stakes_enabled` + `challenge_min_stake_bb` from `platform_state` at top of handler.
+- If stakes disabled:
+  - Skip min-stake validation
+  - Skip balance check + escrow deduction
+  - Skip stake escrow transaction insert
+  - Insert challenge with `stake_amount: 0`, `pot_total: 0`
+  - Pre-create battle with `prize_amount: 0` (will grow from donations)
+- If stakes enabled: enforce `stake_amount >= challenge_min_stake_bb` (replace hardcoded `MIN_STAKE_BB = 100`).
+
+**`match-challenge-stake/index.ts`**
+- If `challenge.stake_amount === 0`: skip balance check + escrow deduction + stake transaction. Set `opponent_stake_matched: true` automatically. `pot_total` stays as donations-only.
+- Existing platform fee math (`totalPot * 0.05`) still works on the donation-only pot.
+
+**`sovereign-system-control/index.ts`**
+Add 3 new actions:
+- `challenge_stakes_enable` — sets `challenge_stakes_enabled='true'`
+- `challenge_stakes_disable` — sets `challenge_stakes_enabled='false'`
+- `challenge_set_min_stake` — accepts `min_stake_bb` from request body, upserts `challenge_min_stake_bb`
+
+### Sovereign HQ UI — `KillSwitchPanel.tsx`
+Add a 6th tile labeled **"Challenge Stakes"**:
+- Toggle: enable/disable stakes (orange dot when ON, grey when OFF)
+- Inline number input (visible only when ENABLED) to set min stake BB → calls `challenge_set_min_stake`
+- Confirmation dialog requires typing `ENABLE` / `DISABLE`
+
+### Migration
+Insert two rows into `platform_state`:
+```sql
+INSERT INTO platform_state (key, value) VALUES
+  ('challenge_stakes_enabled', 'false'),
+  ('challenge_min_stake_bb', '100')
+ON CONFLICT (key) DO NOTHING;
+```
+(`platform_state` already in `supabase_realtime` publication from previous migration.)
 
 ## File Plan
 
 | File | Change |
 |------|--------|
-| **Migration** | Insert `tiers_enabled='true'` into `platform_state`; add `platform_state` to realtime publication |
-| `supabase/functions/sovereign-system-control/index.ts` | Add `tiers_enable` / `tiers_disable` actions |
-| `supabase/functions/subscribe-with-bb/index.ts` | Block when `tiers_enabled=false` |
-| `supabase/functions/purchase-product-bb/index.ts` | Skip tier check when `tiers_enabled=false` |
-| `src/hooks/useTiersEnabled.tsx` | **New** — query + realtime subscription |
-| `src/components/sovereign/KillSwitchPanel.tsx` | Add 5th tile: Tier System toggle |
-| `src/components/barber/BarberSubscriptionTiers.tsx` | "Coming Soon" fallback when disabled |
-| `src/components/TierRing.tsx` | Strip ring when disabled |
-| `src/components/AvatarCrest.tsx` | Strip crest when disabled |
-| `src/pages/BarbersDirectory.tsx` | Hide filter + skip priority sort |
-| `src/components/map/BarberMapDirectory.tsx` | Uniform pin style |
-| `src/pages/BarberPublicProfile.tsx` | Hide tier badge |
-| `src/components/battles/BattleCard.tsx` | Plain avatars |
-| `src/components/barber/UpgradePrompt.tsx` | Return null |
-| `src/components/barber/MyBattlesSection.tsx` | Skip upgrade CTA |
-| `src/components/battles/ChallengeFeed.tsx` | Bypass Silver+ gate |
-| `src/hooks/useSubscriptionLimits.tsx` | Force unlimited when disabled |
-| `src/hooks/useStreamingPermissions.tsx` | Force `canStream: true` when disabled |
+| **Migration** | Insert `challenge_stakes_enabled='false'` + `challenge_min_stake_bb='100'` |
+| `src/hooks/useChallengeStakeConfig.tsx` | **New** — query + realtime for both keys |
+| `src/components/battles/ChallengeModal.tsx` | Hide stake UI when disabled; submit `stake_amount: 0` |
+| `src/components/battles/ChallengeFeed.tsx` | Conditional stake UI in presets/custom form/cards; remove `gt('stake_amount', 0)` filter |
+| `src/components/battles/AcceptChallengeModal.tsx` | Skip stake block + balance check when stake is 0 |
+| `src/components/sovereign/KillSwitchPanel.tsx` | Add "Challenge Stakes" tile + min-stake input |
+| `supabase/functions/create-challenge-stake/index.ts` | Branch on `challenge_stakes_enabled`; respect configurable min |
+| `supabase/functions/match-challenge-stake/index.ts` | Skip escrow when `stake_amount === 0` |
+| `supabase/functions/sovereign-system-control/index.ts` | Add `challenge_stakes_enable/disable` + `challenge_set_min_stake` actions |
 
-## Note on `diamond`
-`diamond` tier is referenced in code (TIER_LIMITS, BarbersDirectory filter) but doesn't exist in `barber_subscription_tiers`. Out of scope for this toggle — will leave as-is unless you want it cleaned up (separate task).
+## Behavior Summary
+- **Default (after deploy)**: Barbers challenge each other for free. No BB locked. Viewers donate → winner takes 95% of donations, 5% goes to Challenge Jackpot pool.
+- **Sovereign re-enables**: Old behavior returns. Min stake configurable from the panel (any amount, e.g. 50, 250, 500).
 
