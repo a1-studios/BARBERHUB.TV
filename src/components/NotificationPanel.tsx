@@ -31,13 +31,13 @@ function getIcon(type: string) {
 interface NotificationPanelProps {
   embedded?: boolean;
   onClose?: () => void;
+  onOpenAcceptModal?: (challenge: any) => void;
 }
 
-export function NotificationPanel({ embedded, onClose }: NotificationPanelProps) {
+export function NotificationPanel({ embedded, onClose, onOpenAcceptModal }: NotificationPanelProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const [acceptChallenge, setAcceptChallenge] = useState<any | null>(null);
   const {
     notifications,
     unreadCount,
