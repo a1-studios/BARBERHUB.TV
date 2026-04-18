@@ -1183,6 +1183,7 @@ export type Database = {
           ivs_stream_key: string | null
           last_viewer_check: string | null
           live_viewers: number | null
+          match_mode: string
           match_number: number | null
           max_participants: number | null
           organizer_id: string
@@ -1243,6 +1244,7 @@ export type Database = {
           ivs_stream_key?: string | null
           last_viewer_check?: string | null
           live_viewers?: number | null
+          match_mode?: string
           match_number?: number | null
           max_participants?: number | null
           organizer_id: string
@@ -1303,6 +1305,7 @@ export type Database = {
           ivs_stream_key?: string | null
           last_viewer_check?: string | null
           live_viewers?: number | null
+          match_mode?: string
           match_number?: number | null
           max_participants?: number | null
           organizer_id?: string
@@ -2584,6 +2587,7 @@ export type Database = {
           duration_minutes: number
           expires_at: string | null
           id: string
+          match_mode: string
           opponent_stake_matched: boolean | null
           platform_fee_collected: number | null
           pot_total: number | null
@@ -2610,6 +2614,7 @@ export type Database = {
           duration_minutes?: number
           expires_at?: string | null
           id?: string
+          match_mode?: string
           opponent_stake_matched?: boolean | null
           platform_fee_collected?: number | null
           pot_total?: number | null
@@ -2636,6 +2641,7 @@ export type Database = {
           duration_minutes?: number
           expires_at?: string | null
           id?: string
+          match_mode?: string
           opponent_stake_matched?: boolean | null
           platform_fee_collected?: number | null
           pot_total?: number | null
