@@ -1,13 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useTiersEnabled } from '@/hooks/useTiersEnabled';
 
 export function useStreamingPermissions() {
   const { user } = useAuth();
+  const { enabled: tiersEnabled } = useTiersEnabled();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['streaming-permissions', user?.id],
+    queryKey: ['streaming-permissions', user?.id, tiersEnabled],
     queryFn: async () => {
+      // Master tier toggle OFF → everyone can stream
+      if (!tiersEnabled) {
+        return { canStream: true, reason: undefined };
+      }
+
       // Check platform flag
       const { data: flag } = await supabase
         .from('platform_state')

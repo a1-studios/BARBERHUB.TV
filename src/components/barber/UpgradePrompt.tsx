@@ -7,6 +7,7 @@ import { AddFundsModal } from '@/components/AddFundsModal';
 import { UniversalBarterGateway } from '@/components/barter/UniversalBarterGateway';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useTiersEnabled } from '@/hooks/useTiersEnabled';
 
 interface UpgradePromptProps {
   isOpen: boolean;
@@ -46,6 +47,10 @@ export const UpgradePrompt = ({
   const [barterTierId, setBarterTierId] = useState<{ id: string; name: string; bbPrice: number } | null>(null);
   const { barberBucks, isLoading: bbLoading } = useBarberBucks();
   const { isBarber } = useUserRole();
+  const { enabled: tiersEnabled } = useTiersEnabled();
+
+  // Master tier toggle OFF → suppress upgrade prompts entirely
+  if (!tiersEnabled) return null;
 
   const config = REASON_CONFIG[reason];
   const Icon = config.icon;
