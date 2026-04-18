@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { AlertTriangle, Pause, Play, Lock, Unlock, Wrench, ShieldCheck, Layers } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { AlertTriangle, Pause, Play, Lock, Unlock, Wrench, ShieldCheck, Layers, Coins, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -22,6 +22,8 @@ interface KillSwitchPanelProps {
     maintenance_mode?: { value: string };
     enforce_tiers?: { value: string };
     tiers_enabled?: { value: string };
+    challenge_stakes_enabled?: { value: string };
+    challenge_min_stake_bb?: { value: string };
   };
   onRefresh: () => void;
 }
@@ -43,6 +45,36 @@ const KillSwitchPanel = ({ platformState, onRefresh }: KillSwitchPanelProps) => 
   const tiersEnforced = platformState?.enforce_tiers?.value === 'true';
   // Default ON: only treated as disabled when value explicitly === 'false'
   const tiersEnabled = platformState?.tiers_enabled?.value !== 'false';
+  // Default OFF: only treated as enabled when explicitly 'true'
+  const stakesEnabled = platformState?.challenge_stakes_enabled?.value === 'true';
+  const minStakeFromState = parseInt(platformState?.challenge_min_stake_bb?.value || '100', 10) || 100;
+  const [minStakeInput, setMinStakeInput] = useState<number>(minStakeFromState);
+  const [savingMinStake, setSavingMinStake] = useState(false);
+
+  // Keep input in sync if state changes from realtime/refresh
+  useEffect(() => {
+    setMinStakeInput(minStakeFromState);
+  }, [minStakeFromState]);
+
+  const saveMinStake = async () => {
+    if (!minStakeInput || minStakeInput < 1) {
+      toast.error('Minimum stake must be at least 1 BB');
+      return;
+    }
+    setSavingMinStake(true);
+    try {
+      const response = await supabase.functions.invoke('sovereign-system-control', {
+        body: { action: 'challenge_set_min_stake', min_stake_bb: minStakeInput }
+      });
+      if (response.error) throw response.error;
+      toast.success(response.data.message || `Min stake set to ${minStakeInput} BB`);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update min stake');
+    } finally {
+      setSavingMinStake(false);
+    }
+  };
 
   const executeAction = async (action: string) => {
     setLoading(true);
@@ -79,7 +111,7 @@ const KillSwitchPanel = ({ platformState, onRefresh }: KillSwitchPanelProps) => 
           <h3 className="text-sm font-semibold text-white">Kill Switches</h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {/* Battles Kill Switch */}
           <div className="p-4 rounded-lg bg-[#0a0a0f] border border-white/[0.06]">
             <div className="flex items-center justify-between mb-3">
@@ -229,8 +261,62 @@ const KillSwitchPanel = ({ platformState, onRefresh }: KillSwitchPanelProps) => 
               {tiersEnabled ? 'Disable' : 'Enable'}
             </Button>
           </div>
+          </div>
+
+          {/* Challenge Stakes Toggle + Min Stake Configurator */}
+          <div className="p-4 rounded-lg bg-[#0a0a0f] border border-white/[0.06]">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-white/40 uppercase tracking-wider">Challenge Stakes</span>
+              <div className="flex items-center gap-1.5">
+                <div className={`h-1.5 w-1.5 rounded-full ${stakesEnabled ? 'bg-orange-500' : 'bg-white/20'}`} />
+                <span className={`text-[10px] ${stakesEnabled ? 'text-orange-500' : 'text-white/40'}`}>
+                  {stakesEnabled ? 'ENABLED' : 'DISABLED'}
+                </span>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full border-white/10 text-white hover:bg-white/[0.04] bg-transparent mb-2"
+              disabled={loading}
+              onClick={() => openConfirmDialog(
+                stakesEnabled ? 'challenge_stakes_disable' : 'challenge_stakes_enable',
+                stakesEnabled ? 'Disable Challenge Stakes' : 'Enable Challenge Stakes',
+                stakesEnabled
+                  ? 'Barbers will be able to challenge each other for FREE. Viewer donations will still build the winner\'s pot. Type DISABLE to confirm.'
+                  : `Barbers will be required to lock at least ${minStakeFromState} BB to issue or accept challenges. Type ENABLE to confirm.`,
+                stakesEnabled ? 'DISABLE' : 'ENABLE'
+              )}
+            >
+              <Coins className="h-3 w-3 mr-2" />
+              {stakesEnabled ? 'Disable' : 'Enable'}
+            </Button>
+
+            {stakesEnabled && (
+              <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                <label className="text-[10px] text-white/40 uppercase tracking-wider block mb-1.5">Min stake (BB)</label>
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    type="number"
+                    min={1}
+                    value={minStakeInput}
+                    onChange={(e) => setMinStakeInput(parseInt(e.target.value, 10) || 0)}
+                    className="bg-[#0a0a0f] border-white/10 text-white h-8 text-xs"
+                  />
+                  <Button
+                    size="sm"
+                    className="h-8 px-2 bg-orange-500 hover:bg-orange-600 text-white"
+                    disabled={savingMinStake || minStakeInput === minStakeFromState || !minStakeInput}
+                    onClick={saveMinStake}
+                  >
+                    <Save className="h-3 w-3" />
+                  </Button>
+                </div>
+                <p className="text-[10px] text-white/30 mt-1">Current: {minStakeFromState} BB</p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
       {/* Confirmation Dialog */}
       <AlertDialog open={confirmDialog?.open} onOpenChange={() => setConfirmDialog(null)}>
