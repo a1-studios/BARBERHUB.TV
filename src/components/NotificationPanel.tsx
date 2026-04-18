@@ -6,6 +6,8 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
+import { AcceptChallengeModal } from '@/components/battles/AcceptChallengeModal';
+import { supabase } from '@/integrations/supabase/client';
 
 const notificationIconMap: Record<string, React.ReactNode> = {
   new_appointment: <Calendar className="h-4 w-4 text-primary" />,
@@ -18,6 +20,8 @@ const notificationIconMap: Record<string, React.ReactNode> = {
   no_show: <AlertTriangle className="h-4 w-4 text-yellow-500" />,
   battle_invite: <Swords className="h-4 w-4 text-primary" />,
   battle_result: <Swords className="h-4 w-4 text-cyan" />,
+  challenge_received: <Swords className="h-4 w-4 text-primary" />,
+  challenge_accepted: <Swords className="h-4 w-4 text-primary" />,
   review_prompt: <Star className="h-4 w-4 text-yellow-500" />,
 };
 
@@ -34,6 +38,7 @@ export function NotificationPanel({ embedded, onClose }: NotificationPanelProps)
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const [acceptChallenge, setAcceptChallenge] = useState<any | null>(null);
   const {
     notifications,
     unreadCount,
@@ -60,8 +65,35 @@ export function NotificationPanel({ embedded, onClose }: NotificationPanelProps)
     };
   }, [open, embedded]);
 
-  const handleClick = (n: Notification) => {
+  const closeSelf = () => {
+    if (embedded && onClose) onClose();
+    if (!embedded) setOpen(false);
+  };
+
+  const handleClick = async (n: Notification) => {
     if (!n.read) markAsRead(n.id);
+
+    // Direct challenge → load full challenge row + open Accept modal
+    if (n.type === 'challenge_received' && n.data?.challenge_id) {
+      const { data: ch } = await supabase
+        .from('open_challenges')
+        .select('id, challenger_username, title, stake_amount, pot_total, expires_at')
+        .eq('id', n.data.challenge_id)
+        .maybeSingle();
+      if (ch) {
+        setAcceptChallenge(ch);
+        closeSelf();
+        return;
+      }
+    }
+
+    // Challenge accepted → jump straight into the split-screen contender room
+    if (n.type === 'challenge_accepted' && n.data?.battle_id) {
+      navigate(`/battle/${n.data.battle_id}/contender`);
+      closeSelf();
+      return;
+    }
+
     if (n.data?.battle_id) {
       navigate(`/battles/${n.data.battle_id}`);
     } else if (n.data?.appointment_id) {
@@ -69,8 +101,7 @@ export function NotificationPanel({ embedded, onClose }: NotificationPanelProps)
       const action = reviewTypes.includes(n.type) ? '&action=review' : '';
       navigate(`/profile?appointment_id=${n.data.appointment_id}${action}`);
     }
-    if (embedded && onClose) onClose();
-    if (!embedded) setOpen(false);
+    closeSelf();
   };
 
   const renderList = () => (
