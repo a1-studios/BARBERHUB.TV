@@ -9,7 +9,6 @@ const corsHeaders = {
 // 🔴 DEV BYPASS — set to false before going live
 const DEV_BYPASS = true;
 
-const MIN_STAKE_BB = 100;
 const MAX_DURATION_MINUTES = 60;
 
 interface StakeRequest {
@@ -44,19 +43,38 @@ serve(async (req) => {
 
     const { title, stake_amount, challenge_message, duration_minutes, target_barber_id }: StakeRequest = await req.json();
 
-    console.log(`Creating challenge stake: ${stake_amount} BB from ${user.id}`);
-
-    // Validate stake amount
-    if (!stake_amount || stake_amount < MIN_STAKE_BB) {
-      throw new Error(`Minimum stake is ${MIN_STAKE_BB} BB`);
-    }
-
     if (!title) {
       throw new Error('Missing required field: title');
     }
 
-    // Silver+ subscription check
-    if (!DEV_BYPASS) {
+    // Read sovereign-controlled stake config
+    const { data: stateRows } = await supabase
+      .from('platform_state')
+      .select('key, value')
+      .in('key', ['challenge_stakes_enabled', 'challenge_min_stake_bb']);
+
+    const stateMap = (stateRows || []).reduce<Record<string, string>>((acc, row) => {
+      acc[row.key] = row.value;
+      return acc;
+    }, {});
+
+    const stakesEnabled = stateMap.challenge_stakes_enabled === 'true';
+    const minStakeBB = parseInt(stateMap.challenge_min_stake_bb || '100', 10) || 100;
+
+    // Effective stake: 0 when stakes are globally disabled
+    const effectiveStake = stakesEnabled ? (stake_amount ?? 0) : 0;
+
+    console.log(`Creating challenge: stakesEnabled=${stakesEnabled}, requested=${stake_amount}, effective=${effectiveStake} BB from ${user.id}`);
+
+    // Validate stake amount only when stakes are required
+    if (stakesEnabled) {
+      if (!effectiveStake || effectiveStake < minStakeBB) {
+        throw new Error(`Minimum stake is ${minStakeBB} BB`);
+      }
+    }
+
+    // Silver+ subscription check (only when stakes are enabled)
+    if (stakesEnabled && !DEV_BYPASS) {
       const { data: subscription, error: subError } = await supabase
         .from('barber_subscriptions')
         .select('id, tier:barber_subscription_tiers(tier_name)')
@@ -88,37 +106,41 @@ serve(async (req) => {
 
     const currentBalance = profile.barber_bucks || 0;
 
-    if (currentBalance < stake_amount) {
-      throw new Error(`Insufficient Barber Bucks. You need ${stake_amount} BB but have ${currentBalance} BB.`);
+    // Balance check + escrow only when there's an actual stake
+    let newBalance = currentBalance;
+    if (effectiveStake > 0) {
+      if (currentBalance < effectiveStake) {
+        throw new Error(`Insufficient Barber Bucks. You need ${effectiveStake} BB but have ${currentBalance} BB.`);
+      }
+
+      newBalance = currentBalance - effectiveStake;
+      const { error: deductError } = await supabase
+        .from('profiles')
+        .update({ barber_bucks: newBalance })
+        .eq('user_id', user.id);
+
+      if (deductError) {
+        throw new Error('Failed to deduct stake');
+      }
+
+      // Record escrow transaction
+      await supabase
+        .from('barber_bucks_transactions')
+        .insert({
+          user_id: user.id,
+          amount: -effectiveStake,
+          balance_after: newBalance,
+          transaction_type: 'challenge_stake_escrow',
+          description: `Challenge stake escrow: "${title}"`,
+        });
     }
 
     // Calculate duration and expiration
     const durationMins = Math.min(duration_minutes || MAX_DURATION_MINUTES, MAX_DURATION_MINUTES);
     const expiresAt = new Date(Date.now() + durationMins * 60 * 1000).toISOString();
 
-    // Deduct stake from challenger (escrow)
-    const newBalance = currentBalance - stake_amount;
-    const { error: deductError } = await supabase
-      .from('profiles')
-      .update({ barber_bucks: newBalance })
-      .eq('user_id', user.id);
-
-    if (deductError) {
-      throw new Error('Failed to deduct stake');
-    }
-
-    // Record escrow transaction
-    await supabase
-      .from('barber_bucks_transactions')
-      .insert({
-        user_id: user.id,
-        amount: -stake_amount,
-        balance_after: newBalance,
-        transaction_type: 'challenge_stake_escrow',
-        description: `Challenge stake escrow: "${title}"`,
-      });
-
-    // Pre-create a battle record so complete-open-challenge can link to it
+    // Pre-create a battle record so complete-open-challenge can link to it.
+    // prize_amount starts at 2x stake (or 0 when free) — viewer donations grow it.
     const { data: battle, error: battleError } = await supabase
       .from('battles')
       .insert({
@@ -127,7 +149,7 @@ serve(async (req) => {
         battle_type: 'challenge',
         status: 'upcoming',
         currency: 'BB',
-        prize_amount: stake_amount * 2,
+        prize_amount: effectiveStake * 2,
         barber1_id: null,
         barber2_id: null,
       })
@@ -135,16 +157,18 @@ serve(async (req) => {
       .single();
 
     if (battleError) {
-      // Rollback stake
-      await supabase
-        .from('profiles')
-        .update({ barber_bucks: currentBalance })
-        .eq('user_id', user.id);
+      // Rollback stake if we deducted one
+      if (effectiveStake > 0) {
+        await supabase
+          .from('profiles')
+          .update({ barber_bucks: currentBalance })
+          .eq('user_id', user.id);
+      }
       console.error('Battle pre-create error:', battleError);
       throw new Error('Failed to create battle record');
     }
 
-    // Create challenge with stake
+    // Create challenge with stake (or zero-stake donation-only)
     const { data: challenge, error: challengeError } = await supabase
       .from('open_challenges')
       .insert({
@@ -152,8 +176,8 @@ serve(async (req) => {
         challenger_username: profile.display_name || profile.username || 'Anonymous',
         challenger_stream_url: 'pending',
         title,
-        stake_amount,
-        pot_total: stake_amount,
+        stake_amount: effectiveStake,
+        pot_total: effectiveStake,
         donations_total: 0,
         status: 'waiting_for_opponent',
         battle_type: 'challenge',
@@ -167,25 +191,32 @@ serve(async (req) => {
       .single();
 
     if (challengeError) {
-      // Rollback stake
-      await supabase
-        .from('profiles')
-        .update({ barber_bucks: currentBalance })
-        .eq('user_id', user.id);
+      // Rollback stake if we deducted one
+      if (effectiveStake > 0) {
+        await supabase
+          .from('profiles')
+          .update({ barber_bucks: currentBalance })
+          .eq('user_id', user.id);
+      }
       console.error('Challenge create error:', challengeError);
       throw new Error('Failed to create challenge');
     }
 
-    console.log(`Challenge created with ${stake_amount} BB stake, expires at ${expiresAt}: ${challenge.id}`);
+    const message = effectiveStake > 0
+      ? `Challenge created with ${effectiveStake} BB stake! Expires in ${durationMins} minutes.`
+      : `Challenge issued! Viewers can donate to grow the winner's pot. Expires in ${durationMins} minutes.`;
+
+    console.log(`Challenge created (stake=${effectiveStake}): ${challenge.id}, expires ${expiresAt}`);
 
     return new Response(
       JSON.stringify({
         success: true,
         challenge,
         new_balance: newBalance,
-        stake_amount,
+        stake_amount: effectiveStake,
         expires_at: expiresAt,
-        message: `Challenge created with ${stake_amount} BB stake! Expires in ${durationMins} minutes.`
+        stakes_enabled: stakesEnabled,
+        message
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
