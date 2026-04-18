@@ -1,40 +1,89 @@
 
 
-## Real Root Cause (verified via DB + edge logs)
+User wants to redesign the email gate (`EnterTheVault` step in promotion gate) to:
+1. Add a "Sign In" path for existing users — currently it forces everyone through the new-lead flow
+2. Re-skin from cyan-dominant to **orange-dominant with cyan accents** (matches platform brand: Neon Orange primary, Zion Blue secondary)
+3. Inject high-energy welcome feel (motion, glow, hype copy)
 
-`match-challenge-stake` has **never been invoked** despite multiple `challenge_received` notifications being marked read. The reason: in `Header.tsx` (line 266), `NotificationPanel` is rendered **inside the BB dropdown's conditional `{bbDropdownOpen && (...)}` block**. When the user taps a `challenge_received` notification, `handleClick` does:
+Let me check the file briefly to confirm structure and existing flow.
+<lov-tool-use id="toolu_vrtx_01625qYWFTii6xSP4tf9DAmF" name="code--view" integration-id="code" data="{\"file_path\": \"src/components/promotion-gate/IdentifyStep.tsx\"}">
+</lov-tool-use>
 
-1. `setAcceptChallenge(ch)` — schedules the modal to open
-2. `closeSelf()` → `onClose()` → `setBbDropdownOpen(false)` → **the dropdown unmounts**, taking `NotificationPanel` AND its child `AcceptChallengeModal` with it
+<lov-tool-use id="toolu_vrtx_013AK7R99LtbTVxPUwPS9VWS" name="code--list_dir" integration-id="code" data="{\"dir_path\": \"src/components/promotion-gate\"}">
+</lov-tool-use>
 
-The modal never renders. The Accept button never exists. Hence: no edge function call, challenge stays `waiting_for_opponent`, no battle goes live.
+<lov-tool-use id="toolu_vrtx_0142Ttdigg1tnmMkwB8p42z9" name="code--view" integration-id="code" data="{\"file_path\": \"src/components/promotion-gate/EmailGateStep.tsx\"}">
+</lov-tool-use>
 
-## Fix
+<lov-tool-use id="toolu_vrtx_01Cw2ZgLXrV4pZz1wbtZYM3q" name="code--list_dir" integration-id="code" data="{\"dir_path\": \"src/components/promotion-gate\"}">
+</lov-tool-use>
 
-### 1. Lift `AcceptChallengeModal` out of `NotificationPanel` and into `Header.tsx`
-The modal must live at the Header level (a sibling of the dropdown, not a child) so it survives dropdown unmount.
+<lov-tool-use id="toolu_vrtx_01P8Ygh6BnYckmhoGabttmfH" name="code--view" integration-id="code" data="{\"file_path\": \"src/components/promotion-gate/IdentifyStep.tsx\"}">
+</lov-tool-use>
 
-**Pattern:**
-- Add `acceptChallenge` state in `Header.tsx`
-- Pass `onOpenAcceptModal={(ch) => setAcceptChallenge(ch)}` callback into `NotificationPanel`
-- In `NotificationPanel.handleClick`: call `onOpenAcceptModal(ch)` then `closeSelf()` — modal lives on after panel closes
-- Render `<AcceptChallengeModal>` in `Header.tsx` outside the dropdown conditional
+<lov-tool-use id="toolu_vrtx_01EGJQU7nfVfHF7nXXFL8VAX" name="code--view" integration-id="code" data="{\"file_path\": \"src/components/promotion-gate/useGateState.ts\"}">
+</lov-tool-use>
 
-### 2. After Accept succeeds in `AcceptChallengeModal`
-Already correct: navigates to `/battle/{battle_id}/contender`. The acceptor's `barber_profiles.id` is now wired to `barber2_id` by the edge function, so `ContenderTheater` will recognize them as `barberPosition=2` and they'll see the split-screen contender room.
+<lov-tool-use id="toolu_vrtx_01WxTfrDpu4p7DNKCZ9mdF6T" name="code--search_files" integration-id="code" data="{\"query\": \"EmailGateStep|promotion-gate\", \"include_patterns\": \"*.tsx,*.ts\"}">
+</lov-tool-use>
 
-### 3. Defensive: log Accept invocation
-Add `console.log('Accept challenge clicked', challenge.id)` at the top of `handleAccept` so future debugging can confirm the click reached the handler.
+<lov-tool-use id="toolu_vrtx_01SvT4NFSLXvpJMEKQ5ZPs7R" name="code--view" integration-id="code" data="{\"file_path\": \"src/components/SpinWheelOverlay.tsx\"}">
+</lov-tool-use>
+Now I have full context. The user wants the `EmailGateStep` (Enter the Vault screen) redesigned: (1) add a "Sign In" path for existing users, (2) shift palette from cyan-dominant to **orange-dominant with cyan accents**, and (3) more energetic welcome feel.
 
-## Files
+<lov-plan>
+
+## What's Wrong (per screenshot)
+- `EmailGateStep` is cyan-heavy (envelope ring, label, input border, glow) → feels cold/corporate vs our signature **Neon Orange**.
+- "AUTHENTICATE" CTA is disabled-grey by default → looks dead.
+- No path for **returning users** — they're forced through the full vault funnel even if they already have an account.
+- Copy ("ENTER THE VAULT", "IDENTIFICATION REQUIRED", "OPERATOR EMAIL") feels sterile, not "energetic welcome."
+
+## Fix — Redesign `EmailGateStep` only
+
+### A. Visual overhaul — Orange primary, cyan accent
+
+| Element | Now (cyan) | New (orange-led) |
+|---|---|---|
+| Icon ring | cyan border + cyan glow | **Orange Sparkles icon** in orange ring with pulsing orange glow + tiny cyan inner dot accent |
+| Heading | "ENTER THE VAULT" thin tracking, cyan shadow | **"WELCOME BACK"** (or "JOIN THE ARENA") — chunky display weight, orange-to-yellow gradient text, animated letter-by-letter entrance |
+| Sub-line | "IDENTIFICATION REQUIRED" grey | **"Your seat at the table is one tap away ⚡"** — warmer copy, white/80, no caps tracking |
+| Input label | cyan triangle "OPERATOR EMAIL" | small orange dot + "Email" — friendly, not spec-sheet |
+| Input border | cyan when valid | **orange when valid**, cyan only as the focus ring accent (1px inset) |
+| Input bg | flat black | subtle orange radial-glow underneath when focused |
+| CTA when empty | dead grey "AUTHENTICATE" | **always-live orange gradient**, label "Continue →"; if email invalid, button shakes on submit instead of looking dead |
+| CTA when valid | flat orange | orange gradient + animated shimmer sweep + soft pulse halo |
+| Footer | "ENCRYPTED · SINGLE-USE · NO SPAM" mono cyan-grey | warmer "🔒 We never spam. Promise." in white/40 |
+
+Add a subtle **animated orange particle burst** behind the icon on mount (3-4 framer-motion dots fanning outward) for the "energetic welcome" feel.
+
+### B. Returning-user path — "Already have an account? Sign in"
+
+Below the CTA add a clearly visible secondary action:
+
+```
+─────────  or  ─────────
+        Already have an account?
+       [ Sign in instead → ]   ← cyan-outlined ghost button
+```
+
+Clicking it:
+- Calls a new optional prop `onSignIn?: () => void` passed from `SpinWheelOverlay`
+- In `SpinWheelOverlay.handleEmail`'s sibling, add `handleSignIn = () => { onClose(); navigate('/auth'); }` — closes the vault overlay and routes to `/auth` (existing sign-in page)
+- Skips the gate entirely (does NOT call `markGateCompleted` so they can still claim a prize later if they want)
+
+### C. Component contract changes
 
 | File | Change |
-|------|--------|
-| `src/components/Header.tsx` | Add `acceptChallenge` state; pass `onOpenAcceptModal` into `NotificationPanel`; render `<AcceptChallengeModal>` at Header root level (outside dropdown div) |
-| `src/components/NotificationPanel.tsx` | Accept new prop `onOpenAcceptModal?: (ch) => void`; remove internal `acceptChallenge` state + modal render; in `handleClick` for `challenge_received` call `onOpenAcceptModal(ch)` then `closeSelf()` |
-| `src/components/battles/AcceptChallengeModal.tsx` | Add `console.log` at top of `handleAccept` for debugging |
+|---|---|
+| `src/components/promotion-gate/EmailGateStep.tsx` | Full visual rebuild per table above; add optional `onSignIn?: () => void` prop; render Sign-in CTA when present; keep all existing email validation logic untouched |
+| `src/components/SpinWheelOverlay.tsx` | Add `handleSignIn` (uses existing `useNavigate`) → `onClose()` then `navigate('/auth')`. Pass `onSignIn={handleSignIn}` into `<EmailGateStep>` |
+
+No other files touched. No DB, no edge functions, no routing additions (the `/auth` page already exists).
 
 ## Result
-- Acceptor taps notification → panel calls `onOpenAcceptModal(ch)` → Header sets state → dropdown closes → `AcceptChallengeModal` renders at Header root (unaffected by dropdown unmount) → user sees Accept/Decline buttons
-- Tap Accept → `match-challenge-stake` runs → battle gets `barber2_id` + `status='live'` → modal navigates to `/battle/{battle_id}/contender` → ContenderTheater identifies them as `barberPosition=2` → split-screen room with challenger already waiting on the other side
+- New screen leads with **orange energy** (gradient title, pulsing orange icon, live orange CTA) with cyan reduced to small accent details (focus ring, sign-in button outline).
+- Returning users see **"Sign in instead →"** below the primary CTA → one tap to `/auth`.
+- New users still flow through Email → Identify → Spin → Reward → Finalize unchanged.
+- Energetic welcome via gradient text, particle burst, shimmer CTA, warmer copy.
 
