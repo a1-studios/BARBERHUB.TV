@@ -189,6 +189,12 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
                     role: state.role,
                   }}
                   onSubmitted={handleFinalized}
+                  onBack={() => update({ step: 'REWARD' })}
+                  onSkip={() => {
+                    markGateCompleted();
+                    reset();
+                    onClose();
+                  }}
                 />
               </div>
             )}
