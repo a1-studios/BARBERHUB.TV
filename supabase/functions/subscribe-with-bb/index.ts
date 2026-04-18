@@ -38,6 +38,26 @@ serve(async (req) => {
       throw new Error("Missing tier_id");
     }
 
+    // Master tier toggle gate — block subscription writes when tier system is disabled platform-wide
+    const { data: tiersFlag } = await supabase
+      .from("platform_state")
+      .select("value")
+      .eq("key", "tiers_enabled")
+      .maybeSingle();
+
+    if (tiersFlag?.value === "false") {
+      return new Response(
+        JSON.stringify({
+          error: "tiers_disabled",
+          message: "The tier subscription system is currently disabled platform-wide.",
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 403,
+        }
+      );
+    }
+
     console.log(`[subscribe-with-bb] User ${user.id} requesting tier ${tier_id}`);
 
     // Verify user is a barber
