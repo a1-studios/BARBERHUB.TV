@@ -87,6 +87,11 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
     handleLeadUpdate('email', { email });
   };
 
+  const handleSignIn = () => {
+    onClose();
+    navigate('/auth');
+  };
+
   const handleRole = async (role: 'barber' | 'fan') => {
     update({ role, step: 'ENGAGE' });
     handleLeadUpdate('role', { role });
