@@ -166,14 +166,16 @@ serve(async (req) => {
         .eq('id', existingPool.id);
     }
 
-    // Update challenge - mark as accepted
+    // Update challenge - mark as matched (battle live; expire it from open feed instantly)
+    const nowIso = new Date().toISOString();
     const { error: updateError } = await supabase
       .from('open_challenges')
       .update({
         accepted_by_id: user.id,
         accepted_by_username: profile.display_name || profile.username || 'Anonymous',
-        accepted_at: new Date().toISOString(),
-        status: 'accepted',
+        accepted_at: nowIso,
+        status: 'matched',
+        expires_at: nowIso, // forces feed filters (expires_at > now()) to drop the row
         opponent_stake_matched: true,
         pot_total: totalPot,
         platform_fee_collected: platformFee,
@@ -210,6 +212,15 @@ serve(async (req) => {
         .eq('id', challenge.battle_id);
     }
 
+    // Soft-dismiss any prior challenge notifications for both users so the bell clears.
+    // We match notifications whose data->>challenge_id == this challenge for both parties.
+    await supabase
+      .from('notifications')
+      .update({ read: true, dismissed_at: new Date().toISOString() })
+      .in('user_id', [challenge.challenger_id, user.id])
+      .in('type', ['challenge_received', 'challenge_sent'])
+      .filter('data->>challenge_id', 'eq', challenge_id);
+
     // Notify challenger (deep-linkable to the battle room)
     const notifyMessage = isFreeChallenge
       ? `${profile.display_name || 'A barber'} accepted your challenge "${challenge.title}"! Pot grows from viewer donations.`
@@ -220,7 +231,7 @@ serve(async (req) => {
       .insert({
         user_id: challenge.challenger_id,
         type: 'challenge_accepted',
-        title: '⚔️ Challenge Accepted!',
+        title: '⚔️ Challenge Accepted — Battle Live!',
         message: notifyMessage,
         data: {
           challenge_id,

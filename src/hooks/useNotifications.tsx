@@ -13,6 +13,7 @@ export interface Notification {
   data: any;
   read: boolean;
   created_at: string;
+  dismissed_at?: string | null;
 }
 
 export const useNotifications = () => {
@@ -20,7 +21,7 @@ export const useNotifications = () => {
   const queryClient = useQueryClient();
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Fetch notifications
+  // Fetch notifications (active only — hide soft-dismissed entries like accepted/declined challenges)
   const { data: notifications, isLoading } = useQuery({
     queryKey: ['notifications', user?.id],
     queryFn: async () => {
@@ -30,6 +31,7 @@ export const useNotifications = () => {
         .from('notifications')
         .select('*')
         .eq('user_id', user.id)
+        .is('dismissed_at', null)
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -81,7 +83,7 @@ export const useNotifications = () => {
     }
   });
 
-  // Real-time subscription
+  // Real-time subscription — listen to BOTH inserts (new) and updates (dismissals)
   useEffect(() => {
     if (!user?.id) return;
 
@@ -96,10 +98,13 @@ export const useNotifications = () => {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          console.log('New notification received:', payload);
-          
-          // Show toast for new notification
           const newNotification = payload.new as Notification;
+          // Skip toast for already-dismissed inserts (defensive)
+          if (newNotification.dismissed_at) {
+            queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
+            return;
+          }
+
           const reviewTypes = ['appointment_completed', 'review_prompt'];
 
           // Type-aware action target — DO NOT auto-route challenge_received into the battle room
@@ -108,7 +113,6 @@ export const useNotifications = () => {
           let onClickOverride: (() => void) | null = null;
 
           if (newNotification.type === 'challenge_received') {
-            // Open the notification panel so the user can Accept/Decline via modal
             actionLabel = 'Respond';
             onClickOverride = () => {
               window.dispatchEvent(new CustomEvent('open-notifications'));
@@ -132,7 +136,19 @@ export const useNotifications = () => {
             } : undefined
           });
 
-          // Refetch notifications
+          queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          // Dismissals / read-state changes — refresh silently so bell clears across tabs
           queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
         }
       )

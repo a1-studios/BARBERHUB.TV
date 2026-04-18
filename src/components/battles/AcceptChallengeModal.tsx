@@ -77,11 +77,24 @@ export const AcceptChallengeModal = ({ challenge, isOpen, onClose }: AcceptChall
   const handleDecline = async () => {
     setIsDeclining(true);
     try {
-      // Mark the challenge as declined (best-effort; RLS may restrict — fail silently)
+      const nowIso = new Date().toISOString();
+
+      // Mark the challenge as declined and expire it from any open feeds (best-effort; RLS may restrict)
       await supabase
         .from('open_challenges')
-        .update({ status: 'declined' })
+        .update({ status: 'declined', expires_at: nowIso })
         .eq('id', challenge.id);
+
+      // Soft-dismiss this challenge_received notification on the acceptor's bell
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        await supabase
+          .from('notifications')
+          .update({ read: true, dismissed_at: nowIso })
+          .eq('user_id', authUser.id)
+          .eq('type', 'challenge_received')
+          .filter('data->>challenge_id', 'eq', challenge.id);
+      }
 
       toast({
         title: "Challenge Declined",
