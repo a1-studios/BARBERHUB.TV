@@ -14,6 +14,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useSubscriptionLimits } from '@/hooks/useSubscriptionLimits';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { useChallengeStakeConfig } from '@/hooks/useChallengeStakeConfig';
+import { useQuickPlayConfig } from '@/hooks/useQuickPlayConfig';
 import { AcceptChallengeModal } from './AcceptChallengeModal';
 import { differenceInSeconds } from 'date-fns';
 import { useEffect, useState } from 'react';
@@ -315,6 +316,7 @@ export const ChallengeFeed = () => {
   const { user } = useAuth();
   const { isBarber } = useUserRole();
   const { tierName } = useSubscriptionLimits();
+  const { quickPlayEnabled } = useQuickPlayConfig();
   const queryClient = useQueryClient();
   const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null);
 
@@ -363,6 +365,16 @@ export const ChallengeFeed = () => {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [queryClient]);
+
+  if (!quickPlayEnabled) {
+    return (
+      <div className="text-center py-8 bg-card/30 backdrop-blur-sm rounded-lg border border-dashed border-border">
+        <Swords className="w-10 h-10 mx-auto mb-2 text-muted-foreground" />
+        <h3 className="text-sm font-bold text-foreground mb-1">Quick Play is Off</h3>
+        <p className="text-xs text-muted-foreground">Unranked challenges are temporarily disabled.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

@@ -47,16 +47,25 @@ serve(async (req) => {
       throw new Error('Missing required field: title');
     }
 
-    // Read sovereign-controlled stake config
+    // Read sovereign-controlled platform config (Quick Play + stake settings)
     const { data: stateRows } = await supabase
       .from('platform_state')
       .select('key, value')
-      .in('key', ['challenge_stakes_enabled', 'challenge_min_stake_bb']);
+      .in('key', ['challenge_stakes_enabled', 'challenge_min_stake_bb', 'quick_play_enabled']);
 
     const stateMap = (stateRows || []).reduce<Record<string, string>>((acc, row) => {
-      acc[row.key] = row.value;
+      acc[row.key] = String(row.value ?? '');
       return acc;
     }, {});
+
+    // Quick Play master switch — default ON. Reject if Sovereign disabled it.
+    const quickPlayEnabled = (stateMap.quick_play_enabled ?? 'true') !== 'false';
+    if (!quickPlayEnabled) {
+      return new Response(
+        JSON.stringify({ error: 'Quick Play is currently disabled by the platform.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      );
+    }
 
     const stakesEnabled = stateMap.challenge_stakes_enabled === 'true';
     const minStakeBB = parseInt(stateMap.challenge_min_stake_bb || '100', 10) || 100;
@@ -148,12 +157,14 @@ serve(async (req) => {
 
     // Pre-create a battle record so complete-open-challenge can link to it.
     // prize_amount starts at 2x stake (or 0 when free) — viewer donations grow it.
+    // match_mode='quick_play' keeps this out of tournament brackets/standings/feed.
     const { data: battle, error: battleError } = await supabase
       .from('battles')
       .insert({
         title,
         organizer_id: user.id,
         battle_type: 'challenge',
+        match_mode: 'quick_play',
         status: 'upcoming',
         currency: 'BB',
         prize_amount: effectiveStake * 2,
@@ -192,6 +203,7 @@ serve(async (req) => {
         duration_minutes: durationMins,
         expires_at: expiresAt,
         battle_id: battle.id,
+        match_mode: 'quick_play',
         ...(target_barber_id ? { target_barber_id } : {}),
       })
       .select()

@@ -75,38 +75,46 @@ export default function ContenderTheater() {
     enabled: !!battleId
   });
 
-  // Fetch barber profiles
+  // Fetch barber profiles — load whichever barber IDs exist (challenger arrives
+  // before opponent accepts, so barber2_id may be null in Quick Play mode).
   const { data: barberProfiles } = useQuery({
     queryKey: ['battle-barbers', battle?.barber1_id, battle?.barber2_id],
     queryFn: async () => {
-      if (!battle?.barber1_id || !battle?.barber2_id) return null;
+      const ids = [battle?.barber1_id, battle?.barber2_id].filter(Boolean) as string[];
+      if (ids.length === 0) return null;
       const { data, error } = await supabase
         .from('barber_profiles')
         .select('*, profiles:user_id(display_name)')
-        .in('id', [battle.barber1_id, battle.barber2_id]);
+        .in('id', ids);
       if (error) throw error;
       return data;
     },
-    enabled: !!battle?.barber1_id && !!battle?.barber2_id
+    enabled: !!battle && (!!battle.barber1_id || !!battle.barber2_id),
   });
 
-  // Determine which barber position the current user is
+  // Determine which barber position the current user is.
+  // Fallback: organizer of the battle is always treated as barber1 (the challenger),
+  // even before their barber_profiles row is loaded — this keeps them in the room
+  // while waiting for an opponent in Quick Play.
   useEffect(() => {
-    if (barberProfiles && user) {
-      const barber1 = barberProfiles.find(b => b.id === battle?.barber1_id);
-      const barber2 = barberProfiles.find(b => b.id === battle?.barber2_id);
-      
-      if (barber1?.user_id === user.id) {
-        setBarberPosition(1);
-        setBarberId(barber1.id);
-        setLocalCountry(barber1.country_code || undefined);
-        setRemoteCountry(barber2?.country_code || undefined);
-      } else if (barber2?.user_id === user.id) {
-        setBarberPosition(2);
-        setBarberId(barber2.id);
-        setLocalCountry(barber2.country_code || undefined);
-        setRemoteCountry(barber1?.country_code || undefined);
-      }
+    if (!user) return;
+    const barber1 = barberProfiles?.find(b => b.id === battle?.barber1_id);
+    const barber2 = barberProfiles?.find(b => b.id === battle?.barber2_id);
+
+    if (barber1?.user_id === user.id) {
+      setBarberPosition(1);
+      setBarberId(barber1.id);
+      setLocalCountry(barber1.country_code || undefined);
+      setRemoteCountry(barber2?.country_code || undefined);
+    } else if (barber2?.user_id === user.id) {
+      setBarberPosition(2);
+      setBarberId(barber2.id);
+      setLocalCountry(barber2.country_code || undefined);
+      setRemoteCountry(barber1?.country_code || undefined);
+    } else if (battle?.organizer_id === user.id) {
+      // Challenger waiting for an opponent — let them stage in the room.
+      setBarberPosition(1);
+      setBarberId(battle?.barber1_id || '');
     }
   }, [barberProfiles, user, battle]);
 
