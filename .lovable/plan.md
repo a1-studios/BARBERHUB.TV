@@ -1,89 +1,44 @@
 
 
-User wants to redesign the email gate (`EnterTheVault` step in promotion gate) to:
-1. Add a "Sign In" path for existing users — currently it forces everyone through the new-lead flow
-2. Re-skin from cyan-dominant to **orange-dominant with cyan accents** (matches platform brand: Neon Orange primary, Zion Blue secondary)
-3. Inject high-energy welcome feel (motion, glow, hype copy)
+## Goal
+Replace the bulky **`LiveBarberStreams`** card grid with a compact **floating pill** anchored just under the header that shows live activity at a glance — a single circle for solo broadcasts, a stacked-pair of circles for live challenges/battles. Keep the existing avatar style from `LiveNowBanner`. Remove the large widget entirely.
 
-Let me check the file briefly to confirm structure and existing flow.
-<lov-tool-use id="toolu_vrtx_01625qYWFTii6xSP4tf9DAmF" name="code--view" integration-id="code" data="{\"file_path\": \"src/components/promotion-gate/IdentifyStep.tsx\"}">
-</lov-tool-use>
+## Current State (per screenshot)
+- `FanArenaView.tsx` renders both `LiveNowBanner` (avatar circles, already good) AND `LiveBarberStreams` (the giant "LIVE NOW · Watch live battles and broadcasts" card with the orange Solo Broadcast tile + Watch Live button) → redundant + bulky.
+- Live battles/challenges have no quick visual indicator anywhere — fans can't see "two barbers are battling right now."
 
-<lov-tool-use id="toolu_vrtx_013AK7R99LtbTVxPUwPS9VWS" name="code--list_dir" integration-id="code" data="{\"dir_path\": \"src/components/promotion-gate\"}">
-</lov-tool-use>
+## Fix
 
-<lov-tool-use id="toolu_vrtx_0142Ttdigg1tnmMkwB8p42z9" name="code--view" integration-id="code" data="{\"file_path\": \"src/components/promotion-gate/EmailGateStep.tsx\"}">
-</lov-tool-use>
+### 1. Create new `LiveActivityPill` component (`src/components/battles/LiveActivityPill.tsx`)
+- Fixed-positioned pill, anchored `top: 80px` (right under the floating header), centered horizontally, `z-40`
+- Single horizontal scrollable row of small avatar bubbles, same red-pulse-ring styling as `LiveNowBanner`
+- Two avatar shapes:
+  - **Solo broadcast** → single circle (40px), pulsing red ring → tap routes to `/broadcast/{barber_id}`
+  - **Live battle/challenge** (status `active` / `voting` / `waiting_for_opponent` with both barbers present) → **stacked pair**: two overlapping 36px circles (second offset right -12px / down +6px), wrapped in a single combined red-orange gradient ring with a tiny crossed-swords icon badge → tap routes to `/battle/{id}/theater`
+- Container: subtle `bg-background/70 backdrop-blur-md border border-primary/30 rounded-full px-3 py-1.5 shadow-lg` so it floats elegantly below the header
+- Auto-hides when no live activity (`return null`)
+- Reuses queries from existing `LiveNowBanner` (solo broadcasts) + a new battles query (`status IN ('active','voting','waiting_for_opponent')` with both barbers joined) + realtime subscription on `barber_profiles` and `battles`
 
-<lov-tool-use id="toolu_vrtx_01Cw2ZgLXrV4pZz1wbtZYM3q" name="code--list_dir" integration-id="code" data="{\"dir_path\": \"src/components/promotion-gate\"}">
-</lov-tool-use>
+### 2. Update `FanArenaView.tsx`
+- Remove `<LiveNowBanner />` (replaced by pill)
+- Remove `<LiveBarberStreams />` (the bulky widget the user wants gone)
+- Keep everything else
 
-<lov-tool-use id="toolu_vrtx_01P8Ygh6BnYckmhoGabttmfH" name="code--view" integration-id="code" data="{\"file_path\": \"src/components/promotion-gate/IdentifyStep.tsx\"}">
-</lov-tool-use>
+### 3. Mount `LiveActivityPill` globally
+- Add `<LiveActivityPill />` inside `Header.tsx` (just after the closing `</header>` element so it lives at the same fixed root) → appears on every page under the header, not just fan arena
 
-<lov-tool-use id="toolu_vrtx_01EGJQU7nfVfHF7nXXFL8VAX" name="code--view" integration-id="code" data="{\"file_path\": \"src/components/promotion-gate/useGateState.ts\"}">
-</lov-tool-use>
-
-<lov-tool-use id="toolu_vrtx_01WxTfrDpu4p7DNKCZ9mdF6T" name="code--search_files" integration-id="code" data="{\"query\": \"EmailGateStep|promotion-gate\", \"include_patterns\": \"*.tsx,*.ts\"}">
-</lov-tool-use>
-
-<lov-tool-use id="toolu_vrtx_01SvT4NFSLXvpJMEKQ5ZPs7R" name="code--view" integration-id="code" data="{\"file_path\": \"src/components/SpinWheelOverlay.tsx\"}">
-</lov-tool-use>
-Now I have full context. The user wants the `EmailGateStep` (Enter the Vault screen) redesigned: (1) add a "Sign In" path for existing users, (2) shift palette from cyan-dominant to **orange-dominant with cyan accents**, and (3) more energetic welcome feel.
-
-<lov-plan>
-
-## What's Wrong (per screenshot)
-- `EmailGateStep` is cyan-heavy (envelope ring, label, input border, glow) → feels cold/corporate vs our signature **Neon Orange**.
-- "AUTHENTICATE" CTA is disabled-grey by default → looks dead.
-- No path for **returning users** — they're forced through the full vault funnel even if they already have an account.
-- Copy ("ENTER THE VAULT", "IDENTIFICATION REQUIRED", "OPERATOR EMAIL") feels sterile, not "energetic welcome."
-
-## Fix — Redesign `EmailGateStep` only
-
-### A. Visual overhaul — Orange primary, cyan accent
-
-| Element | Now (cyan) | New (orange-led) |
-|---|---|---|
-| Icon ring | cyan border + cyan glow | **Orange Sparkles icon** in orange ring with pulsing orange glow + tiny cyan inner dot accent |
-| Heading | "ENTER THE VAULT" thin tracking, cyan shadow | **"WELCOME BACK"** (or "JOIN THE ARENA") — chunky display weight, orange-to-yellow gradient text, animated letter-by-letter entrance |
-| Sub-line | "IDENTIFICATION REQUIRED" grey | **"Your seat at the table is one tap away ⚡"** — warmer copy, white/80, no caps tracking |
-| Input label | cyan triangle "OPERATOR EMAIL" | small orange dot + "Email" — friendly, not spec-sheet |
-| Input border | cyan when valid | **orange when valid**, cyan only as the focus ring accent (1px inset) |
-| Input bg | flat black | subtle orange radial-glow underneath when focused |
-| CTA when empty | dead grey "AUTHENTICATE" | **always-live orange gradient**, label "Continue →"; if email invalid, button shakes on submit instead of looking dead |
-| CTA when valid | flat orange | orange gradient + animated shimmer sweep + soft pulse halo |
-| Footer | "ENCRYPTED · SINGLE-USE · NO SPAM" mono cyan-grey | warmer "🔒 We never spam. Promise." in white/40 |
-
-Add a subtle **animated orange particle burst** behind the icon on mount (3-4 framer-motion dots fanning outward) for the "energetic welcome" feel.
-
-### B. Returning-user path — "Already have an account? Sign in"
-
-Below the CTA add a clearly visible secondary action:
-
-```
-─────────  or  ─────────
-        Already have an account?
-       [ Sign in instead → ]   ← cyan-outlined ghost button
-```
-
-Clicking it:
-- Calls a new optional prop `onSignIn?: () => void` passed from `SpinWheelOverlay`
-- In `SpinWheelOverlay.handleEmail`'s sibling, add `handleSignIn = () => { onClose(); navigate('/auth'); }` — closes the vault overlay and routes to `/auth` (existing sign-in page)
-- Skips the gate entirely (does NOT call `markGateCompleted` so they can still claim a prize later if they want)
-
-### C. Component contract changes
-
+### 4. Files Touched
 | File | Change |
 |---|---|
-| `src/components/promotion-gate/EmailGateStep.tsx` | Full visual rebuild per table above; add optional `onSignIn?: () => void` prop; render Sign-in CTA when present; keep all existing email validation logic untouched |
-| `src/components/SpinWheelOverlay.tsx` | Add `handleSignIn` (uses existing `useNavigate`) → `onClose()` then `navigate('/auth')`. Pass `onSignIn={handleSignIn}` into `<EmailGateStep>` |
-
-No other files touched. No DB, no edge functions, no routing additions (the `/auth` page already exists).
+| `src/components/battles/LiveActivityPill.tsx` | **New** — floating pill with single circles (solo) + stacked-pair circles (battles) |
+| `src/components/Header.tsx` | Mount `<LiveActivityPill />` after the `</header>` close so it floats globally |
+| `src/components/fan/FanArenaView.tsx` | Remove `<LiveNowBanner />` and `<LiveBarberStreams />` imports + usages |
+| `src/components/battles/LiveNowBanner.tsx` | **Keep file** but no longer rendered (legacy — can stay for future use) |
+| `src/components/battles/LiveBarberStreams.tsx` | **Keep file** but no longer rendered on the home feed (still usable elsewhere if needed) |
 
 ## Result
-- New screen leads with **orange energy** (gradient title, pulsing orange icon, live orange CTA) with cyan reduced to small accent details (focus ring, sign-in button outline).
-- Returning users see **"Sign in instead →"** below the primary CTA → one tap to `/auth`.
-- New users still flow through Email → Identify → Spin → Reward → Finalize unchanged.
-- Energetic welcome via gradient text, particle burst, shimmer CTA, warmer copy.
+- Home feed loses the giant orange "Solo Broadcast / Watch Live" card → cleaner, video-first.
+- Right under the header sits a tiny floating pill: one circle = solo broadcast, two stacked circles with crossed-sword badge = live challenge/battle.
+- Tapping a single circle → solo broadcast viewer. Tapping a stacked pair → battle theater (split-screen).
+- Pill auto-hides when nothing is live, so the UI stays pristine.
 
