@@ -80,7 +80,7 @@ export function NotificationPanel({ embedded, onClose, onOpenAcceptModal }: Noti
         .eq('id', n.data.challenge_id)
         .maybeSingle();
       if (ch) {
-        setAcceptChallenge(ch);
+        onOpenAcceptModal?.(ch);
         closeSelf();
         return;
       }
