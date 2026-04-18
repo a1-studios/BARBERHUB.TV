@@ -1,40 +1,42 @@
 
 
-## Issues from screenshot + complaints
+## Goal
+Replace the fixed 50/50 mobile split with a **draggable divider** so viewers can resize each barber's video independently — drag up = give barber 2 more space, drag down = give barber 1 more space, or fully expand either to fullscreen.
 
-1. **Mobile video layout (VOD/voting phase)** — `BattleTheater.tsx` line 366 uses `<div className="h-full flex">` which forces side-by-side on ALL viewports (cramped on mobile). Needs `flex-col md:flex-row` like we did in `LiveKitArena`.
+## Current State
+`BattleTheater.tsx` (live phase via `LiveKitArena.tsx` and VOD phase) uses `flex-col md:flex-row` with hard `flex-1` on each side → equal halves, no resize.
 
-2. **Vote buttons wrong colors** — `BattleTheater.tsx` lines 394 (`from-blue-500 to-blue-600`) + 434 (`from-purple-500 to-purple-600`). Replace with brand: **orange** for left + **cyan** for right.
+## Approach
+Use `react-resizable-panels` (already in deps via `src/components/ui/resizable.tsx`) wrapped by a small custom mobile-friendly component. On mobile (vertical stack) the handle is a horizontal grab-bar; on desktop (side-by-side) it's vertical.
 
-3. **Like (floating reaction) emojis too big and hang around too long** — `FloatingReactions.tsx`: `text-4xl` + 3s `duration` + 3s removal timeout → shrink to `text-2xl` and reduce duration to `1.8s` so they fade fast.
+### New file: `src/components/battles/DraggableBattleSplit.tsx`
+Thin wrapper around `ResizablePanelGroup`:
+- `direction="vertical"` on mobile, `"horizontal"` on desktop (via `useIsMobile`)
+- Two `ResizablePanel`s, each `defaultSize={50} minSize={15}` (allow near-fullscreen of either side, but not zero so the handle stays grabbable)
+- `ResizableHandle withHandle` styled prominently: 
+  - Mobile: full-width 6px tall bar with center grip dots (white/30 bg, white/80 dots, larger touch target ~24px hit area via padding)
+  - Desktop: 4px wide, vertical grip
+- Double-tap/click handle → reset to 50/50
 
-4. **Live pill hangs after broadcast ends** — Right now the pill auto-refetches every 5s + listens to `barber_profiles`/`battles` realtime. The hang happens because:
-   - Solo broadcasts: `is_live` flag may stay `true` after end (no end-broadcast cleanup writes it false), only `last_live_check` ages out — and our 30-second `LIVE_BROADCAST_STALE_MS` means up to 30s lag.
-   - Battles: 2-min freshness window is way too generous for "immediately disappear."
-   
-   Fix:
-   - Tighten battle window from **2 min → 30 seconds** (LiveKit heartbeats every 10s, so 30s is comfortably "live now").
-   - Tighten `LIVE_BROADCAST_STALE_MS` from 30s → 15s for solo broadcasts in `liveBroadcast.ts`.
-   - On Realtime UPDATE for `battles`, immediately drop the item from local state if either `barber*_is_streaming` flips to false OR `status` leaves the active set — don't wait for next refetch.
+### Edit: `src/pages/BattleTheater.tsx`
+The VOD/voting layout currently at lines ~360-450 (the `h-full flex flex-col md:flex-row` block with two video tiles):
+- Replace the outer flex container with `<DraggableBattleSplit>`
+- Move each video tile into its respective `panelOne` / `panelTwo` slot
 
-5. **Viewers can't see the two barbers in VOD phase** — The two video tiles show "No video available" because `barber_1_video_url` / `barber_2_video_url` are null. This is a data issue, not a viewer-logic bug — the egress hasn't populated VOD URLs, OR the battle skipped processing. Already-existing fallback (`battleStreamUid → CloudflareStreamPlayer`) handles the combined egress recording (single Cloudflare Stream UID for the whole battle), but it's only used when `cloudflare_stream_uid` exists. When neither exists → "No video available" shows for both. 
-   
-   Fix: when no VOD content exists yet, instead of two empty players, show ONE friendly "Recording is being processed — check back soon" placeholder spanning the full split, and auto-redirect/refetch on `cloudflare_stream_uid` arrival via realtime (already subscribed). This makes the viewer experience correct.
+### Edit: `src/components/battles/LiveKitArena.tsx`
+Same swap for live phase: replace the `flex-1 flex flex-col md:flex-row` participants container with `<DraggableBattleSplit>`, putting `renderParticipantSide(p1, ...)` and `renderParticipantSide(p2, ...)` into the two panels.
 
 ## Files Touched
-
 | File | Change |
 |---|---|
-| `src/pages/BattleTheater.tsx` | (a) Split container `h-full flex` → `h-full flex flex-col md:flex-row`, give each side `h-1/2 md:h-full`. (b) Vote button left: orange gradient (`from-orange-500 to-orange-600`). Right: cyan gradient (`from-cyan-500 to-cyan-600`). (c) When both videos are missing AND no `cloudflare_stream_uid`, render single "Recording in progress" placeholder full-bleed instead of two empty players |
-| `src/components/battles/FloatingReactions.tsx` | Emoji size `text-4xl` → `text-2xl`; animation `duration: 3` → `1.8`; removal timeout `3000` → `1800` |
-| `src/components/battles/LiveActivityPill.tsx` | Battle freshness window 2min → 30s; on realtime UPDATE explicitly remove from list if `is_streaming` flips false or `status` leaves active set (immediate UI clear, no wait for refetch) |
-| `src/lib/liveBroadcast.ts` | `LIVE_BROADCAST_STALE_MS` 30000 → 15000 |
-| New migration | UPDATE `barber_profiles SET is_live = false` where `last_live_check < now() - 30 sec` AND is_live = true (purges current ghost solo entries); also re-run battle ghost cleanup with 30s window |
+| `src/components/battles/DraggableBattleSplit.tsx` | **NEW** — responsive draggable two-panel wrapper with prominent grip handle, double-tap reset |
+| `src/pages/BattleTheater.tsx` | Wrap VOD two-video block in `<DraggableBattleSplit>` |
+| `src/components/battles/LiveKitArena.tsx` | Wrap live two-participant block in `<DraggableBattleSplit>` |
 
 ## Result
-- Mobile VOD viewer: barber 1 fills top half, barber 2 fills bottom half → much larger and readable.
-- Vote buttons in signature **orange + cyan** instead of blue/purple.
-- Floating reaction emojis are smaller, snappier — disappear in under 2 seconds.
-- Live activity pill clears within seconds (not minutes) of any stream ending; ghost rows wiped immediately.
-- When no VOD asset is ready, viewers see a single clear "Recording in progress" instead of two confusing empty players.
+- Mobile portrait: viewers can drag the horizontal grip up/down to expand either barber to nearly fullscreen at any time, in both live and VOD phases.
+- Desktop: same behavior, vertical drag bar between the two sides.
+- Default 50/50 — feels identical until the user grabs the handle.
+- Double-tap the handle snaps back to 50/50.
+- Works across the entire battle lifecycle (live LiveKit + VOD playback).
 
