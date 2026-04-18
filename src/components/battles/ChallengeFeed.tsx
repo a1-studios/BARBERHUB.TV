@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useSubscriptionLimits } from '@/hooks/useSubscriptionLimits';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
+import { useChallengeStakeConfig } from '@/hooks/useChallengeStakeConfig';
 import { AcceptChallengeModal } from './AcceptChallengeModal';
 import { differenceInSeconds } from 'date-fns';
 import { useEffect, useState } from 'react';
@@ -68,9 +69,10 @@ const CountdownBadge = ({ expiresAt }: { expiresAt: string }) => {
 const QuickChallengePresets = ({ isSilverPlus }: { isSilverPlus: boolean }) => {
   const [loadingPreset, setLoadingPreset] = useState<number | null>(null);
   const queryClient = useQueryClient();
+  const { stakesEnabled } = useChallengeStakeConfig();
 
   const handleQuickChallenge = async (preset: typeof QUICK_PRESETS[0], index: number) => {
-    if (!isSilverPlus) {
+    if (stakesEnabled && !isSilverPlus) {
       toast.error('Silver+ subscription required to issue challenges');
       return;
     }
@@ -79,14 +81,19 @@ const QuickChallengePresets = ({ isSilverPlus }: { isSilverPlus: boolean }) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { toast.error('Please sign in first'); return; }
 
+      const effectiveStake = stakesEnabled ? preset.stake : 0;
       const { data, error } = await supabase.functions.invoke('create-challenge-stake', {
-        body: { title: preset.title, stake_amount: preset.stake, duration_minutes: 60 },
+        body: { title: preset.title, stake_amount: effectiveStake, duration_minutes: 60 },
       });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      toast.success(`🔥 "${preset.title}" issued! ${preset.stake} BB staked.`);
+      toast.success(
+        effectiveStake > 0
+          ? `🔥 "${preset.title}" issued! ${effectiveStake} BB staked.`
+          : `🔥 "${preset.title}" issued! Viewers can donate to the pot.`
+      );
       queryClient.invalidateQueries({ queryKey: ['open-challenges'] });
     } catch (err: any) {
       toast.error(err.message || 'Failed to create challenge');
@@ -108,22 +115,26 @@ const QuickChallengePresets = ({ isSilverPlus }: { isSilverPlus: boolean }) => {
             key={preset.title}
             whileTap={{ scale: 0.93 }}
             whileHover={{ scale: 1.03 }}
-            disabled={loadingPreset !== null || !isSilverPlus}
+            disabled={loadingPreset !== null || (stakesEnabled && !isSilverPlus)}
             onClick={() => handleQuickChallenge(preset, i)}
             className={`relative p-3 sm:p-4 rounded-xl border border-border/50 bg-gradient-to-br ${preset.color} hover:shadow-lg hover:shadow-primary/10 transition-shadow duration-200 text-left disabled:opacity-50 disabled:cursor-not-allowed group overflow-hidden`}
           >
             <div className="relative z-10">
               <span className="text-xl sm:text-2xl block">{preset.emoji}</span>
               <h5 className="font-bold text-white text-[11px] sm:text-sm mt-1 leading-tight">{preset.title}</h5>
-              <div className="flex items-center gap-1 mt-1.5">
-                <Coins className="w-3 h-3 text-yellow-300" />
-                <span className="text-[10px] sm:text-xs font-bold text-yellow-300">{preset.stake} BB</span>
-              </div>
+              {stakesEnabled ? (
+                <div className="flex items-center gap-1 mt-1.5">
+                  <Coins className="w-3 h-3 text-yellow-300" />
+                  <span className="text-[10px] sm:text-xs font-bold text-yellow-300">{preset.stake} BB</span>
+                </div>
+              ) : (
+                <div className="mt-1.5 text-[10px] sm:text-xs font-bold text-white/90">FREE</div>
+              )}
               {loadingPreset === i && (
                 <Loader2 className="absolute top-0 right-0 w-4 h-4 text-white animate-spin" />
               )}
             </div>
-            {!isSilverPlus && (
+            {stakesEnabled && !isSilverPlus && (
               <div className="absolute inset-0 rounded-xl bg-black/60 flex items-center justify-center z-20">
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Lock className="w-3 h-3" /> Silver+
@@ -139,25 +150,29 @@ const QuickChallengePresets = ({ isSilverPlus }: { isSilverPlus: boolean }) => {
 
 const CustomChallengeForm = ({ isSilverPlus }: { isSilverPlus: boolean }) => {
   const { barberBucks: balance } = useBarberBucks();
+  const { stakesEnabled, minStake } = useChallengeStakeConfig();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState('');
-  const [stakeValue, setStakeValue] = useState(100);
+  const [stakeValue, setStakeValue] = useState(minStake);
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const hasEnoughBalance = (balance || 0) >= stakeValue;
+  useEffect(() => { setStakeValue(prev => Math.max(prev, minStake)); }, [minStake]);
+
+  const effectiveStake = stakesEnabled ? stakeValue : 0;
+  const hasEnoughBalance = !stakesEnabled || (balance || 0) >= effectiveStake;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isSilverPlus || !title || !hasEnoughBalance) return;
+    if ((stakesEnabled && !isSilverPlus) || !title || !hasEnoughBalance) return;
 
     setIsSubmitting(true);
     try {
       const { data, error } = await supabase.functions.invoke('create-challenge-stake', {
         body: {
           title,
-          stake_amount: stakeValue,
+          stake_amount: effectiveStake,
           challenge_message: message || null,
           duration_minutes: 60,
         },
@@ -166,10 +181,14 @@ const CustomChallengeForm = ({ isSilverPlus }: { isSilverPlus: boolean }) => {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      toast.success(`🔥 Challenge issued! ${stakeValue} BB staked.`);
+      toast.success(
+        effectiveStake > 0
+          ? `🔥 Challenge issued! ${effectiveStake} BB staked.`
+          : `🔥 Challenge issued! Viewers can donate to the pot.`
+      );
       queryClient.invalidateQueries({ queryKey: ['open-challenges'] });
       setTitle('');
-      setStakeValue(100);
+      setStakeValue(minStake);
       setMessage('');
       setOpen(false);
     } catch (err: any) {
@@ -179,7 +198,10 @@ const CustomChallengeForm = ({ isSilverPlus }: { isSilverPlus: boolean }) => {
     }
   };
 
-  if (!isSilverPlus) return null;
+  if (stakesEnabled && !isSilverPlus) return null;
+
+  const sliderMax = Math.max(minStake * 5, 500);
+  const sliderStep = Math.max(Math.round(minStake / 2), 50);
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -200,14 +222,16 @@ const CustomChallengeForm = ({ isSilverPlus }: { isSilverPlus: boolean }) => {
           animate={{ opacity: 1 }}
           className="mt-3 p-4 rounded-xl border border-border bg-card/50 backdrop-blur-sm space-y-4"
         >
-          {/* Balance */}
-          <div className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg border border-border/50">
-            <span className="text-xs text-muted-foreground">Balance</span>
-            <div className="flex items-center gap-1 font-bold text-sm text-foreground">
-              <Coins className="w-3.5 h-3.5 text-yellow-500" />
-              {balance?.toLocaleString() || 0} BB
+          {/* Balance — only show when stakes are enabled */}
+          {stakesEnabled && (
+            <div className="flex items-center justify-between p-2.5 bg-muted/30 rounded-lg border border-border/50">
+              <span className="text-xs text-muted-foreground">Balance</span>
+              <div className="flex items-center gap-1 font-bold text-sm text-foreground">
+                <Coins className="w-3.5 h-3.5 text-yellow-500" />
+                {balance?.toLocaleString() || 0} BB
+              </div>
             </div>
-          </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
@@ -222,27 +246,33 @@ const CustomChallengeForm = ({ isSilverPlus }: { isSilverPlus: boolean }) => {
               />
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <Label className="text-xs">Stake</Label>
-                <span className="text-sm font-bold text-yellow-500">{stakeValue} BB</span>
+            {stakesEnabled ? (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <Label className="text-xs">Stake</Label>
+                  <span className="text-sm font-bold text-yellow-500">{stakeValue} BB</span>
+                </div>
+                <Slider
+                  value={[stakeValue]}
+                  onValueChange={([v]) => setStakeValue(v)}
+                  min={minStake}
+                  max={sliderMax}
+                  step={sliderStep}
+                  className="py-1"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                  <span>{minStake} BB</span>
+                  <span>{sliderMax} BB</span>
+                </div>
+                {!hasEnoughBalance && (
+                  <p className="text-[11px] text-destructive mt-1">Insufficient balance ({balance || 0} BB)</p>
+                )}
               </div>
-              <Slider
-                value={[stakeValue]}
-                onValueChange={([v]) => setStakeValue(v)}
-                min={100}
-                max={500}
-                step={50}
-                className="py-1"
-              />
-              <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-                <span>100 BB</span>
-                <span>500 BB</span>
+            ) : (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-2.5 text-[11px] text-muted-foreground">
+                🆓 <span className="font-semibold text-foreground">Free challenge</span> — viewers donate to grow the winner's pot.
               </div>
-              {!hasEnoughBalance && (
-                <p className="text-[11px] text-destructive mt-1">Insufficient balance ({balance || 0} BB)</p>
-              )}
-            </div>
+            )}
 
             <div>
               <Label htmlFor="custom-msg" className="text-xs">Trash Talk (optional)</Label>
@@ -263,12 +293,16 @@ const CustomChallengeForm = ({ isSilverPlus }: { isSilverPlus: boolean }) => {
             >
               {isSubmitting ? (
                 <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Creating...</>
-              ) : (
+              ) : stakesEnabled ? (
                 <>🔥 Stake {stakeValue} BB & Challenge</>
+              ) : (
+                <>🔥 Issue Free Challenge</>
               )}
             </Button>
             <p className="text-[10px] text-muted-foreground text-center">
-              Opponent matches your stake · Winner takes pot minus 5% to jackpot
+              {stakesEnabled
+                ? 'Opponent matches your stake · Winner takes pot minus 5% to jackpot'
+                : 'Viewers donate to the pot · Winner takes 95%, 5% to jackpot'}
             </p>
           </form>
         </motion.div>
@@ -308,7 +342,6 @@ export const ChallengeFeed = () => {
         .select('*')
         .eq('status', 'waiting_for_opponent')
         .not('expires_at', 'is', null)
-        .gt('stake_amount', 0)
         .order('stake_amount', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
 
@@ -384,12 +417,16 @@ export const ChallengeFeed = () => {
 
             return (
               <Card key={challenge.id} className="bg-card/50 backdrop-blur-sm border-border hover:border-primary/50 transition-all duration-300 p-5 relative overflow-hidden">
-                {challenge.stake_amount && (
+                {(challenge.stake_amount ?? 0) > 0 ? (
                   <div className="absolute top-0 right-0 bg-gradient-to-r from-yellow-500 to-orange-500 px-3 py-0.5 rounded-bl-lg">
                     <div className="flex items-center gap-1 text-white font-bold text-xs">
                       <Coins className="w-3 h-3" />
                       <span>{challenge.stake_amount} BB</span>
                     </div>
+                  </div>
+                ) : (
+                  <div className="absolute top-0 right-0 bg-gradient-to-r from-primary to-orange-500 px-3 py-0.5 rounded-bl-lg">
+                    <div className="text-white font-bold text-[10px] tracking-wide">FREE</div>
                   </div>
                 )}
 
@@ -408,7 +445,7 @@ export const ChallengeFeed = () => {
 
                 <Badge variant="outline" className="mb-3 text-[10px] border-yellow-500/40 text-yellow-500/80">UNOFFICIAL</Badge>
 
-                {challenge.stake_amount && (
+                {(challenge.stake_amount ?? 0) > 0 ? (
                   <div className="mb-3 p-2.5 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-muted-foreground">Match stake:</span>
@@ -419,17 +456,27 @@ export const ChallengeFeed = () => {
                       <span className="font-bold text-foreground">{(challenge.stake_amount || 0) * 2} BB</span>
                     </div>
                   </div>
+                ) : (
+                  <div className="mb-3 p-2.5 bg-primary/10 border border-primary/20 rounded-lg">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">Donations:</span>
+                      <span className="font-bold text-primary">{challenge.pot_total ?? 0} BB</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-1">Viewers donate to grow the winner's pot</p>
+                  </div>
                 )}
 
                 <div className="space-y-2">
-                  {canAccept && isSilverPlus && (
+                  {canAccept && (isSilverPlus || (challenge.stake_amount ?? 0) === 0) && (
                     <Button onClick={() => setSelectedChallenge(challenge)} className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700" size="sm">
                       <Swords className="w-4 h-4 mr-2" />
-                      Match {challenge.stake_amount} BB & Accept
+                      {(challenge.stake_amount ?? 0) > 0
+                        ? `Match ${challenge.stake_amount} BB & Accept`
+                        : `Accept Challenge`}
                     </Button>
                   )}
 
-                  {canAccept && !isSilverPlus && (
+                  {canAccept && !isSilverPlus && (challenge.stake_amount ?? 0) > 0 && (
                     <div className="flex items-center gap-2 text-center text-xs text-muted-foreground py-2 bg-muted/30 rounded-lg px-3">
                       <Lock className="w-4 h-4 flex-shrink-0" />
                       <span>Silver+ required to accept</span>
