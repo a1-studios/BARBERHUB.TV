@@ -42,17 +42,17 @@ export const LiveActivityPill = () => {
         isFreshLiveBroadcast(b.last_live_check, b.updated_at)
       );
 
-      // 2) Live battles — only TRULY active: both barbers streaming AND updated in last 30 min
-      const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+      // 2) Live battles — only TRULY active: both barbers streaming AND updated in last 2 min (LiveKit heartbeat window)
+      const twoMinAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
       const { data: battles } = await supabase
         .from('battles')
         .select('id, status, barber1_id, barber2_id, barber1_is_streaming, barber2_is_streaming, updated_at')
-        .in('status', ['active', 'voting', 'live'])
+        .in('status', ['active', 'live'])
         .not('barber1_id', 'is', null)
         .not('barber2_id', 'is', null)
         .eq('barber1_is_streaming', true)
         .eq('barber2_is_streaming', true)
-        .gte('updated_at', thirtyMinAgo);
+        .gte('updated_at', twoMinAgo);
 
       // Collect all user_ids needed for avatar/name lookups
       const userIds = new Set<string>();
@@ -175,7 +175,7 @@ export const LiveActivityPill = () => {
               key={`battle-${item.id}`}
               onClick={() => navigate(`/battle/${item.id}/theater`)}
               className="relative shrink-0 group"
-              style={{ width: '60px', height: '40px' }}
+              style={{ width: '54px', height: '36px' }}
               aria-label={`Watch live battle`}
             >
               {/* Stacked pair wrapped in shared gradient glow */}
@@ -183,7 +183,7 @@ export const LiveActivityPill = () => {
 
               {/* Barber 1 — left */}
               <div className="absolute left-0 top-0 rounded-full p-[2px] bg-gradient-to-tr from-red-500 to-orange-500 z-10">
-                <Avatar className="w-9 h-9 border-2 border-background">
+                <Avatar className="w-8 h-8 border-2 border-background">
                   <AvatarImage src={item.b1_avatar || undefined} alt={item.b1_name} />
                   <AvatarFallback className="bg-muted text-foreground text-[10px]">
                     {item.b1_name.slice(0, 2).toUpperCase()}
@@ -193,7 +193,7 @@ export const LiveActivityPill = () => {
 
               {/* Barber 2 — overlapping right */}
               <div className="absolute right-0 top-1 rounded-full p-[2px] bg-gradient-to-tr from-orange-500 to-yellow-500 z-20">
-                <Avatar className="w-9 h-9 border-2 border-background">
+                <Avatar className="w-8 h-8 border-2 border-background">
                   <AvatarImage src={item.b2_avatar || undefined} alt={item.b2_name} />
                   <AvatarFallback className="bg-muted text-foreground text-[10px]">
                     {item.b2_name.slice(0, 2).toUpperCase()}
@@ -202,7 +202,7 @@ export const LiveActivityPill = () => {
               </div>
 
               {/* Crossed swords badge */}
-              <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 z-30 w-4 h-4 rounded-full bg-primary border-2 border-background flex items-center justify-center shadow">
+              <div className="absolute left-1/2 -translate-x-1/2 -bottom-1 z-30 w-3.5 h-3.5 rounded-full bg-primary border-2 border-background flex items-center justify-center shadow">
                 <Swords className="w-2 h-2 text-primary-foreground" />
               </div>
             </button>
