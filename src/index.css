@@ -650,3 +650,60 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* =====================================================
+   Cyber-Industrial Promotion Gate utilities
+   ===================================================== */
+@layer utilities {
+  .cyber-scanlines {
+    background-image: repeating-linear-gradient(
+      0deg,
+      transparent 0,
+      transparent 2px,
+      rgba(255, 255, 255, 0.025) 2px,
+      rgba(255, 255, 255, 0.025) 3px
+    );
+  }
+
+  .cyber-input {
+    width: 100%;
+    background: #000;
+    border: 2px solid rgba(0, 240, 255, 0.25);
+    padding: 0.75rem 1rem;
+    color: #fff;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.95rem;
+    border-radius: 2px;
+    box-shadow: inset 0 0 14px rgba(0, 0, 0, 0.8);
+    transition: all 0.18s ease;
+  }
+  .cyber-input::placeholder {
+    color: rgba(255, 255, 255, 0.2);
+  }
+  .cyber-input:focus {
+    outline: none;
+    border-color: #00f0ff;
+    box-shadow: 0 0 20px rgba(0, 240, 255, 0.4), inset 0 0 14px rgba(0, 0, 0, 0.8);
+  }
+  .cyber-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  @keyframes leverPulse {
+    0%, 100% { box-shadow: 0 0 16px rgba(0, 240, 255, 0.6); }
+    50% { box-shadow: 0 0 28px rgba(0, 240, 255, 1); }
+  }
+  .animate-lever-pulse {
+    animation: leverPulse 1.6s ease-in-out infinite;
+  }
+
+  @keyframes mechSnap {
+    0% { transform: scale(1); }
+    40% { transform: scale(0.96); }
+    100% { transform: scale(1); }
+  }
+  .animate-mech-snap {
+    animation: mechSnap 0.18s ease-out;
+  }
+}
