@@ -11,6 +11,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
+import { useChallengeStakeConfig } from '@/hooks/useChallengeStakeConfig';
 import { toast } from 'sonner';
 
 interface ChallengeModalProps {
@@ -33,15 +34,21 @@ export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
   const [mounted, setMounted] = useState(false);
   const { user } = useAuth();
   const { barberBucks: balance } = useBarberBucks();
+  const { stakesEnabled, minStake } = useChallengeStakeConfig();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [allBarbers, setAllBarbers] = useState<BarberResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedBarber, setSelectedBarber] = useState<BarberResult | null>(null);
-  const [stakeAmount, setStakeAmount] = useState(100);
+  const [stakeAmount, setStakeAmount] = useState(minStake);
   const [isIssuing, setIsIssuing] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
+
+  // Keep stake in sync with sovereign-controlled minimum
+  useEffect(() => {
+    setStakeAmount(prev => Math.max(prev, minStake));
+  }, [minStake]);
 
   // Lock body scroll + load barbers when open
   useEffect(() => {
@@ -52,10 +59,10 @@ export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
       document.body.style.overflow = '';
       setSearchQuery('');
       setSelectedBarber(null);
-      setStakeAmount(100);
+      setStakeAmount(minStake);
     }
     return () => { document.body.style.overflow = ''; };
-  }, [open]);
+  }, [open, minStake]);
 
   const loadBarbers = async () => {
     setIsLoading(true);
@@ -82,8 +89,9 @@ export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
 
   const issueDirectChallenge = async () => {
     if (!selectedBarber || !user) return;
-    if (balance < stakeAmount) {
-      toast.error(`Insufficient BB. You have ${balance} but need ${stakeAmount}.`);
+    const effectiveStake = stakesEnabled ? stakeAmount : 0;
+    if (stakesEnabled && balance < effectiveStake) {
+      toast.error(`Insufficient BB. You have ${balance} but need ${effectiveStake}.`);
       return;
     }
     setIsIssuing(true);
@@ -91,13 +99,17 @@ export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
       const { data, error } = await supabase.functions.invoke('create-challenge-stake', {
         body: {
           title: `Challenge to ${selectedBarber.display_name || selectedBarber.barber_name}`,
-          stake_amount: stakeAmount,
+          stake_amount: effectiveStake,
           challenge_message: `Direct challenge to ${selectedBarber.display_name || selectedBarber.barber_name}`,
           target_barber_id: selectedBarber.user_id,
         },
       });
       if (error) throw error;
-      toast.success(`Challenge issued to ${selectedBarber.display_name || selectedBarber.barber_name}! ${stakeAmount} BB staked.`);
+      toast.success(
+        effectiveStake > 0
+          ? `Challenge issued to ${selectedBarber.display_name || selectedBarber.barber_name}! ${effectiveStake} BB staked.`
+          : `Challenge issued to ${selectedBarber.display_name || selectedBarber.barber_name}! Viewers can donate to the pot.`
+      );
       setSelectedBarber(null);
       setSearchQuery('');
     } catch (err: any) {
@@ -161,6 +173,8 @@ export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
                   setStakeAmount={setStakeAmount}
                   balance={balance}
                   isIssuing={isIssuing}
+                  stakesEnabled={stakesEnabled}
+                  minStake={minStake}
                   onClear={() => setSelectedBarber(null)}
                   onChallenge={issueDirectChallenge}
                 />
@@ -220,16 +234,22 @@ export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
 
 /* Extracted sub-component for the stake picker after selecting a barber */
 function SelectedBarberStake({
-  selectedBarber, stakeAmount, setStakeAmount, balance, isIssuing, onClear, onChallenge,
+  selectedBarber, stakeAmount, setStakeAmount, balance, isIssuing, stakesEnabled, minStake, onClear, onChallenge,
 }: {
   selectedBarber: BarberResult;
   stakeAmount: number;
   setStakeAmount: (v: number) => void;
   balance: number;
   isIssuing: boolean;
+  stakesEnabled: boolean;
+  minStake: number;
   onClear: () => void;
   onChallenge: () => void;
 }) {
+  const firstName = (selectedBarber.display_name || selectedBarber.barber_name || '').split(' ')[0];
+  const sliderMax = Math.max(minStake * 5, 500);
+  const sliderStep = Math.max(Math.round(minStake / 2), 50);
+
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 bg-muted/30 rounded-xl p-4 border border-primary/20">
       <div className="flex items-center justify-between">
@@ -248,27 +268,37 @@ function SelectedBarberStake({
         <Button variant="ghost" size="sm" onClick={onClear} className="text-xs text-muted-foreground">Change</Button>
       </div>
 
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-foreground flex items-center gap-1">
-            <Coins className="h-3 w-3 text-yellow-500" /> Stake Amount
-          </span>
-          <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-xs font-bold">{stakeAmount} BB</Badge>
+      {stakesEnabled ? (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-medium text-foreground flex items-center gap-1">
+              <Coins className="h-3 w-3 text-yellow-500" /> Stake Amount
+            </span>
+            <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-xs font-bold">{stakeAmount} BB</Badge>
+          </div>
+          <Slider value={[stakeAmount]} onValueChange={([v]) => setStakeAmount(v)} min={minStake} max={sliderMax} step={sliderStep} />
+          <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+            <span>{minStake} BB</span>
+            <span>Balance: {balance} BB</span>
+            <span>{sliderMax} BB</span>
+          </div>
         </div>
-        <Slider value={[stakeAmount]} onValueChange={([v]) => setStakeAmount(v)} min={100} max={500} step={50} />
-        <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-          <span>100 BB</span>
-          <span>Balance: {balance} BB</span>
-          <span>500 BB</span>
+      ) : (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground">
+          🆓 <span className="font-semibold text-foreground">Free challenge</span> — no BB locked. Viewers can donate to grow the winner's pot.
         </div>
-      </div>
+      )}
 
       <Button
         onClick={onChallenge}
-        disabled={isIssuing || balance < stakeAmount}
+        disabled={isIssuing || (stakesEnabled && balance < stakeAmount)}
         className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white font-bold"
       >
-        {isIssuing ? 'Issuing...' : `⚔️ Challenge ${(selectedBarber.display_name || selectedBarber.barber_name || '').split(' ')[0]}`}
+        {isIssuing
+          ? 'Issuing...'
+          : stakesEnabled
+            ? `⚔️ Stake ${stakeAmount} BB & Challenge ${firstName}`
+            : `⚔️ Challenge ${firstName}`}
       </Button>
     </motion.div>
   );

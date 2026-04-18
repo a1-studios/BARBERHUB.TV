@@ -9,11 +9,12 @@ const corsHeaders = {
 const SOVEREIGN_EMAIL = Deno.env.get('SOVEREIGN_EMAIL') || 'a1studios.film@gmail.com';
 
 interface SystemRequest {
-  action: 'get_status' | 'pause_battles' | 'resume_battles' | 'freeze_economy' | 'unfreeze_economy' | 'maintenance_mode' | 'exit_maintenance' | 'get_audit_log' | 'get_platform_stats' | 'enforce_tiers_on' | 'enforce_tiers_off' | 'tiers_enable' | 'tiers_disable';
+  action: 'get_status' | 'pause_battles' | 'resume_battles' | 'freeze_economy' | 'unfreeze_economy' | 'maintenance_mode' | 'exit_maintenance' | 'get_audit_log' | 'get_platform_stats' | 'enforce_tiers_on' | 'enforce_tiers_off' | 'tiers_enable' | 'tiers_disable' | 'challenge_stakes_enable' | 'challenge_stakes_disable' | 'challenge_set_min_stake';
   reason?: string;
   notes?: string;
   limit?: number;
   offset?: number;
+  min_stake_bb?: number;
 }
 
 serve(async (req) => {
@@ -65,7 +66,7 @@ serve(async (req) => {
     }
 
     const body: SystemRequest = await req.json();
-    const { action, reason, notes, limit = 50, offset = 0 } = body;
+    const { action, reason, notes, limit = 50, offset = 0, min_stake_bb } = body;
 
     console.log(`Sovereign system action: ${action} by ${user.email}`);
 
@@ -305,6 +306,56 @@ serve(async (req) => {
 
         afterState = { tiers_enabled: false };
         result = { success: true, message: 'Tier system DISABLED. All tier UI hidden, all users treated as standard.' };
+        break;
+      }
+
+      case 'challenge_stakes_enable': {
+        beforeState = { challenge_stakes_enabled: false };
+        severity = 'critical';
+
+        await supabase
+          .from('platform_state')
+          .upsert({ key: 'challenge_stakes_enabled', value: 'true', updated_at: new Date().toISOString(), updated_by: user.id }, { onConflict: 'key' });
+
+        afterState = { challenge_stakes_enabled: true };
+        result = { success: true, message: 'Challenge stakes ENABLED. Barbers must lock BB to issue or accept challenges.' };
+        break;
+      }
+
+      case 'challenge_stakes_disable': {
+        beforeState = { challenge_stakes_enabled: true };
+        severity = 'critical';
+
+        await supabase
+          .from('platform_state')
+          .upsert({ key: 'challenge_stakes_enabled', value: 'false', updated_at: new Date().toISOString(), updated_by: user.id }, { onConflict: 'key' });
+
+        afterState = { challenge_stakes_enabled: false };
+        result = { success: true, message: 'Challenge stakes DISABLED. Barbers can challenge each other for free; viewer donations build the pot.' };
+        break;
+      }
+
+      case 'challenge_set_min_stake': {
+        const newMin = Math.max(1, Math.floor(Number(min_stake_bb) || 0));
+        if (!newMin) {
+          throw new Error('min_stake_bb must be a positive integer');
+        }
+
+        const { data: prevRow } = await supabase
+          .from('platform_state')
+          .select('value')
+          .eq('key', 'challenge_min_stake_bb')
+          .maybeSingle();
+
+        beforeState = { challenge_min_stake_bb: prevRow?.value ?? null };
+        severity = 'normal';
+
+        await supabase
+          .from('platform_state')
+          .upsert({ key: 'challenge_min_stake_bb', value: String(newMin), updated_at: new Date().toISOString(), updated_by: user.id }, { onConflict: 'key' });
+
+        afterState = { challenge_min_stake_bb: String(newMin) };
+        result = { success: true, message: `Minimum challenge stake set to ${newMin} BB.`, min_stake_bb: newMin };
         break;
       }
 
