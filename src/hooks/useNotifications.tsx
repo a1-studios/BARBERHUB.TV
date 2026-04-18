@@ -101,18 +101,33 @@ export const useNotifications = () => {
           // Show toast for new notification
           const newNotification = payload.new as Notification;
           const reviewTypes = ['appointment_completed', 'review_prompt'];
-          const actionTarget = newNotification.data?.battle_id
-            ? `/battles/${newNotification.data.battle_id}`
-            : newNotification.data?.appointment_id
-              ? `/profile?appointment_id=${newNotification.data.appointment_id}${reviewTypes.includes(newNotification.type) ? '&action=review' : ''}`
-              : null;
+
+          // Type-aware action target — DO NOT auto-route challenge_received into the battle room
+          let actionTarget: string | null = null;
+          let actionLabel = 'View';
+          let onClickOverride: (() => void) | null = null;
+
+          if (newNotification.type === 'challenge_received') {
+            // Open the notification panel so the user can Accept/Decline via modal
+            actionLabel = 'Respond';
+            onClickOverride = () => {
+              window.dispatchEvent(new CustomEvent('open-notifications'));
+            };
+          } else if (newNotification.type === 'challenge_accepted' && newNotification.data?.battle_id) {
+            actionTarget = `/battle/${newNotification.data.battle_id}/contender`;
+          } else if (newNotification.data?.battle_id) {
+            actionTarget = `/battles/${newNotification.data.battle_id}`;
+          } else if (newNotification.data?.appointment_id) {
+            actionTarget = `/profile?appointment_id=${newNotification.data.appointment_id}${reviewTypes.includes(newNotification.type) ? '&action=review' : ''}`;
+          }
 
           toast(newNotification.title, {
             description: newNotification.message,
-            action: actionTarget ? {
-              label: 'View',
+            action: (onClickOverride || actionTarget) ? {
+              label: actionLabel,
               onClick: () => {
-                window.location.href = actionTarget;
+                if (onClickOverride) onClickOverride();
+                else if (actionTarget) window.location.href = actionTarget;
               }
             } : undefined
           });
