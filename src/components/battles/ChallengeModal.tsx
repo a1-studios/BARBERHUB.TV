@@ -148,7 +148,10 @@ export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
                 <div className="p-2 rounded-lg bg-gradient-to-br from-red-500 to-orange-500">
                   <Flame className="w-4 h-4 text-white" />
                 </div>
-                <h2 className="text-lg font-bold text-foreground tracking-wide">CHALLENGE ARENA</h2>
+                <div>
+                  <h2 className="text-lg font-bold text-foreground tracking-wide leading-none">QUICK PLAY</h2>
+                  <p className="text-[10px] text-muted-foreground tracking-wider mt-0.5">UNRANKED · NO TOURNAMENT IMPACT</p>
+                </div>
               </div>
               <button onClick={onClose} className="p-1.5 rounded-full hover:bg-muted transition-colors">
                 <X className="w-5 h-5 text-muted-foreground" />
