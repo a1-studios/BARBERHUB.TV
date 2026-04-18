@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { WifiOff, Loader2 } from 'lucide-react';
 import { TugOfWarMeter } from './TugOfWarMeter';
 import { ServerBattleTimer } from './ServerBattleTimer';
+import { DraggableBattleSplit } from './DraggableBattleSplit';
 
 interface LiveKitArenaProps {
   battleId: string;

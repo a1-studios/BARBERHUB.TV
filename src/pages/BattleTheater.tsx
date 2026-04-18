@@ -12,6 +12,7 @@ import { PresenceIndicator } from '@/components/battles/PresenceIndicator';
 import { BattleSettings } from '@/components/battles/BattleSettings';
 import { AnimatedCounter } from '@/components/battles/AnimatedCounter';
 import { LiveKitArena } from '@/components/battles/LiveKitArena';
+import { DraggableBattleSplit } from '@/components/battles/DraggableBattleSplit';
 import { ProcessingArena } from '@/components/battles/ProcessingArena';
 import { useVoteCombo } from '@/hooks/useVoteCombo';
 import { useRealtimeBattleViewers } from '@/hooks/useRealtimeBattleViewers';
