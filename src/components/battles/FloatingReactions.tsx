@@ -49,7 +49,7 @@ export const FloatingReactions = ({ battleId, barberId }: FloatingReactionsProps
           // Auto-remove after animation
           setTimeout(() => {
             setReactions(prev => prev.filter(r => r.id !== newReaction.id));
-          }, 3000);
+          }, 1800);
         }
       )
       .subscribe();
@@ -77,10 +77,10 @@ export const FloatingReactions = ({ battleId, barberId }: FloatingReactionsProps
             }}
             exit={{ opacity: 0 }}
             transition={{
-              duration: 3,
+              duration: 1.8,
               ease: 'easeOut'
             }}
-            className="absolute text-4xl"
+            className="absolute text-2xl"
             style={{
               filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
             }}

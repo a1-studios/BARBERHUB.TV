@@ -362,10 +362,20 @@ export default function BattleTheater() {
         </div>
       </motion.div>
 
-      {/* 50/50 Split Screen */}
-      <div className="h-full flex">
-        {/* Left Side - Barber 1 */}
-        <div className="flex-1 relative">
+      {/* 50/50 Split Screen — vertical stack on mobile, side-by-side on desktop.
+          When no VOD is ready, show single "Recording in progress" placeholder. */}
+      {!battleStreamUid && !barber1VideoSrc && !barber2VideoSrc ? (
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-center px-6 bg-gradient-to-br from-background via-background to-primary/10">
+          <div className="w-16 h-16 rounded-full border-4 border-primary/30 border-t-primary animate-spin mb-4" />
+          <h2 className="text-2xl font-bold mb-2">Recording in progress</h2>
+          <p className="text-muted-foreground max-w-md">
+            The battle has finished and the recording is being processed. Check back soon — this page will refresh automatically when it's ready.
+          </p>
+        </div>
+      ) : (
+      <div className="h-full flex flex-col md:flex-row">
+        {/* Left / Top - Barber 1 */}
+        <div className="flex-1 relative h-1/2 md:h-full">
           {battleStreamUid ? (
             <CloudflareStreamPlayer streamUid={battleStreamUid} fallbackUrl={barber1VideoSrc} autoPlay muted loop />
           ) : isMP4(barber1VideoSrc) ? (
@@ -391,7 +401,7 @@ export default function BattleTheater() {
               <Button
                 onClick={() => handleVote(barber1?.id, battle.creation1_id || '')}
                 disabled={!!userVote}
-                className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-bold py-6 px-8 rounded-xl shadow-2xl"
+                className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-6 px-8 rounded-xl shadow-2xl"
               >
                 {userVote === battle.creation1_id ? '✓ Voted' : 'VOTE'}
               </Button>
@@ -402,10 +412,10 @@ export default function BattleTheater() {
           </div>
         </div>
 
-        <div className="w-px bg-white/30" />
+        <div className="h-px md:h-auto md:w-px bg-white/30" />
 
-        {/* Right Side - Barber 2 */}
-        <div className="flex-1 relative">
+        {/* Right / Bottom - Barber 2 */}
+        <div className="flex-1 relative h-1/2 md:h-full">
           {battleStreamUid ? (
             <CloudflareStreamPlayer streamUid={battleStreamUid} fallbackUrl={barber2VideoSrc} autoPlay muted loop />
           ) : isMP4(barber2VideoSrc) ? (
@@ -431,7 +441,7 @@ export default function BattleTheater() {
               <Button
                 onClick={() => handleVote(barber2?.id, battle.creation2_id || '')}
                 disabled={!!userVote}
-                className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-bold py-6 px-8 rounded-xl shadow-2xl"
+                className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-bold py-6 px-8 rounded-xl shadow-2xl"
               >
                 {userVote === battle.creation2_id ? '✓ Voted' : 'VOTE'}
               </Button>
@@ -442,6 +452,7 @@ export default function BattleTheater() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Bottom Reaction Bar */}
       <motion.div

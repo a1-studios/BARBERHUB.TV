@@ -1,5 +1,5 @@
 export const LIVE_BROADCAST_HEARTBEAT_MS = 10000;
-export const LIVE_BROADCAST_STALE_MS = 30000;
+export const LIVE_BROADCAST_STALE_MS = 15000;
 
 export const getLiveReferenceTime = (
   lastLiveCheck?: string | null,
