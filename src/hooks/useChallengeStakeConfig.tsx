@@ -22,7 +22,7 @@ export function useChallengeStakeConfig() {
         .in('key', ['challenge_stakes_enabled', 'challenge_min_stake_bb']);
       if (error) throw error;
       const map = (data || []).reduce<Record<string, string>>((acc, row) => {
-        acc[row.key] = row.value;
+        acc[row.key] = row.value == null ? '' : String(row.value);
         return acc;
       }, {});
       return {
