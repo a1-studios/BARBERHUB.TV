@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
-import { AcceptChallengeModal } from '@/components/battles/AcceptChallengeModal';
 import { supabase } from '@/integrations/supabase/client';
 
 const notificationIconMap: Record<string, React.ReactNode> = {
