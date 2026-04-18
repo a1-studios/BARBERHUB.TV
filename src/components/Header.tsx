@@ -38,6 +38,7 @@ const Header = () => {
   const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
   const { unreadCount } = useNotifications();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [acceptChallenge, setAcceptChallenge] = useState<any | null>(null);
 
   // Allow toasts (e.g. challenge_received) to programmatically open the notification panel
   useEffect(() => {
