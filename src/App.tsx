@@ -42,6 +42,7 @@ import CameraStudio from "./pages/CameraStudio";
 import Rankings from "./pages/Rankings";
 import BroadcastViewer from "./pages/BroadcastViewer";
 import BroadcastStudio from "./pages/BroadcastStudio";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -220,6 +221,7 @@ const AppContent = () => {
                 </AuthGuard>
               } 
             />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
     </>
