@@ -54,8 +54,10 @@ serve(async (req) => {
       .single();
 
     if (battleError || !battle) throw new Error("Battle not found");
-    if (battle.streaming_type !== "livekit") {
-      throw new Error("This battle does not use LiveKit streaming");
+    // LiveKit is the platform standard. Accept legacy/null streaming_type values too.
+    // Only reject if the battle is explicitly marked for a non-LiveKit pipeline (e.g., 'youtube').
+    if (battle.streaming_type && !['livekit', 'twilio'].includes(battle.streaming_type)) {
+      throw new Error(`This battle uses ${battle.streaming_type} streaming, not LiveKit`);
     }
 
     // Display name
