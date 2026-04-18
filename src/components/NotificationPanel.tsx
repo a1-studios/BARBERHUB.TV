@@ -162,9 +162,22 @@ export function NotificationPanel({ embedded, onClose }: NotificationPanelProps)
     </>
   );
 
+  const challengeModal = acceptChallenge ? (
+    <AcceptChallengeModal
+      challenge={acceptChallenge}
+      isOpen={!!acceptChallenge}
+      onClose={() => setAcceptChallenge(null)}
+    />
+  ) : null;
+
   // Embedded mode: just render the list directly
   if (embedded) {
-    return renderList();
+    return (
+      <>
+        {renderList()}
+        {challengeModal}
+      </>
+    );
   }
 
   // Standalone mode (fallback, not used in current header)
@@ -188,6 +201,7 @@ export function NotificationPanel({ embedded, onClose }: NotificationPanelProps)
           {renderList()}
         </div>
       )}
+      {challengeModal}
     </div>
   );
 }
