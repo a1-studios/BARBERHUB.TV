@@ -166,7 +166,10 @@ serve(async (req) => {
         .eq('id', existingPool.id);
     }
 
-    // Update challenge - mark as matched (battle live; expire it from open feed instantly)
+    // Update challenge - mark as completed (battle live; expire from feed instantly).
+    // NOTE: status check constraint only allows 'waiting_for_opponent' | 'completed' | 'expired'.
+    // We use 'completed' + expires_at=now() so feed filters drop the row immediately,
+    // and the cleanup cron hard-deletes it shortly after.
     const nowIso = new Date().toISOString();
     const { error: updateError } = await supabase
       .from('open_challenges')
@@ -174,8 +177,8 @@ serve(async (req) => {
         accepted_by_id: user.id,
         accepted_by_username: profile.display_name || profile.username || 'Anonymous',
         accepted_at: nowIso,
-        status: 'matched',
-        expires_at: nowIso, // forces feed filters (expires_at > now()) to drop the row
+        status: 'completed',
+        expires_at: nowIso,
         opponent_stake_matched: true,
         pot_total: totalPot,
         platform_fee_collected: platformFee,
@@ -183,6 +186,7 @@ serve(async (req) => {
       .eq('id', challenge_id);
 
     if (updateError) {
+      console.error('Failed to update open_challenges row:', updateError);
       // Rollback stake if we deducted one
       if (!isFreeChallenge) {
         await supabase
@@ -190,7 +194,7 @@ serve(async (req) => {
           .update({ barber_bucks: currentBalance })
           .eq('user_id', user.id);
       }
-      throw new Error('Failed to accept challenge');
+      throw new Error(`Failed to accept challenge: ${updateError.message}`);
     }
 
     // Wire the battle: set barber2 to acceptor + flip to live so both clients
