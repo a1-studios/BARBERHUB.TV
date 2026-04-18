@@ -42,13 +42,17 @@ export const LiveActivityPill = () => {
         isFreshLiveBroadcast(b.last_live_check, b.updated_at)
       );
 
-      // 2) Live battles (active / voting / waiting_for_opponent w/ both barbers)
+      // 2) Live battles — only TRULY active: both barbers streaming AND updated in last 30 min
+      const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
       const { data: battles } = await supabase
         .from('battles')
-        .select('id, status, barber1_id, barber2_id')
+        .select('id, status, barber1_id, barber2_id, barber1_is_streaming, barber2_is_streaming, updated_at')
         .in('status', ['active', 'voting', 'live'])
         .not('barber1_id', 'is', null)
-        .not('barber2_id', 'is', null);
+        .not('barber2_id', 'is', null)
+        .eq('barber1_is_streaming', true)
+        .eq('barber2_is_streaming', true)
+        .gte('updated_at', thirtyMinAgo);
 
       // Collect all user_ids needed for avatar/name lookups
       const userIds = new Set<string>();
