@@ -177,7 +177,26 @@ serve(async (req) => {
       throw new Error('Failed to accept challenge');
     }
 
-    // Notify challenger
+    // Wire the battle: set barber2 to acceptor + flip to live so both clients
+    // routed through ContenderTheater can join the same room.
+    if (challenge.battle_id) {
+      const { data: acceptorBarberProfile } = await supabase
+        .from('barber_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      await supabase
+        .from('battles')
+        .update({
+          barber2_id: acceptorBarberProfile?.id ?? null,
+          status: 'live',
+          prize_amount: totalPot,
+        })
+        .eq('id', challenge.battle_id);
+    }
+
+    // Notify challenger (deep-linkable to the battle room)
     const notifyMessage = isFreeChallenge
       ? `${profile.display_name || 'A barber'} accepted your challenge "${challenge.title}"! Pot grows from viewer donations.`
       : `${profile.display_name || 'A barber'} accepted your challenge "${challenge.title}"! Total pot: ${totalPot} BB`;
@@ -191,6 +210,7 @@ serve(async (req) => {
         message: notifyMessage,
         data: {
           challenge_id,
+          battle_id: challenge.battle_id,
           opponent_id: user.id,
           pot_total: totalPot,
           is_free_challenge: isFreeChallenge,

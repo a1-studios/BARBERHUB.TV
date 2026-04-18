@@ -60,10 +60,10 @@ export const AcceptChallengeModal = ({ challenge, isOpen, onClose }: AcceptChall
           : `You matched the ${stakeRequired} BB stake. The battle is on!`
       });
 
-      if (data?.battle_id) {
-        setTimeout(() => navigate(`/studio?battleId=${data.battle_id}`), 1000);
-      }
       onClose();
+      if (data?.battle_id) {
+        navigate(`/battle/${data.battle_id}/contender`);
+      }
     } catch (error: any) {
       console.error('Error accepting challenge:', error);
       toast({ title: "Error", description: error.message || "Failed to accept challenge", variant: "destructive" });

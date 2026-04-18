@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Flame, Search, Swords, Coins, Users } from 'lucide-react';
 import { ChallengeFeed } from './ChallengeFeed';
@@ -32,6 +33,7 @@ interface BarberResult {
 
 export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
   const [mounted, setMounted] = useState(false);
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { barberBucks: balance } = useBarberBucks();
   const { stakesEnabled, minStake } = useChallengeStakeConfig();
@@ -105,6 +107,7 @@ export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
         },
       });
       if (error) throw error;
+      const battleId = data?.battle_id || data?.challenge?.battle_id;
       toast.success(
         effectiveStake > 0
           ? `Challenge issued to ${selectedBarber.display_name || selectedBarber.barber_name}! ${effectiveStake} BB staked.`
@@ -112,6 +115,10 @@ export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
       );
       setSelectedBarber(null);
       setSearchQuery('');
+      onClose();
+      if (battleId) {
+        navigate(`/battle/${battleId}/contender`);
+      }
     } catch (err: any) {
       toast.error(err.message || 'Failed to issue challenge');
     }
