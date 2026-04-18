@@ -209,16 +209,35 @@ serve(async (req) => {
       throw new Error('Failed to create challenge');
     }
 
+    // Notify the targeted barber so they get a realtime alert + can deep-link to accept
+    if (target_barber_id) {
+      await supabase
+        .from('notifications')
+        .insert({
+          user_id: target_barber_id,
+          type: 'challenge_received',
+          title: "⚔️ You've Been Challenged!",
+          message: `${profile.display_name || profile.username || 'A barber'} challenged you to "${title}"${effectiveStake > 0 ? ` for ${effectiveStake} BB` : ' (free — viewer donations build the pot)'}.`,
+          data: {
+            challenge_id: challenge.id,
+            battle_id: battle.id,
+            challenger_id: user.id,
+            stake_amount: effectiveStake,
+          },
+        });
+    }
+
     const message = effectiveStake > 0
       ? `Challenge created with ${effectiveStake} BB stake! Expires in ${durationMins} minutes.`
       : `Challenge issued! Viewers can donate to grow the winner's pot. Expires in ${durationMins} minutes.`;
 
-    console.log(`Challenge created (stake=${effectiveStake}): ${challenge.id}, expires ${expiresAt}`);
+    console.log(`Challenge created (stake=${effectiveStake}): ${challenge.id}, battle=${battle.id}, expires ${expiresAt}`);
 
     return new Response(
       JSON.stringify({
         success: true,
         challenge,
+        battle_id: battle.id,
         new_balance: newBalance,
         stake_amount: effectiveStake,
         expires_at: expiresAt,
