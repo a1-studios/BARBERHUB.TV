@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useNotifications } from '@/hooks/useNotifications';
 import { NotificationPanel } from './NotificationPanel';
+import { AcceptChallengeModal } from './battles/AcceptChallengeModal';
 
 interface QuickAction {
   id: string;
