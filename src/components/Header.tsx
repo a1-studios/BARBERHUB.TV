@@ -265,7 +265,11 @@ const Header = () => {
                         >
                           ← Back to Wallet
                         </button>
-                        <NotificationPanel embedded onClose={() => { setBbDropdownOpen(false); setShowNotifications(false); }} />
+                        <NotificationPanel
+                          embedded
+                          onClose={() => { setBbDropdownOpen(false); setShowNotifications(false); }}
+                          onOpenAcceptModal={(ch) => setAcceptChallenge(ch)}
+                        />
                       </div>
                     </div>
                   ) : (
