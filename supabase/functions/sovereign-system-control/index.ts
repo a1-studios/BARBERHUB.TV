@@ -9,7 +9,7 @@ const corsHeaders = {
 const SOVEREIGN_EMAIL = Deno.env.get('SOVEREIGN_EMAIL') || 'a1studios.film@gmail.com';
 
 interface SystemRequest {
-  action: 'get_status' | 'pause_battles' | 'resume_battles' | 'freeze_economy' | 'unfreeze_economy' | 'maintenance_mode' | 'exit_maintenance' | 'get_audit_log' | 'get_platform_stats' | 'enforce_tiers_on' | 'enforce_tiers_off';
+  action: 'get_status' | 'pause_battles' | 'resume_battles' | 'freeze_economy' | 'unfreeze_economy' | 'maintenance_mode' | 'exit_maintenance' | 'get_audit_log' | 'get_platform_stats' | 'enforce_tiers_on' | 'enforce_tiers_off' | 'tiers_enable' | 'tiers_disable';
   reason?: string;
   notes?: string;
   limit?: number;
@@ -279,6 +279,32 @@ serve(async (req) => {
 
         afterState = { enforce_tiers: false };
         result = { success: true, message: 'Tier enforcement disabled. All barbers visible (testing mode).' };
+        break;
+      }
+
+      case 'tiers_enable': {
+        beforeState = { tiers_enabled: false };
+        severity = 'critical';
+
+        await supabase
+          .from('platform_state')
+          .upsert({ key: 'tiers_enabled', value: 'true', updated_at: new Date().toISOString(), updated_by: user.id }, { onConflict: 'key' });
+
+        afterState = { tiers_enabled: true };
+        result = { success: true, message: 'Tier system ENABLED. Subscriptions, badges, and tier perks are live.' };
+        break;
+      }
+
+      case 'tiers_disable': {
+        beforeState = { tiers_enabled: true };
+        severity = 'emergency';
+
+        await supabase
+          .from('platform_state')
+          .upsert({ key: 'tiers_enabled', value: 'false', updated_at: new Date().toISOString(), updated_by: user.id }, { onConflict: 'key' });
+
+        afterState = { tiers_enabled: false };
+        result = { success: true, message: 'Tier system DISABLED. All tier UI hidden, all users treated as standard.' };
         break;
       }
 

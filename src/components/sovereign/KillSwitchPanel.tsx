@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, Pause, Play, Lock, Unlock, Wrench, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, Pause, Play, Lock, Unlock, Wrench, ShieldCheck, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -21,6 +21,7 @@ interface KillSwitchPanelProps {
     economy_frozen?: { value: string };
     maintenance_mode?: { value: string };
     enforce_tiers?: { value: string };
+    tiers_enabled?: { value: string };
   };
   onRefresh: () => void;
 }
@@ -40,6 +41,8 @@ const KillSwitchPanel = ({ platformState, onRefresh }: KillSwitchPanelProps) => 
   const economyFrozen = platformState?.economy_frozen?.value === 'true';
   const maintenanceMode = platformState?.maintenance_mode?.value === 'true';
   const tiersEnforced = platformState?.enforce_tiers?.value === 'true';
+  // Default ON: only treated as disabled when value explicitly === 'false'
+  const tiersEnabled = platformState?.tiers_enabled?.value !== 'false';
 
   const executeAction = async (action: string) => {
     setLoading(true);
@@ -76,7 +79,7 @@ const KillSwitchPanel = ({ platformState, onRefresh }: KillSwitchPanelProps) => 
           <h3 className="text-sm font-semibold text-white">Kill Switches</h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Battles Kill Switch */}
           <div className="p-4 rounded-lg bg-[#0a0a0f] border border-white/[0.06]">
             <div className="flex items-center justify-between mb-3">
@@ -194,6 +197,36 @@ const KillSwitchPanel = ({ platformState, onRefresh }: KillSwitchPanelProps) => 
             >
               <ShieldCheck className="h-3 w-3 mr-2" />
               {tiersEnforced ? 'Switch to Testing' : 'Enforce Tiers'}
+            </Button>
+          </div>
+
+          {/* Master Tier System Toggle */}
+          <div className="p-4 rounded-lg bg-[#0a0a0f] border border-white/[0.06]">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-white/40 uppercase tracking-wider">Tier System</span>
+              <div className="flex items-center gap-1.5">
+                <div className={`h-1.5 w-1.5 rounded-full ${tiersEnabled ? 'bg-orange-500' : 'bg-white/20'}`} />
+                <span className={`text-[10px] ${tiersEnabled ? 'text-orange-500' : 'text-white/40'}`}>
+                  {tiersEnabled ? 'ENABLED' : 'DISABLED'}
+                </span>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full border-white/10 text-white hover:bg-white/[0.04] bg-transparent"
+              disabled={loading}
+              onClick={() => openConfirmDialog(
+                tiersEnabled ? 'tiers_disable' : 'tiers_enable',
+                tiersEnabled ? 'Disable Tier System' : 'Enable Tier System',
+                tiersEnabled
+                  ? 'This will hide ALL tier UI (badges, rings, pricing cards, upgrade prompts) globally and treat every user as Standard. Type DISABLE to confirm.'
+                  : 'This will re-enable the full tier subscription system across the platform. Type ENABLE to confirm.',
+                tiersEnabled ? 'DISABLE' : 'ENABLE'
+              )}
+            >
+              <Layers className="h-3 w-3 mr-2" />
+              {tiersEnabled ? 'Disable' : 'Enable'}
             </Button>
           </div>
         </div>
