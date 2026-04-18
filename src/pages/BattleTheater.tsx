@@ -12,6 +12,7 @@ import { PresenceIndicator } from '@/components/battles/PresenceIndicator';
 import { BattleSettings } from '@/components/battles/BattleSettings';
 import { AnimatedCounter } from '@/components/battles/AnimatedCounter';
 import { LiveKitArena } from '@/components/battles/LiveKitArena';
+import { DraggableBattleSplit } from '@/components/battles/DraggableBattleSplit';
 import { ProcessingArena } from '@/components/battles/ProcessingArena';
 import { useVoteCombo } from '@/hooks/useVoteCombo';
 import { useRealtimeBattleViewers } from '@/hooks/useRealtimeBattleViewers';
@@ -373,84 +374,85 @@ export default function BattleTheater() {
           </p>
         </div>
       ) : (
-      <div className="h-full flex flex-col md:flex-row">
-        {/* Left / Top - Barber 1 */}
-        <div className="flex-1 relative h-1/2 md:h-full">
-          {battleStreamUid ? (
-            <CloudflareStreamPlayer streamUid={battleStreamUid} fallbackUrl={barber1VideoSrc} autoPlay muted loop />
-          ) : isMP4(barber1VideoSrc) ? (
-            <VODPlayer src={barber1VideoSrc!} className="w-full h-full object-cover" />
-          ) : (
-            <HLSVideoPlayer src={barber1VideoSrc} isLive={false} title={barber1?.name} size="large" autoPlay />
-          )}
-          <div className="absolute bottom-20 left-4 right-4 space-y-3">
-            <div className="text-white text-center">
-              <h2 className="text-2xl font-bold mb-2">{barber1?.name}</h2>
-              <div className="flex items-center justify-center gap-4 mb-3">
-                <div className="bg-black/60 backdrop-blur-sm rounded-full px-4 py-2">
-                  <AnimatedCounter value={voteCounts?.barber1Votes || 0} className="text-xl font-bold" />
-                  <span className="text-sm ml-2">votes</span>
+      <div className="absolute inset-0">
+        <DraggableBattleSplit
+          panelOne={
+            <>
+              {battleStreamUid ? (
+                <CloudflareStreamPlayer streamUid={battleStreamUid} fallbackUrl={barber1VideoSrc} autoPlay muted loop />
+              ) : isMP4(barber1VideoSrc) ? (
+                <VODPlayer src={barber1VideoSrc!} className="w-full h-full object-cover" />
+              ) : (
+                <HLSVideoPlayer src={barber1VideoSrc} isLive={false} title={barber1?.name} size="large" autoPlay />
+              )}
+              <div className="absolute bottom-20 left-4 right-4 space-y-3">
+                <div className="text-white text-center">
+                  <h2 className="text-2xl font-bold mb-2">{barber1?.name}</h2>
+                  <div className="flex items-center justify-center gap-4 mb-3">
+                    <div className="bg-black/60 backdrop-blur-sm rounded-full px-4 py-2">
+                      <AnimatedCounter value={voteCounts?.barber1Votes || 0} className="text-xl font-bold" />
+                      <span className="text-sm ml-2">votes</span>
+                    </div>
+                    <div className="bg-black/60 backdrop-blur-sm rounded-full px-4 py-2">
+                      <AnimatedCounter value={viewerData.barber1} className="text-xl font-bold" />
+                      <span className="text-sm ml-2">viewers</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="bg-black/60 backdrop-blur-sm rounded-full px-4 py-2">
-                  <AnimatedCounter value={viewerData.barber1} className="text-xl font-bold" />
-                  <span className="text-sm ml-2">viewers</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex gap-2 justify-center">
-              <Button
-                onClick={() => handleVote(barber1?.id, battle.creation1_id || '')}
-                disabled={!!userVote}
-                className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-6 px-8 rounded-xl shadow-2xl"
-              >
-                {userVote === battle.creation1_id ? '✓ Voted' : 'VOTE'}
-              </Button>
-              <Button variant="outline" size="icon" onClick={handleLike} className="bg-black/40 backdrop-blur-sm border-white/20 hover:bg-white/20">
-                <Heart className="h-5 w-5 text-white" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <div className="h-px md:h-auto md:w-px bg-white/30" />
-
-        {/* Right / Bottom - Barber 2 */}
-        <div className="flex-1 relative h-1/2 md:h-full">
-          {battleStreamUid ? (
-            <CloudflareStreamPlayer streamUid={battleStreamUid} fallbackUrl={barber2VideoSrc} autoPlay muted loop />
-          ) : isMP4(barber2VideoSrc) ? (
-            <VODPlayer src={barber2VideoSrc!} className="w-full h-full object-cover" />
-          ) : (
-            <HLSVideoPlayer src={barber2VideoSrc} isLive={false} title={barber2?.name} size="large" autoPlay />
-          )}
-          <div className="absolute bottom-20 left-4 right-4 space-y-3">
-            <div className="text-white text-center">
-              <h2 className="text-2xl font-bold mb-2">{barber2?.name}</h2>
-              <div className="flex items-center justify-center gap-4 mb-3">
-                <div className="bg-black/60 backdrop-blur-sm rounded-full px-4 py-2">
-                  <AnimatedCounter value={voteCounts?.barber2Votes || 0} className="text-xl font-bold" />
-                  <span className="text-sm ml-2">votes</span>
-                </div>
-                <div className="bg-black/60 backdrop-blur-sm rounded-full px-4 py-2">
-                  <AnimatedCounter value={viewerData.barber2} className="text-xl font-bold" />
-                  <span className="text-sm ml-2">viewers</span>
+                <div className="flex gap-2 justify-center">
+                  <Button
+                    onClick={() => handleVote(barber1?.id, battle.creation1_id || '')}
+                    disabled={!!userVote}
+                    className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-6 px-8 rounded-xl shadow-2xl"
+                  >
+                    {userVote === battle.creation1_id ? '✓ Voted' : 'VOTE'}
+                  </Button>
+                  <Button variant="outline" size="icon" onClick={handleLike} className="bg-black/40 backdrop-blur-sm border-white/20 hover:bg-white/20">
+                    <Heart className="h-5 w-5 text-white" />
+                  </Button>
                 </div>
               </div>
-            </div>
-            <div className="flex gap-2 justify-center">
-              <Button
-                onClick={() => handleVote(barber2?.id, battle.creation2_id || '')}
-                disabled={!!userVote}
-                className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-bold py-6 px-8 rounded-xl shadow-2xl"
-              >
-                {userVote === battle.creation2_id ? '✓ Voted' : 'VOTE'}
-              </Button>
-              <Button variant="outline" size="icon" onClick={handleLike} className="bg-black/40 backdrop-blur-sm border-white/20 hover:bg-white/20">
-                <Heart className="h-5 w-5 text-white" />
-              </Button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+          panelTwo={
+            <>
+              {battleStreamUid ? (
+                <CloudflareStreamPlayer streamUid={battleStreamUid} fallbackUrl={barber2VideoSrc} autoPlay muted loop />
+              ) : isMP4(barber2VideoSrc) ? (
+                <VODPlayer src={barber2VideoSrc!} className="w-full h-full object-cover" />
+              ) : (
+                <HLSVideoPlayer src={barber2VideoSrc} isLive={false} title={barber2?.name} size="large" autoPlay />
+              )}
+              <div className="absolute bottom-20 left-4 right-4 space-y-3">
+                <div className="text-white text-center">
+                  <h2 className="text-2xl font-bold mb-2">{barber2?.name}</h2>
+                  <div className="flex items-center justify-center gap-4 mb-3">
+                    <div className="bg-black/60 backdrop-blur-sm rounded-full px-4 py-2">
+                      <AnimatedCounter value={voteCounts?.barber2Votes || 0} className="text-xl font-bold" />
+                      <span className="text-sm ml-2">votes</span>
+                    </div>
+                    <div className="bg-black/60 backdrop-blur-sm rounded-full px-4 py-2">
+                      <AnimatedCounter value={viewerData.barber2} className="text-xl font-bold" />
+                      <span className="text-sm ml-2">viewers</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex gap-2 justify-center">
+                  <Button
+                    onClick={() => handleVote(barber2?.id, battle.creation2_id || '')}
+                    disabled={!!userVote}
+                    className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-bold py-6 px-8 rounded-xl shadow-2xl"
+                  >
+                    {userVote === battle.creation2_id ? '✓ Voted' : 'VOTE'}
+                  </Button>
+                  <Button variant="outline" size="icon" onClick={handleLike} className="bg-black/40 backdrop-blur-sm border-white/20 hover:bg-white/20">
+                    <Heart className="h-5 w-5 text-white" />
+                  </Button>
+                </div>
+              </div>
+            </>
+          }
+        />
       </div>
       )}
 

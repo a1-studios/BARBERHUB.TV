@@ -12,6 +12,7 @@ import { motion } from 'framer-motion';
 import { WifiOff, Loader2 } from 'lucide-react';
 import { TugOfWarMeter } from './TugOfWarMeter';
 import { ServerBattleTimer } from './ServerBattleTimer';
+import { DraggableBattleSplit } from './DraggableBattleSplit';
 
 interface LiveKitArenaProps {
   battleId: string;
@@ -122,11 +123,12 @@ const ArenaInner = ({
         </div>
       </div>
 
-      {/* 50/50 Split — vertical stack on mobile, side-by-side on desktop */}
-      <div className="flex-1 flex flex-col md:flex-row">
-        {renderParticipantSide(p1, barber1Name, 'from-orange-500 to-orange-600')}
-        <div className="h-px md:h-auto md:w-px bg-white/30" />
-        {renderParticipantSide(p2, barber2Name, 'from-cyan-500 to-cyan-600')}
+      {/* Draggable split — viewers can resize each barber's tile */}
+      <div className="flex-1 min-h-0">
+        <DraggableBattleSplit
+          panelOne={renderParticipantSide(p1, barber1Name, 'from-orange-500 to-orange-600')}
+          panelTwo={renderParticipantSide(p2, barber2Name, 'from-cyan-500 to-cyan-600')}
+        />
       </div>
 
       {/* Tug-of-War meter */}
