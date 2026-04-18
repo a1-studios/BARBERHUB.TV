@@ -339,11 +339,13 @@ export const ChallengeFeed = () => {
   const { data: challenges = [], isLoading } = useQuery({
     queryKey: ['open-challenges'],
     queryFn: async () => {
+      const nowIso = new Date().toISOString();
+      // Only show truly OPEN Quick Play challenges — drop matched/declined/expired rows
       const { data, error } = await supabase
         .from('open_challenges')
         .select('*')
         .eq('status', 'waiting_for_opponent')
-        .not('expires_at', 'is', null)
+        .gt('expires_at', nowIso)
         .order('stake_amount', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
 

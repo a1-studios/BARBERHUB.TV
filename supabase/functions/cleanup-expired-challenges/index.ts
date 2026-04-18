@@ -16,12 +16,38 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Find all expired challenges still waiting
+    const nowIso = new Date().toISOString();
+
+    // ─── 1) Hard-delete MATCHED challenges older than 60s (Quick Play cleanup) ───
+    const sixtySecondsAgo = new Date(Date.now() - 60_000).toISOString();
+    const { data: matchedOld } = await supabase
+      .from('open_challenges')
+      .select('id, challenger_id, accepted_by_id')
+      .eq('status', 'matched')
+      .lt('accepted_at', sixtySecondsAgo);
+
+    if (matchedOld && matchedOld.length > 0) {
+      const ids = matchedOld.map(r => r.id);
+      // Soft-dismiss orphan notifications for both parties
+      const userIds = Array.from(new Set(matchedOld.flatMap(r => [r.challenger_id, r.accepted_by_id].filter(Boolean))));
+      if (userIds.length > 0) {
+        await supabase
+          .from('notifications')
+          .update({ read: true, dismissed_at: nowIso })
+          .in('user_id', userIds as string[])
+          .in('type', ['challenge_received', 'challenge_sent'])
+          .filter('data->>challenge_id', 'in', `(${ids.join(',')})`);
+      }
+      await supabase.from('open_challenges').delete().in('id', ids);
+      console.log(`Hard-deleted ${ids.length} matched Quick Play challenges`);
+    }
+
+    // ─── 2) Find all expired challenges still waiting (refund path) ───
     const { data: expired, error: fetchError } = await supabase
       .from('open_challenges')
       .select('id, challenger_id, stake_amount, title')
       .eq('status', 'waiting_for_opponent')
-      .lt('expires_at', new Date().toISOString());
+      .lt('expires_at', nowIso);
 
     if (fetchError) {
       console.error('Fetch expired error:', fetchError);
@@ -90,6 +116,14 @@ serve(async (req) => {
           errors.push(`Status update failed for ${challenge.id}`);
           continue;
         }
+
+        // Soft-dismiss any lingering challenge notifications tied to this row
+        await supabase
+          .from('notifications')
+          .update({ read: true, dismissed_at: nowIso })
+          .eq('user_id', challenge.challenger_id)
+          .in('type', ['challenge_received', 'challenge_sent'])
+          .filter('data->>challenge_id', 'eq', challenge.id);
 
         cleaned++;
         console.log(`Cleaned challenge ${challenge.id}: refunded ${stakeAmount} BB to ${challenge.challenger_id}`);
