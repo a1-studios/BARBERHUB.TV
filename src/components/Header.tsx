@@ -38,6 +38,16 @@ const Header = () => {
   const { unreadCount } = useNotifications();
   const [showNotifications, setShowNotifications] = useState(false);
 
+  // Allow toasts (e.g. challenge_received) to programmatically open the notification panel
+  useEffect(() => {
+    const handler = () => {
+      setBbDropdownOpen(true);
+      setShowNotifications(true);
+    };
+    window.addEventListener('open-notifications', handler);
+    return () => window.removeEventListener('open-notifications', handler);
+  }, []);
+
   // Fetch user profile for avatar
   const { data: userProfile } = useQuery({
     queryKey: ['header-profile', user?.id],

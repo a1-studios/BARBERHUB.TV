@@ -40,6 +40,8 @@ export const AcceptChallengeModal = ({ challenge, isOpen, onClose }: AcceptChall
   const secondsLeft = challenge.expires_at ? Math.max(0, differenceInSeconds(new Date(challenge.expires_at), new Date())) : null;
   const isExpired = secondsLeft !== null && secondsLeft <= 0;
 
+  const [isDeclining, setIsDeclining] = useState(false);
+
   const handleAccept = async () => {
     if (!hasEnoughBalance || !isSilverPlus || isExpired) return;
 
@@ -69,6 +71,29 @@ export const AcceptChallengeModal = ({ challenge, isOpen, onClose }: AcceptChall
       toast({ title: "Error", description: error.message || "Failed to accept challenge", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDecline = async () => {
+    setIsDeclining(true);
+    try {
+      // Mark the challenge as declined (best-effort; RLS may restrict — fail silently)
+      await supabase
+        .from('open_challenges')
+        .update({ status: 'declined' })
+        .eq('id', challenge.id);
+
+      toast({
+        title: "Challenge Declined",
+        description: `You passed on ${challenge.challenger_username}'s challenge.`
+      });
+      onClose();
+    } catch (error: any) {
+      console.error('Error declining challenge:', error);
+      // Still close — user intent is clear
+      onClose();
+    } finally {
+      setIsDeclining(false);
     }
   };
 
@@ -164,19 +189,33 @@ export const AcceptChallengeModal = ({ challenge, isOpen, onClose }: AcceptChall
             </div>
           )}
 
-          <Button
-            onClick={handleAccept}
-            disabled={isSubmitting || !hasEnoughBalance || !isSilverPlus || isExpired}
-            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-          >
-            {isSubmitting ? (
-              <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isFreeChallenge ? 'Accepting...' : 'Matching Stake...'}</>
-            ) : isFreeChallenge ? (
-              `⚔️ Accept Challenge`
-            ) : (
-              `Match ${stakeRequired} BB & Accept Challenge`
-            )}
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button
+              onClick={handleAccept}
+              disabled={isSubmitting || isDeclining || !hasEnoughBalance || !isSilverPlus || isExpired}
+              className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+            >
+              {isSubmitting ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{isFreeChallenge ? 'Accepting...' : 'Matching Stake...'}</>
+              ) : isFreeChallenge ? (
+                `⚔️ Accept Challenge`
+              ) : (
+                `Match ${stakeRequired} BB & Accept Challenge`
+              )}
+            </Button>
+            <Button
+              onClick={handleDecline}
+              disabled={isSubmitting || isDeclining}
+              variant="outline"
+              className="w-full"
+            >
+              {isDeclining ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Declining...</>
+              ) : (
+                'Decline'
+              )}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
