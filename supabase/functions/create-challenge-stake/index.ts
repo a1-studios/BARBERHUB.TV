@@ -139,6 +139,13 @@ serve(async (req) => {
     const durationMins = Math.min(duration_minutes || MAX_DURATION_MINUTES, MAX_DURATION_MINUTES);
     const expiresAt = new Date(Date.now() + durationMins * 60 * 1000).toISOString();
 
+    // Resolve challenger's barber_profiles.id so we can pre-seat them in the battle
+    const { data: challengerBarberProfile } = await supabase
+      .from('barber_profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
     // Pre-create a battle record so complete-open-challenge can link to it.
     // prize_amount starts at 2x stake (or 0 when free) — viewer donations grow it.
     const { data: battle, error: battleError } = await supabase
@@ -150,7 +157,7 @@ serve(async (req) => {
         status: 'upcoming',
         currency: 'BB',
         prize_amount: effectiveStake * 2,
-        barber1_id: null,
+        barber1_id: challengerBarberProfile?.id ?? null,
         barber2_id: null,
       })
       .select('id')
@@ -169,6 +176,7 @@ serve(async (req) => {
     }
 
     // Create challenge with stake (or zero-stake donation-only)
+    // NOTE: open_challenges has no `battle_type` column — battle_type lives on the battles row.
     const { data: challenge, error: challengeError } = await supabase
       .from('open_challenges')
       .insert({
@@ -180,7 +188,6 @@ serve(async (req) => {
         pot_total: effectiveStake,
         donations_total: 0,
         status: 'waiting_for_opponent',
-        battle_type: 'challenge',
         bounty_description: challenge_message || null,
         duration_minutes: durationMins,
         expires_at: expiresAt,
