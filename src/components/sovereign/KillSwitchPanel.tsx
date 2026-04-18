@@ -322,6 +322,69 @@ const KillSwitchPanel = ({ platformState, onRefresh }: KillSwitchPanelProps) => 
               </div>
             )}
           </div>
+
+          {/* Quick Play (Unranked Challenges) — Master + Feed Publish */}
+          <div className="p-4 rounded-lg bg-[#0a0a0f] border border-white/[0.06]">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-white/40 uppercase tracking-wider">Quick Play</span>
+              <div className="flex items-center gap-1.5">
+                <div className={`h-1.5 w-1.5 rounded-full ${quickPlayEnabled ? 'bg-orange-500' : 'bg-white/20'}`} />
+                <span className={`text-[10px] ${quickPlayEnabled ? 'text-orange-500' : 'text-white/40'}`}>
+                  {quickPlayEnabled ? 'ENABLED' : 'DISABLED'}
+                </span>
+              </div>
+            </div>
+            <p className="text-[10px] text-white/30 mb-2 leading-snug">
+              Unranked barber-vs-barber matches. Tournament brackets & standings are unaffected.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full border-white/10 text-white hover:bg-white/[0.04] bg-transparent mb-2"
+              disabled={loading}
+              onClick={() => openConfirmDialog(
+                quickPlayEnabled ? 'quick_play_disable' : 'quick_play_enable',
+                quickPlayEnabled ? 'Disable Quick Play' : 'Enable Quick Play',
+                quickPlayEnabled
+                  ? 'Hides all Quick Play entry points and rejects new challenge requests. In-flight challenges expire normally. Type DISABLE to confirm.'
+                  : 'Allows barbers to issue and accept unranked challenges. Type ENABLE to confirm.',
+                quickPlayEnabled ? 'DISABLE' : 'ENABLE'
+              )}
+            >
+              <Swords className="h-3 w-3 mr-2" />
+              {quickPlayEnabled ? 'Disable' : 'Enable'}
+            </Button>
+
+            {quickPlayEnabled && (
+              <div className="mt-3 pt-3 border-t border-white/[0.06]">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] text-white/40 uppercase tracking-wider">Publish to Feed</span>
+                  <div className="flex items-center gap-1.5">
+                    <div className={`h-1.5 w-1.5 rounded-full ${quickPlayFeedEnabled ? 'bg-orange-500' : 'bg-white/20'}`} />
+                    <span className={`text-[10px] ${quickPlayFeedEnabled ? 'text-orange-500' : 'text-white/40'}`}>
+                      {quickPlayFeedEnabled ? 'ON' : 'OFF'}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-white/10 text-white hover:bg-white/[0.04] bg-transparent"
+                  disabled={loading}
+                  onClick={() => openConfirmDialog(
+                    quickPlayFeedEnabled ? 'quick_play_feed_disable' : 'quick_play_feed_enable',
+                    quickPlayFeedEnabled ? 'Hide Quick Play from Feed' : 'Publish Quick Play to Feed',
+                    quickPlayFeedEnabled
+                      ? 'Quick Play matches will stop appearing in the watch feed. Type HIDE to confirm.'
+                      : 'Quick Play matches will start appearing in the watch feed alongside tournament battles. Type PUBLISH to confirm.',
+                    quickPlayFeedEnabled ? 'HIDE' : 'PUBLISH'
+                  )}
+                >
+                  {quickPlayFeedEnabled ? 'Hide from Feed' : 'Publish to Feed'}
+                </Button>
+              </div>
+            )}
+          </div>
         </div>
 
       {/* Confirmation Dialog */}
