@@ -41,8 +41,9 @@ const Index = () => {
     sessionStorage.getItem('fan_intro_seen') === 'true'
   );
 
-  // Auto-show spin wheel once per session
+  // Show promotion gate to guests until permanently completed
   const [showSpinWheel, setShowSpinWheel] = useState(() => {
+    if (localStorage.getItem('gate_completed') === '1') return false;
     if (sessionStorage.getItem('spin_wheel_shown') === 'true') return false;
     return true;
   });

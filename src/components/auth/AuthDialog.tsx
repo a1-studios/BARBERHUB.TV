@@ -9,6 +9,7 @@ import { Loader2, User, Scissors, Users, Lock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { CountrySelector } from '@/components/CountrySelector';
 import { ArenaGateModal, ArenaGateResult } from './ArenaGateModal';
+import { ForgotPasswordForm } from './ForgotPasswordForm';
 import { toast } from 'sonner';
 
 interface AuthDialogProps {
@@ -30,6 +31,7 @@ export function AuthDialog({
 }: AuthDialogProps) {
   const [open, setOpen] = useState(autoOpen);
   const [loading, setLoading] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
   const { signIn, signUp } = useAuth();
 
   // Arena Gate state for barbers
@@ -153,6 +155,12 @@ export function AuthDialog({
             </TabsList>
             
             <TabsContent value="signin" className="space-y-4">
+              {showForgot ? (
+                <ForgotPasswordForm
+                  initialEmail={signInData.email}
+                  onBack={() => setShowForgot(false)}
+                />
+              ) : (
               <form onSubmit={handleSignIn} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="signin-email">Email</Label>
@@ -166,7 +174,16 @@ export function AuthDialog({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signin-password">Password</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="signin-password">Password</Label>
+                    <button
+                      type="button"
+                      onClick={() => setShowForgot(true)}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
                   <Input
                     id="signin-password"
                     type="password"
@@ -180,6 +197,7 @@ export function AuthDialog({
                   Sign In
                 </Button>
               </form>
+              )}
             </TabsContent>
             
             <TabsContent value="signup" className="space-y-4">

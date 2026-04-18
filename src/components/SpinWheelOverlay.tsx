@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState as useStateLocal } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -387,5 +387,4 @@ const AuthenticatedSpinFlow = ({
   );
 };
 
-// Tiny local-state helper — keeps this sub-component self-contained
-import { useState as useStateLocal } from 'react';
+};
