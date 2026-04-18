@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNotifications } from '@/hooks/useNotifications';
 import { NotificationPanel } from './NotificationPanel';
 import { AcceptChallengeModal } from './battles/AcceptChallengeModal';
+import { LiveActivityPill } from './battles/LiveActivityPill';
 
 interface QuickAction {
   id: string;
@@ -342,6 +343,9 @@ const Header = () => {
           onClose={() => setAcceptChallenge(null)}
         />
       )}
+
+      {/* Floating live activity pill — sits just under the header */}
+      <LiveActivityPill />
     </header>
   );
 };

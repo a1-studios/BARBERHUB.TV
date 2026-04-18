@@ -4,8 +4,6 @@ import { LiveBattleFeed } from '@/components/LiveBattleFeed';
 import { GlobalLeagueDashboard } from '@/components/GlobalLeagueDashboard';
 import { ArenaTicker } from '@/components/factions/ArenaTicker';
 import { useCategoryPrizePools } from '@/hooks/useCategoryPrizePools';
-import { LiveNowBanner } from '@/components/battles/LiveNowBanner';
-import { LiveBarberStreams } from '@/components/battles/LiveBarberStreams';
 import { ProductShelf } from '@/components/ProductShelf';
 
 export const FanArenaView = () => {
@@ -19,12 +17,6 @@ export const FanArenaView = () => {
 
       {/* Official Gear Shelf */}
       <ProductShelf />
-
-      {/* Live Now — followed barber avatars */}
-      <LiveNowBanner />
-
-      {/* Live Streams — full cards with engagement */}
-      <LiveBarberStreams />
 
       {/* Grand Prize Banner — below the video feed */}
       <section className="px-3 sm:px-6">
