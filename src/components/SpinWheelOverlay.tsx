@@ -87,6 +87,11 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
     handleLeadUpdate('email', { email });
   };
 
+  const handleSignIn = () => {
+    onClose();
+    navigate('/auth');
+  };
+
   const handleRole = async (role: 'barber' | 'fan') => {
     update({ role, step: 'ENGAGE' });
     handleLeadUpdate('role', { role });
@@ -143,7 +148,11 @@ export const SpinWheelOverlay = ({ open, onClose }: SpinWheelOverlayProps) => {
           <AnimatePresence mode="wait">
             {state.step === 'INITIAL' && (
               <div key="INITIAL">
-                <EmailGateStep initialEmail={state.email} onContinue={handleEmail} />
+                <EmailGateStep
+                  initialEmail={state.email}
+                  onContinue={handleEmail}
+                  onSignIn={handleSignIn}
+                />
               </div>
             )}
             {state.step === 'IDENTIFY' && (

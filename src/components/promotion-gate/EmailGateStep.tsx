@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { z } from 'zod';
-import { Mail, ArrowRight, ShieldAlert } from 'lucide-react';
+import { Sparkles, ArrowRight, AlertCircle, LogIn } from 'lucide-react';
 
 const DISPOSABLE_DOMAINS = new Set([
   'mailinator.com',
@@ -33,7 +33,6 @@ const emailSchema = z
     return domain && !DISPOSABLE_DOMAINS.has(domain);
   }, 'Disposable email addresses are not allowed')
   .refine((val) => {
-    // Block obvious test patterns
     const local = val.split('@')[0];
     return !/^(test|asdf|qwerty|abc|xyz)\d*$/.test(local);
   }, 'Please use a real email address');
@@ -41,12 +40,14 @@ const emailSchema = z
 interface EmailGateStepProps {
   initialEmail?: string;
   onContinue: (email: string) => void;
+  onSignIn?: () => void;
 }
 
-export const EmailGateStep = ({ initialEmail = '', onContinue }: EmailGateStepProps) => {
+export const EmailGateStep = ({ initialEmail = '', onContinue, onSignIn }: EmailGateStepProps) => {
   const [email, setEmail] = useState(initialEmail);
   const [error, setError] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
+  const [shake, setShake] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -75,6 +76,7 @@ export const EmailGateStep = ({ initialEmail = '', onContinue }: EmailGateStepPr
     setTouched(true);
     if (!isValid) {
       setError(validation.error?.errors[0].message || 'Invalid email');
+      setShake((s) => s + 1);
       return;
     }
     onContinue(validation.data);
@@ -87,103 +89,205 @@ export const EmailGateStep = ({ initialEmail = '', onContinue }: EmailGateStepPr
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -12 }}
       transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-      className="w-full max-w-md mx-auto px-6 space-y-8"
+      className="w-full max-w-md mx-auto px-6 space-y-7"
     >
-      <div className="text-center space-y-3">
-        <motion.div
-          initial={{ scale: 0.8 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.1, type: 'spring', stiffness: 600, damping: 20 }}
-          className="inline-flex items-center justify-center w-16 h-16 rounded-full border-2"
-          style={{
-            borderColor: '#00F0FF',
-            background: 'radial-gradient(circle at center, rgba(0,240,255,0.15), transparent 70%)',
-            boxShadow: '0 0 30px rgba(0,240,255,0.4), inset 0 0 20px rgba(0,0,0,0.6)',
-          }}
-        >
-          <Mail className="w-7 h-7" style={{ color: '#00F0FF' }} />
-        </motion.div>
-        <h2
-          className="text-2xl md:text-3xl font-black tracking-[0.2em] uppercase"
-          style={{ color: '#fff', textShadow: '0 0 12px rgba(0,240,255,0.5)' }}
-        >
-          Enter the Vault
-        </h2>
-        <p className="text-xs uppercase tracking-widest" style={{ color: '#7a8a8d' }}>
-          Identification required
-        </p>
+      {/* Icon w/ orange pulsing ring + particle burst */}
+      <div className="relative flex flex-col items-center gap-4">
+        <div className="relative w-20 h-20 flex items-center justify-center">
+          {/* Particle burst */}
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <motion.span
+              key={i}
+              initial={{ scale: 0, opacity: 0.9, x: 0, y: 0 }}
+              animate={{
+                scale: [0, 1, 0],
+                opacity: [0.9, 0.7, 0],
+                x: Math.cos((i / 6) * Math.PI * 2) * 56,
+                y: Math.sin((i / 6) * Math.PI * 2) * 56,
+              }}
+              transition={{
+                duration: 1.6,
+                delay: 0.15 + i * 0.05,
+                repeat: Infinity,
+                repeatDelay: 1.4,
+                ease: 'easeOut',
+              }}
+              className="absolute w-1.5 h-1.5 rounded-full"
+              style={{ background: '#FF8C00', boxShadow: '0 0 8px #FF5F1F' }}
+            />
+          ))}
+
+          {/* Outer pulsing orange halo */}
+          <motion.div
+            animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0.8, 0.5] }}
+            transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute inset-0 rounded-full"
+            style={{
+              background:
+                'radial-gradient(circle, rgba(255,95,31,0.45), rgba(255,95,31,0) 70%)',
+              filter: 'blur(4px)',
+            }}
+          />
+
+          {/* Solid orange ring with cyan inner accent */}
+          <div
+            className="relative w-16 h-16 rounded-full flex items-center justify-center"
+            style={{
+              background: 'linear-gradient(135deg, #FF5F1F, #FF8C00)',
+              boxShadow:
+                '0 0 28px rgba(255,95,31,0.7), inset 0 0 10px rgba(0,0,0,0.4), inset 0 0 0 1.5px rgba(0,240,255,0.4)',
+            }}
+          >
+            <Sparkles className="w-7 h-7 text-black" strokeWidth={2.5} />
+          </div>
+        </div>
+
+        <div className="text-center space-y-1.5">
+          <motion.h2
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="text-3xl md:text-4xl font-black tracking-tight leading-none"
+            style={{
+              background: 'linear-gradient(135deg, #FFB347 0%, #FF8C00 40%, #FF5F1F 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              filter: 'drop-shadow(0 0 12px rgba(255,95,31,0.35))',
+            }}
+          >
+            Welcome to the Arena ⚡
+          </motion.h2>
+          <p className="text-sm text-white/70 font-medium">
+            Your seat at the table is one tap away.
+          </p>
+        </div>
       </div>
 
-      <div className="space-y-2">
+      {/* Email field */}
+      <motion.div
+        key={shake}
+        animate={shake ? { x: [0, -8, 8, -6, 6, -3, 3, 0] } : {}}
+        transition={{ duration: 0.4 }}
+        className="space-y-2"
+      >
         <label
           htmlFor="gate-email"
-          className="text-[10px] uppercase tracking-[0.3em] font-bold block"
-          style={{ color: '#00F0FF' }}
+          className="text-xs font-semibold flex items-center gap-1.5 text-white/80"
         >
-          ◢ Operator Email
+          <span
+            className="w-1.5 h-1.5 rounded-full inline-block"
+            style={{ background: '#FF5F1F', boxShadow: '0 0 6px #FF5F1F' }}
+          />
+          Email
         </label>
-        <input
-          ref={inputRef}
-          id="gate-email"
-          type="email"
-          inputMode="email"
-          autoComplete="email"
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-          placeholder="you@domain.com"
-          value={email}
-          onChange={(e) => handleChange(e.target.value)}
-          onBlur={handleBlur}
-          className="w-full bg-black border-2 px-4 py-4 text-white text-base font-mono placeholder:text-white/20 focus:outline-none transition-all"
-          style={{
-            borderColor: error ? '#ff3344' : isValid ? '#00F0FF' : 'rgba(0,240,255,0.25)',
-            boxShadow: error
-              ? '0 0 20px rgba(255,51,68,0.3), inset 0 0 14px rgba(0,0,0,0.8)'
-              : isValid
-              ? '0 0 20px rgba(0,240,255,0.4), inset 0 0 14px rgba(0,0,0,0.8)'
-              : 'inset 0 0 14px rgba(0,0,0,0.8)',
-            borderRadius: '2px',
-          }}
-        />
+        <div className="relative">
+          {/* Focused orange glow */}
+          {isValid && (
+            <div
+              className="absolute -inset-px rounded-xl pointer-events-none"
+              style={{
+                background:
+                  'radial-gradient(ellipse at center, rgba(255,95,31,0.25), transparent 70%)',
+              }}
+            />
+          )}
+          <input
+            ref={inputRef}
+            id="gate-email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="you@domain.com"
+            value={email}
+            onChange={(e) => handleChange(e.target.value)}
+            onBlur={handleBlur}
+            className="relative w-full bg-black/80 border-2 px-4 py-4 text-white text-base placeholder:text-white/25 focus:outline-none transition-all rounded-xl"
+            style={{
+              borderColor: error
+                ? '#ff3344'
+                : isValid
+                ? '#FF5F1F'
+                : 'rgba(255,255,255,0.12)',
+              boxShadow: error
+                ? '0 0 18px rgba(255,51,68,0.3)'
+                : isValid
+                ? '0 0 22px rgba(255,95,31,0.45), inset 0 0 0 1px rgba(0,240,255,0.25)'
+                : 'inset 0 0 12px rgba(0,0,0,0.6)',
+            }}
+          />
+        </div>
         {error && (
           <motion.p
             initial={{ opacity: 0, x: -4 }}
             animate={{ opacity: 1, x: 0 }}
-            className="text-xs flex items-center gap-1.5 font-mono"
+            className="text-xs flex items-center gap-1.5"
             style={{ color: '#ff5566' }}
           >
-            <ShieldAlert className="w-3 h-3" />
+            <AlertCircle className="w-3.5 h-3.5" />
             {error}
           </motion.p>
         )}
-      </div>
+      </motion.div>
 
+      {/* Primary CTA — always live orange */}
       <motion.button
         type="submit"
-        disabled={!isValid}
-        whileHover={isValid ? { scale: 1.02 } : {}}
-        whileTap={isValid ? { scale: 0.98 } : {}}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
         transition={{ type: 'spring', stiffness: 800, damping: 30 }}
-        className="w-full py-4 font-black tracking-[0.25em] uppercase text-sm flex items-center justify-center gap-3 transition-all disabled:cursor-not-allowed"
+        className="relative w-full py-4 font-black tracking-wide text-base flex items-center justify-center gap-2 overflow-hidden rounded-xl text-black"
         style={{
-          background: isValid
-            ? 'linear-gradient(135deg, #FF5F00, #FF8C00)'
-            : 'linear-gradient(135deg, #2a2a2a, #1a1a1a)',
-          color: isValid ? '#000' : '#555',
-          boxShadow: isValid
-            ? '0 0 30px rgba(255,95,0,0.5), inset 0 0 20px rgba(0,0,0,0.2)'
-            : 'inset 0 0 20px rgba(0,0,0,0.6)',
-          borderRadius: '2px',
-          border: isValid ? '1px solid rgba(255,140,0,0.6)' : '1px solid rgba(255,255,255,0.05)',
+          background: 'linear-gradient(135deg, #FF5F1F 0%, #FF8C00 50%, #FFB347 100%)',
+          boxShadow:
+            '0 8px 28px rgba(255,95,31,0.55), inset 0 1px 0 rgba(255,255,255,0.3)',
         }}
       >
-        Authenticate
-        <ArrowRight className="w-4 h-4" />
+        {/* Shimmer sweep */}
+        <motion.span
+          aria-hidden
+          className="absolute inset-y-0 -left-1/3 w-1/3 pointer-events-none"
+          style={{
+            background:
+              'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)',
+            transform: 'skewX(-20deg)',
+          }}
+          animate={{ x: ['0%', '450%'] }}
+          transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.8 }}
+        />
+        <span className="relative">Continue</span>
+        <ArrowRight className="relative w-5 h-5" strokeWidth={3} />
       </motion.button>
 
-      <p className="text-[10px] text-center uppercase tracking-widest font-mono" style={{ color: '#5a6a6d' }}>
-        ◣ Encrypted · Single-use · No spam
+      {/* Sign-in branch */}
+      {onSignIn && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="flex-1 h-px bg-white/10" />
+            <span className="text-[10px] uppercase tracking-[0.3em] text-white/40">or</span>
+            <span className="flex-1 h-px bg-white/10" />
+          </div>
+          <button
+            type="button"
+            onClick={onSignIn}
+            className="w-full py-3 rounded-xl flex items-center justify-center gap-2 text-sm font-semibold transition-all hover:bg-[rgba(0,240,255,0.08)]"
+            style={{
+              border: '1px solid rgba(0,240,255,0.4)',
+              color: '#7FE7FF',
+              boxShadow: 'inset 0 0 0 1px rgba(0,240,255,0.05)',
+            }}
+          >
+            <LogIn className="w-4 h-4" />
+            Already have an account? <span className="underline underline-offset-2">Sign in</span>
+          </button>
+        </div>
+      )}
+
+      <p className="text-[11px] text-center text-white/40">
+        🔒 We never spam. Promise.
       </p>
     </motion.form>
   );
