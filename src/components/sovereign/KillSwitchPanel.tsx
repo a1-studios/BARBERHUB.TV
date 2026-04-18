@@ -24,6 +24,8 @@ interface KillSwitchPanelProps {
     tiers_enabled?: { value: string };
     challenge_stakes_enabled?: { value: string };
     challenge_min_stake_bb?: { value: string };
+    quick_play_enabled?: { value: string };
+    quick_play_feed_publish?: { value: string };
   };
   onRefresh: () => void;
 }
@@ -47,6 +49,10 @@ const KillSwitchPanel = ({ platformState, onRefresh }: KillSwitchPanelProps) => 
   const tiersEnabled = platformState?.tiers_enabled?.value !== 'false';
   // Default OFF: only treated as enabled when explicitly 'true'
   const stakesEnabled = platformState?.challenge_stakes_enabled?.value === 'true';
+  // Quick Play — default ON (only disabled when explicitly 'false')
+  const quickPlayEnabled = platformState?.quick_play_enabled?.value !== 'false';
+  // Quick Play feed publish — default OFF (only ON when explicitly 'true')
+  const quickPlayFeedEnabled = platformState?.quick_play_feed_publish?.value === 'true';
   const minStakeFromState = parseInt(platformState?.challenge_min_stake_bb?.value || '100', 10) || 100;
   const [minStakeInput, setMinStakeInput] = useState<number>(minStakeFromState);
   const [savingMinStake, setSavingMinStake] = useState(false);
