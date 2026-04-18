@@ -333,6 +333,15 @@ const Header = () => {
         isOpen={showAddFundsModal} 
         onClose={() => setShowAddFundsModal(false)} 
       />
+
+      {/* Accept Challenge Modal — lifted out of dropdown so it survives dropdown unmount */}
+      {acceptChallenge && (
+        <AcceptChallengeModal
+          challenge={acceptChallenge}
+          isOpen={!!acceptChallenge}
+          onClose={() => setAcceptChallenge(null)}
+        />
+      )}
     </header>
   );
 };
