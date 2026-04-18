@@ -3,10 +3,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, Loader2, Crown, Star, Sparkles, Coins } from "lucide-react";
+import { Check, Loader2, Crown, Star, Sparkles, Coins, Layers } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { useBarberBucks } from "@/hooks/useBarberBucks";
+import { useTiersEnabled } from "@/hooks/useTiersEnabled";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +42,7 @@ export const BarberSubscriptionTiers = ({ onShowAddFunds, onBarterForTier }: Bar
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { barberBucks, isLoading: bbLoading } = useBarberBucks();
+  const { enabled: tiersEnabled, loading: tiersLoading } = useTiersEnabled();
   const [processingTier, setProcessingTier] = useState<string | null>(null);
   const [confirmingTier, setConfirmingTier] = useState<{ id: string; name: string; displayName: string; bbPrice: number } | null>(null);
 
@@ -145,10 +147,25 @@ export const BarberSubscriptionTiers = ({ onShowAddFunds, onBarterForTier }: Bar
     }
   };
 
-  if (loadingTiers) {
+  if (loadingTiers || tiersLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Master tier toggle OFF → show "Coming Soon" placeholder instead of pricing cards
+  if (!tiersEnabled) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 px-6 text-center space-y-4">
+        <div className="h-16 w-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
+          <Layers className="h-8 w-8 text-primary" />
+        </div>
+        <h3 className="text-2xl font-bold text-foreground">Tiers Coming Soon</h3>
+        <p className="text-sm text-muted-foreground max-w-sm">
+          The membership tier system is currently disabled. All barbers operate on the Standard plan with full platform access. Stay tuned — premium tiers will return shortly.
+        </p>
       </div>
     );
   }

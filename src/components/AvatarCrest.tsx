@@ -7,6 +7,7 @@ import { M4MVerificationModal } from '@/components/m4m/M4MVerificationModal';
 import { M4MCertificationModal } from '@/components/m4m/M4MCertificationModal';
 import { M4MQRCodeModal } from '@/components/m4m/M4MQRCodeModal';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
+import { useTiersEnabled } from '@/hooks/useTiersEnabled';
 import { Coins } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -336,11 +337,21 @@ export const AvatarCrest = ({
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [ghostHovered, setGhostHovered] = useState(false);
   const { barberBucks, isLoading: bbLoading } = useBarberBucks();
+  const { enabled: tiersEnabled } = useTiersEnabled();
 
   const tierKey = (tier?.toLowerCase() || 'free') as keyof typeof TIER_COLORS;
   const validTier = TIER_COLORS[tierKey] ? tierKey : 'free';
   const isActive = validTier !== 'free';
   const config = SIZE_CONFIG[size];
+
+  // Master tier toggle OFF → render plain avatar (no crest, no wings, no stars, no M4M heart)
+  if (!tiersEnabled) {
+    return (
+      <div className={cn('relative inline-flex flex-col items-center', className)}>
+        <div className="rounded-full overflow-hidden">{children}</div>
+      </div>
+    );
+  }
 
   const cx = config.svgSize / 2;
   const cy = config.svgSize / 2 - (showM4M ? 6 * config.wingScale : 0);

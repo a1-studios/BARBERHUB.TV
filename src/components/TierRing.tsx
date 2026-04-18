@@ -3,6 +3,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/u
 import { BarberSubscriptionTiers } from '@/components/barber/BarberSubscriptionTiers';
 import { AddFundsModal } from '@/components/AddFundsModal';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
+import { useTiersEnabled } from '@/hooks/useTiersEnabled';
 import { Coins } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -34,10 +35,20 @@ export const TierRing = ({ tier, size = 'md', interactive = false, children, cla
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [showAddFunds, setShowAddFunds] = useState(false);
   const { barberBucks, isLoading: bbLoading } = useBarberBucks();
+  const { enabled: tiersEnabled } = useTiersEnabled();
 
   const tierKey = (tier?.toLowerCase() || 'free') as keyof typeof TIER_BORDER;
   const validTier = TIER_BORDER[tierKey] ? tierKey : 'free';
   const sizeConfig = SIZE_MAP[size];
+
+  // Master tier toggle OFF → render avatar with no ring/glow/upgrade drawer
+  if (!tiersEnabled) {
+    return (
+      <div className={cn('relative inline-flex items-center justify-center rounded-full overflow-hidden', className)}>
+        {children}
+      </div>
+    );
+  }
 
   const handleClick = () => {
     if (interactive) setDrawerOpen(true);

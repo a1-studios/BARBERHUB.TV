@@ -82,23 +82,33 @@ serve(async (req) => {
       }
     }
 
-    // Check tier requirements
+    // Check tier requirements (skip when master tier toggle is OFF)
     if (product.tier_required) {
-      const { data: subscription } = await supabase
-        .from('barber_subscriptions')
-        .select('tier_id, barber_subscription_tiers(tier_name)')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
+      const { data: tiersFlag } = await supabase
+        .from('platform_state')
+        .select('value')
+        .eq('key', 'tiers_enabled')
         .maybeSingle();
 
-      const tierHierarchy = ['bronze', 'silver', 'gold'];
-      const userTierIndex = subscription?.barber_subscription_tiers?.tier_name 
-        ? tierHierarchy.indexOf(subscription.barber_subscription_tiers.tier_name.toLowerCase())
-        : -1;
-      const requiredTierIndex = tierHierarchy.indexOf(product.tier_required.toLowerCase());
+      const tiersGloballyEnabled = tiersFlag?.value !== 'false';
 
-      if (userTierIndex < requiredTierIndex) {
-        throw new Error(`This product requires ${product.tier_required} tier or higher subscription`);
+      if (tiersGloballyEnabled) {
+        const { data: subscription } = await supabase
+          .from('barber_subscriptions')
+          .select('tier_id, barber_subscription_tiers(tier_name)')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+
+        const tierHierarchy = ['bronze', 'silver', 'gold'];
+        const userTierIndex = subscription?.barber_subscription_tiers?.tier_name 
+          ? tierHierarchy.indexOf(subscription.barber_subscription_tiers.tier_name.toLowerCase())
+          : -1;
+        const requiredTierIndex = tierHierarchy.indexOf(product.tier_required.toLowerCase());
+
+        if (userTierIndex < requiredTierIndex) {
+          throw new Error(`This product requires ${product.tier_required} tier or higher subscription`);
+        }
       }
     }
 

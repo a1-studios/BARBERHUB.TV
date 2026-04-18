@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { useTiersEnabled } from './useTiersEnabled';
 import { toast } from 'sonner';
 import { DEV_MODE } from '@/config/features';
 
@@ -14,6 +15,7 @@ const TIER_LIMITS = {
 
 export const useSubscriptionLimits = () => {
   const { user } = useAuth();
+  const { enabled: tiersEnabled } = useTiersEnabled();
 
   const { data: subscription } = useQuery({
     queryKey: ['barberSubscription', user?.id],
@@ -53,9 +55,9 @@ export const useSubscriptionLimits = () => {
     enabled: !!user?.id && !DEV_MODE
   });
 
-  if (DEV_MODE) {
+  if (DEV_MODE || !tiersEnabled) {
     return {
-      tierName: 'diamond',
+      tierName: tiersEnabled ? 'diamond' : 'standard',
       monthlyLimit: 9999,
       battlesUsed: 0,
       battlesRemaining: 9999,
