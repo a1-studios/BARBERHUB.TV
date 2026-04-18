@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Swords } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,8 +26,11 @@ interface BattleLive {
 
 type LiveItem = SoloLive | BattleLive;
 
+const ACTIVE_BATTLE_STATUSES = ['active', 'live'];
+
 export const LiveActivityPill = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const { data: items = [], refetch } = useQuery({
     queryKey: ['live-activity-pill'],
@@ -42,17 +45,17 @@ export const LiveActivityPill = () => {
         isFreshLiveBroadcast(b.last_live_check, b.updated_at)
       );
 
-      // 2) Live battles — only TRULY active: both barbers streaming AND updated in last 2 min (LiveKit heartbeat window)
-      const twoMinAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+      // 2) Live battles — only TRULY active: both barbers streaming AND updated in last 30s (LiveKit heartbeat window)
+      const thirtySecAgo = new Date(Date.now() - 30 * 1000).toISOString();
       const { data: battles } = await supabase
         .from('battles')
         .select('id, status, barber1_id, barber2_id, barber1_is_streaming, barber2_is_streaming, updated_at')
-        .in('status', ['active', 'live'])
+        .in('status', ACTIVE_BATTLE_STATUSES)
         .not('barber1_id', 'is', null)
         .not('barber2_id', 'is', null)
         .eq('barber1_is_streaming', true)
         .eq('barber2_is_streaming', true)
-        .gte('updated_at', twoMinAgo);
+        .gte('updated_at', thirtySecAgo);
 
       // Collect all user_ids needed for avatar/name lookups
       const userIds = new Set<string>();
@@ -111,14 +114,38 @@ export const LiveActivityPill = () => {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'barber_profiles' },
         (payload) => {
-          const oldLive = (payload.old as any)?.is_live;
-          const newLive = (payload.new as any)?.is_live;
-          if (oldLive !== newLive) refetch();
+          const oldRow = payload.old as any;
+          const newRow = payload.new as any;
+          // If barber went offline, drop them from local state immediately
+          if (oldRow?.is_live === true && newRow?.is_live === false && newRow?.id) {
+            queryClient.setQueryData<LiveItem[]>(['live-activity-pill'], (prev) =>
+              (prev || []).filter((item) => !(item.kind === 'solo' && item.id === newRow.id))
+            );
+          }
+          if (oldRow?.is_live !== newRow?.is_live) refetch();
         }
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'battles' },
+        { event: 'UPDATE', schema: 'public', table: 'battles' },
+        (payload) => {
+          const newRow = payload.new as any;
+          // If a battle stops streaming or leaves the active set, drop it instantly
+          const stillActive =
+            ACTIVE_BATTLE_STATUSES.includes(newRow?.status) &&
+            newRow?.barber1_is_streaming === true &&
+            newRow?.barber2_is_streaming === true;
+          if (!stillActive && newRow?.id) {
+            queryClient.setQueryData<LiveItem[]>(['live-activity-pill'], (prev) =>
+              (prev || []).filter((item) => !(item.kind === 'battle' && item.id === newRow.id))
+            );
+          }
+          refetch();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'battles' },
         () => refetch()
       )
       .subscribe();
@@ -126,7 +153,7 @@ export const LiveActivityPill = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [refetch]);
+  }, [refetch, queryClient]);
 
   if (items.length === 0) return null;
 
