@@ -2373,42 +2373,66 @@ export type Database = {
       marketing_leads: {
         Row: {
           converted: boolean | null
+          country_code: string | null
           created_at: string | null
           device_fingerprint: string | null
           email: string
+          fbc: string | null
+          fbp: string | null
           id: string
           max_spins: number | null
+          prize_bb: number | null
           prize_id: string | null
           prize_label: string | null
           role: string
           shared: boolean | null
+          source_url: string | null
           spins_used: number | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
         }
         Insert: {
           converted?: boolean | null
+          country_code?: string | null
           created_at?: string | null
           device_fingerprint?: string | null
           email: string
+          fbc?: string | null
+          fbp?: string | null
           id?: string
           max_spins?: number | null
+          prize_bb?: number | null
           prize_id?: string | null
           prize_label?: string | null
           role: string
           shared?: boolean | null
+          source_url?: string | null
           spins_used?: number | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
         }
         Update: {
           converted?: boolean | null
+          country_code?: string | null
           created_at?: string | null
           device_fingerprint?: string | null
           email?: string
+          fbc?: string | null
+          fbp?: string | null
           id?: string
           max_spins?: number | null
+          prize_bb?: number | null
           prize_id?: string | null
           prize_label?: string | null
           role?: string
           shared?: boolean | null
+          source_url?: string | null
           spins_used?: number | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
         }
         Relationships: []
       }
@@ -4166,16 +4190,24 @@ export type Database = {
         Args: { p_fingerprint: string }
         Returns: {
           converted: boolean | null
+          country_code: string | null
           created_at: string | null
           device_fingerprint: string | null
           email: string
+          fbc: string | null
+          fbp: string | null
           id: string
           max_spins: number | null
+          prize_bb: number | null
           prize_id: string | null
           prize_label: string | null
           role: string
           shared: boolean | null
+          source_url: string | null
           spins_used: number | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
         }[]
         SetofOptions: {
           from: "*"
@@ -4184,6 +4216,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_marketing_lead_count: { Args: never; Returns: number }
       get_multiple_public_profiles: {
         Args: { user_ids: string[] }
         Returns: {
