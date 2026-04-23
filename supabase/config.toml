@@ -163,3 +163,6 @@ verify_jwt = false
 
 [functions.livekit-egress-webhook]
 verify_jwt = false
+
+[functions.meta-capi-track]
+verify_jwt = false

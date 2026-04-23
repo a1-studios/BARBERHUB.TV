@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { z } from 'zod';
 import { Loader2, Eye, EyeOff, Mail, ArrowLeft } from 'lucide-react';
 import { CountrySelector } from '@/components/CountrySelector';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { fbqTrack } from '@/lib/metaPixel';
+import { getCountryFromUrl } from '@/lib/urlParams';
 
 const profileSchema = z.object({
   email: z.string().trim().toLowerCase().email('Enter a valid email'),
@@ -57,13 +59,21 @@ export const FinalizeStep = ({
   const [email, setEmail] = useState(prefilledEmail);
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
-  const [country, setCountry] = useState<string | null>(null);
+  const [country, setCountry] = useState<string | null>(getCountryFromUrl() ?? null);
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+
+  useEffect(() => {
+    if (!country) {
+      const fromUrl = getCountryFromUrl();
+      if (fromUrl) setCountry(fromUrl);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const passwordStrength =
     password.length >= 8 && /[0-9]/.test(password) ? 'strong' : password.length > 0 ? 'weak' : null;
@@ -129,6 +139,12 @@ export const FinalizeStep = ({
       }
 
       setEmailSent(true);
+      // Fire CompleteRegistration (fan signup via promotion gate)
+      void fbqTrack('CompleteRegistration', {
+        email: result.data.email,
+        country: result.data.country,
+        user_type: role,
+      });
       onSubmitted();
     } catch (err: any) {
       toast.error(err?.message || 'Failed to create account');

@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { z } from 'zod';
 import { Sparkles, ArrowRight, AlertCircle, LogIn } from 'lucide-react';
+import { fbqTrack } from '@/lib/metaPixel';
+import { readStoredCountry } from '@/lib/urlParams';
 
 const DISPOSABLE_DOMAINS = new Set([
   'mailinator.com',
@@ -79,6 +81,11 @@ export const EmailGateStep = ({ initialEmail = '', onContinue, onSignIn }: Email
       setShake((s) => s + 1);
       return;
     }
+    // Fire Meta Lead event (pixel + CAPI)
+    void fbqTrack('Lead', {
+      email: validation.data,
+      country: readStoredCountry(),
+    });
     onContinue(validation.data);
   };
 

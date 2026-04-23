@@ -11,7 +11,10 @@ import { BarberGuard } from "@/components/auth/BarberGuard";
 import { AdminGuard } from "@/components/auth/AdminGuard";
 import SovereignGuard from "@/components/auth/SovereignGuard";
 import { useFollowedBarbersNotifications } from "@/hooks/useFollowedBarbersNotifications";
+import { useMetaPixelPageView } from "@/hooks/useMetaPixelPageView";
+import { IS_COMING_SOON } from "@/config/launchMode";
 import Index from "./pages/Index";
+import ComingSoon from "./pages/ComingSoon";
 import Profile from "./pages/Profile";
 // BattlesPage removed — /battles redirects to /watch
 import BattleDetails from "./pages/BattleDetails";
@@ -49,11 +52,14 @@ const queryClient = new QueryClient();
 const AppContent = () => {
   // Enable real-time notifications for followed barbers going live
   useFollowedBarbersNotifications();
+  // Track SPA route changes in Meta Pixel
+  useMetaPixelPageView();
   
   return (
     <>
       <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={IS_COMING_SOON ? <ComingSoon /> : <Index />} />
+            <Route path="/coming-soon" element={<ComingSoon />} />
             <Route path="/auth" element={<Navigate to="/" replace />} />
             <Route 
               path="/profile" 
