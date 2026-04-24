@@ -48,8 +48,21 @@ const Index = () => {
     return true;
   });
 
+  // Detect OAuth resume → re-mount wizard at Spin step with the role chosen pre-redirect
+  const [resumeSpin, setResumeSpin] = useState<{ role: 'barber' | 'fan' } | null>(null);
+  useEffect(() => {
+    if (!user || loading) return;
+    if (localStorage.getItem('wizard_resume_spin') === 'true') {
+      const role = (localStorage.getItem('pending_social_role') as 'barber' | 'fan') || 'fan';
+      localStorage.removeItem('wizard_resume_spin');
+      localStorage.removeItem('pending_social_role');
+      setResumeSpin({ role });
+    }
+  }, [user, loading]);
+
   const handleSpinClose = () => {
     setShowSpinWheel(false);
+    setResumeSpin(null);
     sessionStorage.setItem('spin_wheel_shown', 'true');
   };
 
