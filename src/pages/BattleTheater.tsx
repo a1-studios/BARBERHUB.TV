@@ -75,6 +75,7 @@ export default function BattleTheater() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [localPhase, setLocalPhase] = useState<'live' | 'processing' | 'vod' | null>(null);
   const [liveKitCreds, setLiveKitCreds] = useState<{ token: string; serverUrl: string } | null>(null);
+  const [donateTarget, setDonateTarget] = useState<{ barberId: string; name: string } | null>(null);
 
   const { comboCount, bonusEarned, incrementCombo } = useVoteCombo(id || '', user?.id);
   const viewerData = useRealtimeBattleViewers(id || '');
