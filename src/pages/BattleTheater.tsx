@@ -449,13 +449,19 @@ export default function BattleTheater() {
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2 justify-center">
+                <div className="flex gap-2 justify-center flex-wrap">
                   <Button
                     onClick={() => handleVote(barber2?.id, battle.creation2_id || '')}
                     disabled={!!userVote}
                     className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-bold py-6 px-8 rounded-xl shadow-2xl"
                   >
                     {userVote === battle.creation2_id ? '✓ Voted' : 'VOTE'}
+                  </Button>
+                  <Button
+                    onClick={() => barber2?.id && setDonateTarget({ barberId: barber2.id, name: barber2.name || 'Barber' })}
+                    className="bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 text-black font-bold py-6 px-6 rounded-xl shadow-2xl"
+                  >
+                    <Coins className="h-5 w-5 mr-2" /> DONATE
                   </Button>
                   <Button variant="outline" size="icon" onClick={handleLike} className="bg-black/40 backdrop-blur-sm border-white/20 hover:bg-white/20">
                     <Heart className="h-5 w-5 text-white" />
