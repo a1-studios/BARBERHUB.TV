@@ -32,14 +32,14 @@ export const useIncomingChallengeOverlay = () => {
     const challengeId = n?.data?.challenge_id;
     if (!challengeId) return null;
 
-    const { data: ch } = await supabase
+    const { data: chRaw } = await supabase
       .from('open_challenges')
-      .select('id, challenger_username, challenger_avatar, challenger_country, title, stake_amount, pot_total, expires_at, status')
+      .select('id, challenger_username, title, stake_amount, pot_total, expires_at, status')
       .eq('id', challengeId)
       .maybeSingle();
 
+    const ch = chRaw as any;
     if (!ch) return null;
-    // Skip if already accepted / declined / expired
     if (ch.status && ch.status !== 'pending' && ch.status !== 'open' && ch.status !== 'active') return null;
     if (ch.expires_at && new Date(ch.expires_at).getTime() <= Date.now()) return null;
 
@@ -47,8 +47,8 @@ export const useIncomingChallengeOverlay = () => {
       notification_id: n.id,
       challenge_id: ch.id,
       challenger_username: ch.challenger_username,
-      challenger_avatar: (ch as any).challenger_avatar ?? null,
-      challenger_country: (ch as any).challenger_country ?? null,
+      challenger_avatar: ch.challenger_avatar ?? null,
+      challenger_country: ch.challenger_country ?? null,
       title: ch.title,
       stake_amount: ch.stake_amount ?? 0,
       pot_total: ch.pot_total ?? 0,
