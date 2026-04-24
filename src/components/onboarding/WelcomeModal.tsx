@@ -14,9 +14,13 @@ const getCountryFlag = (code: string) => {
   return String.fromCodePoint(...codePoints);
 };
 
-export const WelcomeModal = () => {
+interface WelcomeModalProps {
+  mode?: 'first-time' | 'returning';
+}
+
+export const WelcomeModal = ({ mode = 'first-time' }: WelcomeModalProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const { isBarber, isFan, isLoading } = useUserRole();
+  const { isBarber, isLoading } = useUserRole();
   const { profile } = useUserProfile();
   const navigate = useNavigate();
 
@@ -25,11 +29,12 @@ export const WelcomeModal = () => {
 
   useEffect(() => {
     if (isLoading) return;
+    if (mode === 'returning') return; // returning is handled via toast in Index
     const hasSeenWelcome = localStorage.getItem(STORAGE_KEY);
     if (!hasSeenWelcome) {
       setIsOpen(true);
     }
-  }, [isLoading]);
+  }, [isLoading, mode]);
 
   const handleDismiss = () => {
     localStorage.setItem(STORAGE_KEY, "true");
@@ -41,7 +46,7 @@ export const WelcomeModal = () => {
     navigate(path);
   };
 
-  if (isLoading) return null;
+  if (isLoading || mode === 'returning') return null;
 
   const barberSteps = [
     { icon: Scissors, title: "Enter Battles", description: "Register for tournament categories and get matched with opponents" },
@@ -63,42 +68,42 @@ export const WelcomeModal = () => {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-md bg-card border-border/50">
-        <DialogHeader className="text-center">
-          <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-            <Trophy className="h-8 w-8 text-primary-foreground" />
+      <DialogContent className="sm:max-w-sm bg-card border-border/50 ring-2 ring-cyan-400/60 shadow-[0_0_24px_rgba(34,211,238,0.25)] p-4 sm:p-5">
+        <DialogHeader className="text-center space-y-1">
+          <div className="mx-auto mb-2 h-12 w-12 rounded-full bg-gradient-to-br from-primary to-primary/60 ring-1 ring-cyan-400/50 flex items-center justify-center">
+            <Trophy className="h-6 w-6 text-primary-foreground" />
           </div>
-          <DialogTitle className="text-2xl font-bold">
-            <span>Welcome to the Arena, </span>
+          <DialogTitle className="text-lg font-semibold tracking-tight">
+            <span>Welcome, </span>
             <span className="text-primary">{displayName}</span>
             <span>! 🔥</span>
             {countryCode && (
-              <span className="ml-2 text-3xl">{getCountryFlag(countryCode)}</span>
+              <span className="ml-1.5 text-xl">{getCountryFlag(countryCode)}</span>
             )}
           </DialogTitle>
-          <DialogDescription className="text-muted-foreground text-base">
+          <DialogDescription className="text-muted-foreground text-xs">
             {subtitle}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-2 py-2">
           <AnimatePresence>
             {steps.map((step, index) => (
               <motion.div
                 key={step.title}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.15 }}
-                className="flex items-start gap-4 p-3 rounded-lg bg-muted/30 border border-border/30"
+                transition={{ delay: index * 0.12 }}
+                className="flex items-start gap-3 p-2 rounded-lg bg-muted/30 border border-border/30"
               >
-                <div className="flex-shrink-0 h-10 w-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
-                  <step.icon className="h-5 w-5 text-primary" />
+                <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <step.icon className="h-4 w-4 text-primary" />
                 </div>
-                <div>
-                  <h4 className="font-semibold text-foreground">{step.title}</h4>
-                  <p className="text-sm text-muted-foreground">{step.description}</p>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-foreground text-sm leading-tight">{step.title}</h4>
+                  <p className="text-xs text-muted-foreground leading-snug">{step.description}</p>
                 </div>
-                <span className="ml-auto text-2xl font-bold text-muted-foreground/30">
+                <span className="ml-auto text-lg font-semibold text-muted-foreground/30 leading-none">
                   {index + 1}
                 </span>
               </motion.div>
@@ -109,21 +114,21 @@ export const WelcomeModal = () => {
         <div className="flex flex-col gap-2">
           {isBarber ? (
             <>
-              <Button onClick={() => handleAction("/portal")} className="w-full bg-primary hover:bg-primary/90">
-                <Scissors className="mr-2 h-4 w-4" />
+              <Button size="sm" onClick={() => handleAction("/portal")} className="w-full bg-primary hover:bg-primary/90">
+                <Scissors className="mr-2 h-3.5 w-3.5" />
                 Go to Battle Portal
               </Button>
-              <Button variant="outline" onClick={handleDismiss} className="w-full">
+              <Button size="sm" variant="outline" onClick={handleDismiss} className="w-full">
                 Explore First
               </Button>
             </>
           ) : (
             <>
-              <Button onClick={() => handleAction("/battles")} className="w-full bg-primary hover:bg-primary/90">
-                <Eye className="mr-2 h-4 w-4" />
+              <Button size="sm" onClick={() => handleAction("/battles")} className="w-full bg-primary hover:bg-primary/90">
+                <Eye className="mr-2 h-3.5 w-3.5" />
                 Watch Battles
               </Button>
-              <Button variant="outline" onClick={handleDismiss} className="w-full">
+              <Button size="sm" variant="outline" onClick={handleDismiss} className="w-full">
                 Explore First
               </Button>
             </>
@@ -132,7 +137,7 @@ export const WelcomeModal = () => {
 
         <button
           onClick={handleDismiss}
-          className="text-xs text-muted-foreground hover:text-foreground text-center mt-2"
+          className="text-[10px] text-muted-foreground hover:text-foreground text-center mt-1"
         >
           Don't show this again
         </button>
