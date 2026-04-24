@@ -253,7 +253,7 @@ const BattleLobby = () => {
       )}
 
       {/* Fan terminal — visible to everyone (contenders also get to see chat) */}
-      {!isContender && (
+      {!isContender && b2 && (
         <FanTerminal
           battleId={battle.id}
           barber1={{ userId: b1.userId, profileId: b1.profileId, name: b1.name }}
