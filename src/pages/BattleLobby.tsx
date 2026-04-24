@@ -227,8 +227,8 @@ const BattleLobby = () => {
             isLocal: localPosition === 1,
           }}
           barber2={{
-            name: b2.name,
-            flag: b2.flag,
+            name: b2Display.name,
+            flag: b2Display.flag,
             ready: b2Ready,
             present: !!b2Present,
             isLocal: localPosition === 2,
