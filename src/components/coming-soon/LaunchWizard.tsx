@@ -11,7 +11,9 @@ import { SegmentedProgress } from './SegmentedProgress';
 import { fbqTrack } from '@/lib/metaPixel';
 import { gtagFireLead } from '@/lib/googleAds';
 import { supabase } from '@/integrations/supabase/client';
-import { captureAttribution, getCountryFromUrl } from '@/lib/urlParams';
+import { captureAttribution, getCountryFromUrl, getEmailFromUrl } from '@/lib/urlParams';
+import { fbqTrack } from '@/lib/metaPixel';
+import { gtagFireLead } from '@/lib/googleAds';
 import type { Prize } from '@/components/vault/VaultSpinWheel';
 
 export type LaunchRole = 'barber' | 'fan';
@@ -27,6 +29,10 @@ export interface LaunchWizardState {
 interface LaunchWizardProps {
   onClose: () => void;
   mode?: LaunchWizardMode;
+  /** Step number (1–5) the wizard should open on. Default 1. */
+  startStep?: number;
+  /** Pre-filled role (e.g. when resuming after social OAuth). When set, role + country steps are skipped. */
+  prefilledRole?: LaunchRole;
 }
 
 const TOTAL_STEPS = 5;
