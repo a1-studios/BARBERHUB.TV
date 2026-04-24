@@ -55,7 +55,7 @@ export const ReadyUpPanel = ({ onLockIn, isLockedIn, opponentPresent, opponentRe
     if (!canLock) return;
     const next = !checks.lock;
     HapticFeedback.streak(next ? 3 : 1);
-    AudioManager.play(next ? 'combo3' : 'vote');
+    AudioManager.play(next ? 'combo2' : 'vote');
     setChecks((c) => ({ ...c, lock: next }));
     await onLockIn(next);
   };
