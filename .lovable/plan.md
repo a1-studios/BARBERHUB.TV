@@ -1,158 +1,129 @@
 
 
-## Meta CAPI Bridge + barberhub.tv Coming Soon Wizard
+## Goal
+Ship the immersive, gamified Coming Soon wizard — but with **Neon Orange as the dominant highlight** (Cyan demoted to a secondary accent), strict **Barber/Fan binary roles**, and explicit hooks for **Meta Ads + Google Ads** attribution and conversion tracking.
 
-Two deliverables: (1) verify/wire the `meta-capi-track` Edge Function with the new secrets so Nationality + UserType flow through Meta correctly, (2) ship a public-facing "Coming Soon" page at `barberhub.tv` with a multi-step wizard that captures email → role → country → spin-to-win, then fires `Lead` and `CompleteRegistration` to Meta.
+## Color System Correction
+- **Primary highlight (90%)**: Neon Orange `#FF5F1F` → Amber `#FFB347` gradient. Used for: focus rings, progress fill, active states, CTAs, glow halos, selected tiles, coin reveal, shimmer.
+- **Secondary accent (10%)**: Cyan `#00F0FF` reserved only for tiny "live" data signals (e.g., the live-counter pulse dot, the "data-secured" tick on the reveal). Never on inputs, buttons, or progress.
+- **Surface**: Glassmorphic `bg-white/5 backdrop-blur-2xl border-white/10`.
+- **Currency moments**: Gold `#FFD37A → #FF8C00` shimmer (already brand-defined).
 
-## Part 1 — Meta Pixel + CAPI (frontend + server)
+## Roles (unchanged)
+Two tiles only: **Barber** (Scissors icon) and **Fan** (Heart icon). No Judge, no Client. `StepRole.tsx` stays as-is structurally; only restyled.
 
-### 1.1 Pixel base install
-- `index.html`: insert Meta Pixel base code in `<head>` (Pixel ID `3952840548352887`, initial `PageView`).
-- `<noscript>` `<img>` fallback in `<body>` (HTML5 spec — never in `<head>`).
+## Visual & Motion Spec
 
-### 1.2 SPA route tracking
-- New `src/lib/metaPixel.ts`: typed wrapper (`fbqTrack`, `fbqTrackPageView`, `getFbp`, `getFbc`) that guards `typeof window.fbq === 'function'`.
-- New `src/hooks/useMetaPixelPageView.tsx`: listens to React Router `useLocation()` and fires `PageView` per pathname change.
-- Mount the hook inside `AppContent` in `src/App.tsx`.
-- `src/vite-env.d.ts`: add `Window.fbq` global type.
+### Wizard shell (`LaunchWizard.tsx`)
+- Glass card: `bg-white/5 backdrop-blur-2xl border border-orange-500/20 rounded-[24px] shadow-[0_0_60px_rgba(255,95,31,0.35)]`.
+- Inner top edge: 1px white→transparent gradient highlight (light-streak).
+- **Mobile (<768px)**: bottom sheet — slides up from bottom, occupies lower 75vh, drag-down handle at top to dismiss, primary CTA pinned in lower 40% for thumb reach.
+- **Desktop (≥768px)**: center-floating glass card, max-w-lg.
 
-### 1.3 Edge Function `meta-capi-track`
-**Inputs (from client):**
-```ts
-{
-  event_name: 'Lead' | 'CompleteRegistration',
-  event_id: string,                 // UUID for browser+server dedup
-  email?: string,
-  country?: string,                 // ISO-2 (US, CA, ...)
-  user_type?: 'fan' | 'barber',
-  source_url?: string,
-  fbp?: string,                     // _fbp cookie
-  fbc?: string                      // _fbc cookie (from fbclid)
-}
-```
+### Transitions
+- Replace current `y: 12 → 0` with **direction-aware horizontal spring slide**: forward = incoming `x: 100% → 0` / outgoing `x: 0 → -100%`; back = inverted. `transition={{ type: 'spring', stiffness: 320, damping: 32 }}`.
+- Track a `direction` ref (1 = forward, -1 = back) so AnimatePresence animates correctly when user taps Back.
 
-**Field mapping → Meta CAPI payload:**
-| Intake field | Meta CAPI location | Notes |
+### Swipe gesture (new `SwipeableStep.tsx` wrapper)
+- Framer Motion `drag="x"`, `dragConstraints={{ left: 0, right: 0 }}`, `dragElastic={0.2}`.
+- On `dragEnd`: if `offset.x < -80` and `canAdvance` → next; if `offset.x > 80` → back. Validation gates (e.g., email valid) still apply.
+- Used by all 5 steps.
+
+### Progress (new `SegmentedProgress.tsx`)
+- 5 segments at top of wizard. Inactive = `bg-white/10`. Active = orange→amber pill with `shadow-[0_0_18px_rgba(255,95,31,0.6)]` and inner shimmer sweep. Completed = solid orange (no glow).
+- Replaces current dot row.
+
+### Inputs (StepEmail / StepCountry)
+- `h-14`, `rounded-[14px]`, `border border-orange-500/30 bg-black/40`.
+- Focus: `border-orange-500 shadow-[0_0_22px_rgba(255,95,31,0.55)] ring-2 ring-orange-500/40`.
+- Floating label that lifts on focus.
+
+### Buttons (dual-layer pill — used everywhere)
+- Outer: `border border-white/30` (the "0.6px white border" — Tailwind's thinnest).
+- Inner: `bg-gradient-to-br from-[#FF5F1F] via-[#FF8C00] to-[#FFB347]`.
+- Top streak: `inset 0 1px 0 rgba(255,255,255,0.45)`.
+- `whileTap={{ scale: 0.95 }}` + `navigator.vibrate?.(10)` for haptic.
+
+### Role tiles (StepRole)
+- Glass surface, larger (h-44), icon in orange-glow circle.
+- On select: 250ms scale-pulse (1 → 1.06 → 1) + orange border bloom (`shadow-[0_0_30px_rgba(255,95,31,0.7)]`) before auto-advancing.
+
+### Spin step (StepSpin)
+- Wrap existing `VaultSpinWheel` in glass frame with subtle scanline overlay; orange ring around the wheel housing.
+
+### Reveal finale (StepReveal) — **3D Barber Coin Pop**
+- Circular orange-gold BB coin (CSS 3D, no Three.js):
+  - Initial: `scale: 0, rotateY: 720deg, y: 100`.
+  - Spring to: `scale: 1.2 → 1, rotateY: 0, y: 0` over 700ms (`stiffness: 180, damping: 12`).
+- Radial **orange** ring expands behind it (`scale: 0→4, opacity: 0.6→0`, 800ms).
+- Prize label below: gold gradient with diagonal shimmer sweep every 2.5s.
+- Confetti via existing `celebrationEffects.ts`.
+- Tiny cyan tick chip: "✓ Spot secured" (only place cyan appears).
+- Email + "We'll email you when doors open" in muted glass chip.
+- Done CTA = orange dual-layer pill.
+
+### Background (ComingSoon page)
+- Add looping muted Cloudflare Stream video layer (reuse `DynamicBattleHero` pool) behind `bg-black/55 backdrop-blur-sm`.
+- Pause video while wizard is open (shared state).
+
+## Meta Ads + Google Ads Integration
+
+### Already wired (verify, don't rebuild)
+- Meta Pixel (`3952840548352887`) in `index.html` + SPA `useMetaPixelPageView`.
+- `meta-capi-track` Edge Function mirrors `Lead` + `CompleteRegistration` server-side with hashed email/country and `user_role` custom_data.
+- `?country=`, `utm_*`, `fbclid` capture in `src/lib/urlParams.ts`.
+
+### New for Google Ads
+- **gtag base**: add Google Ads tag to `index.html` `<head>`, parameterized by `VITE_GOOGLE_ADS_ID` (env var, e.g., `AW-XXXXXXXXX`). Skip render if env is empty so devs aren't blocked.
+- New `src/lib/googleAds.ts`:
+  - `gtagTrackPageView(path)` — fired from a new `useGoogleAdsPageView` hook in `App.tsx` (mirrors the Meta pageview hook).
+  - `gtagConversion({ sendTo, value, currency, transaction_id })` — generic conversion firer. `sendTo` = `${GOOGLE_ADS_ID}/${conversionLabel}`.
+  - Two conversion labels (env-driven, optional): `VITE_GOOGLE_ADS_LEAD_LABEL` (Step 1 email) and `VITE_GOOGLE_ADS_REGISTRATION_LABEL` (Step 5 reveal). If missing, function no-ops gracefully.
+- **gclid capture**: extend `src/lib/urlParams.ts` `captureAttribution()` to also persist `gclid` and `gbraid`/`wbraid` to `sessionStorage`. These get attached to `marketing_leads` insert.
+- **`marketing_leads` migration**: add `gclid text`, `gbraid text`, `wbraid text` columns (additive, nullable). RLS unchanged.
+
+### Wizard fire points (parallel to Meta)
+| Step | Meta | Google Ads |
 |---|---|---|
-| `email` | `user_data.em[0]` | SHA-256 hashed, lowercased+trimmed |
-| `country` | `user_data.country[0]` | SHA-256 hashed, lowercased ISO-2 |
-| `user_type` | `custom_data.user_role` | `'barber'` or `'fan'` — drives audience splits |
-| `country` | also `custom_data.country` (clear) | Lets Meta build per-country lookalikes |
-| `event_id` | top-level `event_id` | dedupes against pixel event |
-| `fbp` / `fbc` | `user_data.fbp` / `user_data.fbc` | Click attribution |
-| `source_url` | `event_source_url` | Required by Meta |
+| 1 Email captured | `Lead` (pixel + CAPI) ✅ existing | `gtagConversion({ sendTo: ...LEAD_LABEL, transaction_id: event_id })` |
+| 5 Reveal complete | `CompleteRegistration` (pixel + CAPI) ✅ existing | `gtagConversion({ sendTo: ...REGISTRATION_LABEL, value: prize_bb/5, currency: 'USD', transaction_id: event_id })` |
 
-**Behavior:**
-- Reads `META_ACCESS_TOKEN` and `barberhub_meta_data` (= dataset ID `3952840548352887`) from secrets.
-- POSTs to `https://graph.facebook.com/v19.0/{barberhub_meta_data}/events` with `data: [event]` + `access_token`.
-- Returns `{ success: true, events_received }` non-blocking from client perspective.
-- Public function (`verify_jwt = false` in `supabase/config.toml`) — needs to fire pre-signup.
-- CORS headers on every response.
-- Zod validation on body; returns 400 with field errors on bad input.
+Each pair shares the same `event_id` (UUID) to enable cross-platform deduplication if you later wire Google's enhanced conversions / GA4 measurement protocol.
 
-### 1.4 Conversion fire points (existing flows)
-| Event | Where it fires | Params |
-|---|---|---|
-| `Lead` | `EmailGateStep` after email captured | `email`, `country` (if known from URL), `user_type` (if pre-selected) |
-| `CompleteRegistration` (fan) | `FinalizeStep` after `supabase.auth.signUp` resolves | `email`, `country`, `user_type: 'fan'` |
-| `CompleteRegistration` (barber) | `BarberProfileForm` after profile upsert | `email`, `country_code`, `user_type: 'barber'` |
-
-Each call: generate UUID `event_id` → fire `fbq('track', name, params, { eventID })` → POST same `event_id` to `meta-capi-track` for server dedup.
-
-### 1.5 Nationality auto-fill from URL (`?country=US`)
-- New `src/lib/urlParams.ts`: `getCountryFromUrl()` reads `?country=` or `?nationality=`, validates against ISO-2 list, persists to `sessionStorage.intake_country`.
-- Consumed by: `FinalizeStep`, `BarberProfileForm`, and the new Coming Soon wizard.
-- Also passed into every `fbq` and CAPI call so Meta attributes geo correctly.
-
-## Part 2 — barberhub.tv Coming Soon Wizard
-
-### 2.1 Route + visibility
-- New `src/pages/ComingSoon.tsx` mounted at `/coming-soon`.
-- New `src/config/launchMode.ts` exporting `LAUNCH_MODE = 'coming_soon' | 'live'` (env-driven via `VITE_LAUNCH_MODE`, default `'live'`).
-- `src/App.tsx`: when `LAUNCH_MODE === 'coming_soon'`, the `/` route renders `ComingSoon` instead of `Index`. All other routes still work for internal QA.
-- Custom domain `barberhub.tv`: user flips `VITE_LAUNCH_MODE=coming_soon` to publish the gate; flip back when ready.
-
-### 2.2 Hero
-- Full-bleed dark background, animated faction banner accent, gold→orange gradient logo lockup ("BARBERHUB.TV").
-- Tagline: "THE GLOBAL BARBER ARENA — LAUNCHING SOON".
-- Live counter pill: total signups so far (reads from `marketing_leads` count via lightweight RPC or supabase select).
-- Single CTA: **"Claim Your Spot"** → opens wizard.
-
-### 2.3 Multi-step wizard (`src/components/coming-soon/LaunchWizard.tsx`)
-
-5 steps, brand-consistent (14px rounding, neon orange, white labels):
-
-| # | Step | Captures | Meta event |
-|---|---|---|---|
-| 1 | **Email** | email (zod-validated) | `Lead` (pixel + CAPI, `event_id` A) |
-| 2 | **Role** | `barber` or `fan` (two big rounded cards) | — (stored in state) |
-| 3 | **Country** | ISO-2 via existing `CountrySelector`, pre-filled from `?country=` | — |
-| 4 | **Spin-to-Win** | Reuses `VaultSpinWheel` — guests get one free spin; result stored in `localStorage.pending_spin_prize` keyed to email | — |
-| 5 | **Reveal** | Shows prize + "We'll email you when the doors open." Insert into `marketing_leads` (email, role, country, prize_label, fbp, fbc). | `CompleteRegistration` (pixel + CAPI, `event_id` B, `user_role` = step 2 choice) |
-
-- Back/Skip buttons on every step (Skip closes wizard, keeps email already saved as `Lead`).
-- Progress dots at top (1/5 … 5/5).
-- All inputs: `rounded-[14px] border-orange-500/40 bg-background/60 h-11`.
-- Primary CTA per step: orange gradient, full-width, 14px.
-
-### 2.4 `marketing_leads` table
-Migration adds (if not present) or extends:
-```sql
-create table if not exists public.marketing_leads (
-  id uuid primary key default gen_random_uuid(),
-  email text not null unique,
-  user_role text check (user_role in ('barber','fan')),
-  country_code text,
-  prize_label text,
-  prize_bb integer default 0,
-  fbp text, fbc text,
-  source_url text,
-  utm_source text, utm_medium text, utm_campaign text,
-  converted boolean default false,
-  created_at timestamptz default now()
-);
-alter table public.marketing_leads enable row level security;
--- Public can insert their own lead; only service role can read.
-create policy "anon_insert_lead" on public.marketing_leads for insert to anon, authenticated with check (true);
-```
-Already-existing `mark_marketing_lead_converted(email)` RPC stays — fired from `Auth.tsx`/`Index.tsx` after signup so the lead is flagged converted.
-
-### 2.5 UTM + fbclid capture
-Wizard reads `utm_source`, `utm_medium`, `utm_campaign`, `fbclid` from URL on mount, persists in `sessionStorage`, attaches to both the lead row and the CAPI payload (`fbclid` → `fbc` cookie format).
+### Type declarations
+`src/vite-env.d.ts`: add `Window.gtag`, `Window.dataLayer`, and the new `VITE_GOOGLE_ADS_*` env vars to `ImportMetaEnv`.
 
 ## Files Touched
 
 | File | Change |
 |---|---|
-| `index.html` | Pixel base in `<head>`, `<noscript>` fallback in `<body>` |
-| `src/lib/metaPixel.ts` | **NEW** — typed wrapper + cookie helpers |
-| `src/lib/urlParams.ts` | **NEW** — country + UTM + fbclid helpers |
-| `src/hooks/useMetaPixelPageView.tsx` | **NEW** — SPA PageView |
-| `src/vite-env.d.ts` | `window.fbq` global + `VITE_LAUNCH_MODE` |
-| `src/App.tsx` | Mount PageView hook; conditional `/` route based on `LAUNCH_MODE` |
-| `src/config/launchMode.ts` | **NEW** — coming-soon flag |
-| `src/pages/ComingSoon.tsx` | **NEW** — landing hero + wizard mount |
-| `src/components/coming-soon/LaunchWizard.tsx` | **NEW** — 5-step orchestrator |
-| `src/components/coming-soon/StepEmail.tsx` | **NEW** |
-| `src/components/coming-soon/StepRole.tsx` | **NEW** |
-| `src/components/coming-soon/StepCountry.tsx` | **NEW** |
-| `src/components/coming-soon/StepSpin.tsx` | **NEW** — wraps `VaultSpinWheel` |
-| `src/components/coming-soon/StepReveal.tsx` | **NEW** — fires `CompleteRegistration`, inserts lead |
-| `src/components/promotion-gate/EmailGateStep.tsx` | Fire `Lead` (pixel + CAPI) on email capture |
-| `src/components/promotion-gate/FinalizeStep.tsx` | Pre-fill country from URL; fire fan `CompleteRegistration` |
-| `src/components/profiles/BarberProfileForm.tsx` | Pre-fill country from URL; fire barber `CompleteRegistration` |
-| `supabase/functions/meta-capi-track/index.ts` | **NEW** — server-side mirror, hashes email/country, maps `user_type` → `custom_data.user_role` |
-| `supabase/config.toml` | Register `meta-capi-track` with `verify_jwt = false` |
-| `supabase/migrations/<ts>_marketing_leads.sql` | Create/extend `marketing_leads` table + RLS |
+| `src/pages/ComingSoon.tsx` | Add looping muted Cloudflare Stream backdrop with dim/blur; pause when wizard open |
+| `src/components/coming-soon/LaunchWizard.tsx` | Glass shell; direction-aware horizontal spring slides; mount `SegmentedProgress`; mobile bottom-sheet variant; `direction` state for back/forward |
+| `src/components/coming-soon/SwipeableStep.tsx` | **NEW** — drag wrapper used by all steps |
+| `src/components/coming-soon/SegmentedProgress.tsx` | **NEW** — 5-segment orange progress bar with glowing active pill |
+| `src/components/coming-soon/StepEmail.tsx` | h-14 input, orange focus glow, floating label, swipe-to-advance, fire Google Ads `Lead` conversion alongside existing Meta `Lead` |
+| `src/components/coming-soon/StepRole.tsx` | Larger glass tiles, orange bloom on select, scale-pulse confirm beat, vibrate(10) — Barber/Fan only |
+| `src/components/coming-soon/StepCountry.tsx` | Orange focus on selector, swipe gestures, dual-layer pill CTA |
+| `src/components/coming-soon/StepSpin.tsx` | Glass frame + scanline overlay around wheel; orange ring |
+| `src/components/coming-soon/StepReveal.tsx` | 3D BB coin pop, orange radial ring, gold shimmer prize label, confetti, cyan "✓ Spot secured" micro-chip, fire Google Ads `Registration` conversion alongside existing Meta event |
+| `src/lib/googleAds.ts` | **NEW** — gtag wrapper: `gtagTrackPageView`, `gtagConversion` |
+| `src/hooks/useGoogleAdsPageView.tsx` | **NEW** — SPA pageview for Google Ads |
+| `src/lib/urlParams.ts` | Extend `captureAttribution()` to persist `gclid` / `gbraid` / `wbraid` |
+| `src/App.tsx` | Mount `useGoogleAdsPageView` next to `useMetaPixelPageView` |
+| `src/vite-env.d.ts` | Add `Window.gtag` / `Window.dataLayer` + `VITE_GOOGLE_ADS_*` env types |
+| `index.html` | Add Google Ads gtag base script (env-gated; renders empty when `VITE_GOOGLE_ADS_ID` missing) |
+| `supabase/migrations/<ts>_marketing_leads_gclid.sql` | Add `gclid`, `gbraid`, `wbraid` columns |
 
-## Secrets (already added by you)
-- `META_ACCESS_TOKEN` ✅
-- `barberhub_meta_data` ✅ (= dataset ID `3952840548352887`)
-
-The Edge Function will read both via `Deno.env.get(...)`. Pixel ID stays public in `index.html` (standard practice).
+## Out of Scope
+- Audio "whoosh" SFX (no asset, requires user-gesture handling).
+- Server-side Google Ads conversions (Enhanced Conversions / Measurement Protocol) — wire the browser tag first; server mirror is a separate request once you provide the conversion labels.
+- Three.js coin (CSS 3D achieves the pop without bundle cost).
+- Audio cue, Judge role.
 
 ## Result
-- `barberhub.tv` shows a Coming Soon hero with a 5-step claim wizard. Each visitor's email → role → country → spin prize is captured to `marketing_leads`, fully attributed to the originating Meta ad via `fbp`/`fbc`/UTMs, and mirrored server-side through the Conversions API.
-- `Lead` fires when email is captured (top of funnel), `CompleteRegistration` fires when the wizard completes (full intake) — both with `user_role: barber|fan` and hashed `country` so Meta can build separate barber-LAL and fan-LAL audiences per country.
-- When you flip `VITE_LAUNCH_MODE=live`, the same wizard infrastructure stays intact for the existing in-app gate, and converted leads get auto-flagged via `mark_marketing_lead_converted` after signup completes.
+- ComingSoon becomes a cinematic, swipe-driven, glass intake over a video backdrop. Every transition feels like a native app.
+- **Orange owns the experience**; cyan reduced to a single confidence-tick. Brand consistency restored.
+- Strict Barber/Fan roles preserved — no DB or role-system breakage.
+- `Lead` (Step 1) and `CompleteRegistration` (Step 5) fire on **both** Meta Pixel + CAPI **and** Google Ads gtag with shared `event_id`s; `gclid`/`gbraid`/`wbraid` get persisted to `marketing_leads` for full Google attribution alongside existing Meta attribution.
+- Finale lands a 3D coin pop with gold shimmer + orange ring + confetti — a high-dopamine reward that visually rhymes with the Barber Bucks economy.
 
