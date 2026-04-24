@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useAuth } from './useAuth';
 
 interface BarberLiveStatus {
@@ -11,6 +11,11 @@ interface BarberLiveStatus {
   user_id: string;
 }
 
+/**
+ * Realtime alerts when a followed barber goes live.
+ * Uses sonner (top-right, transient — never persisted in any toast store)
+ * with a short 5s duration to avoid stacking / clutter.
+ */
 export const useFollowedBarbersNotifications = () => {
   const { user } = useAuth();
   const [followedBarberIds, setFollowedBarberIds] = useState<string[]>([]);
@@ -69,20 +74,14 @@ export const useFollowedBarbersNotifications = () => {
         const isNowLive = barberData.is_live || false;
 
         if (!wasLive && isNowLive) {
-          toast({
-            title: "🔴 LIVE NOW!",
-            description: (
-              <div className="flex flex-col gap-2">
-                <p>{barberData.name} is now streaming live!</p>
-                <button 
-                  onClick={() => window.location.href = `/broadcast/${barberData.id}`}
-                  className="text-sm text-primary hover:underline text-left"
-                >
-                  Watch Live →
-                </button>
-              </div>
-            ),
-            duration: 10000,
+          // Transient sonner pop-down — top-right, 5s, not stored anywhere.
+          toast(`🔴 ${barberData.name} is LIVE`, {
+            description: 'Tap to watch',
+            duration: 5000,
+            action: {
+              label: 'Watch',
+              onClick: () => { window.location.href = `/broadcast/${barberData.id}`; },
+            },
           });
         }
 
