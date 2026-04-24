@@ -5,9 +5,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useContenderReadiness } from '@/hooks/useContenderReadiness';
 import { useLobbyCameraPreview } from '@/hooks/useLobbyCameraPreview';
 import { ReadyUpPanel } from '@/components/lobby/ReadyUpPanel';
+import { LobbyContenderControls } from '@/components/lobby/LobbyContenderControls';
 import { FanTerminal } from '@/components/lobby/FanTerminal';
 import { PrizePoolBeacon } from '@/components/lobby/PrizePoolBeacon';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const LobbyScene = lazy(() => import('@/components/lobby/LobbyScene'));
