@@ -179,7 +179,11 @@ export default function ContenderTheater() {
     },
     onDisconnect: (error) => {
       if (error) {
-        toast.error('Connection lost. Please rejoin.');
+        toast.error('Connection lost. Returning to feed…');
+      }
+      // If we were already live, contender is leaving the arena → send to /watch
+      if (phase === 'live') {
+        setTimeout(() => navigate('/watch', { replace: true }), 600);
       }
     }
   });
@@ -226,10 +230,11 @@ export default function ContenderTheater() {
   const handleEndStream = async () => {
     try {
       disconnect();
-      toast.success('Stream ended successfully');
-      setPhase('preview');
+      toast.success('Stream ended — heading to the feed');
+      navigate('/watch', { replace: true });
     } catch (error) {
       console.error('Failed to end stream:', error);
+      navigate('/watch', { replace: true });
     }
   };
 
