@@ -8,8 +8,6 @@ import { StepSpin } from './StepSpin';
 import { StepReveal } from './StepReveal';
 import { StepLiveFinalize } from './StepLiveFinalize';
 import { SegmentedProgress } from './SegmentedProgress';
-import { fbqTrack } from '@/lib/metaPixel';
-import { gtagFireLead } from '@/lib/googleAds';
 import { supabase } from '@/integrations/supabase/client';
 import { captureAttribution, getCountryFromUrl, getEmailFromUrl } from '@/lib/urlParams';
 import { fbqTrack } from '@/lib/metaPixel';
