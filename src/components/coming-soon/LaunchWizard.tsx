@@ -47,7 +47,7 @@ const useIsMobile = () => {
   return m;
 };
 
-export const LaunchWizard = ({ onClose }: LaunchWizardProps) => {
+export const LaunchWizard = ({ onClose, mode = 'waitlist' }: LaunchWizardProps) => {
   const [step, setStep] = useState(1);
   const directionRef = useRef<1 | -1>(1);
   const [direction, setDirection] = useState<1 | -1>(1);
