@@ -26,6 +26,7 @@ export interface LaunchWizardState {
 
 interface LaunchWizardProps {
   onClose: () => void;
+  mode?: LaunchWizardMode;
 }
 
 const TOTAL_STEPS = 5;
