@@ -10,13 +10,15 @@ interface StepRoleProps {
   onSelect: (role: LaunchRole) => void;
   onBack: () => void;
   onSkip: () => void;
+  /** Hide the back button (e.g. when this is the first visible step in a pre-fill flow). */
+  hideBack?: boolean;
 }
 
 const haptic = () => {
   try { navigator.vibrate?.(10); } catch { /* ignore */ }
 };
 
-export const StepRole = ({ value, onSelect, onBack, onSkip }: StepRoleProps) => {
+export const StepRole = ({ value, onSelect, onBack, onSkip, hideBack = false }: StepRoleProps) => {
   const direction = useStepDirection();
   const [pending, setPending] = useState<LaunchRole | null>(null);
 
