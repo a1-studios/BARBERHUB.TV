@@ -1,98 +1,68 @@
 
 
 ## Goal
-Wire up the **one-tap social sign-in** (Google + Apple + Instagram) inside the `LaunchWizard` Step 1, pre-fill email from ad URLs, and ensure each role (Barber vs Fan) sees a **role-respected prize pool** on the spin wheel — matching the existing Auth/Sign-Up page social-button row.
-
-## What you'll need for Instagram one-click
-
-Instagram OAuth requires a **Meta Developer App configured for Instagram Basic Display / Facebook Login** and that login provider enabled in Supabase. Concretely:
-
-1. **Meta for Developers app** (https://developers.facebook.com/apps/)
-   - Create/select an app → add the **Facebook Login** product (Instagram OAuth runs through it).
-   - Add **OAuth redirect URI**: `https://msuepyfssovvkjzpfjzu.supabase.co/auth/v1/callback`
-   - Copy the **App ID** and **App Secret**.
-2. **Supabase Dashboard → Authentication → Providers → Facebook** (Instagram on Supabase is exposed via the Facebook provider with Instagram scopes; the dedicated `instagram` provider is deprecated for new apps).
-   - Toggle ON, paste App ID + App Secret, save.
-3. **No code-side secret needed** — Supabase handles the token exchange. The frontend just calls `supabase.auth.signInWithOAuth({ provider: 'facebook' })` (or `'google'` / `'apple'`). Meta access token + the existing `META_ACCESS_TOKEN` for CAPI are unrelated — the CAPI token is for *server-side conversion tracking*, not user login.
-
-I'll surface the button labeled "Continue with Instagram" but route through the `facebook` provider with `scope: 'email,public_profile'` so the user sees the standard Meta OAuth screen (Instagram login is accepted there).
-
-## Role-respected prizes
-`StepSpin` already accepts a `role` prop and the existing `useFreemiumPrizes` / `VaultSpinWheel` returns different prize pools per role. Verifying:
-- **Barber prizes**: Free month of Bronze tier, +visibility boost, +entry credits, +BB tokens.
-- **Fan prizes**: 3x voting power, sponsor banner credits, BB tokens, free spin.
-
-I'll confirm the wheel reads `role` on mount and don't change the wheel itself — just make sure `StepSpin` always passes the role chosen in Step 2 (and the role from `prefilledRole` when resuming after OAuth).
+Make the WelcomeModal **30% more compact**, mobile-optimized, with a **bright cyan accent edge**, and split into two distinct flows:
+1. **First-time users**: Full "Welcome to the Arena" onboarding modal — but **only triggered when they enter the battle arena** (i.e., after picking a category / entering a battle), not on landing.
+2. **Returning users**: A small, lightweight **"Welcome back, {name}"** toast/strip — no big modal, no steps.
 
 ## Changes
 
-### 1. `StepEmail.tsx` — add the 3-icon social row at the top
-Match the existing `LandingHero` / `AuthDialog` row (Google · Apple · Instagram). Layout above the email field:
-```
-┌──────────────────────────────────┐
-│   [G]    [Apple]    [IG]         │  ← 3 round 56px buttons
-│  ──────── or use email ────────  │
-│  [ Email address ____________ ]  │
-│  [        Continue →         ]   │
-└──────────────────────────────────┘
-```
-- Each icon: 56×56 glass circle, white border, brand-color glow on hover.
-- Tap behavior:
-  1. Opens an **inline mini "Pick your side" sheet** (Barber/Fan tiles, identical visual to `StepRole` but compact) — required because the spin wheel needs role context.
-  2. Stores `pending_social_role` + `wizard_resume_spin = 'true'` in `localStorage`.
-  3. Calls `supabase.auth.signInWithOAuth({ provider, options: { redirectTo: window.location.origin + '/' } })` with the right provider id (`google` / `apple` / `facebook`).
-  4. Fires Meta `Lead` + Google Ads `Lead` with shared `event_id` before redirect.
+### 1. `WelcomeModal.tsx` — slim down + cyan edge + dual mode
+- **Add `mode` prop**: `'first-time' | 'returning'` (default `'first-time'`).
+- **Size reduction (~30%)**:
+  - `sm:max-w-md` → `sm:max-w-sm` (narrower).
+  - Trophy badge: `h-16 w-16` → `h-12 w-12`; inner icon `h-8 w-8` → `h-6 w-6`; `mb-4` → `mb-2`.
+  - Title: `text-2xl` → `text-lg`; flag `text-3xl` → `text-xl`.
+  - Description: `text-base` → `text-xs`.
+  - Steps container: `space-y-4 py-4` → `space-y-2 py-2`; each row `p-3` → `p-2`, `gap-4` → `gap-3`.
+  - Step icon circle: `h-10 w-10` → `h-8 w-8`; icon `h-5 w-5` → `h-4 w-4`.
+  - Step title: default → `text-sm`; description: `text-sm` → `text-xs`.
+  - Step number: `text-2xl` → `text-lg`.
+  - Buttons: default → `size="sm"`, icons `h-4 w-4` → `h-3.5 w-3.5`.
+  - Footer "Don't show again": `text-xs` → `text-[10px]`, `mt-2` → `mt-1`.
+- **Cyan edge accent** (using existing brand cyan `#22D3EE` / `secondary`):
+  - Add a 2px cyan ring around the `DialogContent`: `ring-2 ring-cyan-400/60 shadow-[0_0_24px_rgba(34,211,238,0.25)]`.
+  - Trophy badge gets a thin cyan inner ring to tie it together.
+- **Mobile**: stays full-width on mobile via existing dialog defaults; tightened paddings ensure no overflow at 360px.
+- **Typography cohesion**: standardize on `font-semibold` for titles, `text-muted-foreground` for body, single `tracking-tight` on title for a unified rhythm.
 
-### 2. `LaunchWizard.tsx` — pre-fill + resume flow
-- Read email pre-fill: `getEmailFromUrl()` (already exists in `urlParams.ts`, verified). If found, initialize `state.email`, fire `Lead` once on mount, and start at **Step 2** (Role).
-- Add props `startStep?: number` and `prefilledRole?: 'barber' | 'fan'` so `Index.tsx` can re-mount the wizard at Step 4 (Spin) after OAuth round-trip.
-- When `prefilledRole` is set, the wizard skips Steps 2 and 3 (role + country — country is already on the user's profile post-OAuth via Google's locale, fall back to `getCountryFromUrl()`) and lands directly on Spin.
-- Hide the Back button on the first visible step in any pre-filled flow.
+### 2. New "Returning user" branch inside same component
+When `mode === 'returning'` (or auto-detected: `localStorage.barberhub_welcome_seen === 'true'` AND user is signed in AND it's a fresh session):
+- Render a **tiny centered card** — no steps list, no CTAs:
+  ```
+  ┌─────────────────────────────┐
+  │  👋  Welcome back,           │
+  │      {displayName} 🇩🇴       │
+  └─────────────────────────────┘
+  ```
+- Auto-dismiss after 2.5s OR on click.
+- Same cyan edge so the brand accent is consistent.
+- Uses `sonner` toast instead of dialog for minimal disruption (lighter than a modal).
 
-### 3. `Index.tsx` — OAuth resume detection
-After auth state loads, check:
-```ts
-if (user && localStorage.getItem('wizard_resume_spin') === 'true') {
-  const role = localStorage.getItem('pending_social_role') as 'barber' | 'fan';
-  // mount <LaunchWizard mode="live" startStep={4} prefilledRole={role} />
-  // clear both localStorage keys
-}
-```
-- Fires Meta `CompleteRegistration` + Google Ads conversion once spin completes (already wired in `StepLiveFinalize`).
+### 3. Trigger logic — move first-time modal off the landing page
+- **Remove** `<WelcomeModal />` from `src/pages/Index.tsx` (line 201).
+- **Add** `<WelcomeModal mode="first-time" />` to **`src/pages/Portal.tsx`** (the Battle Portal — what users hit after picking a category / entering the arena). The modal still self-gates via `localStorage.barberhub_welcome_seen` so it only fires once.
+- **Add** the returning-user welcome-back toast trigger to `src/pages/Index.tsx`:
+  - On mount, if `user` exists AND `localStorage.barberhub_welcome_seen === 'true'` AND `sessionStorage.welcome_back_shown !== 'true'` → fire `toast.success(\`Welcome back, ${displayName} ${flag}\`)` with cyan-accented styling, then set the session flag so it only shows once per session.
 
-### 4. `StepSpin.tsx` — verify role-respected prizes
-- Confirm `role` prop is passed through to `VaultSpinWheel`.
-- Pass `prefilledRole ?? state.role` so resumed-from-OAuth flow still gets correct pool.
-- No prize-pool logic changes — wheel already differentiates.
-
-### 5. Tracking continuity
-- Both Meta Pixel (`Lead`, `CompleteRegistration`) and Google Ads gtag conversions keep firing on the same step boundaries; OAuth path adds the same `Lead` event at icon-tap with provider in `custom_data` for audience segmentation (`{ user_role, signup_method: 'google' | 'apple' | 'instagram' }`).
+### 4. Cyan accent color source
+Use the existing Tailwind `cyan-400` (`#22D3EE`) — it matches the platform's defined Zion Blue / cyan secondary accent already used elsewhere (per `mem://design/branding-colors-permanent`). Orange remains primary (Trophy gradient + buttons stay orange); cyan is **only** the edge halo.
 
 ## Files Touched
 
 | File | Change |
 |---|---|
-| `src/components/coming-soon/StepEmail.tsx` | Add 3-icon social row + "or use email" divider above existing input; inline mini role-pick sheet on icon tap; OAuth invocation with localStorage flags; fire Meta + Google Ads `Lead` |
-| `src/components/coming-soon/LaunchWizard.tsx` | Add `startStep` + `prefilledRole` props; pre-fill email from URL + auto-skip Step 1; hide Back on first visible step in skipped flows |
-| `src/components/coming-soon/StepSpin.tsx` | Ensure `role` flows through (use `prefilledRole ?? state.role`) so Barber/Fan prize pools render correctly |
-| `src/pages/Index.tsx` | Detect `wizard_resume_spin` flag post-auth and re-mount wizard at Step 4 with `prefilledRole`; clear flags |
-| `src/lib/urlParams.ts` | (Already has `getEmailFromUrl` from prior plan — verify only) |
-
-## What you need to do (one-time setup)
-1. In **Meta for Developers**, add this redirect URI to your app's Facebook Login → Valid OAuth Redirect URIs:
-   `https://msuepyfssovvkjzpfjzu.supabase.co/auth/v1/callback`
-2. In **Supabase Dashboard → Authentication → Providers**, enable **Facebook** (paste App ID + App Secret), enable **Google** (already documented), enable **Apple** (requires Apple Developer membership + Service ID + key — separate setup).
-3. No new secrets in the codebase — Supabase handles all OAuth tokens; your existing `META_ACCESS_TOKEN` continues serving server-side CAPI conversions only.
+| `src/components/onboarding/WelcomeModal.tsx` | Shrink all sizes ~30%, add cyan ring/glow edge, add `mode` prop with `'returning'` lightweight variant, tighten typography |
+| `src/pages/Index.tsx` | Remove `<WelcomeModal />` mount; add returning-user welcome-back toast effect (cyan-styled, session-gated) |
+| `src/pages/Portal.tsx` | Mount `<WelcomeModal mode="first-time" />` near the top of the Portal main content so it fires when users enter the battle arena |
 
 ## Out of Scope
-- Apple Sign-In Apple Developer Console setup (requires paid Apple Developer membership — surface the button but it will show "coming soon" until you complete Apple's portal config).
-- Server-side prize ledger changes (existing `spin-wheel` edge function already enforces role-aligned prize pools).
-- Magic-link passwordless sign-in (separate flow).
+- Changing the modal's underlying step content/copy (only sizing + accent).
+- Touching the LaunchWizard intake flow.
+- Adding new translations or a separate component file (one component, two modes keeps maintenance simple).
 
 ## Result
-- Step 1 of the wizard now leads with **3 round social buttons (Google · Apple · Instagram)** matching the existing sign-up page row, then "or use email" + the email input.
-- Ad-click visitors with `?email=...` skip Step 1 entirely.
-- Social-login visitors complete OAuth → land back on `/` authenticated → wizard automatically re-opens on the **Spin step** with their chosen role's prize pool ready to spin.
-- Cold-typed-email visitors keep the full 5-step gamified flow.
-- All Meta CAPI + Google Ads conversion events fire with shared `event_id`s and `signup_method` custom data for proper audience attribution.
+- First-time users entering the Battle Portal see a **tighter, mobile-clean** onboarding card framed by a glowing **cyan edge** — orange remains the dominant action color.
+- Returning signed-in users hitting the home page get a **subtle "Welcome back, {name} 🇩🇴" toast** — no big modal, no friction.
+- Modal footprint reduced ~30% (narrower max-width, smaller paddings, tighter typography) so it fits cleanly on 360px screens with zero scroll.
 
