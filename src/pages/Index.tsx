@@ -73,15 +73,20 @@ const Index = () => {
     if (hasSeenWelcome && !toastShown) {
       const name = profile?.display_name || user.user_metadata?.display_name || user.user_metadata?.full_name || '';
       if (!name && !profile) return; // Wait for profile to load
-      if (name) {
-        toast(
-          <span>
-            Welcome back, <span className="text-cyan-400 font-bold animate-pulse">{name}</span>! 🔥
-          </span>
-        );
-      } else {
-        toast('Welcome back! 🔥');
-      }
+      const code = profile?.country_code;
+      const flag = code
+        ? String.fromCodePoint(...code.toUpperCase().split('').map(c => 127397 + c.charCodeAt(0)))
+        : '';
+      toast(
+        <span className="flex items-center gap-1.5">
+          👋 Welcome back, <span className="text-cyan-400 font-semibold">{name || 'Champion'}</span>
+          {flag && <span className="text-base">{flag}</span>}
+        </span>,
+        {
+          duration: 2500,
+          className: 'ring-1 ring-cyan-400/50 shadow-[0_0_16px_rgba(34,211,238,0.2)]',
+        }
+      );
       sessionStorage.setItem('welcome_back_toast', 'true');
     }
   }, [user, loading, profile]);

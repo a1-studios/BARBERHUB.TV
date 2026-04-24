@@ -23,6 +23,7 @@ import { OpenChallengeQueue } from "@/components/battles/OpenChallengeQueue";
 import { ImmersiveFactionBanners } from "@/components/factions/ImmersiveFactionBanners";
 import { CountryLeaderboard } from "@/components/portal/CountryLeaderboard";
 import { HowItWorks } from "@/components/onboarding/HowItWorks";
+import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { BottomNavBar } from "@/components/BottomNavBar";
 
 interface Battle {
@@ -145,6 +146,9 @@ const Portal = () => {
       <Header />
       <main className="pt-20 sm:pt-24 pb-12">
         <div className="container mx-auto px-4">
+          {/* First-time onboarding modal — fires once when entering the battle arena */}
+          <WelcomeModal mode="first-time" />
+
           {/* Animated Globe Championship Hub */}
           <PortalGlobeHero />
 
