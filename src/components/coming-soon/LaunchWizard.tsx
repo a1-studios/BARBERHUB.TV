@@ -229,7 +229,9 @@ export const LaunchWizard = ({ onClose, mode = 'waitlist' }: LaunchWizardProps) 
                 />
               )}
               {step === 5 && (
-                <StepReveal key="step-5" state={state} onClose={onClose} />
+                mode === 'live'
+                  ? <StepLiveFinalize key="step-5" state={state} onClose={onClose} />
+                  : <StepReveal key="step-5" state={state} onClose={onClose} />
               )}
             </AnimatePresence>
           </div>
