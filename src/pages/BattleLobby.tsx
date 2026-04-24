@@ -3,11 +3,12 @@ import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useContenderReadiness } from '@/hooks/useContenderReadiness';
+import { useLobbyCameraPreview } from '@/hooks/useLobbyCameraPreview';
 import { ReadyUpPanel } from '@/components/lobby/ReadyUpPanel';
 import { FanTerminal } from '@/components/lobby/FanTerminal';
 import { PrizePoolBeacon } from '@/components/lobby/PrizePoolBeacon';
-import { CountdownLauncher } from '@/components/lobby/CountdownLauncher';
 import { Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const LobbyScene = lazy(() => import('@/components/lobby/LobbyScene'));
 
@@ -47,10 +48,13 @@ const BattleLobby = () => {
   const [loading, setLoading] = useState(true);
   const [pulseTrigger, setPulseTrigger] = useState(0);
   const [livePrizeBB, setLivePrizeBB] = useState(0);
-  const [launching, setLaunching] = useState(false);
+  const [handoff, setHandoff] = useState(false);
 
   const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches;
   const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Local camera/mic preview owned at the page level so we can stop it before handoff
+  const { stream, hasCamera, hasMic, hasSpeaker, error: mediaError, start: startMedia, enableSpeaker, stop: stopMedia } = useLobbyCameraPreview();
 
   // Safety guard #1: must come from challenge flow
   useEffect(() => {
@@ -78,13 +82,11 @@ const BattleLobby = () => {
         return;
       }
 
-      // Safety guard #2: tournament battles never use the lobby
       if (battleData.tournament_id) {
         navigate(`/battle/${battleId}/contender`, { replace: true });
         return;
       }
 
-      // Safety guard #3: only upcoming/live battles use the lobby
       if (battleData.status !== 'live' && battleData.status !== 'upcoming') {
         navigate(`/battle/${battleId}/theater`, { replace: true });
         return;
@@ -93,8 +95,6 @@ const BattleLobby = () => {
       setBattle(battleData as BattleRow);
       setLivePrizeBB(battleData.prize_amount || 0);
 
-      // Load barbers — battle.barber{1,2}_id are barber_profiles.id (NOT user_id).
-      // barber2_id may be null until an opponent accepts the challenge.
       const ids = [battleData.barber1_id, battleData.barber2_id].filter(Boolean) as string[];
       if (ids.length > 0) {
         const { data: barbers } = await supabase
@@ -125,8 +125,6 @@ const BattleLobby = () => {
     return () => { cancelled = true; };
   }, [battleId, navigate]);
 
-  // Determine local user's role on this battle (compare auth.uid() to the
-  // barber profiles' user_id — battle.barber{1,2}_id are profile IDs, not user IDs)
   const localPosition: 1 | 2 | null = useMemo(() => {
     if (!user) return null;
     if (b1?.userId === user.id) return 1;
@@ -136,16 +134,15 @@ const BattleLobby = () => {
   const isContender = localPosition !== null;
   const localBarber = localPosition === 1 ? b1 : localPosition === 2 ? b2 : null;
 
-  // Wire presence — only meaningful for contenders, but reading state is harmless for fans
   const readiness = useContenderReadiness({
     battleId: battleId || '',
     barberId: localBarber?.profileId || 'fan-spectator',
     barberPosition: (localPosition || 1) as 1 | 2,
     displayName: localBarber?.name || 'Spectator',
     countryCode: localBarber?.countryCode || 'XX',
+    hasCamera,
   });
 
-  // Per-side ready/present derived from presence
   const b1Ready = localPosition === 1 ? readiness.localReady : (readiness.opponentPresence?.position === 1 ? readiness.opponentReady : false);
   const b2Ready = localPosition === 2 ? readiness.localReady : (readiness.opponentPresence?.position === 2 ? readiness.opponentReady : false);
   const b1Present = localPosition === 1 ? !!user : readiness.opponentPresence?.position === 1;
@@ -168,29 +165,17 @@ const BattleLobby = () => {
     return () => { supabase.removeChannel(ch); };
   }, [battleId]);
 
-  // Safety guard #4: contender joining when bothReady already true → skip lobby
+  // BOTH READY → instant handoff (no countdown). Stop media first so LiveKit can re-acquire.
   useEffect(() => {
-    if (isContender && readiness.bothReady && !launching) {
-      // Late joiner — bypass countdown, go straight to theater
-      const t = setTimeout(() => {
-        navigate(`/battle/${battleId}/contender`, { replace: true });
-      }, 100);
-      return () => clearTimeout(t);
-    }
-  }, [isContender, readiness.bothReady, launching, navigate, battleId]);
-
-  // When both ready → fire countdown
-  useEffect(() => {
-    if (readiness.bothReady && !launching) setLaunching(true);
-  }, [readiness.bothReady, launching]);
-
-  const handleLaunchComplete = () => {
-    if (isContender) {
-      navigate(`/battle/${battleId}/contender`, { replace: true });
-    } else {
-      navigate(`/battle/${battleId}/theater`, { replace: true });
-    }
-  };
+    if (!readiness.bothReady || handoff) return;
+    setHandoff(true);
+    const t = setTimeout(() => {
+      stopMedia();
+      if (isContender) navigate(`/battle/${battleId}/contender`, { replace: true });
+      else navigate(`/battle/${battleId}/theater`, { replace: true });
+    }, 650); // brief whoosh transition
+    return () => clearTimeout(t);
+  }, [readiness.bothReady, handoff, isContender, navigate, battleId, stopMedia]);
 
   if (loading || !battle || !b1) {
     return (
@@ -205,12 +190,10 @@ const BattleLobby = () => {
     );
   }
 
-  // Fallback for opponent slot when challenge has no acceptor yet
   const b2Display = b2 ?? { name: 'Awaiting Challenger', flag: undefined, userId: '', profileId: '' };
 
   return (
     <div className="lobby-canvas fixed inset-0 overflow-hidden bg-[#05060A]">
-      {/* 3D scene */}
       <Suspense
         fallback={
           <div className="absolute inset-0 flex items-center justify-center">
@@ -236,23 +219,27 @@ const BattleLobby = () => {
           pulse={Math.min(1, pulseTrigger * 0.05)}
           isMobile={isMobile}
           reducedMotion={reducedMotion}
+          localStream={stream}
         />
       </Suspense>
 
-      {/* Center prize beacon */}
       <PrizePoolBeacon amountBB={livePrizeBB} pulseTrigger={pulseTrigger} />
 
-      {/* Contender-only ready-up */}
       {isContender && (
         <ReadyUpPanel
-          onLockIn={readiness.setReady}
           isLockedIn={readiness.localReady}
           opponentPresent={readiness.isOpponentPresent}
           opponentReady={readiness.opponentReady}
+          hasCamera={hasCamera}
+          hasMic={hasMic}
+          hasSpeaker={hasSpeaker}
+          onAllowMedia={startMedia}
+          onEnableSpeaker={enableSpeaker}
+          onLockIn={readiness.setReady}
+          permError={mediaError}
         />
       )}
 
-      {/* Fan terminal — visible to everyone (contenders also get to see chat) */}
       {!isContender && b2 && (
         <FanTerminal
           battleId={battle.id}
@@ -262,8 +249,33 @@ const BattleLobby = () => {
         />
       )}
 
-      {/* Countdown overlay */}
-      <CountdownLauncher active={launching} onComplete={handleLaunchComplete} />
+      {/* Quick whoosh transition when both contenders are locked in */}
+      <AnimatePresence>
+        {handoff && (
+          <motion.div
+            key="handoff"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md"
+          >
+            <motion.div
+              initial={{ scale: 0.6, opacity: 0 }}
+              animate={{ scale: 1.1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+              className="text-center"
+            >
+              <div className="text-5xl font-black tracking-[0.3em] bg-gradient-to-r from-orange-400 via-cyan-300 to-orange-400 bg-clip-text text-transparent drop-shadow-[0_0_30px_rgba(34,211,238,0.7)]">
+                FIGHT
+              </div>
+              <p className="mt-1 text-[10px] font-mono uppercase tracking-[0.4em] text-cyan-300/80">
+                entering the ring
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
