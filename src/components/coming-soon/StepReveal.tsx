@@ -85,6 +85,7 @@ export const StepReveal = ({ state, onClose }: StepRevealProps) => {
       });
     };
     void finalize();
+    return () => { if (tickTimer) clearTimeout(tickTimer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
