@@ -51,20 +51,63 @@ const useIsMobile = () => {
   return m;
 };
 
-export const LaunchWizard = ({ onClose, mode = 'waitlist' }: LaunchWizardProps) => {
-  const [step, setStep] = useState(1);
+export const LaunchWizard = ({
+  onClose,
+  mode = 'waitlist',
+  startStep = 1,
+  prefilledRole,
+}: LaunchWizardProps) => {
+  // Compute initial email + step honoring URL pre-fill and explicit startStep prop.
+  const initialEmail = getEmailFromUrl() ?? '';
+  const computedStart = startStep > 1
+    ? startStep
+    : initialEmail
+      ? 2 // skip Step 1 if email pre-filled from ad URL
+      : 1;
+  // Track which step was the first visible one so we can hide Back on it.
+  const [firstStep] = useState(computedStart);
+
+  const [step, setStep] = useState(computedStart);
   const directionRef = useRef<1 | -1>(1);
   const [direction, setDirection] = useState<1 | -1>(1);
   const isMobile = useIsMobile();
   const [state, setState] = useState<LaunchWizardState>({
-    email: '',
-    role: null,
+    email: initialEmail,
+    role: prefilledRole ?? null,
     country: getCountryFromUrl() ?? null,
     prize: null,
   });
 
   useEffect(() => {
     captureAttribution();
+  }, []);
+
+  // Auto-fire Lead event once when wizard opens with a pre-filled email
+  // (since the user is skipping Step 1 where Lead would normally fire).
+  useEffect(() => {
+    if (initialEmail && computedStart > 1 && !prefilledRole) {
+      (async () => {
+        try {
+          const eventId = await fbqTrack('Lead', {
+            email: initialEmail,
+            country: getCountryFromUrl() ?? undefined,
+            extra: { signup_method: 'ad_prefill' },
+          });
+          gtagFireLead(eventId);
+          await supabase.from('marketing_leads').upsert(
+            {
+              email: initialEmail,
+              country_code: getCountryFromUrl() ?? null,
+              source_url: typeof window !== 'undefined' ? window.location.href : null,
+            } as never,
+            { onConflict: 'email' }
+          );
+        } catch (err) {
+          console.warn('[LaunchWizard] prefill Lead failed', err);
+        }
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const update = (patch: Partial<LaunchWizardState>) =>
