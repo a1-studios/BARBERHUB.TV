@@ -32,14 +32,18 @@ export const StepRole = ({ value, onSelect, onBack, onSkip, hideBack = false }: 
   return (
     <SwipeableStep direction={direction} canAdvance={false} onSwipeBack={onBack}>
       <div className="space-y-6">
-        <div className="flex items-center justify-between -mt-1">
-          <button
-            type="button"
-            onClick={() => { haptic(); onBack(); }}
-            className="flex items-center gap-1.5 text-sm text-white/60 hover:text-orange-400 transition-colors active:scale-95"
-          >
-            <ArrowLeft className="w-4 h-4" /> Back
-          </button>
+        <div className="flex items-center justify-between -mt-1 min-h-[20px]">
+          {hideBack ? (
+            <span />
+          ) : (
+            <button
+              type="button"
+              onClick={() => { haptic(); onBack(); }}
+              className="flex items-center gap-1.5 text-sm text-white/60 hover:text-orange-400 transition-colors active:scale-95"
+            >
+              <ArrowLeft className="w-4 h-4" /> Back
+            </button>
+          )}
           <button
             type="button"
             onClick={onSkip}
