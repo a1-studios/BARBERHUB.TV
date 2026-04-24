@@ -515,6 +515,16 @@ export default function BattleTheater() {
         <BattleChat battleId={id!} isOpen={chatOpen} onClose={() => setChatOpen(false)} />
       )}
       <BattleSettings isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      {donateTarget && (
+        <DonationModal
+          isOpen={!!donateTarget}
+          onClose={() => setDonateTarget(null)}
+          creatorId={donateTarget.barberId}
+          creatorName={donateTarget.name}
+          battleId={id!}
+          barberId={donateTarget.barberId}
+        />
+      )}
     </div>
   );
 }
