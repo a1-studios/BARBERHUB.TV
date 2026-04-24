@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { X, MessageSquare, Settings as SettingsIcon, Heart, Volume2, VolumeX } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { DonationModal } from '@/components/DonationModal';
 
 /** VOD player — uses Cloudflare Stream UID when available, falls back to native video */
 const VODPlayer = ({ src, streamUid, className }: { src: string; streamUid?: string | null; className?: string }) => {
@@ -74,6 +75,7 @@ export default function BattleTheater() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [localPhase, setLocalPhase] = useState<'live' | 'processing' | 'vod' | null>(null);
   const [liveKitCreds, setLiveKitCreds] = useState<{ token: string; serverUrl: string } | null>(null);
+  const [donateTarget, setDonateTarget] = useState<1 | 2 | null>(null);
 
   const { comboCount, bonusEarned, incrementCombo } = useVoteCombo(id || '', user?.id);
   const viewerData = useRealtimeBattleViewers(id || '');
