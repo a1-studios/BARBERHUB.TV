@@ -2379,6 +2379,8 @@ export type Database = {
           email: string
           fbc: string | null
           fbp: string | null
+          gbraid: string | null
+          gclid: string | null
           id: string
           max_spins: number | null
           prize_bb: number | null
@@ -2391,6 +2393,7 @@ export type Database = {
           utm_campaign: string | null
           utm_medium: string | null
           utm_source: string | null
+          wbraid: string | null
         }
         Insert: {
           converted?: boolean | null
@@ -2400,6 +2403,8 @@ export type Database = {
           email: string
           fbc?: string | null
           fbp?: string | null
+          gbraid?: string | null
+          gclid?: string | null
           id?: string
           max_spins?: number | null
           prize_bb?: number | null
@@ -2412,6 +2417,7 @@ export type Database = {
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+          wbraid?: string | null
         }
         Update: {
           converted?: boolean | null
@@ -2421,6 +2427,8 @@ export type Database = {
           email?: string
           fbc?: string | null
           fbp?: string | null
+          gbraid?: string | null
+          gclid?: string | null
           id?: string
           max_spins?: number | null
           prize_bb?: number | null
@@ -2433,6 +2441,7 @@ export type Database = {
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+          wbraid?: string | null
         }
         Relationships: []
       }
@@ -4196,6 +4205,8 @@ export type Database = {
           email: string
           fbc: string | null
           fbp: string | null
+          gbraid: string | null
+          gclid: string | null
           id: string
           max_spins: number | null
           prize_bb: number | null
@@ -4208,6 +4219,7 @@ export type Database = {
           utm_campaign: string | null
           utm_medium: string | null
           utm_source: string | null
+          wbraid: string | null
         }[]
         SetofOptions: {
           from: "*"
