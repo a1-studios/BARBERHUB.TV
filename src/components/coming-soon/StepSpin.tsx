@@ -78,6 +78,15 @@ export const StepSpin = ({ role, email, onResult, onBack, onSkip }: StepSpinProp
             boxShadow: '0 0 30px rgba(255,95,31,0.25), inset 0 0 30px rgba(255,140,0,0.06)',
           }}
         >
+          {/* Charging pulse — slow energy gather around the ring */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 rounded-[18px] animate-pulse"
+            style={{
+              boxShadow: 'inset 0 0 40px rgba(255,95,31,0.35), 0 0 24px rgba(255,140,0,0.4)',
+              animationDuration: '1.8s',
+            }}
+          />
           {/* Subtle scanlines */}
           <div
             aria-hidden
