@@ -1,68 +1,84 @@
-
-
 ## Goal
-Make the WelcomeModal **30% more compact**, mobile-optimized, with a **bright cyan accent edge**, and split into two distinct flows:
-1. **First-time users**: Full "Welcome to the Arena" onboarding modal — but **only triggered when they enter the battle arena** (i.e., after picking a category / entering a battle), not on landing.
-2. **Returning users**: A small, lightweight **"Welcome back, {name}"** toast/strip — no big modal, no steps.
+Three focused fixes to the live battle experience:
+
+1. **Viewers in the LIVE LiveKit arena get visible Vote + Donate buttons** (currently they only have chat/reactions — no way to vote or tip during the live stream).
+2. **When a contender exits / disconnects from a live battle, they are auto-routed to the `/watch` feed** (today they stay on a dead screen).
+3. **"X is now live" follow notifications stop being stored, pop down from the top-right, and only stay visible for ~half their current duration** to eliminate clutter.
+
+---
 
 ## Changes
 
-### 1. `WelcomeModal.tsx` — slim down + cyan edge + dual mode
-- **Add `mode` prop**: `'first-time' | 'returning'` (default `'first-time'`).
-- **Size reduction (~30%)**:
-  - `sm:max-w-md` → `sm:max-w-sm` (narrower).
-  - Trophy badge: `h-16 w-16` → `h-12 w-12`; inner icon `h-8 w-8` → `h-6 w-6`; `mb-4` → `mb-2`.
-  - Title: `text-2xl` → `text-lg`; flag `text-3xl` → `text-xl`.
-  - Description: `text-base` → `text-xs`.
-  - Steps container: `space-y-4 py-4` → `space-y-2 py-2`; each row `p-3` → `p-2`, `gap-4` → `gap-3`.
-  - Step icon circle: `h-10 w-10` → `h-8 w-8`; icon `h-5 w-5` → `h-4 w-4`.
-  - Step title: default → `text-sm`; description: `text-sm` → `text-xs`.
-  - Step number: `text-2xl` → `text-lg`.
-  - Buttons: default → `size="sm"`, icons `h-4 w-4` → `h-3.5 w-3.5`.
-  - Footer "Don't show again": `text-xs` → `text-[10px]`, `mt-2` → `mt-1`.
-- **Cyan edge accent** (using existing brand cyan `#22D3EE` / `secondary`):
-  - Add a 2px cyan ring around the `DialogContent`: `ring-2 ring-cyan-400/60 shadow-[0_0_24px_rgba(34,211,238,0.25)]`.
-  - Trophy badge gets a thin cyan inner ring to tie it together.
-- **Mobile**: stays full-width on mobile via existing dialog defaults; tightened paddings ensure no overflow at 360px.
-- **Typography cohesion**: standardize on `font-semibold` for titles, `text-muted-foreground` for body, single `tracking-tight` on title for a unified rhythm.
+### 1. Add Vote + Donate to the live LiveKit arena (`BattleTheater.tsx`)
 
-### 2. New "Returning user" branch inside same component
-When `mode === 'returning'` (or auto-detected: `localStorage.barberhub_welcome_seen === 'true'` AND user is signed in AND it's a fresh session):
-- Render a **tiny centered card** — no steps list, no CTAs:
-  ```
-  ┌─────────────────────────────┐
-  │  👋  Welcome back,           │
-  │      {displayName} 🇩🇴       │
-  └─────────────────────────────┘
-  ```
-- Auto-dismiss after 2.5s OR on click.
-- Same cyan edge so the brand accent is consistent.
-- Uses `sonner` toast instead of dialog for minimal disruption (lighter than a modal).
+The live phase currently renders `<LiveKitArena>` plus a tiny overlay with only chat + reactions. The two viewer actions that matter most during a live PK — voting and donating — are missing.
 
-### 3. Trigger logic — move first-time modal off the landing page
-- **Remove** `<WelcomeModal />` from `src/pages/Index.tsx` (line 201).
-- **Add** `<WelcomeModal mode="first-time" />` to **`src/pages/Portal.tsx`** (the Battle Portal — what users hit after picking a category / entering the arena). The modal still self-gates via `localStorage.barberhub_welcome_seen` so it only fires once.
-- **Add** the returning-user welcome-back toast trigger to `src/pages/Index.tsx`:
-  - On mount, if `user` exists AND `localStorage.barberhub_welcome_seen === 'true'` AND `sessionStorage.welcome_back_shown !== 'true'` → fire `toast.success(\`Welcome back, ${displayName} ${flag}\`)` with cyan-accented styling, then set the session flag so it only shows once per session.
+- In `src/pages/BattleTheater.tsx`, inside the `localPhase === 'live' && liveKitCreds` branch, add a new bottom-of-screen action row above the reaction picker:
+  - **Vote Barber 1** (orange button, left) — calls existing `handleVote(barber1.id, battle.creation1_id)`; disables + shows ✓ once `userVote === battle.creation1_id`.
+  - **Donate** (heart icon, center) — opens existing `DonationModal` for whichever side the user is currently leaning toward; default to a small picker (B1 / B2) so a viewer can tip either contender. Reuse the same `DonationModal` component already used in `ArenaActionBar`.
+  - **Vote Barber 2** (cyan button, right) — same pattern as B1.
+- Vote buttons honor the existing one-vote-per-user rule; the active side stays highlighted, the other dims.
+- Buttons sit in a translucent `bg-black/50 backdrop-blur` pill above the existing `ReactionPicker`, mobile-first sizing (`h-11`, single tap), with safe-area padding.
+- `handleVote` already exists and already increments combo + plays sounds + fires haptics — no new logic needed, just wire the buttons.
+- Donation modal state (`isDonationOpen`, `donationTarget`) added as local React state at the top of `BattleTheater`.
 
-### 4. Cyan accent color source
-Use the existing Tailwind `cyan-400` (`#22D3EE`) — it matches the platform's defined Zion Blue / cyan secondary accent already used elsewhere (per `mem://design/branding-colors-permanent`). Orange remains primary (Trophy gradient + buttons stay orange); cyan is **only** the edge halo.
+Result: a live viewer can now Vote, Donate, React, and Chat without leaving the LiveKit arena.
+
+### 2. Contender auto-redirect to feed on exit (`ContenderTheater.tsx`)
+
+`handleEndStream` currently calls `disconnect()` and just sets `phase` back to `'preview'`, leaving the user staring at a dead camera screen. Same goes for unexpected disconnects (`onDisconnect` only shows an error toast).
+
+- In `src/pages/ContenderTheater.tsx`:
+  - `handleEndStream` → after `disconnect()` + success toast, call `navigate('/watch', { replace: true })`.
+  - `onDisconnect` callback inside `useBattleVideoRoom` → on any disconnect that happens **after** `phase === 'live'` (i.e., the battle was running and ended/dropped), navigate to `/watch` after a 600ms delay so the toast is visible. Don't redirect if disconnect happens during preview/standby (user is just leaving the lobby).
+  - Same redirect for the `ContenderTopBar`'s back/X exit if it currently doesn't route — confirm and wire to `/watch` for consistency.
+- Use `replace: true` so the back button doesn't bounce them back into a closed battle room.
+
+Result: any time a contender leaves a live battle (via End Stream, opponent drop, network drop, or close), they land in the Watch Feed where the rest of the platform's content lives.
+
+### 3. Live-now notifications: pop down from top-right, don't store, half duration (`useFollowedBarbersNotifications.tsx`)
+
+Today the hook uses the legacy `@/hooks/use-toast` which:
+- Has `TOAST_REMOVE_DELAY = 1000000` (~17 min — toasts effectively never auto-clear from state).
+- Renders bottom-right via `<Toaster />`.
+- Ignores the `duration` prop in our config.
+- Stacks (cluttering the screen).
+
+Switch this single notification to **sonner** (already mounted globally, supports proper duration + position):
+
+- In `src/hooks/useFollowedBarbersNotifications.tsx`:
+  - Replace `import { toast } from '@/hooks/use-toast'` with `import { toast } from 'sonner'`.
+  - Replace the `toast({ title, description, duration })` call with:
+    ```ts
+    toast(`🔴 ${barberData.name} is LIVE`, {
+      description: 'Tap to watch',
+      position: 'top-right',
+      duration: 5000,           // half of the previous 10000ms
+      action: { label: 'Watch', onClick: () => window.location.href = `/broadcast/${barberData.id}` },
+    });
+    ```
+  - Sonner toasts are not persisted in any store — they're transient by design, so closing/refreshing wipes them; nothing is "saved."
+- Confirm `<Toaster />` from `sonner` is mounted in `App.tsx` (it is — alongside the legacy one). Pass `position="top-right"` on the sonner Toaster instance if it isn't already so live alerts pop down from the upper right consistently.
+
+Result: live alerts pop down from top-right, auto-dismiss in 5s, never accumulate in any store, never stack into clutter.
+
+---
 
 ## Files Touched
 
 | File | Change |
 |---|---|
-| `src/components/onboarding/WelcomeModal.tsx` | Shrink all sizes ~30%, add cyan ring/glow edge, add `mode` prop with `'returning'` lightweight variant, tighten typography |
-| `src/pages/Index.tsx` | Remove `<WelcomeModal />` mount; add returning-user welcome-back toast effect (cyan-styled, session-gated) |
-| `src/pages/Portal.tsx` | Mount `<WelcomeModal mode="first-time" />` near the top of the Portal main content so it fires when users enter the battle arena |
+| `src/pages/BattleTheater.tsx` | Add Vote-B1 / Donate / Vote-B2 action row inside the live LiveKit branch; wire `DonationModal` with target picker |
+| `src/pages/ContenderTheater.tsx` | Redirect to `/watch` on `handleEndStream` and on post-live disconnect |
+| `src/hooks/useFollowedBarbersNotifications.tsx` | Switch from legacy `useToast` to `sonner`, top-right, 5s, transient |
+| `src/App.tsx` (small) | Ensure `<Toaster position="top-right" />` from `sonner` is set so live alerts use the correct corner |
 
 ## Out of Scope
-- Changing the modal's underlying step content/copy (only sizing + accent).
-- Touching the LaunchWizard intake flow.
-- Adding new translations or a separate component file (one component, two modes keeps maintenance simple).
+- Restyling the existing `ArenaActionBar` (used on the showcase feed, not the live LiveKit view).
+- Changing the donation amount UI inside `DonationModal`.
+- Adding a persistent "live now" inbox — the user explicitly asked for these notifications **not** to be stored.
 
 ## Result
-- First-time users entering the Battle Portal see a **tighter, mobile-clean** onboarding card framed by a glowing **cyan edge** — orange remains the dominant action color.
-- Returning signed-in users hitting the home page get a **subtle "Welcome back, {name} 🇩🇴" toast** — no big modal, no friction.
-- Modal footprint reduced ~30% (narrower max-width, smaller paddings, tighter typography) so it fits cleanly on 360px screens with zero scroll.
-
+- Live viewers can vote + tip without leaving the LiveKit arena.
+- Contenders always land back in the Watch Feed after a battle ends or drops, instead of a dead screen.
+- "Live now" alerts behave like real push notifications: top-right, 5s, gone — no clutter, no history.

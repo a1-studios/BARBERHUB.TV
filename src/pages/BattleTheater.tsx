@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { X, MessageSquare, Settings as SettingsIcon, Heart, Volume2, VolumeX } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { DonationModal } from '@/components/DonationModal';
 
 /** VOD player — uses Cloudflare Stream UID when available, falls back to native video */
 const VODPlayer = ({ src, streamUid, className }: { src: string; streamUid?: string | null; className?: string }) => {
@@ -74,6 +75,8 @@ export default function BattleTheater() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [localPhase, setLocalPhase] = useState<'live' | 'processing' | 'vod' | null>(null);
   const [liveKitCreds, setLiveKitCreds] = useState<{ token: string; serverUrl: string } | null>(null);
+  const [donateTarget, setDonateTarget] = useState<1 | 2 | null>(null);
+  const [showDonatePicker, setShowDonatePicker] = useState(false);
 
   const { comboCount, bonusEarned, incrementCombo } = useVoteCombo(id || '', user?.id);
   const viewerData = useRealtimeBattleViewers(id || '');
@@ -303,6 +306,68 @@ export default function BattleTheater() {
             <MessageSquare className="h-5 w-5" />
           </Button>
         </div>
+        {/* Live viewer action row: Vote B1 · Donate · Vote B2 */}
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-2 rounded-full bg-black/60 backdrop-blur-md border border-white/10 shadow-2xl">
+          <Button
+            onClick={() => handleVote(barber1?.id, battle.creation1_id || '')}
+            disabled={!!userVote}
+            size="sm"
+            className={`h-10 px-4 rounded-full font-bold text-white transition-all ${
+              userVote === battle.creation1_id
+                ? 'bg-orange-500 ring-2 ring-orange-300'
+                : userVote
+                ? 'bg-white/10 opacity-50'
+                : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700'
+            }`}
+          >
+            {userVote === battle.creation1_id ? '✓' : 'Vote'} {barber1?.name?.split(' ')[0] || 'B1'}
+          </Button>
+
+          <Button
+            onClick={() => {
+              if (!user) { toast.error('Sign in to donate'); return; }
+              setShowDonatePicker((s) => !s);
+            }}
+            size="sm"
+            variant="ghost"
+            className="relative h-10 w-10 rounded-full bg-primary/20 hover:bg-primary/30 text-primary p-0"
+            aria-label="Donate"
+          >
+            <Heart className="h-5 w-5" fill="currentColor" />
+            {showDonatePicker && (
+              <div className="absolute -top-14 left-1/2 -translate-x-1/2 flex gap-1 bg-black/90 backdrop-blur-md border border-white/10 rounded-full p-1 shadow-2xl">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowDonatePicker(false); setDonateTarget(1); }}
+                  className="h-8 px-3 rounded-full bg-orange-500 text-white text-xs font-bold whitespace-nowrap"
+                >
+                  {barber1?.name?.split(' ')[0] || 'B1'}
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowDonatePicker(false); setDonateTarget(2); }}
+                  className="h-8 px-3 rounded-full bg-cyan-500 text-white text-xs font-bold whitespace-nowrap"
+                >
+                  {barber2?.name?.split(' ')[0] || 'B2'}
+                </button>
+              </div>
+            )}
+          </Button>
+
+          <Button
+            onClick={() => handleVote(barber2?.id, battle.creation2_id || '')}
+            disabled={!!userVote}
+            size="sm"
+            className={`h-10 px-4 rounded-full font-bold text-white transition-all ${
+              userVote === battle.creation2_id
+                ? 'bg-cyan-500 ring-2 ring-cyan-300'
+                : userVote
+                ? 'bg-white/10 opacity-50'
+                : 'bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700'
+            }`}
+          >
+            {userVote === battle.creation2_id ? '✓' : 'Vote'} {barber2?.name?.split(' ')[0] || 'B2'}
+          </Button>
+        </div>
+
         {user && (
           <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40">
             <ReactionPicker battleId={id!} userId={user.id} />
@@ -311,6 +376,18 @@ export default function BattleTheater() {
         <FloatingReactions battleId={id!} />
         {localStorage.getItem('battleChatEnabled') !== 'false' && (
           <BattleChat battleId={id!} isOpen={chatOpen} onClose={() => setChatOpen(false)} />
+        )}
+
+        {/* Donation modal — picks the target barber chosen via the heart button */}
+        {donateTarget && (
+          <DonationModal
+            isOpen={!!donateTarget}
+            onClose={() => setDonateTarget(null)}
+            creatorId={(donateTarget === 1 ? barber1?.user_id : barber2?.user_id) || ''}
+            creatorName={(donateTarget === 1 ? barber1?.name : barber2?.name) || 'Barber'}
+            battleId={id!}
+            barberId={(donateTarget === 1 ? barber1?.id : barber2?.id) || ''}
+          />
         )}
       </>
     );

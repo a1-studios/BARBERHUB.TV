@@ -241,7 +241,7 @@ const App = () => (
     <AuthProvider>
       <TooltipProvider>
         <Toaster />
-        <Sonner />
+        <Sonner position="top-right" />
         <BrowserRouter>
           <AppContent />
         </BrowserRouter>
