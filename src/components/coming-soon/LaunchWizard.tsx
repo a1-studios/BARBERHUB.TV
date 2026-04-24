@@ -258,6 +258,7 @@ export const LaunchWizard = ({
                   }}
                   onBack={goBack}
                   onSkip={onClose}
+                  hideBack={firstStep >= 2}
                 />
               )}
               {step === 3 && (
