@@ -226,8 +226,10 @@ const Index = () => {
       <Footer />
       {user && <BottomNavBar />}
 
-      {/* Auto-show spin wheel overlay */}
-      <SpinWheelOverlay open={showSpinWheel} onClose={handleSpinClose} />
+      {/* Gamified intake wizard — replaces legacy SpinWheelOverlay */}
+      {showSpinWheel && (
+        <LaunchWizard mode="live" onClose={handleSpinClose} />
+      )}
 
       {/* Arena Gate Modal — rendered outside auth conditional so it persists */}
       <ArenaGateModal
