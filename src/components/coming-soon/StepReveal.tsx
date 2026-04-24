@@ -20,7 +20,9 @@ const haptic = (ms = 25) => {
 
 export const StepReveal = ({ state, onClose }: StepRevealProps) => {
   const [saved, setSaved] = useState(false);
+  const [counterValue, setCounterValue] = useState(0);
   const prize = state.prize;
+  const prizeBb = prize?.bb_value ?? 0;
 
   useEffect(() => {
     haptic(40);
