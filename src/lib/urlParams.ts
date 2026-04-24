@@ -39,6 +39,31 @@ export function readStoredCountry(): string | undefined {
   }
 }
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Read & validate `?email=` or `?em=` from URL (used by Meta/Google ad templates). Persists to sessionStorage. */
+export function getEmailFromUrl(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  const params = new URLSearchParams(window.location.search);
+  const raw = params.get('email') ?? params.get('em');
+  if (!raw) return readStoredEmail();
+  const email = raw.trim().toLowerCase();
+  if (!EMAIL_RE.test(email) || email.length > 255) return readStoredEmail();
+  try {
+    sessionStorage.setItem('intake_email', email);
+  } catch { /* ignore */ }
+  return email;
+}
+
+export function readStoredEmail(): string | undefined {
+  try {
+    const stored = sessionStorage.getItem('intake_email');
+    return stored && EMAIL_RE.test(stored) ? stored : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export interface AttributionData {
   utm_source?: string;
   utm_medium?: string;

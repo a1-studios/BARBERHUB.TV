@@ -8,10 +8,10 @@ import { StepSpin } from './StepSpin';
 import { StepReveal } from './StepReveal';
 import { StepLiveFinalize } from './StepLiveFinalize';
 import { SegmentedProgress } from './SegmentedProgress';
+import { supabase } from '@/integrations/supabase/client';
+import { captureAttribution, getCountryFromUrl, getEmailFromUrl } from '@/lib/urlParams';
 import { fbqTrack } from '@/lib/metaPixel';
 import { gtagFireLead } from '@/lib/googleAds';
-import { supabase } from '@/integrations/supabase/client';
-import { captureAttribution, getCountryFromUrl } from '@/lib/urlParams';
 import type { Prize } from '@/components/vault/VaultSpinWheel';
 
 export type LaunchRole = 'barber' | 'fan';
@@ -27,6 +27,10 @@ export interface LaunchWizardState {
 interface LaunchWizardProps {
   onClose: () => void;
   mode?: LaunchWizardMode;
+  /** Step number (1–5) the wizard should open on. Default 1. */
+  startStep?: number;
+  /** Pre-filled role (e.g. when resuming after social OAuth). When set, role + country steps are skipped. */
+  prefilledRole?: LaunchRole;
 }
 
 const TOTAL_STEPS = 5;
@@ -47,20 +51,63 @@ const useIsMobile = () => {
   return m;
 };
 
-export const LaunchWizard = ({ onClose, mode = 'waitlist' }: LaunchWizardProps) => {
-  const [step, setStep] = useState(1);
+export const LaunchWizard = ({
+  onClose,
+  mode = 'waitlist',
+  startStep = 1,
+  prefilledRole,
+}: LaunchWizardProps) => {
+  // Compute initial email + step honoring URL pre-fill and explicit startStep prop.
+  const initialEmail = getEmailFromUrl() ?? '';
+  const computedStart = startStep > 1
+    ? startStep
+    : initialEmail
+      ? 2 // skip Step 1 if email pre-filled from ad URL
+      : 1;
+  // Track which step was the first visible one so we can hide Back on it.
+  const [firstStep] = useState(computedStart);
+
+  const [step, setStep] = useState(computedStart);
   const directionRef = useRef<1 | -1>(1);
   const [direction, setDirection] = useState<1 | -1>(1);
   const isMobile = useIsMobile();
   const [state, setState] = useState<LaunchWizardState>({
-    email: '',
-    role: null,
+    email: initialEmail,
+    role: prefilledRole ?? null,
     country: getCountryFromUrl() ?? null,
     prize: null,
   });
 
   useEffect(() => {
     captureAttribution();
+  }, []);
+
+  // Auto-fire Lead event once when wizard opens with a pre-filled email
+  // (since the user is skipping Step 1 where Lead would normally fire).
+  useEffect(() => {
+    if (initialEmail && computedStart > 1 && !prefilledRole) {
+      (async () => {
+        try {
+          const eventId = await fbqTrack('Lead', {
+            email: initialEmail,
+            country: getCountryFromUrl() ?? undefined,
+            extra: { signup_method: 'ad_prefill' },
+          });
+          gtagFireLead(eventId);
+          await supabase.from('marketing_leads').upsert(
+            {
+              email: initialEmail,
+              country_code: getCountryFromUrl() ?? null,
+              source_url: typeof window !== 'undefined' ? window.location.href : null,
+            } as never,
+            { onConflict: 'email' }
+          );
+        } catch (err) {
+          console.warn('[LaunchWizard] prefill Lead failed', err);
+        }
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const update = (patch: Partial<LaunchWizardState>) =>
@@ -75,8 +122,16 @@ export const LaunchWizard = ({ onClose, mode = 'waitlist' }: LaunchWizardProps) 
   const goBack = () => {
     directionRef.current = -1;
     setDirection(-1);
-    setStep((s) => Math.max(s - 1, 1));
+    setStep((s) => Math.max(s - 1, firstStep));
   };
+
+  // If prefilledRole was provided (post-OAuth resume) and we're at the role step, jump to spin.
+  useEffect(() => {
+    if (prefilledRole && step < 4) {
+      setStep(4);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Step 1 → captures email + fires Lead (Meta + Google) + creates initial lead row
   const handleEmailContinue = async (email: string) => {
@@ -203,6 +258,7 @@ export const LaunchWizard = ({ onClose, mode = 'waitlist' }: LaunchWizardProps) 
                   }}
                   onBack={goBack}
                   onSkip={onClose}
+                  hideBack={firstStep >= 2}
                 />
               )}
               {step === 3 && (
