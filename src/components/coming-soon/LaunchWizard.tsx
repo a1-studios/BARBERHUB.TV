@@ -6,6 +6,7 @@ import { StepRole } from './StepRole';
 import { StepCountry } from './StepCountry';
 import { StepSpin } from './StepSpin';
 import { StepReveal } from './StepReveal';
+import { StepLiveFinalize } from './StepLiveFinalize';
 import { SegmentedProgress } from './SegmentedProgress';
 import { fbqTrack } from '@/lib/metaPixel';
 import { gtagFireLead } from '@/lib/googleAds';
@@ -14,6 +15,7 @@ import { captureAttribution, getCountryFromUrl } from '@/lib/urlParams';
 import type { Prize } from '@/components/vault/VaultSpinWheel';
 
 export type LaunchRole = 'barber' | 'fan';
+export type LaunchWizardMode = 'waitlist' | 'live';
 
 export interface LaunchWizardState {
   email: string;
@@ -24,6 +26,7 @@ export interface LaunchWizardState {
 
 interface LaunchWizardProps {
   onClose: () => void;
+  mode?: LaunchWizardMode;
 }
 
 const TOTAL_STEPS = 5;
@@ -44,7 +47,7 @@ const useIsMobile = () => {
   return m;
 };
 
-export const LaunchWizard = ({ onClose }: LaunchWizardProps) => {
+export const LaunchWizard = ({ onClose, mode = 'waitlist' }: LaunchWizardProps) => {
   const [step, setStep] = useState(1);
   const directionRef = useRef<1 | -1>(1);
   const [direction, setDirection] = useState<1 | -1>(1);
@@ -226,7 +229,9 @@ export const LaunchWizard = ({ onClose }: LaunchWizardProps) => {
                 />
               )}
               {step === 5 && (
-                <StepReveal key="step-5" state={state} onClose={onClose} />
+                mode === 'live'
+                  ? <StepLiveFinalize key="step-5" state={state} onClose={onClose} />
+                  : <StepReveal key="step-5" state={state} onClose={onClose} />
               )}
             </AnimatePresence>
           </div>
