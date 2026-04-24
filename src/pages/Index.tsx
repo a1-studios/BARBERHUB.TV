@@ -240,8 +240,18 @@ const Index = () => {
       {user && <BottomNavBar />}
 
       {/* Gamified intake wizard — replaces legacy SpinWheelOverlay */}
-      {showSpinWheel && (
+      {showSpinWheel && !resumeSpin && (
         <LaunchWizard mode="live" onClose={handleSpinClose} />
+      )}
+
+      {/* Post-OAuth resume — wizard re-opens at Spin step with the role chosen pre-redirect */}
+      {resumeSpin && (
+        <LaunchWizard
+          mode="live"
+          startStep={4}
+          prefilledRole={resumeSpin.role}
+          onClose={handleSpinClose}
+        />
       )}
 
       {/* Arena Gate Modal — rendered outside auth conditional so it persists */}
