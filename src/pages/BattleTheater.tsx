@@ -314,9 +314,36 @@ export default function BattleTheater() {
             <ReactionPicker battleId={id!} userId={user.id} />
           </div>
         )}
+        {/* Live donate buttons — one per barber (left/right edges) */}
+        {user && barber1?.id && (
+          <Button
+            onClick={() => setDonateTarget({ barberId: barber1.id, name: barber1.name || 'Barber 1' })}
+            className="fixed bottom-20 left-4 z-40 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 text-black font-bold rounded-full shadow-2xl"
+          >
+            <Coins className="h-4 w-4 mr-2" /> Donate
+          </Button>
+        )}
+        {user && barber2?.id && (
+          <Button
+            onClick={() => setDonateTarget({ barberId: barber2.id, name: barber2.name || 'Barber 2' })}
+            className="fixed bottom-20 right-4 z-40 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 text-black font-bold rounded-full shadow-2xl"
+          >
+            <Coins className="h-4 w-4 mr-2" /> Donate
+          </Button>
+        )}
         <FloatingReactions battleId={id!} />
         {localStorage.getItem('battleChatEnabled') !== 'false' && (
           <BattleChat battleId={id!} isOpen={chatOpen} onClose={() => setChatOpen(false)} />
+        )}
+        {donateTarget && (
+          <DonationModal
+            isOpen={!!donateTarget}
+            onClose={() => setDonateTarget(null)}
+            creatorId={donateTarget.barberId}
+            creatorName={donateTarget.name}
+            battleId={id!}
+            barberId={donateTarget.barberId}
+          />
         )}
       </>
     );
