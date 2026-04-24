@@ -192,7 +192,7 @@ const BattleLobby = () => {
     }
   };
 
-  if (loading || !battle || !b1 || !b2) {
+  if (loading || !battle || !b1) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-[#05060A]">
         <div className="flex flex-col items-center gap-3">
@@ -204,6 +204,9 @@ const BattleLobby = () => {
       </div>
     );
   }
+
+  // Fallback for opponent slot when challenge has no acceptor yet
+  const b2Display = b2 ?? { name: 'Awaiting Challenger', flag: undefined, userId: '', profileId: '' };
 
   return (
     <div className="lobby-canvas fixed inset-0 overflow-hidden bg-[#05060A]">
