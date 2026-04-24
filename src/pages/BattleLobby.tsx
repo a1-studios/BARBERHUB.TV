@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useState, lazy, Suspense } from 'react';
+import { useCallback, useEffect, useMemo, useState, lazy, Suspense } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useContenderReadiness } from '@/hooks/useContenderReadiness';
 import { useLobbyCameraPreview } from '@/hooks/useLobbyCameraPreview';
 import { ReadyUpPanel } from '@/components/lobby/ReadyUpPanel';
+import { LobbyContenderControls } from '@/components/lobby/LobbyContenderControls';
 import { FanTerminal } from '@/components/lobby/FanTerminal';
 import { PrizePoolBeacon } from '@/components/lobby/PrizePoolBeacon';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const LobbyScene = lazy(() => import('@/components/lobby/LobbyScene'));
@@ -54,7 +55,26 @@ const BattleLobby = () => {
   const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // Local camera/mic preview owned at the page level so we can stop it before handoff
-  const { stream, hasCamera, hasMic, hasSpeaker, error: mediaError, start: startMedia, enableSpeaker, stop: stopMedia } = useLobbyCameraPreview();
+  const {
+    stream,
+    hasCamera,
+    hasMic,
+    hasSpeaker,
+    isVideoEnabled,
+    isAudioEnabled,
+    error: mediaError,
+    start: startMedia,
+    enableSpeaker,
+    toggleVideo,
+    toggleAudio,
+    switchCamera,
+    stop: stopMedia,
+  } = useLobbyCameraPreview();
+
+  const handleLeave = useCallback(() => {
+    try { stopMedia(); } catch {}
+    navigate('/watch', { replace: true });
+  }, [stopMedia, navigate]);
 
   // Safety guard #1: must come from challenge flow
   useEffect(() => {
@@ -225,6 +245,20 @@ const BattleLobby = () => {
 
       <PrizePoolBeacon amountBB={livePrizeBB} pulseTrigger={pulseTrigger} />
 
+      {/* Leave Lobby button — top-left, always available */}
+      <button
+        onClick={handleLeave}
+        className="lobby-ui-interactive pointer-events-auto absolute z-30 flex items-center gap-1.5 rounded-full border border-white/15 bg-black/60 px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest text-white/80 backdrop-blur-xl transition-colors hover:border-red-400/60 hover:bg-red-500/20 hover:text-red-100"
+        style={{
+          top: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
+          left: 'calc(env(safe-area-inset-left, 0px) + 0.5rem)',
+        }}
+        aria-label="Leave lobby"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" />
+        Leave
+      </button>
+
       {isContender && (
         <ReadyUpPanel
           isLockedIn={readiness.localReady}
@@ -237,6 +271,18 @@ const BattleLobby = () => {
           onEnableSpeaker={enableSpeaker}
           onLockIn={readiness.setReady}
           permError={mediaError}
+        />
+      )}
+
+      {/* Contender-only mic/cam/flip rail — anchored above the FanTerminal area */}
+      {isContender && hasCamera && (
+        <LobbyContenderControls
+          hasStream={!!stream}
+          isVideoEnabled={isVideoEnabled}
+          isAudioEnabled={isAudioEnabled}
+          onToggleVideo={toggleVideo}
+          onToggleAudio={toggleAudio}
+          onSwitchCamera={switchCamera}
         />
       )}
 

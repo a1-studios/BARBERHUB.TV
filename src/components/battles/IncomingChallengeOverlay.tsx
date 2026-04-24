@@ -189,7 +189,7 @@ export const IncomingChallengeOverlay = () => {
               <Button
                 onClick={handleAccept}
                 disabled={accepting || declining || expired}
-                className="h-12 w-full rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-base font-black uppercase tracking-wider text-white shadow-[0_0_24px_rgba(16,185,129,0.5)] hover:from-green-400 hover:to-emerald-400"
+                className="h-14 w-full rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-base font-black uppercase tracking-wider text-white shadow-[0_0_24px_rgba(16,185,129,0.5)] hover:from-green-400 hover:to-emerald-400"
               >
                 {accepting ? (
                   <>
@@ -204,7 +204,7 @@ export const IncomingChallengeOverlay = () => {
                 onClick={handleDecline}
                 disabled={accepting || declining}
                 variant="outline"
-                className="h-10 w-full rounded-xl border-white/15 bg-white/[0.02] text-xs font-bold uppercase tracking-widest text-white/70 hover:border-white/25 hover:bg-white/5 hover:text-white"
+                className="h-12 w-full rounded-xl border-red-500/40 bg-red-500/10 text-sm font-bold uppercase tracking-widest text-red-200 hover:border-red-400/70 hover:bg-red-500/20 hover:text-red-100"
               >
                 {declining ? <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> : null}
                 Decline
@@ -212,7 +212,7 @@ export const IncomingChallengeOverlay = () => {
             </div>
 
             <p className="text-center text-[10px] font-mono uppercase tracking-widest text-white/35">
-              Closing this leaves it unread in your bell
+              Closing the X keeps it unread in your bell
             </p>
           </div>
         </motion.div>
