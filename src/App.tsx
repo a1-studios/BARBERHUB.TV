@@ -48,6 +48,7 @@ import BroadcastViewer from "./pages/BroadcastViewer";
 import BroadcastStudio from "./pages/BroadcastStudio";
 import ResetPassword from "./pages/ResetPassword";
 import BattleLobby from "./pages/BattleLobby";
+import { IncomingChallengeOverlay } from "@/components/battles/IncomingChallengeOverlay";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ const AppContent = () => {
   
   return (
     <>
+      <IncomingChallengeOverlay />
       <Routes>
             <Route path="/" element={IS_COMING_SOON ? <ComingSoon /> : <Index />} />
             <Route path="/coming-soon" element={<ComingSoon />} />
