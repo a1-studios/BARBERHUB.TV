@@ -122,8 +122,16 @@ export const LaunchWizard = ({
   const goBack = () => {
     directionRef.current = -1;
     setDirection(-1);
-    setStep((s) => Math.max(s - 1, 1));
+    setStep((s) => Math.max(s - 1, firstStep));
   };
+
+  // If prefilledRole was provided (post-OAuth resume) and we're at the role step, jump to spin.
+  useEffect(() => {
+    if (prefilledRole && step < 4) {
+      setStep(4);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Step 1 → captures email + fires Lead (Meta + Google) + creates initial lead row
   const handleEmailContinue = async (email: string) => {
