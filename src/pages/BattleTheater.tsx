@@ -238,6 +238,30 @@ export default function BattleTheater() {
     } catch (error) { console.error('Error voting:', error); toast.error('Failed to cast vote'); }
   }, [user, userVote, id, incrementCombo]);
 
+  // ─── LIVE CHALLENGE POT VOTE — separate from official battle_votes ───
+  // Quick Play live-challenge votes are session-only and decide who takes the
+  // donation pot. They are wiped after distribution and never affect tournament
+  // standings or category leaderboards.
+  const handleLiveChallengeVote = useCallback(async (pickedBarberProfileId: string) => {
+    if (!user) { toast.error('Sign in to vote for the pot'); return; }
+    if (!pickedBarberProfileId) return;
+    if (userVote) return;
+    try {
+      HapticFeedback.vote();
+      AudioManager.play('vote');
+      const { error } = await supabase
+        .from('live_challenge_votes')
+        .insert({ battle_id: id!, voter_id: user.id, picked_barber_id: pickedBarberProfileId });
+      if (error) throw error;
+      setUserVote(pickedBarberProfileId);
+      CelebrationEffects.vote(window.innerWidth / 2, window.innerHeight / 2);
+      toast.success('Pot vote cast! 🔥');
+    } catch (err: any) {
+      console.error('Live vote error:', err);
+      toast.error(err?.message?.includes('duplicate') ? 'You already picked' : 'Failed to cast pot vote');
+    }
+  }, [user, userVote, id]);
+
   const handleLike = async () => {
     if (!user) return;
     HapticFeedback.like();
