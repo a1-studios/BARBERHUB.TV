@@ -38,6 +38,12 @@ interface DistributeRequest {
   winner_id?: string | null;
   loser_id?: string | null;
   is_draw?: boolean;
+  /**
+   * When 'quick_play', the function tallies live_challenge_votes for the battle
+   * and auto-resolves winner/loser/is_draw. The pot includes the original stake
+   * (battles.prize_amount) PLUS all viewer donations (battle_donations).
+   */
+  match_mode?: 'quick_play' | string;
 }
 
 serve(async (req) => {
