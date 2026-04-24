@@ -93,16 +93,18 @@ const BattleLobby = () => {
       setBattle(battleData as BattleRow);
       setLivePrizeBB(battleData.prize_amount || 0);
 
-      // Load both barbers — battle.barber{1,2}_id are barber_profiles.id (NOT user_id)
+      // Load barbers — battle.barber{1,2}_id are barber_profiles.id (NOT user_id).
+      // barber2_id may be null until an opponent accepts the challenge.
       const ids = [battleData.barber1_id, battleData.barber2_id].filter(Boolean) as string[];
-      if (ids.length === 2) {
+      if (ids.length > 0) {
         const { data: barbers } = await supabase
           .from('barber_profiles')
           .select('id, user_id, name, country_code')
           .in('id', ids);
 
         if (barbers && !cancelled) {
-          const findFor = (profileId: string): BarberInfo | null => {
+          const findFor = (profileId: string | null): BarberInfo | null => {
+            if (!profileId) return null;
             const b = barbers.find((x) => x.id === profileId);
             if (!b) return null;
             return {
@@ -113,8 +115,8 @@ const BattleLobby = () => {
               flag: flagFromCC(b.country_code || undefined),
             };
           };
-          setB1(findFor(battleData.barber1_id!));
-          setB2(findFor(battleData.barber2_id!));
+          setB1(findFor(battleData.barber1_id));
+          setB2(findFor(battleData.barber2_id));
         }
       }
 
