@@ -55,7 +55,26 @@ const BattleLobby = () => {
   const reducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // Local camera/mic preview owned at the page level so we can stop it before handoff
-  const { stream, hasCamera, hasMic, hasSpeaker, error: mediaError, start: startMedia, enableSpeaker, stop: stopMedia } = useLobbyCameraPreview();
+  const {
+    stream,
+    hasCamera,
+    hasMic,
+    hasSpeaker,
+    isVideoEnabled,
+    isAudioEnabled,
+    error: mediaError,
+    start: startMedia,
+    enableSpeaker,
+    toggleVideo,
+    toggleAudio,
+    switchCamera,
+    stop: stopMedia,
+  } = useLobbyCameraPreview();
+
+  const handleLeave = useCallback(() => {
+    try { stopMedia(); } catch {}
+    navigate('/watch', { replace: true });
+  }, [stopMedia, navigate]);
 
   // Safety guard #1: must come from challenge flow
   useEffect(() => {
