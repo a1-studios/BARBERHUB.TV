@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
+import { PodiumPreviewBubble } from './PodiumPreviewBubble';
 
 interface ContenderPodiumProps {
   position: [number, number, number];
@@ -11,6 +12,8 @@ interface ContenderPodiumProps {
   isReady: boolean;
   isPresent: boolean;
   isLocal?: boolean;
+  localStream?: MediaStream | null;
+  bubbleSize?: number;
 }
 
 const SIDE_COLOR = {
@@ -18,7 +21,17 @@ const SIDE_COLOR = {
   2: { primary: '#22D3EE', emissive: '#22D3EE' },
 };
 
-export const ContenderPodium = ({ position, side, name, countryFlag, isReady, isPresent, isLocal }: ContenderPodiumProps) => {
+export const ContenderPodium = ({
+  position,
+  side,
+  name,
+  countryFlag,
+  isReady,
+  isPresent,
+  isLocal,
+  localStream,
+  bubbleSize = 96,
+}: ContenderPodiumProps) => {
   const ringRef = useRef<THREE.Mesh>(null);
   const podiumColor = SIDE_COLOR[side];
   const idleColor = useRef(new THREE.Color(podiumColor.primary));
@@ -39,21 +52,37 @@ export const ContenderPodium = ({ position, side, name, countryFlag, isReady, is
       : (isPresent ? 0.7 : 0.2);
   });
 
+  const fallbackInitial = (name || '?').trim().charAt(0);
+
   return (
     <group position={position}>
-      <mesh position={[0, -1.0, 0]}>
-        <cylinderGeometry args={[0.9, 1.1, 0.3, 32]} />
+      {/* Floor disc / footrest */}
+      <mesh position={[0, -1.05, 0]}>
+        <cylinderGeometry args={[1.0, 1.15, 0.18, 32]} />
         <meshStandardMaterial color="#0F1116" metalness={0.85} roughness={0.35} />
       </mesh>
-      <mesh position={[0, -0.83, 0]}>
-        <cylinderGeometry args={[0.92, 0.92, 0.05, 32]} />
-        <meshStandardMaterial color={podiumColor.primary} emissive={podiumColor.emissive} emissiveIntensity={0.6} />
+      {/* Glowing chrome ring at floor */}
+      <mesh position={[0, -0.93, 0]}>
+        <cylinderGeometry args={[1.02, 1.02, 0.04, 48]} />
+        <meshStandardMaterial color={podiumColor.primary} emissive={podiumColor.emissive} emissiveIntensity={0.55} />
       </mesh>
-      <mesh position={[0, -0.4, 0]}>
-        <cylinderGeometry args={[0.6, 0.7, 0.8, 24]} />
-        <meshStandardMaterial color="#1a1d24" metalness={0.6} roughness={0.4} />
+      {/* Chair stem */}
+      <mesh position={[0, -0.55, 0]}>
+        <cylinderGeometry args={[0.18, 0.28, 0.55, 16]} />
+        <meshStandardMaterial color="#23262d" metalness={0.7} roughness={0.35} />
       </mesh>
-      <mesh ref={ringRef} position={[0, 0.4, 0]} rotation={[Math.PI / 2, 0, 0]}>
+      {/* Chair seat */}
+      <mesh position={[0, -0.22, 0]}>
+        <cylinderGeometry args={[0.7, 0.62, 0.22, 32]} />
+        <meshStandardMaterial color="#1a1d24" metalness={0.45} roughness={0.5} />
+      </mesh>
+      {/* Seat trim glow ring */}
+      <mesh position={[0, -0.1, 0]}>
+        <torusGeometry args={[0.7, 0.03, 12, 48]} />
+        <meshStandardMaterial color={podiumColor.primary} emissive={podiumColor.emissive} emissiveIntensity={0.9} />
+      </mesh>
+      {/* Spinning halo above chair (state ring) */}
+      <mesh ref={ringRef} position={[0, 0.55, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <torusGeometry args={[0.85, 0.04, 16, 64]} />
         <meshStandardMaterial
           color={podiumColor.primary}
@@ -64,11 +93,25 @@ export const ContenderPodium = ({ position, side, name, countryFlag, isReady, is
         />
       </mesh>
 
-      <Html position={[0, 1.4, 0]} center distanceFactor={6} occlude={false}>
+      {/* Live preview bubble — sits inside the halo */}
+      <Html position={[0, 0.55, 0]} center distanceFactor={5.5} occlude={false} zIndexRange={[10, 0]}>
+        <PodiumPreviewBubble
+          stream={isLocal ? localStream ?? null : null}
+          side={side}
+          isReady={isReady}
+          isPresent={isPresent}
+          fallbackInitial={fallbackInitial}
+          flag={countryFlag}
+          size={bubbleSize}
+        />
+      </Html>
+
+      {/* Name pill */}
+      <Html position={[0, 1.55, 0]} center distanceFactor={6} occlude={false}>
         <div
-          className={`pointer-events-none select-none whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-bold backdrop-blur-md transition-all duration-300 ${
+          className={`pointer-events-none select-none whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold backdrop-blur-md transition-all duration-300 ${
             isReady
-              ? 'bg-cyan-400/20 text-cyan-300 ring-2 ring-cyan-400 shadow-[0_0_20px_rgba(34,211,238,0.7)]'
+              ? 'bg-cyan-400/20 text-cyan-300 ring-2 ring-cyan-400 shadow-[0_0_18px_rgba(34,211,238,0.7)]'
               : isPresent
               ? side === 1
                 ? 'bg-orange-500/20 text-orange-200 ring-1 ring-orange-400/60'
@@ -82,7 +125,8 @@ export const ContenderPodium = ({ position, side, name, countryFlag, isReady, is
         </div>
       </Html>
 
-      <Html position={[0, -1.4, 0]} center distanceFactor={7} occlude={false}>
+      {/* Status caption */}
+      <Html position={[0, -1.5, 0]} center distanceFactor={7} occlude={false}>
         <div className="pointer-events-none select-none whitespace-nowrap text-[10px] font-mono uppercase tracking-widest">
           {!isPresent && <span className="text-white/40">Waiting...</span>}
           {isPresent && !isReady && <span className="text-orange-400 animate-pulse">Arming</span>}

@@ -1,122 +1,100 @@
 ## Goal
-Ship the **3D Pre-Battle Lobby** as a **challenges-only pilot**. Tournament battles, ContenderTheater, BattleTheater, LiveKit publish/subscribe, donation splits, `match-challenge-stake`, and notification routing all stay **byte-for-byte intact**. Only the two challenge entry points get re-routed through the lobby; from the lobby, both contenders land in the existing ContenderTheater (LiveKit) exactly as today.
+Polish the 3D Pre-Battle Lobby into a true mobile-native, frictionless experience: skinnier mobile layout, no countdown gate, live self-preview embedded on each podium, in-lobby "Ready Up" controls (camera/mic/speaker/lock-in) that hand off to the existing LiveKit pipeline, and a forced full-screen "Incoming Challenge" pop-up that interrupts whatever the recipient is doing — wherever they are in the app, even on a fresh visit.
 
-The reference image (cyber-arena, overhead jumbotron, neon orange + cyan, VS contenders with national flags, crowd silhouette, side stat panels) drives the visual direction.
+The existing tournament, matchmaker, ContenderTheater, BattleTheater, LiveKit, donation split, and notification routing pipelines stay byte-for-byte intact. Only challenge entry points and the lobby itself change.
 
-## Pilot scope
+---
 
-```text
-ACCEPTOR clicks "Accept"
-   ↓ supabase.functions.invoke('match-challenge-stake')   (UNCHANGED)
-   ↓ challenge.completed + battle.status='live'           (UNCHANGED)
-   ↓
-NEW → /battle/:id/lobby?source=challenge                  ← only changed line
-   ↓ contenders Ready Up (3D scene + fan terminal)
-   ↓ bothReady === true → 5s countdown
-   ↓ /battle/:id/contender                                (UNCHANGED — LiveKit)
-```
+## Pilot scope (still challenges-only)
+- Tournament battles → unchanged.
+- Challenges (free or staked, direct or open) → go through the polished lobby.
+- After both contenders Lock In → instant hand-off to the existing `ContenderTheater` (LiveKit) — no 5s countdown overlay anymore.
 
-## Changed files (3 redirect lines + 1 route)
+---
 
-| File | Change |
-|---|---|
-| `src/components/battles/AcceptChallengeModal.tsx` line 68 | redirect `/contender` → `/lobby?source=challenge` |
-| `src/components/battles/ChallengeModal.tsx` line 120 | same redirect swap |
-| `src/App.tsx` | Add `<Route path="/battle/:id/lobby" element={<AuthGuard><BattleLobby /></AuthGuard>} />` (lazy import) |
+## What changes
 
-Notification deep-links keep pointing to `/contender` — late joiners and tournament users skip the lobby entirely. Lobby is **opt-in via the challenge accept flow only**.
+### 1. Mobile layout fixes (lobby viewport ~402×636 case)
+File: `src/components/lobby/ReadyUpPanel.tsx`
+- Switch top panel from fixed `w-[min(480px,...)]` to `w-[calc(100%-1rem)] max-w-[420px]`, tighter padding (`p-2.5`), smaller heading (`text-[10px]`), tile gap `gap-1.5`, tile padding `py-2`, icons `h-3.5 w-3.5`, label `text-[9px]`. The whole panel must fit comfortably above the prize beacon on a 402px-wide screen with no horizontal overflow.
+- Move the panel to `top-2 sm:top-4` so it doesn't crash into the iOS status bar.
 
-## New files
+File: `src/components/lobby/LobbyScene.tsx`
+- Pull the podiums in for mobile so they don't get clipped at the screen edges. Use ~`±2.0` on mobile, `±2.6` on desktop. Tighten camera FOV slightly on mobile (`fov: 55`) and pull camera back (`position: [0, 5.5, 12]`) to fit both podiums in portrait without cropping.
+- Drop the floor grid radius slightly to keep horizon visible at 9:16.
 
-| File | Purpose |
-|---|---|
-| `src/pages/BattleLobby.tsx` | Route page. Loads battle + both barber profiles. Safety guards (see below). Lazy-loads `<LobbyScene>`. Hosts UI overlay |
-| `src/components/lobby/LobbyScene.tsx` | R3F `<Canvas dpr={[1,2]} gl={{powerPreference:'high-performance', alpha:false}}>` — cyber arena with two pedestals |
-| `src/components/lobby/ArenaEnvironment.tsx` | Dark grid floor (cyan emissive), drei `<Stars>`, fog, slow-rotating overhead torus rings (orange + cyan) — jumbotron motif |
-| `src/components/lobby/ContenderPodium.tsx` | 3D pedestal per barber. Holographic ring snaps amber → solid `cyan-400` glow when `is_ready` flips. Profile name + flag mounted via drei `<Html>` |
-| `src/components/lobby/CameraRig.tsx` | Camera dolly-in + cursor parallax `lerp`. Disabled on mobile / `prefers-reduced-motion` |
-| `src/components/lobby/TiltCard.tsx` | Framer Motion ±8° rotateX/Y cursor-tilt with `transform-style: preserve-3d` |
-| `src/components/lobby/ReadyUpPanel.tsx` | Contender-only. Three checks: **Camera**, **Mic**, **Lock-In**. Uses `getUserMedia` for cam/mic verification (releases tracks immediately). Wires Lock-In into existing `useContenderReadiness.setReady`. Cyan-glow border on lock + `AudioManager` SFX + `HapticFeedback` |
-| `src/components/lobby/FanTerminal.tsx` | Translucent glass panel (`bg-black/50 backdrop-blur-xl ring-1 ring-cyan-400/30`). Bottom-pinned desktop, swipe-up sheet mobile |
-| `src/components/lobby/LiveCommentStream.tsx` | Reuses `useBattleChat(battleId)`. AnimatePresence rows fade up, 12s lifespan, plus inline send box |
-| `src/components/lobby/FanActionBar.tsx` | **Follow B1 / Follow B2** (orange) writes to `barber_follows` (existing table). **Predict Winner** (cyan) opens picker → upserts to new `battle_predictions`. **Donate BB** (orange→cyan gradient) opens existing `DonationModal` — routes through `process_battle_donation` RPC unchanged |
-| `src/components/lobby/PrizePoolBeacon.tsx` | Wraps existing `AnimatedPrizeCounter`. CSS scale-pulse + cyan shockwave ring on every `pulseTrigger` increment — sibling DOM, never re-renders the 3D scene |
-| `src/components/lobby/CountdownLauncher.tsx` | When `bothReady === true`, fires 5s countdown ("5..4..3..FIGHT!"), then `navigate('/battle/:id/contender')` for contenders / `navigate('/battle/:id/theater')` for fans |
+File: `src/components/lobby/ContenderPodium.tsx`
+- Restyle the pedestal to read more like a barber chair: replace the bottom cylinder + ring with a wider seat-style cylinder + a thin chrome footrest ring. Keep the same colored emissive ring at chair-height for state glow. Keep all existing color logic (orange = present P1, cyan = present P2, bright cyan pulse = ready).
 
-## New table (predictions only — separate from `battle_votes`)
+### 2. Live self-preview circle on the podium (hero of the change)
+Goal: as soon as a contender allows Camera, a live `<video>` of themselves shows up as a glowing circular bust on top of their podium — and the opponent sees the same circle (with their own preview locally; opponent sees only state, no remote video, since real video transport stays in LiveKit on the next page).
 
-```sql
-create table if not exists public.battle_predictions (
-  id uuid primary key default gen_random_uuid(),
-  battle_id uuid not null references public.battles(id) on delete cascade,
-  user_id uuid not null,
-  picked_barber_id uuid not null,
-  created_at timestamptz not null default now(),
-  unique (battle_id, user_id)
-);
-create index if not exists battle_predictions_battle_idx on public.battle_predictions(battle_id);
-alter table public.battle_predictions enable row level security;
-create policy "anyone reads predictions" on public.battle_predictions for select using (true);
-create policy "auth users insert own prediction" on public.battle_predictions for insert with check (auth.uid() = user_id);
-create policy "users update own prediction" on public.battle_predictions for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
-```
+Implementation:
+- New component `src/components/lobby/PodiumPreviewBubble.tsx` — a `<Html>` overlay child rendered inside `ContenderPodium` at `position={[0, 1.0, 0]}`. Renders a circular 96px (mobile) / 120px (desktop) frame with a `<video autoplay muted playsinline>` mirrored, ringed by the side color (orange or cyan), with a subtle glow that intensifies when `isReady`.
+- The bubble is fed by an optional `MediaStream` prop. It only receives a stream for the *local* contender — the opponent slot shows a placeholder avatar (initials or country flag) until they themselves lock in, at which point the ring switches to bright cyan.
+- New hook `src/hooks/useLobbyCameraPreview.tsx` — light wrapper around `navigator.mediaDevices.getUserMedia({ video: true, audio: true })` that:
+  - Starts a single shared stream the moment Camera is allowed in `ReadyUpPanel`.
+  - Exposes `{ stream, hasCamera, hasMic, hasSpeaker, start, stop, error }`.
+  - Stops cleanly on unmount and right before lobby hand-off (so LiveKit can re-acquire devices in `ContenderTheater` without conflict on iOS Safari).
+- `BattleLobby.tsx` owns the hook and passes the resulting stream into `LobbyScene` → `ContenderPodium` → `PodiumPreviewBubble` only on the local contender's side.
 
-`battle_votes` (post-battle, weighted, status-gated by `validate_vote_time` trigger) is untouched. Frontend gracefully no-ops if migration hasn't applied yet (try/catch + toast).
+### 3. Frictionless Ready Up (no countdown wall)
+File: `src/components/lobby/ReadyUpPanel.tsx`
+- Replace the separate Camera / Mic buttons with a single "Allow Camera + Mic" tile that requests both at once on first tap. On success, both checks flip to ✓ together and the live preview bubble immediately lights up on that contender's podium. The Lock In tile becomes enabled in the same tap.
+- Add a third tile: Speaker (auto-checks via `AudioContext` resume on tap; this is what unblocks audio playback for the lobby/LiveKit).
+- After tap-to-allow, tile collapses into a tiny status row ("📷 Cam · 🎙 Mic · 🔊 Spk · ✓") to free vertical space.
 
-## Real-time data sources (all reused, none modified)
+File: `src/pages/BattleLobby.tsx` and `src/components/lobby/CountdownLauncher.tsx`
+- Remove the 5-second full-screen countdown completely. As soon as `bothReady === true`, the lobby triggers a 600ms whoosh transition (a quick ring flash on both podiums + soft camera dolly-in) and navigates straight to `ContenderTheater` (`navigate(/battle/:id/contender, { replace: true })`). Fans go to `/battle/:id/theater`.
+- Delete `CountdownLauncher` from the render tree (keep the file or remove — your call; we'll remove the import).
 
-- Readiness: `useContenderReadiness` on `battle-contenders-{id}` presence channel
-- Chat: `useBattleChat(battleId)` — fetch + realtime + sendMessage + rate-limit
-- Donations realtime: subscribe to `battle_donations` INSERTs filtered by `battle_id` → bumps `pulseTrigger` for beacon shockwave
-- Prize pool: read `battles.prize_amount` (already updated by `match-challenge-stake` to `pot_total`)
-- Donation flow: existing `DonationModal` → `process_battle_donation` RPC (untouched)
+### 4. Forced "Incoming Challenge" full-screen interrupt
+Goal: the recipient ALWAYS sees a blocking modal they have to deal with, no matter where they are in the app — even if they were just looking at the feed when the challenge arrived, and even on the very next page load.
 
-## State machine
+New component: `src/components/battles/IncomingChallengeOverlay.tsx`
+- A full-screen, app-wide, top-of-everything (`z-[10000]`) takeover with cinematic intro: dark backdrop, animated "INCOMING CHALLENGE" headline, challenger avatar + name + flag, challenge title, stake (or "FREE"), countdown timer to expiry, big green **Accept** and outline **Decline** buttons.
+- Accepting reuses the existing `match-challenge-stake` flow and routes to `/battle/:id/lobby?source=challenge`.
+- Declining reuses the existing decline path (mark `open_challenges.status = 'declined'`, soft-dismiss the notification).
+- An explicit ✕ in the corner closes the overlay BUT the underlying notification remains unread in the bell so the user can come back to it.
 
-```text
-[waiting]   opponent not present       →  "Waiting..." over their podium
-[present]   both contenders connected
-[arming]    ≥1 toggle locked locally
-[ready]     bothReady === true         →  fire countdown
-[launching] 5s countdown               →  fans + contenders route forward
-```
+Mounting + trigger logic:
+- Mount the overlay once globally inside `App.tsx` so it can interrupt any route.
+- New hook `src/hooks/useIncomingChallengeOverlay.tsx` that:
+  1. On mount and on every auth change, queries `notifications` for the latest unread, non-dismissed `challenge_received` for the current user → if found AND the underlying `open_challenges` row is still `pending` and not expired → shows the overlay. This covers the "they were not in the app when the challenge was sent" case (closing-app-and-coming-back).
+  2. Subscribes to realtime `INSERT` on `notifications` for `type=challenge_received` → opens the overlay immediately. This covers the "they're in the app right now" case.
+- We will also keep the existing toast and the bell-icon Respond flow unchanged so nothing regresses; the overlay is additive and takes priority.
 
-Fan terminal stays interactive through `[waiting]` → `[ready]`; locks at `[launching]`.
+### 5. Bell continues to work as fallback
+- No changes to `useNotifications` or `NotificationPanel`. The bell still shows `challenge_received`. The new overlay just gets there first and is harder to miss.
 
-## Visual / interaction spec
+---
 
-- Background near-black `#05060A`, cyan grid `#22D3EE` @ 12%.
-- **Cyan-400** (`#22D3EE`) reserved for state transitions / locked / shockwaves. **Orange-500** (`#F97316`) stays primary (Follow B1, Donate). Per `mem://design/branding-colors-permanent`.
-- Tilt: ±8°, spring `stiffness:150 damping:20`, disabled on `prefers-reduced-motion`.
-- Donation pulse: beacon `scale: [1, 1.08, 1]` + cyan ring 0→240% over 700ms.
-- Mobile (≤640px): canvas `dpr={[1, 1.5]}`, parallax off, terminal becomes swipe-up sheet (collapsed by default with "Open Arena Chat" handle).
+## Files touched
 
-## Performance / Z-index
+Edit:
+- `src/pages/BattleLobby.tsx` — wire `useLobbyCameraPreview`, pass stream to `LobbyScene`, drop countdown, instant nav on `bothReady`, mobile layout tweaks.
+- `src/components/lobby/LobbyScene.tsx` — responsive podium spacing + camera FOV/position; pass `localStream` through to `ContenderPodium`.
+- `src/components/lobby/ContenderPodium.tsx` — barber-chair styling + render `PodiumPreviewBubble` when stream OR placeholder.
+- `src/components/lobby/ReadyUpPanel.tsx` — combined "Allow Cam+Mic" tile, Speaker tile, collapsed status row, tightened mobile sizing, top offset for status bar.
+- `src/components/lobby/CountdownLauncher.tsx` — remove from render in lobby (file kept untouched).
+- `src/App.tsx` — mount `<IncomingChallengeOverlay />` globally inside the `AuthProvider` tree.
 
-- Canvas mounted with `frameloop` default (animated, but tightly scoped — `useFrame` only for ring rotations + halo lerp).
-- All UI lives in sibling DOM over canvas (NOT inside `<Html>` except 3D-anchored name badges) → chat/buttons never re-render the scene.
-- `BattleLobby` lazy-loads `LobbyScene` via `React.lazy` + Suspense fallback (animated cyan loader).
+Create:
+- `src/components/lobby/PodiumPreviewBubble.tsx`
+- `src/hooks/useLobbyCameraPreview.tsx`
+- `src/components/battles/IncomingChallengeOverlay.tsx`
+- `src/hooks/useIncomingChallengeOverlay.tsx`
 
-```text
-.lobby-canvas         z-0  pointer-events: auto
-.lobby-ui-decorative  z-10 pointer-events: none (prize beacon)
-.lobby-ui-interactive z-20 pointer-events: auto (ReadyUp, FanTerminal)
-.lobby-modal-layer    z-50 pointer-events: auto (DonationModal, Predict picker, Countdown)
-```
+Untouched (guaranteed):
+- `ContenderTheater.tsx`, `BattleTheater.tsx`, all of `src/hooks/useBattleVideoRoom.tsx`, all `livekit*` lib/edge fns, `process_battle_donation` RPC, donation split (80/15/5), `useNotifications`, `NotificationPanel`, `Header`, `AcceptChallengeModal` (still used by the bell path), tournament/matchmaker code.
 
-## Safety guards (challenge-only enforcement)
+---
 
-1. `BattleLobby` mount → if `searchParams.get('source') !== 'challenge'` **OR** the battle row has `tournament_id !== null` → immediately `navigate('/battle/:id/contender', { replace: true })`. Lobby unreachable from tournament path.
-2. If `battle.status !== 'live'` → redirect to `/battle/:id/theater`.
-3. Late-joining contenders (joining when `bothReady` is already true on mount) → skip directly to `/contender` to avoid re-arming countdown.
-
-## Out of scope
-
-- Tournament path, matchmaker queue, scheduled battles.
-- Any change to `match-challenge-stake`, ContenderTheater, LiveKit clients/edge functions.
-- Replacing `DonationModal`, follow flow, chat hook, or `useContenderReadiness`.
-- Mobile gyroscope tilt (cursor-only for v1).
-
-## Result
-
-A cinematic 3D Pre-Battle Lobby gated **strictly to the challenge accept flow**: contenders walk through Camera/Mic/Lock-In with snappy cyan-glow feedback, fans flood a glassy terminal to chat, follow, predict, and donate while the center prize beacon visibly pulses on every BB hit. When both contenders lock in, a 5s "5..4..3..FIGHT!" countdown hands control to the **existing, unmodified** ContenderTheater + LiveKit pipeline — guaranteeing live battle, donations, and tournament logic stay flawless while we validate the lobby experience on challenges.
+## QA checklist before shipping
+1. On a 402×636 viewport, the Ready Check panel sits cleanly under the iOS status bar with no horizontal scroll, and both podiums are fully visible above the bottom Fan Terminal.
+2. Tapping "Allow Camera + Mic" once flips both checks AND lights up a circular live preview of yourself on top of your podium.
+3. Tapping Lock In (with opponent already locked) immediately routes both contenders to `ContenderTheater` (LiveKit) — no full-screen countdown.
+4. While viewing the watch feed as Barber B, sending Barber B a challenge from another account triggers a full-screen overlay that blocks the feed and offers Accept/Decline.
+5. Closing the app and reopening it while a pending `challenge_received` notification exists also pops the overlay on the very first authenticated route.
+6. Existing bell-icon Respond flow and Accept modal still function (regression check).
+7. After accepting, the donation split during the live battle is still 80% pool / 15% platform / 5% M4M (untouched).
