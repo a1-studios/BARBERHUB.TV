@@ -942,38 +942,6 @@ export type Database = {
           },
         ]
       }
-      battle_predictions: {
-        Row: {
-          battle_id: string
-          created_at: string
-          id: string
-          picked_barber_id: string
-          user_id: string
-        }
-        Insert: {
-          battle_id: string
-          created_at?: string
-          id?: string
-          picked_barber_id: string
-          user_id: string
-        }
-        Update: {
-          battle_id?: string
-          created_at?: string
-          id?: string
-          picked_barber_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "battle_predictions_battle_id_fkey"
-            columns: ["battle_id"]
-            isOneToOne: false
-            referencedRelation: "battles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       battle_reactions: {
         Row: {
           barber_id: string | null

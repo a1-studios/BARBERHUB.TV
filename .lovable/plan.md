@@ -1,46 +1,68 @@
-# Fix: Challenge notification flow is silently broken
 
-## Root cause (verified against the live DB)
 
-I traced a fresh challenge (`2c210e4b…`) created at 18:52:45. The system **does** create the row in `open_challenges` AND the `challenge_received` notification for the target barber `09acf09b…`. The bell row exists, but the full-screen `IncomingChallengeOverlay` never appears, and any attempted Decline throws.
+## Goal
+Make the WelcomeModal **30% more compact**, mobile-optimized, with a **bright cyan accent edge**, and split into two distinct flows:
+1. **First-time users**: Full "Welcome to the Arena" onboarding modal — but **only triggered when they enter the battle arena** (i.e., after picking a category / entering a battle), not on landing.
+2. **Returning users**: A small, lightweight **"Welcome back, {name}"** toast/strip — no big modal, no steps.
 
-Three concrete bugs in `src/hooks/useIncomingChallengeOverlay.tsx` and `src/components/battles/IncomingChallengeOverlay.tsx`:
+## Changes
 
-1. **Wrong status filter (silent reject).** Hydration rejects unless status is `'pending' | 'open' | 'active'`. The actual DB constraint only allows `'waiting_for_opponent' | 'completed' | 'expired'`. So every brand-new challenge is filtered out → overlay never opens → "barber isn't getting it."
-2. **Selecting columns that don't exist.** The query reads `challenger_avatar` and `challenger_country` from `open_challenges`, but those columns live on `profiles`. Even if the status check passed, hydration would crash or silently drop those fields.
-3. **Decline writes an illegal status.** The Decline button sets `status: 'declined'`, which violates the check constraint `status IN ('waiting_for_opponent','completed','expired')` → toast error pops on every decline.
+### 1. `WelcomeModal.tsx` — slim down + cyan edge + dual mode
+- **Add `mode` prop**: `'first-time' | 'returning'` (default `'first-time'`).
+- **Size reduction (~30%)**:
+  - `sm:max-w-md` → `sm:max-w-sm` (narrower).
+  - Trophy badge: `h-16 w-16` → `h-12 w-12`; inner icon `h-8 w-8` → `h-6 w-6`; `mb-4` → `mb-2`.
+  - Title: `text-2xl` → `text-lg`; flag `text-3xl` → `text-xl`.
+  - Description: `text-base` → `text-xs`.
+  - Steps container: `space-y-4 py-4` → `space-y-2 py-2`; each row `p-3` → `p-2`, `gap-4` → `gap-3`.
+  - Step icon circle: `h-10 w-10` → `h-8 w-8`; icon `h-5 w-5` → `h-4 w-4`.
+  - Step title: default → `text-sm`; description: `text-sm` → `text-xs`.
+  - Step number: `text-2xl` → `text-lg`.
+  - Buttons: default → `size="sm"`, icons `h-4 w-4` → `h-3.5 w-3.5`.
+  - Footer "Don't show again": `text-xs` → `text-[10px]`, `mt-2` → `mt-1`.
+- **Cyan edge accent** (using existing brand cyan `#22D3EE` / `secondary`):
+  - Add a 2px cyan ring around the `DialogContent`: `ring-2 ring-cyan-400/60 shadow-[0_0_24px_rgba(34,211,238,0.25)]`.
+  - Trophy badge gets a thin cyan inner ring to tie it together.
+- **Mobile**: stays full-width on mobile via existing dialog defaults; tightened paddings ensure no overflow at 360px.
+- **Typography cohesion**: standardize on `font-semibold` for titles, `text-muted-foreground` for body, single `tracking-tight` on title for a unified rhythm.
 
-There is also a smaller polish issue: when the overlay is closed via the X, the bell still routes the user to the **viewer** battle page on click, not the lobby. The accepted-by-target should land in the contender lobby.
+### 2. New "Returning user" branch inside same component
+When `mode === 'returning'` (or auto-detected: `localStorage.barberhub_welcome_seen === 'true'` AND user is signed in AND it's a fresh session):
+- Render a **tiny centered card** — no steps list, no CTAs:
+  ```
+  ┌─────────────────────────────┐
+  │  👋  Welcome back,           │
+  │      {displayName} 🇩🇴       │
+  └─────────────────────────────┘
+  ```
+- Auto-dismiss after 2.5s OR on click.
+- Same cyan edge so the brand accent is consistent.
+- Uses `sonner` toast instead of dialog for minimal disruption (lighter than a modal).
 
-## What I will change
+### 3. Trigger logic — move first-time modal off the landing page
+- **Remove** `<WelcomeModal />` from `src/pages/Index.tsx` (line 201).
+- **Add** `<WelcomeModal mode="first-time" />` to **`src/pages/Portal.tsx`** (the Battle Portal — what users hit after picking a category / entering the arena). The modal still self-gates via `localStorage.barberhub_welcome_seen` so it only fires once.
+- **Add** the returning-user welcome-back toast trigger to `src/pages/Index.tsx`:
+  - On mount, if `user` exists AND `localStorage.barberhub_welcome_seen === 'true'` AND `sessionStorage.welcome_back_shown !== 'true'` → fire `toast.success(\`Welcome back, ${displayName} ${flag}\`)` with cyan-accented styling, then set the session flag so it only shows once per session.
 
-### 1. `src/hooks/useIncomingChallengeOverlay.tsx`
-- Rewrite `hydrateFromNotification` to:
-  - Select the correct columns from `open_challenges` (`id, challenger_id, challenger_username, title, stake_amount, pot_total, expires_at, status, target_barber_id`).
-  - Accept only the real "still open" status: `status === 'waiting_for_opponent'`.
-  - Drop rows whose `target_barber_id` doesn't match the current user (defensive — keeps stale broadcasts out).
-  - Fetch `avatar_url, country_code` separately from `profiles` for the challenger so the overlay can show flag + avatar.
-- Keep the realtime + polling logic untouched.
+### 4. Cyan accent color source
+Use the existing Tailwind `cyan-400` (`#22D3EE`) — it matches the platform's defined Zion Blue / cyan secondary accent already used elsewhere (per `mem://design/branding-colors-permanent`). Orange remains primary (Trophy gradient + buttons stay orange); cyan is **only** the edge halo.
 
-### 2. `src/components/battles/IncomingChallengeOverlay.tsx`
-- Decline path: set `status: 'expired'` and `expires_at: now()` (legal under the check constraint) instead of `'declined'`. Also dismiss the notification so the bell clears for both users.
-- After Accept, navigate to `/battle/{battleId}/lobby?source=challenge` (already correct) — keep as-is, but make sure we always have `battle_id` (fall back to a re-fetch from `open_challenges` if the function response omits it).
-- Show a small "from {challenger_username}" line even when avatar/country are absent (so the overlay still renders gracefully when the profile lookup fails).
+## Files Touched
 
-### 3. `src/hooks/useNotifications.tsx` — bell click for `challenge_received`
-- When the user opens the bell and clicks an unread `challenge_received`, re-open the overlay instead of routing them anywhere. We do this by exposing a tiny `window.dispatchEvent(new CustomEvent('reopen-incoming-challenge', { detail: { notification_id }}))` and having `useIncomingChallengeOverlay` listen for it and re-hydrate that specific notification. (No DB changes — purely client wiring.)
+| File | Change |
+|---|---|
+| `src/components/onboarding/WelcomeModal.tsx` | Shrink all sizes ~30%, add cyan ring/glow edge, add `mode` prop with `'returning'` lightweight variant, tighten typography |
+| `src/pages/Index.tsx` | Remove `<WelcomeModal />` mount; add returning-user welcome-back toast effect (cyan-styled, session-gated) |
+| `src/pages/Portal.tsx` | Mount `<WelcomeModal mode="first-time" />` near the top of the Portal main content so it fires when users enter the battle arena |
 
-### 4. Sanity check on `match-challenge-stake`
-- The function already correctly flips `battles.status='live'`, sets `barber2_id`, and emits `challenge_accepted`. No changes needed.
-- The recent edge logs show `Unauthorized` errors — those are the **expected** preflight calls from the lobby polling before the user is authed; they are not user-facing failures. No change required.
+## Out of Scope
+- Changing the modal's underlying step content/copy (only sizing + accent).
+- Touching the LaunchWizard intake flow.
+- Adding new translations or a separate component file (one component, two modes keeps maintenance simple).
 
-## Out of scope (intentionally)
-- 3D lobby visuals, controls, or environment — last round's plan covered that and the user's complaint this turn is purely about the notification + accept flow.
-- Donations / pot splits — already wired and untouched.
+## Result
+- First-time users entering the Battle Portal see a **tighter, mobile-clean** onboarding card framed by a glowing **cyan edge** — orange remains the dominant action color.
+- Returning signed-in users hitting the home page get a **subtle "Welcome back, {name} 🇩🇴" toast** — no big modal, no friction.
+- Modal footprint reduced ~30% (narrower max-width, smaller paddings, tighter typography) so it fits cleanly on 360px screens with zero scroll.
 
-## Verification steps after implementation
-1. Barber A challenges Barber B → on Barber B's screen the full-screen orange "Incoming Challenge" overlay appears within ~2s (realtime), shows challenger avatar + country flag if set, stake, and a live countdown.
-2. Tap **Accept Challenge** → both users land in `/battle/:id/lobby?source=challenge`, then into the contender theater when both lock in.
-3. Tap **Decline** → no error toast; the row in `open_challenges` becomes `expired`, the bell clears for both users, and the overlay closes.
-4. Tap the **X** → overlay closes but the bell still shows the unread notification; clicking it from the bell re-opens the overlay (not the viewer feed).
-5. Existing feed bubbles, voting, and donation buttons are unaffected (no files in those paths are touched).

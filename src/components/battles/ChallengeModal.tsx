@@ -117,7 +117,7 @@ export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
       setSearchQuery('');
       onClose();
       if (battleId) {
-        navigate(`/battle/${battleId}/lobby?source=challenge`);
+        navigate(`/battle/${battleId}/contender`);
       }
     } catch (err: any) {
       toast.error(err.message || 'Failed to issue challenge');

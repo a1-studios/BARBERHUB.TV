@@ -113,11 +113,10 @@ export const useNotifications = () => {
           let onClickOverride: (() => void) | null = null;
 
           if (newNotification.type === 'challenge_received') {
-            // Suppress the toast — the global IncomingChallengeOverlay is the
-            // single source of truth for this notification type. Just refresh
-            // the bell so the unread count is accurate.
-            queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
-            return;
+            actionLabel = 'Respond';
+            onClickOverride = () => {
+              window.dispatchEvent(new CustomEvent('open-notifications'));
+            };
           } else if (newNotification.type === 'challenge_accepted' && newNotification.data?.battle_id) {
             actionTarget = `/battle/${newNotification.data.battle_id}/contender`;
           } else if (newNotification.data?.battle_id) {

@@ -209,31 +209,6 @@ export default function ContenderTheater() {
     }
   }, [bothReady, phase]);
 
-  // Auto-redirect contenders back to the feed once the live battle ends.
-  // Battle status flips to 'processing' / 'voting' / 'completed' when LiveKit
-  // disconnects or the timer hits 0 — at that point there's nothing left to
-  // do in the contender view, so send them back to /watch.
-  useEffect(() => {
-    if (!battleId) return;
-    const channel = supabase
-      .channel(`contender-end-${battleId}`)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'battles',
-        filter: `id=eq.${battleId}`,
-      }, (payload) => {
-        const s = (payload.new as any).status;
-        if (s === 'processing' || s === 'voting' || s === 'completed') {
-          try { disconnect(); } catch {}
-          toast.success('Battle ended! Returning to the feed…');
-          setTimeout(() => navigate('/watch', { replace: true }), 1500);
-        }
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [battleId, navigate, disconnect]);
-
   // Handle countdown complete - connect to LiveKit
   const handleCountdownComplete = useCallback(async () => {
     try {

@@ -65,7 +65,7 @@ export const AcceptChallengeModal = ({ challenge, isOpen, onClose }: AcceptChall
 
       onClose();
       if (data?.battle_id) {
-        navigate(`/battle/${data.battle_id}/lobby?source=challenge`);
+        navigate(`/battle/${data.battle_id}/contender`);
       }
     } catch (error: any) {
       console.error('Error accepting challenge:', error);

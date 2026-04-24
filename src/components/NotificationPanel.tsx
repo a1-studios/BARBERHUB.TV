@@ -72,15 +72,18 @@ export function NotificationPanel({ embedded, onClose, onOpenAcceptModal }: Noti
   const handleClick = async (n: Notification) => {
     if (!n.read) markAsRead(n.id);
 
-    // Direct challenge → re-open the global IncomingChallengeOverlay
+    // Direct challenge → load full challenge row + open Accept modal
     if (n.type === 'challenge_received' && n.data?.challenge_id) {
-      window.dispatchEvent(
-        new CustomEvent('reopen-incoming-challenge', {
-          detail: { notification_id: n.id },
-        })
-      );
-      closeSelf();
-      return;
+      const { data: ch } = await supabase
+        .from('open_challenges')
+        .select('id, challenger_username, title, stake_amount, pot_total, expires_at')
+        .eq('id', n.data.challenge_id)
+        .maybeSingle();
+      if (ch) {
+        onOpenAcceptModal?.(ch);
+        closeSelf();
+        return;
+      }
     }
 
     // Challenge accepted → jump straight into the split-screen contender room
