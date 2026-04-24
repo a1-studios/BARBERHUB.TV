@@ -139,6 +139,28 @@ export const StepReveal = ({ state, onClose }: StepRevealProps) => {
         </motion.div>
       </div>
 
+      {/* +N BB animated counter (delayed for dopamine timing) */}
+      {prizeBb > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.85, duration: 0.4 }}
+          className="text-center -mt-2"
+        >
+          <span
+            className="text-2xl font-black"
+            style={{
+              background: 'linear-gradient(135deg, #FFD37A 0%, #FF8C00 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            +<AnimatedCounter value={counterValue} duration={900} /> BB
+          </span>
+        </motion.div>
+      )}
+
       <div className="space-y-2">
         <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight bg-gradient-to-r from-amber-300 via-orange-500 to-orange-600 bg-clip-text text-transparent">
           You're locked in!
