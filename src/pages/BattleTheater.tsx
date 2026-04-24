@@ -20,9 +20,10 @@ import { HapticFeedback } from '@/utils/hapticFeedback';
 import { AudioManager } from '@/utils/audioManager';
 import { CelebrationEffects } from '@/utils/celebrationEffects';
 import { Button } from '@/components/ui/button';
-import { X, MessageSquare, Settings as SettingsIcon, Heart, Volume2, VolumeX } from 'lucide-react';
+import { X, MessageSquare, Settings as SettingsIcon, Heart, Volume2, VolumeX, Coins } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { DonationModal } from '@/components/DonationModal';
 
 /** VOD player — uses Cloudflare Stream UID when available, falls back to native video */
 const VODPlayer = ({ src, streamUid, className }: { src: string; streamUid?: string | null; className?: string }) => {
@@ -74,6 +75,7 @@ export default function BattleTheater() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [localPhase, setLocalPhase] = useState<'live' | 'processing' | 'vod' | null>(null);
   const [liveKitCreds, setLiveKitCreds] = useState<{ token: string; serverUrl: string } | null>(null);
+  const [donateTarget, setDonateTarget] = useState<{ barberId: string; name: string } | null>(null);
 
   const { comboCount, bonusEarned, incrementCombo } = useVoteCombo(id || '', user?.id);
   const viewerData = useRealtimeBattleViewers(id || '');
@@ -120,14 +122,18 @@ export default function BattleTheater() {
       }, (payload) => {
         const s = (payload.new as any).status;
         if (s === 'processing') setLocalPhase('processing');
-        else if (s === 'voting' || s === 'completed') {
+        else if (s === 'voting') {
           setLocalPhase('vod');
           refetch();
+        } else if (s === 'completed') {
+          // Battle is fully over — kick viewers back to the discovery feed.
+          toast.success('Battle ended! Back to the feed…');
+          setTimeout(() => navigate('/watch', { replace: true }), 1500);
         }
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [id, refetch]);
+  }, [id, refetch, navigate]);
 
   // Request viewer token when phase is live
   useEffect(() => {
@@ -308,9 +314,36 @@ export default function BattleTheater() {
             <ReactionPicker battleId={id!} userId={user.id} />
           </div>
         )}
+        {/* Live donate buttons — one per barber (left/right edges) */}
+        {user && barber1?.id && (
+          <Button
+            onClick={() => setDonateTarget({ barberId: barber1.id, name: barber1.name || 'Barber 1' })}
+            className="fixed bottom-20 left-4 z-40 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 text-black font-bold rounded-full shadow-2xl"
+          >
+            <Coins className="h-4 w-4 mr-2" /> Donate
+          </Button>
+        )}
+        {user && barber2?.id && (
+          <Button
+            onClick={() => setDonateTarget({ barberId: barber2.id, name: barber2.name || 'Barber 2' })}
+            className="fixed bottom-20 right-4 z-40 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 text-black font-bold rounded-full shadow-2xl"
+          >
+            <Coins className="h-4 w-4 mr-2" /> Donate
+          </Button>
+        )}
         <FloatingReactions battleId={id!} />
         {localStorage.getItem('battleChatEnabled') !== 'false' && (
           <BattleChat battleId={id!} isOpen={chatOpen} onClose={() => setChatOpen(false)} />
+        )}
+        {donateTarget && (
+          <DonationModal
+            isOpen={!!donateTarget}
+            onClose={() => setDonateTarget(null)}
+            creatorId={donateTarget.barberId}
+            creatorName={donateTarget.name}
+            battleId={id!}
+            barberId={donateTarget.barberId}
+          />
         )}
       </>
     );
@@ -399,13 +432,19 @@ export default function BattleTheater() {
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2 justify-center">
+                <div className="flex gap-2 justify-center flex-wrap">
                   <Button
                     onClick={() => handleVote(barber1?.id, battle.creation1_id || '')}
                     disabled={!!userVote}
                     className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white font-bold py-6 px-8 rounded-xl shadow-2xl"
                   >
                     {userVote === battle.creation1_id ? '✓ Voted' : 'VOTE'}
+                  </Button>
+                  <Button
+                    onClick={() => barber1?.id && setDonateTarget({ barberId: barber1.id, name: barber1.name || 'Barber' })}
+                    className="bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 text-black font-bold py-6 px-6 rounded-xl shadow-2xl"
+                  >
+                    <Coins className="h-5 w-5 mr-2" /> DONATE
                   </Button>
                   <Button variant="outline" size="icon" onClick={handleLike} className="bg-black/40 backdrop-blur-sm border-white/20 hover:bg-white/20">
                     <Heart className="h-5 w-5 text-white" />
@@ -437,13 +476,19 @@ export default function BattleTheater() {
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2 justify-center">
+                <div className="flex gap-2 justify-center flex-wrap">
                   <Button
                     onClick={() => handleVote(barber2?.id, battle.creation2_id || '')}
                     disabled={!!userVote}
                     className="bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-bold py-6 px-8 rounded-xl shadow-2xl"
                   >
                     {userVote === battle.creation2_id ? '✓ Voted' : 'VOTE'}
+                  </Button>
+                  <Button
+                    onClick={() => barber2?.id && setDonateTarget({ barberId: barber2.id, name: barber2.name || 'Barber' })}
+                    className="bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 text-black font-bold py-6 px-6 rounded-xl shadow-2xl"
+                  >
+                    <Coins className="h-5 w-5 mr-2" /> DONATE
                   </Button>
                   <Button variant="outline" size="icon" onClick={handleLike} className="bg-black/40 backdrop-blur-sm border-white/20 hover:bg-white/20">
                     <Heart className="h-5 w-5 text-white" />
@@ -470,6 +515,16 @@ export default function BattleTheater() {
         <BattleChat battleId={id!} isOpen={chatOpen} onClose={() => setChatOpen(false)} />
       )}
       <BattleSettings isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      {donateTarget && (
+        <DonationModal
+          isOpen={!!donateTarget}
+          onClose={() => setDonateTarget(null)}
+          creatorId={donateTarget.barberId}
+          creatorName={donateTarget.name}
+          battleId={id!}
+          barberId={donateTarget.barberId}
+        />
+      )}
     </div>
   );
 }
