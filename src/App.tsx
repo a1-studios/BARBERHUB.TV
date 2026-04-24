@@ -47,6 +47,7 @@ import Rankings from "./pages/Rankings";
 import BroadcastViewer from "./pages/BroadcastViewer";
 import BroadcastStudio from "./pages/BroadcastStudio";
 import ResetPassword from "./pages/ResetPassword";
+import BattleLobby from "./pages/BattleLobby";
 
 const queryClient = new QueryClient();
 
@@ -99,6 +100,14 @@ const AppContent = () => {
                   <BarberGuard>
                     <ContenderTheater />
                   </BarberGuard>
+                </AuthGuard>
+              } 
+            />
+            <Route 
+              path="/battle/:id/lobby" 
+              element={
+                <AuthGuard>
+                  <BattleLobby />
                 </AuthGuard>
               } 
             />
