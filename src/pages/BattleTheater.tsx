@@ -20,9 +20,10 @@ import { HapticFeedback } from '@/utils/hapticFeedback';
 import { AudioManager } from '@/utils/audioManager';
 import { CelebrationEffects } from '@/utils/celebrationEffects';
 import { Button } from '@/components/ui/button';
-import { X, MessageSquare, Settings as SettingsIcon, Heart, Volume2, VolumeX } from 'lucide-react';
+import { X, MessageSquare, Settings as SettingsIcon, Heart, Volume2, VolumeX, Coins } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { DonationModal } from '@/components/DonationModal';
 
 /** VOD player — uses Cloudflare Stream UID when available, falls back to native video */
 const VODPlayer = ({ src, streamUid, className }: { src: string; streamUid?: string | null; className?: string }) => {
