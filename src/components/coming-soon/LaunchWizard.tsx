@@ -188,8 +188,8 @@ export const LaunchWizard = ({
           {...shellMotion}
           className={`relative w-full ${
             isMobile
-              ? 'max-h-[88vh] rounded-t-[28px] pt-3 pb-6 px-5'
-              : 'max-w-lg rounded-[24px] p-6 sm:p-8 max-h-[92vh]'
+              ? 'h-[88vh] rounded-t-[28px] pt-3 pb-6 px-5'
+              : 'max-w-lg rounded-[24px] p-6 sm:p-8 h-[min(92vh,720px)]'
           } overflow-hidden flex flex-col`}
           style={{
             background: 'rgba(8, 8, 10, 0.72)',
