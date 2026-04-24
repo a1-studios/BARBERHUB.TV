@@ -84,7 +84,7 @@ const QuickChallengePresets = ({ isSilverPlus }: { isSilverPlus: boolean }) => {
 
       const effectiveStake = stakesEnabled ? preset.stake : 0;
       const { data, error } = await supabase.functions.invoke('create-challenge-stake', {
-        body: { title: preset.title, stake_amount: effectiveStake, duration_minutes: 60 },
+        body: { title: preset.title, stake_amount: effectiveStake, duration_minutes: 15 },
       });
 
       if (error) throw error;
@@ -175,7 +175,7 @@ const CustomChallengeForm = ({ isSilverPlus }: { isSilverPlus: boolean }) => {
           title,
           stake_amount: effectiveStake,
           challenge_message: message || null,
-          duration_minutes: 60,
+          duration_minutes: 15,
         },
       });
 
