@@ -63,9 +63,11 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError || !user) throw new Error('Unauthorized');
 
-    const { challenge_id, battle_id, winner_id, loser_id, is_draw }: DistributeRequest = await req.json();
+    const body: DistributeRequest = await req.json();
+    const { challenge_id, battle_id, match_mode } = body;
+    let { winner_id, loser_id, is_draw } = body;
 
-    console.log(`[DISTRIBUTE-POT] battle: ${battle_id}, challenge: ${challenge_id}, winner: ${winner_id}, loser: ${loser_id}, draw: ${is_draw}`);
+    console.log(`[DISTRIBUTE-POT] battle: ${battle_id}, challenge: ${challenge_id}, match_mode: ${match_mode}, winner: ${winner_id}, loser: ${loser_id}, draw: ${is_draw}`);
 
     let potTotal = 0;
     let title = '';
@@ -89,7 +91,7 @@ serve(async (req) => {
     } else if (battle_id) {
       const { data: battle } = await supabase
         .from('battles')
-        .select('category, title')
+        .select('category, title, prize_amount, barber1_id, barber2_id, match_mode')
         .eq('id', battle_id)
         .single();
 
@@ -101,14 +103,65 @@ serve(async (req) => {
         .select('amount_bb')
         .eq('battle_id', battle_id);
 
-      potTotal = donations?.reduce((sum, d) => sum + d.amount_bb, 0) || 0;
+      const donationTotal = donations?.reduce((sum, d) => sum + d.amount_bb, 0) || 0;
+
+      // For Quick Play live challenges, the pot = original stake (battles.prize_amount)
+      // + viewer donations. We also auto-tally live_challenge_votes to pick the winner.
+      const isQuickPlay = match_mode === 'quick_play' || battle?.match_mode === 'quick_play';
+
+      if (isQuickPlay) {
+        potTotal = (battle?.prize_amount || 0) + donationTotal;
+
+        if (!winner_id && !is_draw) {
+          const { data: liveVotes } = await supabase
+            .from('live_challenge_votes')
+            .select('picked_barber_id')
+            .eq('battle_id', battle_id);
+
+          const tally = new Map<string, number>();
+          for (const v of liveVotes || []) {
+            tally.set(v.picked_barber_id, (tally.get(v.picked_barber_id) || 0) + 1);
+          }
+
+          const b1 = battle?.barber1_id;
+          const b2 = battle?.barber2_id;
+          const c1 = b1 ? (tally.get(b1) || 0) : 0;
+          const c2 = b2 ? (tally.get(b2) || 0) : 0;
+
+          if (c1 === c2) {
+            is_draw = true;
+          } else if (c1 > c2) {
+            // Resolve barber_profiles.id → user_id (winners table uses user_id)
+            const { data: bp } = await supabase
+              .from('barber_profiles').select('user_id').eq('id', b1).single();
+            winner_id = bp?.user_id || null;
+            const { data: bp2 } = await supabase
+              .from('barber_profiles').select('user_id').eq('id', b2).single();
+            loser_id = bp2?.user_id || null;
+          } else {
+            const { data: bp } = await supabase
+              .from('barber_profiles').select('user_id').eq('id', b2).single();
+            winner_id = bp?.user_id || null;
+            const { data: bp2 } = await supabase
+              .from('barber_profiles').select('user_id').eq('id', b1).single();
+            loser_id = bp2?.user_id || null;
+          }
+          console.log(`[DISTRIBUTE-POT] quick_play tally — b1:${c1} vs b2:${c2}, winner=${winner_id}, draw=${is_draw}`);
+        }
+      } else {
+        potTotal = donationTotal;
+      }
     } else {
       throw new Error('Either challenge_id or battle_id is required');
     }
 
     if (potTotal <= 0) {
+      // For quick_play, still wipe the ephemeral votes & mark complete even with no pot
+      if (battle_id && match_mode === 'quick_play') {
+        await supabase.from('live_challenge_votes').delete().eq('battle_id', battle_id);
+      }
       return new Response(
-        JSON.stringify({ success: true, message: 'No pot to distribute', payout: 0 }),
+        JSON.stringify({ success: true, message: 'No pot to distribute', payout: 0, winner_id, is_draw }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       );
     }
