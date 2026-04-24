@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { LaunchWizard } from '@/components/coming-soon/LaunchWizard';
@@ -7,6 +7,7 @@ import { captureAttribution } from '@/lib/urlParams';
 const ComingSoon = () => {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [count, setCount] = useState<number | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
     captureAttribution();
@@ -15,14 +16,42 @@ const ComingSoon = () => {
     });
   }, []);
 
+  // Pause backdrop video while wizard is open to save GPU on mobile
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (wizardOpen) v.pause();
+    else v.play().catch(() => { /* autoplay may block until interaction */ });
+  }, [wizardOpen]);
+
   return (
     <div className="min-h-screen w-full bg-background text-white relative overflow-hidden">
-      {/* Animated background glow */}
+      {/* Cinematic looping video backdrop */}
+      <video
+        ref={videoRef}
+        autoPlay
+        muted
+        loop
+        playsInline
+        preload="auto"
+        className="absolute inset-0 w-full h-full object-cover opacity-55"
+        poster="/placeholder.svg"
+      >
+        <source
+          src="https://customer-q3djo7byzgo7v0c1.cloudflarestream.com/cb35ed44b5d9474596a6cf01a86bd8b3/manifest/video.m3u8"
+          type="application/x-mpegURL"
+        />
+      </video>
+
+      {/* Dim + blur overlay */}
+      <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" />
+
+      {/* Animated orange ambient glow */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            'radial-gradient(circle at 30% 20%, rgba(255,95,31,0.18), transparent 50%), radial-gradient(circle at 70% 80%, rgba(255,140,0,0.12), transparent 55%)',
+            'radial-gradient(circle at 30% 20%, rgba(255,95,31,0.22), transparent 50%), radial-gradient(circle at 70% 80%, rgba(255,140,0,0.16), transparent 55%)',
         }}
       />
       <motion.div
@@ -32,13 +61,12 @@ const ComingSoon = () => {
         transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
         className="pointer-events-none absolute -top-40 left-1/2 -translate-x-1/2 w-[800px] h-[800px] rounded-full"
         style={{
-          background: 'radial-gradient(circle, rgba(255,95,31,0.2), transparent 60%)',
+          background: 'radial-gradient(circle, rgba(255,95,31,0.22), transparent 60%)',
           filter: 'blur(60px)',
         }}
       />
 
       <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6 py-20 text-center">
-        {/* Lockup */}
         <motion.div
           initial={{ opacity: 0, y: 18 }}
           animate={{ opacity: 1, y: 0 }}
@@ -66,12 +94,12 @@ const ComingSoon = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
-          className="text-base sm:text-lg text-white/70 max-w-md mb-8 font-medium"
+          className="text-base sm:text-lg text-white/75 max-w-md mb-8 font-medium"
         >
           Launching soon. Compete, vote, and earn in the world's first global barber league.
         </motion.p>
 
-        {/* Live counter pill */}
+        {/* Live counter pill — uses the only cyan accent on the page (live signal) */}
         {count !== null && count > 0 && (
           <motion.div
             initial={{ opacity: 0, scale: 0.92 }}
@@ -80,8 +108,14 @@ const ComingSoon = () => {
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-orange-500/40 bg-orange-500/10 mb-10"
           >
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500" />
+              <span
+                className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"
+                style={{ background: '#00F0FF' }}
+              />
+              <span
+                className="relative inline-flex rounded-full h-2 w-2"
+                style={{ background: '#00F0FF', boxShadow: '0 0 8px #00F0FF' }}
+              />
             </span>
             <span className="text-xs font-semibold text-orange-300 tracking-wide">
               {count.toLocaleString()} {count === 1 ? 'barber' : 'people'} already inside
@@ -89,18 +123,23 @@ const ComingSoon = () => {
           </motion.div>
         )}
 
-        {/* CTA */}
+        {/* CTA — dual-layer pill */}
         <motion.button
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4, duration: 0.5 }}
           whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.97 }}
-          onClick={() => setWizardOpen(true)}
-          className="relative px-10 py-5 rounded-[14px] font-black uppercase tracking-wider text-base sm:text-lg text-black overflow-hidden"
+          whileTap={{ scale: 0.95 }}
+          onClick={() => {
+            try { navigator.vibrate?.(10); } catch { /* ignore */ }
+            setWizardOpen(true);
+          }}
+          className="relative px-10 py-5 rounded-[14px] font-black uppercase tracking-wider text-base sm:text-lg text-white overflow-hidden"
           style={{
             background: 'linear-gradient(135deg, #FF5F1F 0%, #FF8C00 50%, #FFB347 100%)',
-            boxShadow: '0 12px 40px rgba(255,95,31,0.55), inset 0 1px 0 rgba(255,255,255,0.35)',
+            border: '1px solid rgba(255,255,255,0.3)',
+            boxShadow:
+              '0 12px 40px rgba(255,95,31,0.55), inset 0 1px 0 rgba(255,255,255,0.45)',
           }}
         >
           <motion.span
@@ -117,7 +156,7 @@ const ComingSoon = () => {
           <span className="relative">⚡ Claim Your Spot</span>
         </motion.button>
 
-        <p className="mt-5 text-[11px] text-white/40 max-w-xs">
+        <p className="mt-5 text-[11px] text-white/50 max-w-xs">
           Free to join. Spin the wheel for an early-bird prize.
         </p>
       </main>
