@@ -120,14 +120,18 @@ export default function BattleTheater() {
       }, (payload) => {
         const s = (payload.new as any).status;
         if (s === 'processing') setLocalPhase('processing');
-        else if (s === 'voting' || s === 'completed') {
+        else if (s === 'voting') {
           setLocalPhase('vod');
           refetch();
+        } else if (s === 'completed') {
+          // Battle is fully over — kick viewers back to the discovery feed.
+          toast.success('Battle ended! Back to the feed…');
+          setTimeout(() => navigate('/watch', { replace: true }), 1500);
         }
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [id, refetch]);
+  }, [id, refetch, navigate]);
 
   // Request viewer token when phase is live
   useEffect(() => {
