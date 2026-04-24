@@ -12,6 +12,7 @@ import { AdminGuard } from "@/components/auth/AdminGuard";
 import SovereignGuard from "@/components/auth/SovereignGuard";
 import { useFollowedBarbersNotifications } from "@/hooks/useFollowedBarbersNotifications";
 import { useMetaPixelPageView } from "@/hooks/useMetaPixelPageView";
+import { useGoogleAdsPageView } from "@/hooks/useGoogleAdsPageView";
 import { IS_COMING_SOON } from "@/config/launchMode";
 import Index from "./pages/Index";
 import ComingSoon from "./pages/ComingSoon";
@@ -52,8 +53,9 @@ const queryClient = new QueryClient();
 const AppContent = () => {
   // Enable real-time notifications for followed barbers going live
   useFollowedBarbersNotifications();
-  // Track SPA route changes in Meta Pixel
+  // Track SPA route changes in Meta Pixel + Google Ads
   useMetaPixelPageView();
+  useGoogleAdsPageView();
   
   return (
     <>

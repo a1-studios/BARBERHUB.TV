@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, createContext, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { StepEmail } from './StepEmail';
@@ -6,7 +6,9 @@ import { StepRole } from './StepRole';
 import { StepCountry } from './StepCountry';
 import { StepSpin } from './StepSpin';
 import { StepReveal } from './StepReveal';
+import { SegmentedProgress } from './SegmentedProgress';
 import { fbqTrack } from '@/lib/metaPixel';
+import { gtagFireLead } from '@/lib/googleAds';
 import { supabase } from '@/integrations/supabase/client';
 import { captureAttribution, getCountryFromUrl } from '@/lib/urlParams';
 import type { Prize } from '@/components/vault/VaultSpinWheel';
@@ -26,8 +28,27 @@ interface LaunchWizardProps {
 
 const TOTAL_STEPS = 5;
 
+/** Direction context so each step can drive AnimatePresence the right way. */
+const DirectionContext = createContext<1 | -1>(1);
+export const useStepDirection = () => useContext(DirectionContext);
+
+const useIsMobile = () => {
+  const [m, setM] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  );
+  useEffect(() => {
+    const onR = () => setM(window.innerWidth < 768);
+    window.addEventListener('resize', onR);
+    return () => window.removeEventListener('resize', onR);
+  }, []);
+  return m;
+};
+
 export const LaunchWizard = ({ onClose }: LaunchWizardProps) => {
   const [step, setStep] = useState(1);
+  const directionRef = useRef<1 | -1>(1);
+  const [direction, setDirection] = useState<1 | -1>(1);
+  const isMobile = useIsMobile();
   const [state, setState] = useState<LaunchWizardState>({
     email: '',
     role: null,
@@ -42,14 +63,25 @@ export const LaunchWizard = ({ onClose }: LaunchWizardProps) => {
   const update = (patch: Partial<LaunchWizardState>) =>
     setState((s) => ({ ...s, ...patch }));
 
-  const next = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS));
-  const back = () => setStep((s) => Math.max(s - 1, 1));
+  const goNext = () => {
+    directionRef.current = 1;
+    setDirection(1);
+    setStep((s) => Math.min(s + 1, TOTAL_STEPS));
+  };
 
-  // Step 1 → captures email + fires Lead + creates initial lead row
+  const goBack = () => {
+    directionRef.current = -1;
+    setDirection(-1);
+    setStep((s) => Math.max(s - 1, 1));
+  };
+
+  // Step 1 → captures email + fires Lead (Meta + Google) + creates initial lead row
   const handleEmailContinue = async (email: string) => {
     update({ email });
-    // Fire Lead event (pixel + CAPI)
-    void fbqTrack('Lead', { email, country: state.country ?? undefined });
+    // Meta Lead — get back the event_id for cross-platform dedup
+    const eventId = await fbqTrack('Lead', { email, country: state.country ?? undefined });
+    // Google Ads Lead conversion (no-ops if env unset) — same transaction_id
+    gtagFireLead(eventId);
     // Insert/upsert lead row early so we have it even if user abandons
     try {
       await supabase.from('marketing_leads').upsert(
@@ -63,104 +95,143 @@ export const LaunchWizard = ({ onClose }: LaunchWizardProps) => {
     } catch (err) {
       console.warn('[LaunchWizard] lead upsert failed', err);
     }
-    next();
+    goNext();
   };
 
+  // Mobile bottom-sheet variant uses a different shell motion + classes.
+  const shellMotion = isMobile
+    ? {
+        initial: { y: '100%' },
+        animate: { y: 0 },
+        exit: { y: '100%' },
+        transition: { type: 'spring' as const, stiffness: 280, damping: 30 },
+      }
+    : {
+        initial: { opacity: 0, scale: 0.96, y: 12 },
+        animate: { opacity: 1, scale: 1, y: 0 },
+        exit: { opacity: 0, scale: 0.96, y: 12 },
+        transition: { type: 'spring' as const, stiffness: 280, damping: 26 },
+      };
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div className="relative w-full max-w-lg bg-background border border-orange-500/30 rounded-[20px] shadow-2xl shadow-orange-500/20 p-6 sm:p-8 max-h-[92vh] overflow-y-auto">
-        {/* Close button */}
-        <button
-          type="button"
-          aria-label="Close"
-          onClick={onClose}
-          className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+    <DirectionContext.Provider value={direction}>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className={`fixed inset-0 z-50 bg-black/85 backdrop-blur-md ${
+          isMobile ? 'flex items-end' : 'flex items-center justify-center p-4'
+        }`}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
+      >
+        <motion.div
+          {...shellMotion}
+          className={`relative w-full ${
+            isMobile
+              ? 'max-h-[88vh] rounded-t-[28px] pt-3 pb-6 px-5'
+              : 'max-w-lg rounded-[24px] p-6 sm:p-8 max-h-[92vh]'
+          } overflow-hidden flex flex-col`}
+          style={{
+            background: 'rgba(8, 8, 10, 0.72)',
+            backdropFilter: 'blur(28px) saturate(140%)',
+            WebkitBackdropFilter: 'blur(28px) saturate(140%)',
+            border: '1px solid rgba(255, 95, 31, 0.22)',
+            boxShadow:
+              '0 0 60px rgba(255,95,31,0.35), inset 0 1px 0 rgba(255,255,255,0.18)',
+          }}
         >
-          <X className="w-4 h-4" />
-        </button>
+          {/* Mobile drag handle */}
+          {isMobile && (
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={onClose}
+              className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-white/25 hover:bg-white/40 transition-colors"
+            />
+          )}
 
-        {/* Progress dots */}
-        <div className="flex items-center justify-center gap-2 mb-6">
-          {Array.from({ length: TOTAL_STEPS }).map((_, i) => {
-            const idx = i + 1;
-            const active = idx === step;
-            const done = idx < step;
-            return (
-              <span
-                key={idx}
-                className={`h-1.5 rounded-full transition-all ${
-                  active
-                    ? 'w-8 bg-orange-500'
-                    : done
-                    ? 'w-4 bg-orange-500/60'
-                    : 'w-4 bg-white/15'
-                }`}
-              />
-            );
-          })}
-        </div>
+          {/* Top inner highlight streak */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute top-0 inset-x-6 h-px"
+            style={{
+              background:
+                'linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent)',
+            }}
+          />
 
-        <AnimatePresence mode="wait">
-          {step === 1 && (
-            <StepEmail
-              key="step-1"
-              initialEmail={state.email}
-              onContinue={handleEmailContinue}
-              onSkip={onClose}
-            />
+          {/* Close button (desktop) */}
+          {!isMobile && (
+            <button
+              type="button"
+              aria-label="Close"
+              onClick={onClose}
+              className="absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors z-10"
+            >
+              <X className="w-4 h-4" />
+            </button>
           )}
-          {step === 2 && (
-            <StepRole
-              key="step-2"
-              value={state.role}
-              onSelect={(role) => {
-                update({ role });
-                next();
-              }}
-              onBack={back}
-              onSkip={onClose}
-            />
-          )}
-          {step === 3 && (
-            <StepCountry
-              key="step-3"
-              value={state.country}
-              onChange={(country) => update({ country })}
-              onContinue={next}
-              onBack={back}
-              onSkip={onClose}
-            />
-          )}
-          {step === 4 && state.role && (
-            <StepSpin
-              key="step-4"
-              role={state.role}
-              email={state.email}
-              onResult={(prize) => {
-                update({ prize });
-                next();
-              }}
-              onBack={back}
-              onSkip={onClose}
-            />
-          )}
-          {step === 5 && (
-            <StepReveal
-              key="step-5"
-              state={state}
-              onClose={onClose}
-            />
-          )}
-        </AnimatePresence>
-      </div>
-    </motion.div>
+
+          {/* Segmented progress */}
+          <div className={`px-1 ${isMobile ? 'mb-5' : 'mb-6'}`}>
+            <SegmentedProgress total={TOTAL_STEPS} current={step} />
+          </div>
+
+          {/* Steps */}
+          <div className="relative flex-1 overflow-y-auto overflow-x-hidden">
+            <AnimatePresence mode="wait" custom={direction}>
+              {step === 1 && (
+                <StepEmail
+                  key="step-1"
+                  initialEmail={state.email}
+                  onContinue={handleEmailContinue}
+                  onSkip={onClose}
+                />
+              )}
+              {step === 2 && (
+                <StepRole
+                  key="step-2"
+                  value={state.role}
+                  onSelect={(role) => {
+                    update({ role });
+                    goNext();
+                  }}
+                  onBack={goBack}
+                  onSkip={onClose}
+                />
+              )}
+              {step === 3 && (
+                <StepCountry
+                  key="step-3"
+                  value={state.country}
+                  onChange={(country) => update({ country })}
+                  onContinue={goNext}
+                  onBack={goBack}
+                  onSkip={onClose}
+                />
+              )}
+              {step === 4 && state.role && (
+                <StepSpin
+                  key="step-4"
+                  role={state.role}
+                  email={state.email}
+                  onResult={(prize) => {
+                    update({ prize });
+                    goNext();
+                  }}
+                  onBack={goBack}
+                  onSkip={onClose}
+                />
+              )}
+              {step === 5 && (
+                <StepReveal key="step-5" state={state} onClose={onClose} />
+              )}
+            </AnimatePresence>
+          </div>
+        </motion.div>
+      </motion.div>
+    </DirectionContext.Provider>
   );
 };

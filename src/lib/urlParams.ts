@@ -44,10 +44,13 @@ export interface AttributionData {
   utm_medium?: string;
   utm_campaign?: string;
   fbclid?: string;
+  gclid?: string;
+  gbraid?: string;
+  wbraid?: string;
   source_url?: string;
 }
 
-/** Read UTMs + fbclid from URL, persist to sessionStorage so they survive multi-step flows. */
+/** Read UTMs + fbclid + Google Ads click IDs from URL, persist to sessionStorage so they survive multi-step flows. */
 export function captureAttribution(): AttributionData {
   if (typeof window === 'undefined') return {};
   const params = new URLSearchParams(window.location.search);
@@ -56,6 +59,9 @@ export function captureAttribution(): AttributionData {
     utm_medium: params.get('utm_medium') ?? undefined,
     utm_campaign: params.get('utm_campaign') ?? undefined,
     fbclid: params.get('fbclid') ?? undefined,
+    gclid: params.get('gclid') ?? undefined,
+    gbraid: params.get('gbraid') ?? undefined,
+    wbraid: params.get('wbraid') ?? undefined,
     source_url: window.location.href,
   };
   try {
