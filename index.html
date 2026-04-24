@@ -30,6 +30,24 @@
       fbq('track', 'PageView');
     </script>
     <!-- End Meta Pixel Code -->
+
+    <!-- Google Ads (gtag) — env-gated. Replace AW-XXXXXXXXX via VITE_GOOGLE_ADS_ID at build time. -->
+    <script>
+      (function () {
+        var gid = "%VITE_GOOGLE_ADS_ID%";
+        // If the env var is unset, Vite leaves the literal "%VITE_GOOGLE_ADS_ID%" — bail out.
+        if (!gid || gid.indexOf("%") === 0 || gid.indexOf("VITE_") !== -1) return;
+        var s = document.createElement("script");
+        s.async = true;
+        s.src = "https://www.googletagmanager.com/gtag/js?id=" + gid;
+        document.head.appendChild(s);
+        window.dataLayer = window.dataLayer || [];
+        window.gtag = function () { window.dataLayer.push(arguments); };
+        window.gtag("js", new Date());
+        window.gtag("config", gid);
+      })();
+    </script>
+    <!-- End Google Ads -->
   </head>
 
   <body>
