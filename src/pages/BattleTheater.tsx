@@ -76,6 +76,7 @@ export default function BattleTheater() {
   const [localPhase, setLocalPhase] = useState<'live' | 'processing' | 'vod' | null>(null);
   const [liveKitCreds, setLiveKitCreds] = useState<{ token: string; serverUrl: string } | null>(null);
   const [donateTarget, setDonateTarget] = useState<1 | 2 | null>(null);
+  const [showDonatePicker, setShowDonatePicker] = useState(false);
 
   const { comboCount, bonusEarned, incrementCombo } = useVoteCombo(id || '', user?.id);
   const viewerData = useRealtimeBattleViewers(id || '');
@@ -325,14 +326,30 @@ export default function BattleTheater() {
           <Button
             onClick={() => {
               if (!user) { toast.error('Sign in to donate'); return; }
-              setDonateTarget(1);
+              setShowDonatePicker((s) => !s);
             }}
             size="sm"
             variant="ghost"
-            className="h-10 w-10 rounded-full bg-primary/20 hover:bg-primary/30 text-primary p-0"
+            className="relative h-10 w-10 rounded-full bg-primary/20 hover:bg-primary/30 text-primary p-0"
             aria-label="Donate"
           >
             <Heart className="h-5 w-5" fill="currentColor" />
+            {showDonatePicker && (
+              <div className="absolute -top-14 left-1/2 -translate-x-1/2 flex gap-1 bg-black/90 backdrop-blur-md border border-white/10 rounded-full p-1 shadow-2xl">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowDonatePicker(false); setDonateTarget(1); }}
+                  className="h-8 px-3 rounded-full bg-orange-500 text-white text-xs font-bold whitespace-nowrap"
+                >
+                  {barber1?.name?.split(' ')[0] || 'B1'}
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setShowDonatePicker(false); setDonateTarget(2); }}
+                  className="h-8 px-3 rounded-full bg-cyan-500 text-white text-xs font-bold whitespace-nowrap"
+                >
+                  {barber2?.name?.split(' ')[0] || 'B2'}
+                </button>
+              </div>
+            )}
           </Button>
 
           <Button
