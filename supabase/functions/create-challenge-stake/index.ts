@@ -9,7 +9,7 @@ const corsHeaders = {
 // 🔴 DEV BYPASS — set to false before going live
 const DEV_BYPASS = true;
 
-const MAX_DURATION_MINUTES = 60;
+const MAX_DURATION_MINUTES = 15;
 
 interface StakeRequest {
   title: string;

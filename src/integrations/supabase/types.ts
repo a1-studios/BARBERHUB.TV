@@ -2348,6 +2348,38 @@ export type Database = {
           },
         ]
       }
+      live_challenge_votes: {
+        Row: {
+          battle_id: string
+          created_at: string
+          id: string
+          picked_barber_id: string
+          voter_id: string
+        }
+        Insert: {
+          battle_id: string
+          created_at?: string
+          id?: string
+          picked_barber_id: string
+          voter_id: string
+        }
+        Update: {
+          battle_id?: string
+          created_at?: string
+          id?: string
+          picked_barber_id?: string
+          voter_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_challenge_votes_battle_id_fkey"
+            columns: ["battle_id"]
+            isOneToOne: false
+            referencedRelation: "battles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       m4m_fund_ledger: {
         Row: {
           amount_bb: number
