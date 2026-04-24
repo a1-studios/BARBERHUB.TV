@@ -23,8 +23,8 @@ const LobbyScene = ({ barber1, barber2, pulse = 0, isMobile, reducedMotion, loca
       dpr={isMobile ? [1, 1.5] : [1, 2]}
       gl={{ antialias: true, powerPreference: 'high-performance', alpha: false }}
       camera={{
-        position: isMobile ? [0, 5.2, 11.5] : [0, 6, 14],
-        fov: isMobile ? 55 : 45,
+        position: isMobile ? [0, 4.6, 10.5] : [0, 5.2, 12.5],
+        fov: isMobile ? 58 : 48,
         near: 0.1,
         far: 100,
       }}
