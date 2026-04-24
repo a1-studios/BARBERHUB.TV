@@ -6,6 +6,7 @@ import { fbqTrack, getFbp, getFbc } from '@/lib/metaPixel';
 import { gtagFireRegistration } from '@/lib/googleAds';
 import { readAttribution } from '@/lib/urlParams';
 import { CelebrationEffects } from '@/utils/celebrationEffects';
+import { AnimatedCounter } from '@/components/battles/AnimatedCounter';
 import type { LaunchWizardState } from './LaunchWizard';
 
 interface StepRevealProps {
