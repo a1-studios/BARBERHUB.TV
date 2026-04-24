@@ -74,8 +74,7 @@ export const StepEmail = ({ initialEmail, onContinue, onSkip }: StepEmailProps) 
 
       // Fire Lead events with shared event_id
       const eventId = await fbqTrack('Lead', {
-        signup_method: socialPicker.label,
-        user_role: role,
+        extra: { signup_method: socialPicker.label, user_role: role },
       });
       gtagFireLead(eventId);
 
