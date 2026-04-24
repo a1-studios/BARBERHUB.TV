@@ -14,7 +14,6 @@ import { GlobalLeagueDashboard } from "@/components/GlobalLeagueDashboard";
 import { LiveBarberStreams } from "@/components/battles/LiveBarberStreams";
 import { useAuth } from "@/hooks/useAuth";
 import { FEATURES } from "@/config/features";
-import { WelcomeModal } from "@/components/onboarding/WelcomeModal";
 import { ImmersiveFactionBanners } from "@/components/factions/ImmersiveFactionBanners";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -196,11 +195,8 @@ const Index = () => {
           {isFan ? (
             <FanArenaView />
           ) : (
-            <main>
-              {/* Welcome Modal for First-Time Users */}
-              <WelcomeModal />
-              
-              {/* Head-to-Head Battle Hero */}
+              <main>
+                {/* Head-to-Head Battle Hero */}
               <DynamicBattleHero />
 
               {/* Official Gear Shelf */}
