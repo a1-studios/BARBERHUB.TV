@@ -6,6 +6,7 @@ import { StepRole } from './StepRole';
 import { StepCountry } from './StepCountry';
 import { StepSpin } from './StepSpin';
 import { StepReveal } from './StepReveal';
+import { StepLiveFinalize } from './StepLiveFinalize';
 import { SegmentedProgress } from './SegmentedProgress';
 import { fbqTrack } from '@/lib/metaPixel';
 import { gtagFireLead } from '@/lib/googleAds';
@@ -14,6 +15,7 @@ import { captureAttribution, getCountryFromUrl } from '@/lib/urlParams';
 import type { Prize } from '@/components/vault/VaultSpinWheel';
 
 export type LaunchRole = 'barber' | 'fan';
+export type LaunchWizardMode = 'waitlist' | 'live';
 
 export interface LaunchWizardState {
   email: string;
