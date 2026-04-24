@@ -84,8 +84,8 @@ const BattleLobby = () => {
         return;
       }
 
-      // Safety guard #3: only live battles
-      if (battleData.status !== 'live') {
+      // Safety guard #3: only upcoming/live battles use the lobby
+      if (battleData.status !== 'live' && battleData.status !== 'upcoming') {
         navigate(`/battle/${battleId}/theater`, { replace: true });
         return;
       }
