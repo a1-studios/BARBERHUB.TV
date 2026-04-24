@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { fbqTrack, getFbp, getFbc } from '@/lib/metaPixel';
 import { gtagFireRegistration } from '@/lib/googleAds';
 import { readAttribution } from '@/lib/urlParams';
-import { triggerCelebration } from '@/utils/celebrationEffects';
+import { CelebrationEffects } from '@/utils/celebrationEffects';
 import type { LaunchWizardState } from './LaunchWizard';
 
 interface StepRevealProps {
@@ -24,7 +24,13 @@ export const StepReveal = ({ state, onClose }: StepRevealProps) => {
   useEffect(() => {
     haptic(40);
     // Confetti — best-effort, won't crash if unavailable
-    try { triggerCelebration?.('jackpot'); } catch { /* ignore */ }
+    try {
+      const fx = CelebrationEffects as Record<string, unknown>;
+      const fn = (fx.jackpot ?? fx.fireworks ?? fx.burst ?? fx.victory) as
+        | (() => void)
+        | undefined;
+      fn?.();
+    } catch { /* ignore */ }
 
     const finalize = async () => {
       const attribution = readAttribution();
