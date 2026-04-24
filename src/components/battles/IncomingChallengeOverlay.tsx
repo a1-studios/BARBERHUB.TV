@@ -61,7 +61,17 @@ export const IncomingChallengeOverlay = () => {
         .update({ read: true, dismissed_at: new Date().toISOString() })
         .eq('id', pending.notification_id);
 
-      const battleId = data?.battle_id;
+      // Resolve battle id from response, or fall back to the pending payload
+      let battleId: string | undefined = data?.battle_id || pending.battle_id || undefined;
+      if (!battleId) {
+        const { data: ch } = await supabase
+          .from('open_challenges')
+          .select('battle_id')
+          .eq('id', pending.challenge_id)
+          .maybeSingle();
+        battleId = (ch as any)?.battle_id ?? undefined;
+      }
+
       dismiss();
       if (battleId) navigate(`/battle/${battleId}/lobby?source=challenge`);
     } catch (err: any) {
@@ -77,10 +87,14 @@ export const IncomingChallengeOverlay = () => {
     setDeclining(true);
     try {
       const nowIso = new Date().toISOString();
-      await supabase
+      // open_challenges.status check constraint allows only:
+      // 'waiting_for_opponent' | 'completed' | 'expired'.
+      // Treat a decline as expired-now so cleanup + feed filters drop it instantly.
+      const { error: upErr } = await supabase
         .from('open_challenges')
-        .update({ status: 'declined', expires_at: nowIso })
+        .update({ status: 'expired', expires_at: nowIso })
         .eq('id', pending.challenge_id);
+      if (upErr) console.warn('[IncomingChallengeOverlay] decline status update failed', upErr);
 
       await supabase
         .from('notifications')
