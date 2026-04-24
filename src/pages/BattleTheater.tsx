@@ -378,18 +378,19 @@ export default function BattleTheater() {
           </Button>
 
           <Button
-            onClick={() => handleVote(barber2?.id, battle.creation2_id || '')}
-            disabled={!!userVote}
+            onClick={() => handleLiveChallengeVote(barber2?.id)}
+            disabled={!!userVote || !barber2?.id}
             size="sm"
             className={`h-10 px-4 rounded-full font-bold text-white transition-all ${
-              userVote === battle.creation2_id
+              userVote === barber2?.id
                 ? 'bg-cyan-500 ring-2 ring-cyan-300'
                 : userVote
                 ? 'bg-white/10 opacity-50'
                 : 'bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700'
             }`}
+            title="Pot vote (live only)"
           >
-            {userVote === battle.creation2_id ? '✓' : 'Vote'} {barber2?.name?.split(' ')[0] || 'B2'}
+            {userVote === barber2?.id ? '✓' : 'Vote'} {barber2?.name?.split(' ')[0] || 'B2'}
           </Button>
         </div>
 
