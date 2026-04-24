@@ -35,6 +35,9 @@ export const StepReveal = ({ state, onClose }: StepRevealProps) => {
       fn?.();
     } catch { /* ignore */ }
 
+    // Delayed +N BB counter tick for dopamine timing
+    const tickTimer = prizeBb > 0 ? setTimeout(() => setCounterValue(prizeBb), 900) : null;
+
     const finalize = async () => {
       const attribution = readAttribution();
       try {
