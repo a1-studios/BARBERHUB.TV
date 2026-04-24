@@ -93,17 +93,17 @@ const BattleLobby = () => {
       setBattle(battleData as BattleRow);
       setLivePrizeBB(battleData.prize_amount || 0);
 
-      // Load both barbers
+      // Load both barbers — battle.barber{1,2}_id are barber_profiles.id (NOT user_id)
       const ids = [battleData.barber1_id, battleData.barber2_id].filter(Boolean) as string[];
       if (ids.length === 2) {
         const { data: barbers } = await supabase
           .from('barber_profiles')
           .select('id, user_id, name, country_code')
-          .in('user_id', ids);
+          .in('id', ids);
 
         if (barbers && !cancelled) {
-          const findFor = (uid: string): BarberInfo | null => {
-            const b = barbers.find((x) => x.user_id === uid);
+          const findFor = (profileId: string): BarberInfo | null => {
+            const b = barbers.find((x) => x.id === profileId);
             if (!b) return null;
             return {
               userId: b.user_id,
@@ -123,13 +123,14 @@ const BattleLobby = () => {
     return () => { cancelled = true; };
   }, [battleId, navigate]);
 
-  // Determine local user's role on this battle
+  // Determine local user's role on this battle (compare auth.uid() to the
+  // barber profiles' user_id — battle.barber{1,2}_id are profile IDs, not user IDs)
   const localPosition: 1 | 2 | null = useMemo(() => {
-    if (!user || !battle) return null;
-    if (battle.barber1_id === user.id) return 1;
-    if (battle.barber2_id === user.id) return 2;
+    if (!user) return null;
+    if (b1?.userId === user.id) return 1;
+    if (b2?.userId === user.id) return 2;
     return null;
-  }, [user, battle]);
+  }, [user, b1, b2]);
   const isContender = localPosition !== null;
   const localBarber = localPosition === 1 ? b1 : localPosition === 2 ? b2 : null;
 
