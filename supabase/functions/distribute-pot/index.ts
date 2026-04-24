@@ -249,6 +249,12 @@ serve(async (req) => {
       });
     }
 
+    // Quick Play challenges: wipe ephemeral pot votes — they served their purpose.
+    if (battle_id && match_mode === 'quick_play') {
+      await supabase.from('live_challenge_votes').delete().eq('battle_id', battle_id);
+      await supabase.from('battles').update({ status: 'completed', winner_id: winner_id || null }).eq('id', battle_id);
+    }
+
     console.log(`[DISTRIBUTE-POT] Done: pot=${potTotal}, prize_pool=${prizePoolAmount}, platform=${platformFee}, m4m=${m4mFee}, winner=${winnerPayout}, loser=${loserPayout}, draw=${is_draw}`);
 
     return new Response(
