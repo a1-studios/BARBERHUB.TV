@@ -1,171 +1,125 @@
 project_id = "msuepyfssovvkjzpfjzu"
 
 [api]
-enabled = true
-port = 54321
-schemas = ["public", "storage", "graphql_public"]
-extra_search_path = ["public", "extensions"]
-max_rows = 1000
+  enabled = true
+  extra_search_path = ["public", "extensions"]
+  max_rows = 1000
+  port = 54321
+  schemas = ["public", "storage", "graphql_public"]
 
 [auth]
-enabled = true
-port = 54324
-site_url = "https://lovable.app"
-additional_redirect_urls = ["https://lovable.app"]
-jwt_expiry = 3600
+  additional_redirect_urls = ["https://lovable.app"]
+  enabled = true
+  jwt_expiry = 3600
+  port = 54324
+  site_url = "https://lovable.app"
 
 [db]
-enabled = true
-port = 54322
-shadow_port = 54320
-major_version = 15
+  enabled = true
+  major_version = 15
+  port = 54322
+  shadow_port = 54320
 
-[functions.analyze-haircut]
-verify_jwt = false
-
-[functions.submit-review]
-verify_jwt = false
-
-[functions.auto-close-voting]
-verify_jwt = false
-
-[functions.check-battle-submissions]
-verify_jwt = false
-
-[functions.battle-reminders]
-verify_jwt = false
-
-[functions.subscription-expiry]
-verify_jwt = false
-
-[functions.strike-enforcement]
-verify_jwt = false
-
-[functions.close-voting]
-verify_jwt = true
-
-[functions.complete-match]
-verify_jwt = true
-
-[functions.complete-open-challenge]
-verify_jwt = true
-
-[functions.create-battle-entry]
-verify_jwt = true
-
-[functions.create-donation]
-verify_jwt = true
-
-[functions.generate-livekit-token]
-verify_jwt = false
-
-[functions.get-livekit-viewer-token]
-verify_jwt = false
-
-[functions.process-bb-donation]
-verify_jwt = true
-
-[functions.schedule-tournament-match]
-verify_jwt = true
-
-[functions.set-featured-video]
-verify_jwt = true
-
-[functions.start-live-stream]
-verify_jwt = true
-
-[functions.submit-battle-video]
-verify_jwt = true
-
-[functions.sync-battle-viewers]
-verify_jwt = false
-
-[functions.tournament-matchmaker]
-verify_jwt = false
-
-[functions.update-stream-status]
-verify_jwt = true
-
-[functions.verify-tournament-payment]
-verify_jwt = false
-
-[functions.cleanup-community-notes]
-verify_jwt = false
-
-[functions.register-tournament-bb]
-verify_jwt = true
-
-[functions.create-challenge-stake]
-verify_jwt = true
-
-[functions.match-challenge-stake]
-verify_jwt = true
-
-[functions.distribute-pot]
-verify_jwt = true
-
-[functions.purchase-product-bb]
-verify_jwt = true
-
-[functions.donate-to-battle]
-verify_jwt = true
-
-[functions.purchase-barber-bucks]
-verify_jwt = false
-
-[functions.get-r2-presigned-url]
-verify_jwt = false
-
-[functions.sovereign-economy-control]
-verify_jwt = false
-
-[functions.sovereign-battle-control]
-verify_jwt = false
-
-[functions.sovereign-user-control]
-verify_jwt = false
-
-[functions.sovereign-system-control]
-verify_jwt = false
-
-[functions.subscribe-with-bb]
-verify_jwt = false
-
-[functions.verify-bb-purchase]
-verify_jwt = false
-
-[functions.purchase-sponsor-slot]
-verify_jwt = false
-
-[functions.delete-account]
-verify_jwt = false
-
-[functions.cleanup-expired-challenges]
-verify_jwt = false
-
-[functions.post-bounty]
-verify_jwt = false
-
-[functions.claim-bounty]
-verify_jwt = false
-
-[functions.book-appointment]
-verify_jwt = false
-
-[functions.manage-appointment]
-verify_jwt = false
-
-[functions.spin-wheel]
-verify_jwt = false
-
-[functions.start-battle-egress]
-verify_jwt = false
-
-[functions.livekit-egress-webhook]
-verify_jwt = false
-
-[functions.meta-capi-track]
-verify_jwt = false
-
-[functions.check-gate-eligibility]
-verify_jwt = false
+[functions]
+  [functions.analyze-haircut]
+    verify_jwt = false
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.auto-close-voting]
+    verify_jwt = false
+  [functions.battle-reminders]
+    verify_jwt = false
+  [functions.book-appointment]
+    verify_jwt = false
+  [functions.check-battle-submissions]
+    verify_jwt = false
+  [functions.check-gate-eligibility]
+    verify_jwt = false
+  [functions.claim-bounty]
+    verify_jwt = false
+  [functions.cleanup-community-notes]
+    verify_jwt = false
+  [functions.cleanup-expired-challenges]
+    verify_jwt = false
+  [functions.close-voting]
+    verify_jwt = true
+  [functions.complete-match]
+    verify_jwt = true
+  [functions.complete-open-challenge]
+    verify_jwt = true
+  [functions.create-battle-entry]
+    verify_jwt = true
+  [functions.create-challenge-stake]
+    verify_jwt = true
+  [functions.create-donation]
+    verify_jwt = true
+  [functions.delete-account]
+    verify_jwt = false
+  [functions.distribute-pot]
+    verify_jwt = true
+  [functions.donate-to-battle]
+    verify_jwt = true
+  [functions.generate-livekit-token]
+    verify_jwt = false
+  [functions.get-livekit-viewer-token]
+    verify_jwt = false
+  [functions.get-r2-presigned-url]
+    verify_jwt = false
+  [functions.livekit-egress-webhook]
+    verify_jwt = false
+  [functions.manage-appointment]
+    verify_jwt = false
+  [functions.match-challenge-stake]
+    verify_jwt = true
+  [functions.meta-capi-track]
+    verify_jwt = false
+  [functions.post-bounty]
+    verify_jwt = false
+  [functions.process-bb-donation]
+    verify_jwt = true
+  [functions.purchase-barber-bucks]
+    verify_jwt = false
+  [functions.purchase-product-bb]
+    verify_jwt = true
+  [functions.purchase-sponsor-slot]
+    verify_jwt = false
+  [functions.register-tournament-bb]
+    verify_jwt = true
+  [functions.schedule-tournament-match]
+    verify_jwt = true
+  [functions.set-featured-video]
+    verify_jwt = true
+  [functions.sovereign-battle-control]
+    verify_jwt = false
+  [functions.sovereign-economy-control]
+    verify_jwt = false
+  [functions.sovereign-system-control]
+    verify_jwt = false
+  [functions.sovereign-user-control]
+    verify_jwt = false
+  [functions.spin-wheel]
+    verify_jwt = false
+  [functions.start-battle-egress]
+    verify_jwt = false
+  [functions.start-live-stream]
+    verify_jwt = true
+  [functions.strike-enforcement]
+    verify_jwt = false
+  [functions.submit-battle-video]
+    verify_jwt = true
+  [functions.submit-review]
+    verify_jwt = false
+  [functions.subscribe-with-bb]
+    verify_jwt = false
+  [functions.subscription-expiry]
+    verify_jwt = false
+  [functions.sync-battle-viewers]
+    verify_jwt = false
+  [functions.tournament-matchmaker]
+    verify_jwt = false
+  [functions.update-stream-status]
+    verify_jwt = true
+  [functions.verify-bb-purchase]
+    verify_jwt = false
+  [functions.verify-tournament-payment]
+    verify_jwt = false
