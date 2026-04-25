@@ -218,13 +218,13 @@ export const StepLiveFinalize = ({ state, onClose }: StepLiveFinalizeProps) => {
 
       <div className="space-y-1.5">
         <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight bg-gradient-to-r from-amber-300 via-orange-500 to-orange-600 bg-clip-text text-transparent">
-          {done ? 'Welcome to the Arena!' : 'Claim your prize'}
+          {done ? 'Welcome to the Arena!' : 'Finish to claim'}
         </h2>
         <p className="text-xs text-white/65">
           {done ? (
             <>Check <span className="font-mono font-bold text-orange-400">{state.email}</span> to verify.</>
           ) : (
-            <>Set a password to lock in <span className="text-orange-400 font-semibold">{prize?.label ?? 'your prize'}</span></>
+            <>Set a password to unlock <span className="text-orange-400 font-semibold">{prize?.label ?? 'your prize'}</span></>
           )}
         </p>
       </div>
