@@ -166,3 +166,6 @@ verify_jwt = false
 
 [functions.meta-capi-track]
 verify_jwt = false
+
+[functions.check-gate-eligibility]
+verify_jwt = false
