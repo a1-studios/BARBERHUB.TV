@@ -1,63 +1,57 @@
-## Plan
+## Problem
 
-1. Stop the gate from rendering for authenticated users
-- Update the home page gate logic in `src/pages/Index.tsx` so the Launch Wizard only mounts for guests.
-- Make the initial `showSpinWheel` state and render conditions depend on auth state, not just `localStorage`/`sessionStorage`.
-- Preserve the current OAuth resume flow, but only for genuine sign-up roundtrips.
+The promotion gate (Launch Wizard) currently forces users through `Email → Role → Country → Spin → Claim`. Users are tapping Barber/Fan and immediately landing on the Country step, which feels like the role choice was ignored and the promised "spin to win" never appears before they bail. The reward is deferred far behind the moment of commitment, so users abandon before the dopamine hit.
 
-2. Replace the current browser-only "seen" check with a first-visitor eligibility check
-- Add a small backend-backed eligibility check so the gate is shown only to a first-time guest visitor instead of every browser that lacks `gate_completed`.
-- Use the existing visitor fingerprint pattern (`getDeviceFingerprint`) and add an IP-aware first-seen record so the app can suppress the gate for returning visitors from the same IP/network.
-- Keep local/session storage as a fast client cache, but make the server-side first-visit decision the source of truth.
+The desired flow: as soon as we have *verifiable* signal (email + role choice), spin the wheel immediately. Then require the user to finish their profile (country + password) to actually claim the prize.
 
-3. Add a lightweight visitor tracking table or RPC in Supabase
-- Create a migration for a dedicated public table such as `promotion_gate_visitors` (or equivalent) with fields like fingerprint, first_seen_ip_hash / ip marker, first_seen_at, last_seen_at, and `gate_completed`.
-- Add RLS or a `SECURITY DEFINER` RPC so the client can:
-  - check whether the current visitor is new
-  - mark the visitor as seen when the gate is shown/skipped/completed
-- Keep role data separate from profiles/users and avoid storing secrets client-side.
+## New Step Order
 
-4. Add an Edge Function or RPC for IP-aware eligibility
-- Implement a minimal server-side endpoint that reads the request IP from headers, hashes or normalizes it safely, and decides whether this is a new visitor.
-- Return a simple shape such as:
 ```text
-{ shouldShowGate: boolean, reason: 'new_visitor' | 'seen_before' | 'signed_in_user' }
+1. Email          (verifiable contact)
+2. Role           (Barber / Fan)
+3. SPIN WHEEL     ← reward shown immediately after role pick
+4. Country        ← profile completion gate (required to claim)
+5. Claim & Sign Up (password) — prize unlocks on signup
 ```
-- Use this from `Index.tsx` before opening the Launch Wizard.
 
-5. Wire completion and skip paths into the new eligibility system
-- Update `markGateCompleted()` / gate-close handling so completion is stored both locally and server-side.
-- Ensure Skip also records the visitor as already prompted, so the gate does not reappear for the same IP/fingerprint on refresh.
-- Keep existing prize-claim and OAuth resume behavior intact.
+## Changes
 
-6. Validate the full flow
-- Test these cases:
-  - signed-in existing user: gate never appears
-  - brand-new guest visitor: gate appears once
-  - same guest after refresh: gate does not reappear
-  - guest who signs up through the wizard: no repeat gate after auth
-  - OAuth resume: wizard resumes correctly only during that flow
+### `src/components/coming-soon/LaunchWizard.tsx`
+- Swap the render order in the `AnimatePresence` block: Step 3 becomes `StepSpin`, Step 4 becomes `StepCountry`. Step 5 (`StepLiveFinalize` / `StepReveal`) stays as the final claim screen.
+- Update the `prefilledRole` resume effect: when resuming after social OAuth with a pre-chosen role, jump to step 3 (Spin) instead of the old step 4.
+- Country step `onContinue` advances to the claim step. Country step is now **not skippable** in `live` mode — remove the Skip button on country (or have Skip also call onClose) so users must select a country before they can claim.
+- Pass a prop to `StepSpin` so its "Skip" button is disabled / hidden once the wheel has been spun (prize must not be abandoned mid-flow without claim).
 
-## Technical details
-- Root cause in the current code: `src/pages/Index.tsx` initializes and renders `showSpinWheel` without checking `user`, so authenticated users can still get the overlay if local flags are absent.
-- Current persistence is browser-only (`gate_completed`, `spin_wheel_shown`), which cannot satisfy a true "new user IP only" rule.
-- The clean fix is:
-```text
-guest auth check
-  -> server eligibility check (fingerprint + IP-aware first seen)
-    -> show gate once
-    -> persist seen/completed state server-side + local cache
-```
-- I will reuse existing patterns already in the project:
-  - `getDeviceFingerprint()` from `src/utils/deviceFingerprint.ts`
-  - gate completion helpers in `src/components/promotion-gate/useGateState.ts`
-  - Supabase-backed marketing/visitor tracking patterns already present in the codebase
+### `src/components/coming-soon/StepCountry.tsx`
+- Add a `requireSelection` mode (used in `live` flow). When true, the Continue button stays disabled until a country is chosen and the Skip control is hidden. Add a small banner: "Select your country to claim your prize."
 
-## Files likely involved
+### `src/components/coming-soon/StepSpin.tsx`
+- After the wheel resolves, replace the auto-advance with a clear CTA: **"Continue to claim →"** that advances to the Country step. This makes the user feel they earned the prize and now must finish to keep it.
+- Hide the "Skip" button after a prize has been revealed (passing a `prizeRevealed` flag locally based on `onResult` having fired).
+- Add a small "Locked until you finish your profile" pill under the prize amount so the user understands why they still need to continue.
+
+### `src/components/coming-soon/StepLiveFinalize.tsx`
+- No structural change to signup logic, but tighten the copy: "Finish your profile to unlock <prize.label>" so the link between *finishing* and *claiming* is explicit.
+- The existing `pending_spin_prize` localStorage handoff + the `Index.tsx` auto-claim effect already gates BB credit on successful signup, so the "must finish to collect" guarantee is preserved server-side.
+
+### `src/pages/Index.tsx`
+- Update the OAuth-resume branch: `startStep={3}` instead of `startStep={4}` (Spin is now step 3).
+- No other logic changes — the eligibility check, fingerprint tracking, and `gate_completed` flag continue to work as-is.
+
+### `src/components/coming-soon/StepRole.tsx`
+- Reduce the 280ms pulse-then-advance delay to ~180ms and add a stronger orange bloom + "Locked in" micro-label so the role pick reads as confirmed before the spin appears (this addresses the "it skipped my selection" perception).
+
+## What this does not change
+
+- The fingerprint + IP server-side eligibility check stays in place — gate still only shows for first-time guest visitors.
+- Authenticated users still never see the wizard.
+- The `pending_spin_prize` recovery path on `Index.tsx` continues to credit BB on signup, so the "finish profile to collect" guarantee is enforced even if the user closes the modal between Spin and Claim — they only get credit once an authenticated session exists.
+
+## Files touched
+
+- `src/components/coming-soon/LaunchWizard.tsx`
+- `src/components/coming-soon/StepRole.tsx`
+- `src/components/coming-soon/StepSpin.tsx`
+- `src/components/coming-soon/StepCountry.tsx`
+- `src/components/coming-soon/StepLiveFinalize.tsx`
 - `src/pages/Index.tsx`
-- `src/components/promotion-gate/useGateState.ts`
-- `src/utils/deviceFingerprint.ts`
-- new Supabase migration in `supabase/migrations/`
-- new or updated Supabase function/RPC for gate eligibility
-
-If you approve this plan, I’ll implement it.

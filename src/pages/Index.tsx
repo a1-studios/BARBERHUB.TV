@@ -306,11 +306,11 @@ const Index = () => {
         <LaunchWizard mode="live" onClose={handleSpinClose} />
       )}
 
-      {/* Post-OAuth resume — wizard re-opens at Spin step with the role chosen pre-redirect */}
+      {/* Post-OAuth resume — wizard re-opens at Spin step (now step 3) with the role chosen pre-redirect */}
       {resumeSpin && (
         <LaunchWizard
           mode="live"
-          startStep={4}
+          startStep={3}
           prefilledRole={resumeSpin.role}
           onClose={handleSpinClose}
         />

@@ -125,10 +125,10 @@ export const LaunchWizard = ({
     setStep((s) => Math.max(s - 1, firstStep));
   };
 
-  // If prefilledRole was provided (post-OAuth resume) and we're at the role step, jump to spin.
+  // If prefilledRole was provided (post-OAuth resume) and we're at the role step, jump to spin (now step 3).
   useEffect(() => {
-    if (prefilledRole && step < 4) {
-      setStep(4);
+    if (prefilledRole && step < 3) {
+      setStep(3);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -261,19 +261,9 @@ export const LaunchWizard = ({
                   hideBack={firstStep >= 2}
                 />
               )}
-              {step === 3 && (
-                <StepCountry
-                  key="step-3"
-                  value={state.country}
-                  onChange={(country) => update({ country })}
-                  onContinue={goNext}
-                  onBack={goBack}
-                  onSkip={onClose}
-                />
-              )}
-              {step === 4 && state.role && (
+              {step === 3 && state.role && (
                 <StepSpin
-                  key="step-4"
+                  key="step-3"
                   role={state.role}
                   email={state.email}
                   onResult={(prize) => {
@@ -282,6 +272,18 @@ export const LaunchWizard = ({
                   }}
                   onBack={goBack}
                   onSkip={onClose}
+                />
+              )}
+              {step === 4 && (
+                <StepCountry
+                  key="step-4"
+                  value={state.country}
+                  onChange={(country) => update({ country })}
+                  onContinue={goNext}
+                  onBack={goBack}
+                  onSkip={onClose}
+                  requireSelection={mode === 'live'}
+                  prizeLabel={state.prize?.label ?? null}
                 />
               )}
               {step === 5 && (
