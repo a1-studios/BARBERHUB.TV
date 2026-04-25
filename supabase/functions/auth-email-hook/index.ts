@@ -17,12 +17,12 @@ const corsHeaders = {
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirm your email',
-  invite: "You've been invited",
-  magiclink: 'Your login link',
-  recovery: 'Reset your password',
-  email_change: 'Confirm your new email',
-  reauthentication: 'Your verification code',
+  signup: 'Confirm your spot in the Arena 🏆',
+  invite: "You've been invited to BarberHub",
+  magiclink: 'Your BarberHub login link',
+  recovery: 'Reset your BarberHub password',
+  email_change: 'Confirm your new BarberHub email',
+  reauthentication: 'Your BarberHub verification code',
 }
 
 // Template mapping
@@ -36,7 +36,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "barber-boost-blaze"
+const SITE_NAME = "BarberHub"
 const SENDER_DOMAIN = "notify.barberhub.tv"
 const ROOT_DOMAIN = "barberhub.tv"
 const FROM_DOMAIN = "barberhub.tv" // Domain shown in From address (may be root or sender subdomain)
