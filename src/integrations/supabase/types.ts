@@ -3145,6 +3145,48 @@ export type Database = {
           },
         ]
       }
+      promotion_gate_visitors: {
+        Row: {
+          completed: boolean
+          created_at: string
+          fingerprint: string
+          first_seen_at: string
+          id: string
+          ip_hash: string | null
+          last_seen_at: string
+          shown_count: number
+          skipped: boolean
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          fingerprint: string
+          first_seen_at?: string
+          id?: string
+          ip_hash?: string | null
+          last_seen_at?: string
+          shown_count?: number
+          skipped?: boolean
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          fingerprint?: string
+          first_seen_at?: string
+          id?: string
+          ip_hash?: string | null
+          last_seen_at?: string
+          shown_count?: number
+          skipped?: boolean
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       referral_tracking: {
         Row: {
           bonus_earned: number | null
