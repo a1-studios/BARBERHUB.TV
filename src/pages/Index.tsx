@@ -23,7 +23,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { FanIntroSequence } from "@/components/fan/FanIntroSequence";
 import { FanArenaView } from "@/components/fan/FanArenaView";
-import { ArenaGateModal } from "@/components/auth/ArenaGateModal";
+
 import { ProductShelf } from "@/components/ProductShelf";
 
 const Index = () => {
