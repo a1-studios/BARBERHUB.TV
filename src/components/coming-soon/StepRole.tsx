@@ -137,6 +137,11 @@ const RoleCard = ({
     <div className="text-center">
       <div className="font-black uppercase tracking-wide text-white text-base">{title}</div>
       <div className="text-[11px] text-white/55 mt-0.5">{desc}</div>
+      {pulsing && (
+        <div className="text-[10px] uppercase tracking-[0.18em] font-bold text-orange-300 mt-1.5 animate-pulse">
+          Locked in
+        </div>
+      )}
     </div>
   </motion.button>
 );
