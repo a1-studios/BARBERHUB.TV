@@ -63,6 +63,15 @@ export const isGateCompleted = (): boolean =>
 export const markGateCompleted = (): void => {
   localStorage.setItem(COMPLETED_KEY, '1');
   localStorage.removeItem(STORAGE_KEY);
+  // Best-effort server-side record so the same fingerprint/IP doesn't see the gate again.
+  try {
+    const fingerprint = getDeviceFingerprint();
+    void supabase.functions.invoke('check-gate-eligibility', {
+      body: { action: 'mark_completed', fingerprint },
+    });
+  } catch {
+    /* ignore */
+  }
 };
 
 export function useGateState() {
