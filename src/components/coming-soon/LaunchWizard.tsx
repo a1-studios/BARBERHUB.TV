@@ -125,10 +125,10 @@ export const LaunchWizard = ({
     setStep((s) => Math.max(s - 1, firstStep));
   };
 
-  // If prefilledRole was provided (post-OAuth resume) and we're at the role step, jump to spin.
+  // If prefilledRole was provided (post-OAuth resume) and we're at the role step, jump to spin (now step 3).
   useEffect(() => {
-    if (prefilledRole && step < 4) {
-      setStep(4);
+    if (prefilledRole && step < 3) {
+      setStep(3);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
