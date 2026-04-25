@@ -97,7 +97,6 @@ const Index = () => {
 
   const handleSpinClose = async () => {
     setShowSpinWheel(false);
-    setResumeSpin(null);
     sessionStorage.setItem('spin_wheel_shown', 'true');
     try {
       const { getDeviceFingerprint } = await import('@/utils/deviceFingerprint');
@@ -172,8 +171,9 @@ const Index = () => {
     }
 
     // 2. Auto-claim pending spin prize from guest session
+    // 2. Auto-claim pending spin prize from guest session
     try {
-      const spinRaw = localStorage.getItem('pending_spin_prize');
+      const spinRaw = localStorage.getItem('pending_prize');
       if (spinRaw) {
         const pending = JSON.parse(spinRaw);
         const ageMs = Date.now() - (pending.timestamp || 0);
@@ -182,9 +182,9 @@ const Index = () => {
         const userActualRole = isFan ? 'fan' : 'barber';
         if (pending.role && pending.role !== userActualRole) {
           console.log('[Spin Recovery] Role mismatch: prize for', pending.role, 'but user is', userActualRole);
-          localStorage.removeItem('pending_spin_prize');
+          localStorage.removeItem('pending_prize');
         } else if (ageMs > 24 * 60 * 60 * 1000) {
-          localStorage.removeItem('pending_spin_prize');
+          localStorage.removeItem('pending_prize');
         } else {
           supabase.functions.invoke('spin-wheel', {
             body: {
@@ -198,22 +198,22 @@ const Index = () => {
             },
           }).then(({ data, error }) => {
             if (!error && data?.success) {
-              localStorage.removeItem('pending_spin_prize');
+              localStorage.removeItem('pending_prize');
               queryClient.invalidateQueries({ queryKey: ['barber_bucks'] });
               queryClient.invalidateQueries({ queryKey: ['barber_bucks_transactions'] });
               queryClient.invalidateQueries({ queryKey: ['user_prizes'] });
               toast.success(`🎰 Your spin prize was claimed: ${pending.prize_label}!`);
             } else if (data?.already_claimed) {
-              localStorage.removeItem('pending_spin_prize');
+              localStorage.removeItem('pending_prize');
             } else {
               console.log('[Spin Recovery] Claim unsuccessful:', data?.error || error);
-              localStorage.removeItem('pending_spin_prize');
+              localStorage.removeItem('pending_prize');
             }
           });
         }
       }
     } catch {
-      localStorage.removeItem('pending_spin_prize');
+      localStorage.removeItem('pending_prize');
     }
   }, [user, loading]);
 
@@ -279,38 +279,17 @@ const Index = () => {
         </>
       ) : (
         <>
-          <LandingHero onOpenArenaGate={() => setShowArenaGate(true)} />
+          <LandingHero onStartSignup={() => setShowSpinWheel(true)} />
         </>
       )}
       
       <Footer />
       {user && <BottomNavBar />}
 
-      {/* Gamified intake wizard — replaces legacy SpinWheelOverlay.
-          Only ever rendered for guests (extra defensive check on top of the eligibility effect). */}
-      {!user && showSpinWheel && !resumeSpin && (
-        <LaunchWizard mode="live" onClose={handleSpinClose} />
+      {/* Unified gamified onboarding gate — only ever rendered for guests. */}
+      {!user && showSpinWheel && (
+        <LaunchWizard onClose={handleSpinClose} />
       )}
-
-      {/* Post-OAuth resume — wizard re-opens at Spin step (now step 3) with the role chosen pre-redirect */}
-      {resumeSpin && (
-        <LaunchWizard
-          mode="live"
-          startStep={3}
-          prefilledRole={resumeSpin.role}
-          onClose={handleSpinClose}
-        />
-      )}
-
-      {/* Arena Gate Modal — rendered outside auth conditional so it persists */}
-      <ArenaGateModal
-        isOpen={showArenaGate}
-        onClose={() => setShowArenaGate(false)}
-        onComplete={() => {
-          setShowArenaGate(false);
-          navigate('/profile');
-        }}
-      />
     </div>
   );
 };
