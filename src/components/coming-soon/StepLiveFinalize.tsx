@@ -58,23 +58,8 @@ export const StepLiveFinalize = ({ state, onClose }: StepLiveFinalizeProps) => {
     haptic(15);
 
     try {
-      // Persist prize for auto-claim post-signup (Index.tsx recovery effect)
-      try {
-        localStorage.setItem(
-          'pending_spin_prize',
-          JSON.stringify({
-            email: state.email,
-            role: state.role,
-            prize_id: prize?.id,
-            prize_label: prize?.label,
-            prize_bb: prize?.bb_value ?? 0,
-            prize_type: prize?.prize_type ?? 'bb',
-            duration_months: prize?.duration_months ?? 0,
-            timestamp: Date.now(),
-          })
-        );
-      } catch { /* ignore quota */ }
-
+      // pending_prize key already written by LaunchWizard at the end of StepIntake.
+      // Index.tsx claim effect picks it up after auth state change.
       const { error: signUpError } = await supabase.auth.signUp({
         email: state.email,
         password,
@@ -82,7 +67,7 @@ export const StepLiveFinalize = ({ state, onClose }: StepLiveFinalizeProps) => {
           emailRedirectTo: `${window.location.origin}/`,
           data: {
             user_type: state.role ?? 'fan',
-            display_name: state.email.split('@')[0],
+            display_name: state.username || state.email.split('@')[0],
             country_code: state.country ?? null,
           },
         },
