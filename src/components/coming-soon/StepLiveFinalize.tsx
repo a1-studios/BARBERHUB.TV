@@ -158,7 +158,7 @@ export const StepLiveFinalize = ({ state, onClose }: StepLiveFinalizeProps) => {
           initial={{ scale: 0, rotateY: 720, y: 80 }}
           animate={{ scale: [0, 1.25, 1], rotateY: 0, y: 0 }}
           transition={{
-            scale: { duration: 0.7, times: [0, 0.7, 1], type: 'spring', stiffness: 180, damping: 12 },
+            scale: { duration: 0.7, times: [0, 0.7, 1], ease: [0.34, 1.56, 0.64, 1] },
             rotateY: { duration: 0.7, ease: 'easeOut' },
             y: { duration: 0.7, ease: 'easeOut' },
           }}
