@@ -40,12 +40,10 @@ const Index = () => {
     sessionStorage.getItem('fan_intro_seen') === 'true'
   );
 
-  // Show promotion gate to guests until permanently completed
-  const [showSpinWheel, setShowSpinWheel] = useState(() => {
-    if (localStorage.getItem('gate_completed') === '1') return false;
-    if (sessionStorage.getItem('spin_wheel_shown') === 'true') return false;
-    return true;
-  });
+  // Promotion gate visibility — only ever shown to first-time guest visitors.
+  // The server-side eligibility check below makes the actual decision; the
+  // localStorage flag here just suppresses a one-frame flash for repeat visitors.
+  const [showSpinWheel, setShowSpinWheel] = useState(false);
 
   // Detect OAuth resume → re-mount wizard at Spin step with the role chosen pre-redirect
   const [resumeSpin, setResumeSpin] = useState<{ role: 'barber' | 'fan' } | null>(null);
@@ -59,10 +57,72 @@ const Index = () => {
     }
   }, [user, loading]);
 
-  const handleSpinClose = () => {
+  // Server-backed eligibility check — only show the gate when:
+  //  1) Auth has finished loading
+  //  2) The visitor is NOT signed in
+  //  3) The visitor has not been seen on this fingerprint or IP before
+  useEffect(() => {
+    if (loading) return;
+
+    // Signed-in users never see the gate.
+    if (user) {
+      setShowSpinWheel(false);
+      return;
+    }
+
+    // Already shown this session → don't reopen on tab focus / route changes
+    if (sessionStorage.getItem('spin_wheel_shown') === 'true') return;
+    if (localStorage.getItem('gate_completed') === '1') return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const { getDeviceFingerprint } = await import('@/utils/deviceFingerprint');
+        const fingerprint = getDeviceFingerprint();
+
+        const { data, error } = await supabase.functions.invoke('check-gate-eligibility', {
+          body: { action: 'check', fingerprint },
+        });
+
+        if (cancelled) return;
+        if (error) {
+          console.warn('[gate] eligibility check failed', error);
+          return;
+        }
+
+        if (data?.shouldShowGate) {
+          setShowSpinWheel(true);
+          sessionStorage.setItem('spin_wheel_shown', 'true');
+          // Fire-and-forget: record that we showed the gate
+          supabase.functions.invoke('check-gate-eligibility', {
+            body: { action: 'mark_shown', fingerprint },
+          }).catch(() => { /* ignore */ });
+        } else {
+          // Cache the answer locally so we don't re-call the function on every load
+          localStorage.setItem('gate_completed', '1');
+        }
+      } catch (err) {
+        console.warn('[gate] eligibility check threw', err);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [user, loading]);
+
+  const handleSpinClose = async () => {
     setShowSpinWheel(false);
     setResumeSpin(null);
     sessionStorage.setItem('spin_wheel_shown', 'true');
+    try {
+      const { getDeviceFingerprint } = await import('@/utils/deviceFingerprint');
+      const fingerprint = getDeviceFingerprint();
+      await supabase.functions.invoke('check-gate-eligibility', {
+        body: { action: 'mark_skipped', fingerprint },
+      });
+      localStorage.setItem('gate_completed', '1');
+    } catch {
+      /* best-effort */
+    }
   };
 
   // Welcome-back toast for returning authenticated users (once per session)
