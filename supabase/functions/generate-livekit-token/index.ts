@@ -223,7 +223,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error("Token generation error:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Failed to generate token" }),
+      JSON.stringify({ error: (error as Error).message || "Failed to generate token" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

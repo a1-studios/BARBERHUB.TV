@@ -303,7 +303,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         error: 'An error occurred while submitting your video',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        details: error instanceof Error ? (error as Error).message : 'Unknown error',
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
