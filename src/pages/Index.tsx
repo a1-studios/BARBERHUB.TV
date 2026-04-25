@@ -300,8 +300,9 @@ const Index = () => {
       <Footer />
       {user && <BottomNavBar />}
 
-      {/* Gamified intake wizard — replaces legacy SpinWheelOverlay */}
-      {showSpinWheel && !resumeSpin && (
+      {/* Gamified intake wizard — replaces legacy SpinWheelOverlay.
+          Only ever rendered for guests (extra defensive check on top of the eligibility effect). */}
+      {!user && showSpinWheel && !resumeSpin && (
         <LaunchWizard mode="live" onClose={handleSpinClose} />
       )}
 
