@@ -82,7 +82,7 @@ export const StepIntake = ({ initial, prizeLabel, onContinue, onBack }: StepInta
     }
 
     setSubmitting(false);
-    onContinue(values);
+    onContinue(values as IntakeValues);
   };
 
   return (
