@@ -25,8 +25,9 @@ export const StepRole = ({ value, onSelect, onBack, onSkip, hideBack = false }: 
   const handlePick = (role: LaunchRole) => {
     haptic();
     setPending(role);
-    // 250ms scale-pulse + bloom before advancing
-    setTimeout(() => onSelect(role), 280);
+    // 180ms scale-pulse + bloom before advancing — quick enough to feel responsive,
+    // long enough that the user sees their pick "lock in" before the spin appears.
+    setTimeout(() => onSelect(role), 180);
   };
 
   return (
