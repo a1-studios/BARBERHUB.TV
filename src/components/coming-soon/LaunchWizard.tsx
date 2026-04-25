@@ -261,19 +261,9 @@ export const LaunchWizard = ({
                   hideBack={firstStep >= 2}
                 />
               )}
-              {step === 3 && (
-                <StepCountry
-                  key="step-3"
-                  value={state.country}
-                  onChange={(country) => update({ country })}
-                  onContinue={goNext}
-                  onBack={goBack}
-                  onSkip={onClose}
-                />
-              )}
-              {step === 4 && state.role && (
+              {step === 3 && state.role && (
                 <StepSpin
-                  key="step-4"
+                  key="step-3"
                   role={state.role}
                   email={state.email}
                   onResult={(prize) => {
@@ -282,6 +272,18 @@ export const LaunchWizard = ({
                   }}
                   onBack={goBack}
                   onSkip={onClose}
+                />
+              )}
+              {step === 4 && (
+                <StepCountry
+                  key="step-4"
+                  value={state.country}
+                  onChange={(country) => update({ country })}
+                  onContinue={goNext}
+                  onBack={goBack}
+                  onSkip={onClose}
+                  requireSelection={mode === 'live'}
+                  prizeLabel={state.prize?.label ?? null}
                 />
               )}
               {step === 5 && (
