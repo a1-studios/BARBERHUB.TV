@@ -23,23 +23,8 @@ export const StepSpin = ({ role, email, onResult, onBack, onSkip }: StepSpinProp
   const [revealedPrize, setRevealedPrize] = useState<Prize | null>(null);
 
   const handleResult = (prize: Prize) => {
-    try {
-      localStorage.setItem(
-        'pending_spin_prize',
-        JSON.stringify({
-          email,
-          role,
-          prize_id: prize.id,
-          prize_label: prize.label,
-          prize_bb: prize.bb_value ?? 0,
-          prize_type: prize.prize_type ?? 'bb',
-          duration_months: prize.duration_months ?? 0,
-          timestamp: Date.now(),
-        })
-      );
-    } catch {
-      /* ignore */
-    }
+    // Note: pending_prize key is written by LaunchWizard once intake completes,
+    // so the prize is only escrowed AFTER the user commits identity info.
     haptic(35);
     setRevealedPrize(prize);
   };

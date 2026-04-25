@@ -1,39 +1,30 @@
-import { useState, useEffect, useRef, createContext, useContext } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
-import { StepEmail } from './StepEmail';
 import { StepRole } from './StepRole';
-import { StepCountry } from './StepCountry';
 import { StepSpin } from './StepSpin';
-import { StepReveal } from './StepReveal';
+import { StepIntake, type IntakeValues } from './StepIntake';
 import { StepLiveFinalize } from './StepLiveFinalize';
 import { SegmentedProgress } from './SegmentedProgress';
-import { supabase } from '@/integrations/supabase/client';
 import { captureAttribution, getCountryFromUrl, getEmailFromUrl } from '@/lib/urlParams';
-import { fbqTrack } from '@/lib/metaPixel';
-import { gtagFireLead } from '@/lib/googleAds';
 import type { Prize } from '@/components/vault/VaultSpinWheel';
 
 export type LaunchRole = 'barber' | 'fan';
-export type LaunchWizardMode = 'waitlist' | 'live';
 
 export interface LaunchWizardState {
   email: string;
   role: LaunchRole | null;
   country: string | null;
+  username: string;
+  password: string;
   prize: Prize | null;
 }
 
 interface LaunchWizardProps {
   onClose: () => void;
-  mode?: LaunchWizardMode;
-  /** Step number (1–5) the wizard should open on. Default 1. */
-  startStep?: number;
-  /** Pre-filled role (e.g. when resuming after social OAuth). When set, role + country steps are skipped. */
-  prefilledRole?: LaunchRole;
 }
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 4;
 
 /** Direction context so each step can drive AnimatePresence the right way. */
 const DirectionContext = createContext<1 | -1>(1);
@@ -51,30 +42,16 @@ const useIsMobile = () => {
   return m;
 };
 
-export const LaunchWizard = ({
-  onClose,
-  mode = 'waitlist',
-  startStep = 1,
-  prefilledRole,
-}: LaunchWizardProps) => {
-  // Compute initial email + step honoring URL pre-fill and explicit startStep prop.
-  const initialEmail = getEmailFromUrl() ?? '';
-  const computedStart = startStep > 1
-    ? startStep
-    : initialEmail
-      ? 2 // skip Step 1 if email pre-filled from ad URL
-      : 1;
-  // Track which step was the first visible one so we can hide Back on it.
-  const [firstStep] = useState(computedStart);
-
-  const [step, setStep] = useState(computedStart);
-  const directionRef = useRef<1 | -1>(1);
+export const LaunchWizard = ({ onClose }: LaunchWizardProps) => {
+  const [step, setStep] = useState(1);
   const [direction, setDirection] = useState<1 | -1>(1);
   const isMobile = useIsMobile();
   const [state, setState] = useState<LaunchWizardState>({
-    email: initialEmail,
-    role: prefilledRole ?? null,
+    email: getEmailFromUrl() ?? '',
+    role: null,
     country: getCountryFromUrl() ?? null,
+    username: '',
+    password: '',
     prize: null,
   });
 
@@ -82,81 +59,49 @@ export const LaunchWizard = ({
     captureAttribution();
   }, []);
 
-  // Auto-fire Lead event once when wizard opens with a pre-filled email
-  // (since the user is skipping Step 1 where Lead would normally fire).
-  useEffect(() => {
-    if (initialEmail && computedStart > 1 && !prefilledRole) {
-      (async () => {
-        try {
-          const eventId = await fbqTrack('Lead', {
-            email: initialEmail,
-            country: getCountryFromUrl() ?? undefined,
-            extra: { signup_method: 'ad_prefill' },
-          });
-          gtagFireLead(eventId);
-          await supabase.from('marketing_leads').upsert(
-            {
-              email: initialEmail,
-              country_code: getCountryFromUrl() ?? null,
-              source_url: typeof window !== 'undefined' ? window.location.href : null,
-            } as never,
-            { onConflict: 'email' }
-          );
-        } catch (err) {
-          console.warn('[LaunchWizard] prefill Lead failed', err);
-        }
-      })();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const update = (patch: Partial<LaunchWizardState>) =>
     setState((s) => ({ ...s, ...patch }));
 
   const goNext = () => {
-    directionRef.current = 1;
     setDirection(1);
     setStep((s) => Math.min(s + 1, TOTAL_STEPS));
   };
 
   const goBack = () => {
-    directionRef.current = -1;
     setDirection(-1);
-    setStep((s) => Math.max(s - 1, firstStep));
+    setStep((s) => Math.max(s - 1, 1));
   };
 
-  // If prefilledRole was provided (post-OAuth resume) and we're at the role step, jump to spin (now step 3).
-  useEffect(() => {
-    if (prefilledRole && step < 3) {
-      setStep(3);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Step 1 → captures email + fires Lead (Meta + Google) + creates initial lead row
-  const handleEmailContinue = async (email: string) => {
-    update({ email });
-    // Meta Lead — get back the event_id for cross-platform dedup
-    const eventId = await fbqTrack('Lead', { email, country: state.country ?? undefined });
-    // Google Ads Lead conversion (no-ops if env unset) — same transaction_id
-    gtagFireLead(eventId);
-    // Insert/upsert lead row early so we have it even if user abandons
+  const handleIntakeContinue = (values: IntakeValues) => {
+    update({
+      email: values.email,
+      username: values.username,
+      country: values.country,
+      password: values.password,
+    });
+    // Persist pending prize to localStorage per spec — Index.tsx claim effect reads this key.
     try {
-      await supabase.from('marketing_leads').upsert(
-        {
-          email,
-          country_code: state.country,
-          source_url: typeof window !== 'undefined' ? window.location.href : null,
-        } as never,
-        { onConflict: 'email' }
-      );
-    } catch (err) {
-      console.warn('[LaunchWizard] lead upsert failed', err);
+      if (state.prize && state.role) {
+        localStorage.setItem(
+          'pending_prize',
+          JSON.stringify({
+            email: values.email,
+            role: state.role,
+            prize_id: state.prize.id,
+            prize_label: state.prize.label,
+            prize_bb: state.prize.bb_value ?? 0,
+            prize_type: state.prize.prize_type ?? 'bb',
+            duration_months: state.prize.duration_months ?? 0,
+            timestamp: Date.now(),
+          })
+        );
+      }
+    } catch {
+      /* ignore quota */
     }
     goNext();
   };
 
-  // Mobile bottom-sheet variant uses a different shell motion + classes.
   const shellMotion = isMobile
     ? {
         initial: { y: '100%' },
@@ -200,7 +145,6 @@ export const LaunchWizard = ({
               '0 0 60px rgba(255,95,31,0.35), inset 0 1px 0 rgba(255,255,255,0.18)',
           }}
         >
-          {/* Mobile drag handle */}
           {isMobile && (
             <button
               type="button"
@@ -210,7 +154,6 @@ export const LaunchWizard = ({
             />
           )}
 
-          {/* Top inner highlight streak */}
           <div
             aria-hidden
             className="pointer-events-none absolute top-0 inset-x-6 h-px"
@@ -220,7 +163,6 @@ export const LaunchWizard = ({
             }}
           />
 
-          {/* Close button (desktop) */}
           {!isMobile && (
             <button
               type="button"
@@ -232,25 +174,15 @@ export const LaunchWizard = ({
             </button>
           )}
 
-          {/* Segmented progress */}
           <div className={`px-1 ${isMobile ? 'mb-5' : 'mb-6'}`}>
             <SegmentedProgress total={TOTAL_STEPS} current={step} />
           </div>
 
-          {/* Steps */}
           <div className="relative flex-1 overflow-y-auto overflow-x-hidden">
             <AnimatePresence mode="wait" custom={direction}>
               {step === 1 && (
-                <StepEmail
-                  key="step-1"
-                  initialEmail={state.email}
-                  onContinue={handleEmailContinue}
-                  onSkip={onClose}
-                />
-              )}
-              {step === 2 && (
                 <StepRole
-                  key="step-2"
+                  key="step-1"
                   value={state.role}
                   onSelect={(role) => {
                     update({ role });
@@ -258,14 +190,14 @@ export const LaunchWizard = ({
                   }}
                   onBack={goBack}
                   onSkip={onClose}
-                  hideBack={firstStep >= 2}
+                  hideBack={true}
                 />
               )}
-              {step === 3 && state.role && (
+              {step === 2 && state.role && (
                 <StepSpin
-                  key="step-3"
+                  key="step-2"
                   role={state.role}
-                  email={state.email}
+                  email={state.email || 'champion'}
                   onResult={(prize) => {
                     update({ prize });
                     goNext();
@@ -274,22 +206,22 @@ export const LaunchWizard = ({
                   onSkip={onClose}
                 />
               )}
-              {step === 4 && (
-                <StepCountry
-                  key="step-4"
-                  value={state.country}
-                  onChange={(country) => update({ country })}
-                  onContinue={goNext}
-                  onBack={goBack}
-                  onSkip={onClose}
-                  requireSelection={mode === 'live'}
+              {step === 3 && (
+                <StepIntake
+                  key="step-3"
+                  initial={{
+                    email: state.email,
+                    username: state.username,
+                    country: state.country ?? undefined,
+                    password: state.password,
+                  }}
                   prizeLabel={state.prize?.label ?? null}
+                  onContinue={handleIntakeContinue}
+                  onBack={goBack}
                 />
               )}
-              {step === 5 && (
-                mode === 'live'
-                  ? <StepLiveFinalize key="step-5" state={state} onClose={onClose} />
-                  : <StepReveal key="step-5" state={state} onClose={onClose} />
+              {step === 4 && (
+                <StepLiveFinalize key="step-4" state={state} onClose={onClose} />
               )}
             </AnimatePresence>
           </div>

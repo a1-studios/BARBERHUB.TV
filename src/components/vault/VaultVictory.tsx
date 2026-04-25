@@ -1,10 +1,6 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Trophy, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { ArenaGateModal, ArenaGateResult } from '@/components/auth/ArenaGateModal';
-import { AuthDialog } from '@/components/auth/AuthDialog';
-import { Button } from '@/components/ui/button';
 import type { Prize } from './VaultSpinWheel';
 
 interface VaultVictoryProps {
@@ -15,33 +11,31 @@ interface VaultVictoryProps {
 
 const VaultVictory = ({ prize, email, role }: VaultVictoryProps) => {
   const navigate = useNavigate();
-  const [showArenaGate, setShowArenaGate] = useState(false);
-  const [showFanAuth, setShowFanAuth] = useState(false);
 
   const handleClaim = () => {
-    if (role === 'barber') {
-      setShowArenaGate(true);
-    } else {
-      setShowFanAuth(true);
+    // Persist prize so the unified onboarding gate on `/` can resume the claim flow.
+    try {
+      localStorage.setItem(
+        'pending_prize',
+        JSON.stringify({
+          email,
+          role,
+          prize_id: prize.id,
+          prize_label: prize.label,
+          prize_bb: prize.bb_value ?? 0,
+          prize_type: prize.prize_type ?? 'bb',
+          duration_months: prize.duration_months ?? 0,
+          timestamp: Date.now(),
+        })
+      );
+    } catch {
+      /* ignore */
     }
-  };
-
-  const handleArenaGateComplete = (result: ArenaGateResult) => {
-    setShowArenaGate(false);
-    navigate('/profile', { replace: true });
-  };
-
-  const handleFanAuthClose = (open: boolean) => {
-    setShowFanAuth(open);
-    // If dialog closed after successful auth, redirect
-    if (!open) {
-      // Auth state change will handle redirect
-    }
+    navigate('/');
   };
 
   return (
     <div className="flex flex-col items-center justify-center h-full px-6 space-y-8">
-      {/* Trophy Animation */}
       <motion.div
         initial={{ scale: 0, rotateZ: -20 }}
         animate={{ scale: 1, rotateZ: 0 }}
@@ -57,7 +51,6 @@ const VaultVictory = ({ prize, email, role }: VaultVictoryProps) => {
         >
           <Trophy className="w-14 h-14" style={{ color: prize.color }} />
         </div>
-        {/* Sparkle ring */}
         <motion.div
           className="absolute inset-0 rounded-full border-2"
           style={{ borderColor: prize.color }}
@@ -92,10 +85,9 @@ const VaultVictory = ({ prize, email, role }: VaultVictoryProps) => {
         transition={{ delay: 0.8 }}
         className="text-sm text-gray-400 text-center max-w-xs"
       >
-        Complete your free sign-up to claim this reward. Your prize is locked and waiting for you.
+        Complete your free sign-up to claim this reward. Your prize is locked and waiting.
       </motion.p>
 
-      {/* CTA */}
       <motion.button
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -115,23 +107,6 @@ const VaultVictory = ({ prize, email, role }: VaultVictoryProps) => {
       <p className="text-xs text-gray-600 text-center">
         Prize is escrowed until profile completion
       </p>
-
-      {/* Arena Gate for Barbers */}
-      <ArenaGateModal
-        isOpen={showArenaGate}
-        onClose={() => setShowArenaGate(false)}
-        onComplete={handleArenaGateComplete}
-      />
-
-      {/* Auth Dialog for Fans */}
-      <AuthDialog
-        initialRole="fan"
-        autoOpen={showFanAuth}
-        onOpenChange={handleFanAuthClose}
-        prefilledEmail={email}
-      >
-        <span className="hidden" />
-      </AuthDialog>
     </div>
   );
 };
