@@ -278,7 +278,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('[DISTRIBUTE-POT] Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Failed to distribute pot' }),
+      JSON.stringify({ error: (error as Error).message || 'Failed to distribute pot' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
     );
   }

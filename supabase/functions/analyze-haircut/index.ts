@@ -121,7 +121,7 @@ serve(async (req) => {
     console.error('Error in analyze-haircut function:', error);
 
     return new Response(
-      JSON.stringify({ error: error.message || 'An unexpected error occurred' }),
+      JSON.stringify({ error: (error as Error).message || 'An unexpected error occurred' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

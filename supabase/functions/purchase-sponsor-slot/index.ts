@@ -101,7 +101,7 @@ serve(async (req) => {
 
   } catch (error: any) {
     const status = error.status || 500;
-    const message = error.message || 'Internal error';
+    const message = (error as Error).message || 'Internal error';
     console.error('Purchase sponsor slot error:', message);
     return new Response(JSON.stringify({ error: message }), {
       status,

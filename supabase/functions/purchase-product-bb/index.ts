@@ -212,7 +212,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('Product purchase error:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Failed to purchase product' }),
+      JSON.stringify({ error: (error as Error).message || 'Failed to purchase product' }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400 

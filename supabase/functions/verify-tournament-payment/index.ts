@@ -103,7 +103,7 @@ serve(async (req) => {
     console.error("Error:", error);
     return new Response(
       JSON.stringify({
-        error: error.message,
+        error: (error as Error).message,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

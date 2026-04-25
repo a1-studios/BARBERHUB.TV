@@ -97,7 +97,7 @@ serve(async (req) => {
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   } catch (error) {
-    const msg = error instanceof Error ? error.message : 'Failed to end live challenge';
+    const msg = error instanceof Error ? (error as Error).message : 'Failed to end live challenge';
     console.error('end-live-challenge error:', msg);
     return new Response(
       JSON.stringify({ error: msg }),

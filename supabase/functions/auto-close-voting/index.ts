@@ -227,7 +227,7 @@ serve(async (req) => {
         console.log(`[AUTO-CLOSE-VOTING] Successfully closed battle ${battle.id}`);
       } catch (battleError) {
         console.error(`[AUTO-CLOSE-VOTING] Error processing battle ${battle.id}:`, battleError);
-        results.push({ battleId: battle.id, success: false, error: battleError.message });
+        results.push({ battleId: battle.id, success: false, error: (battleError as Error).message });
       }
     }
 
@@ -250,7 +250,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('[AUTO-CLOSE-VOTING] Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: (error as Error).message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

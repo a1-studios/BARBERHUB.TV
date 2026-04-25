@@ -116,7 +116,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error("Egress start error:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Failed to start egress" }),
+      JSON.stringify({ error: (error as Error).message || "Failed to start egress" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

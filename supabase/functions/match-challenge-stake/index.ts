@@ -268,7 +268,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('Match challenge error:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Failed to match challenge' }),
+      JSON.stringify({ error: (error as Error).message || 'Failed to match challenge' }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400 

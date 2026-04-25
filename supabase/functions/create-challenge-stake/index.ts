@@ -265,7 +265,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('Challenge stake error:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Failed to create challenge stake' }),
+      JSON.stringify({ error: (error as Error).message || 'Failed to create challenge stake' }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400 

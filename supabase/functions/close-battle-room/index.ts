@@ -99,7 +99,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('[CLOSE-BATTLE-ROOM] Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Failed to close battle rooms' }),
+      JSON.stringify({ error: (error as Error).message || 'Failed to close battle rooms' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }

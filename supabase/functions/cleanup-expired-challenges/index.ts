@@ -146,7 +146,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('Cleanup error:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Cleanup failed' }),
+      JSON.stringify({ error: (error as Error).message || 'Cleanup failed' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }

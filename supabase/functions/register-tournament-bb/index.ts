@@ -182,7 +182,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('Tournament registration error:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Failed to register for tournament' }),
+      JSON.stringify({ error: (error as Error).message || 'Failed to register for tournament' }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400 
