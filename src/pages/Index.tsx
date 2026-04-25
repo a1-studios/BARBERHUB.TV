@@ -34,8 +34,6 @@ const Index = () => {
   const navigate = useNavigate();
   const recoveryAttempted = useRef(false);
 
-  // Arena Gate state — lifted here so modal persists after auth state change
-  const [showArenaGate, setShowArenaGate] = useState(false);
   const [introComplete, setIntroComplete] = useState(() =>
     sessionStorage.getItem('fan_intro_seen') === 'true'
   );
@@ -44,18 +42,6 @@ const Index = () => {
   // The server-side eligibility check below makes the actual decision; the
   // localStorage flag here just suppresses a one-frame flash for repeat visitors.
   const [showSpinWheel, setShowSpinWheel] = useState(false);
-
-  // Detect OAuth resume → re-mount wizard at Spin step with the role chosen pre-redirect
-  const [resumeSpin, setResumeSpin] = useState<{ role: 'barber' | 'fan' } | null>(null);
-  useEffect(() => {
-    if (!user || loading) return;
-    if (localStorage.getItem('wizard_resume_spin') === 'true') {
-      const role = (localStorage.getItem('pending_social_role') as 'barber' | 'fan') || 'fan';
-      localStorage.removeItem('wizard_resume_spin');
-      localStorage.removeItem('pending_social_role');
-      setResumeSpin({ role });
-    }
-  }, [user, loading]);
 
   // Server-backed eligibility check — only show the gate when:
   //  1) Auth has finished loading
