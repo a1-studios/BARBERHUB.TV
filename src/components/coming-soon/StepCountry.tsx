@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Lock } from 'lucide-react';
 import { CountrySelector } from '@/components/CountrySelector';
 import { SwipeableStep } from './SwipeableStep';
 import { useStepDirection } from './LaunchWizard';
@@ -9,6 +9,10 @@ interface StepCountryProps {
   onContinue: () => void;
   onBack: () => void;
   onSkip: () => void;
+  /** When true, the Skip control is hidden and Continue stays disabled until a country is chosen. */
+  requireSelection?: boolean;
+  /** When provided (and requireSelection is true), shows a 'unlock <prize>' banner. */
+  prizeLabel?: string | null;
 }
 
 const haptic = () => {
@@ -21,6 +25,8 @@ export const StepCountry = ({
   onContinue,
   onBack,
   onSkip,
+  requireSelection = false,
+  prizeLabel = null,
 }: StepCountryProps) => {
   const direction = useStepDirection();
   const submit = () => {
@@ -37,7 +43,7 @@ export const StepCountry = ({
       onSwipeBack={onBack}
     >
       <div className="space-y-6">
-        <div className="flex items-center justify-between -mt-1">
+        <div className="flex items-center justify-between -mt-1 min-h-[20px]">
           <button
             type="button"
             onClick={() => { haptic(); onBack(); }}
@@ -45,13 +51,15 @@ export const StepCountry = ({
           >
             <ArrowLeft className="w-4 h-4" /> Back
           </button>
-          <button
-            type="button"
-            onClick={onSkip}
-            className="text-sm text-white/60 hover:text-orange-400 transition-colors"
-          >
-            Skip
-          </button>
+          {!requireSelection && (
+            <button
+              type="button"
+              onClick={onSkip}
+              className="text-sm text-white/60 hover:text-orange-400 transition-colors"
+            >
+              Skip
+            </button>
+          )}
         </div>
 
         <div className="text-center space-y-1.5">
@@ -62,6 +70,24 @@ export const StepCountry = ({
             Your flag matters in the global league.
           </p>
         </div>
+
+        {requireSelection && (
+          <div
+            className="flex items-center gap-2 px-3 py-2.5 rounded-[12px] text-xs"
+            style={{
+              background: 'rgba(255,140,0,0.08)',
+              border: '1px solid rgba(255,140,0,0.35)',
+              color: 'rgba(255,211,122,0.95)',
+            }}
+          >
+            <Lock className="w-3.5 h-3.5 shrink-0 text-orange-400" />
+            <span>
+              {prizeLabel
+                ? <>Select your country to unlock <span className="font-bold">{prizeLabel}</span>.</>
+                : <>Select your country to claim your prize.</>}
+            </span>
+          </div>
+        )}
 
         <div className="space-y-1.5">
           <label className="text-[10px] uppercase tracking-wider font-bold text-orange-400 block px-1">
