@@ -1,68 +1,67 @@
 ## Goal
-Restore reliable account confirmation emails first, then re-enable the branded sender path without leaving the project in a half-configured state.
+Stop the broken branded email path immediately so signup confirmations resume via the default Supabase mailer, then document exactly what must be in place before we re-activate branding.
 
-## Audit findings
-- The sender subdomain is verified and available for email sending.
-- Recent auth logs still show confirmation mail going out from the default Supabase sender, not the BarberHub sender.
-- The custom auth email function has no request logs, which means Auth is not currently routing confirmation emails through it.
-- The current function code expects shared email infrastructure in the database (`email_send_log`, `email_send_state`, suppression tables, and the enqueue RPC), but those objects do not exist in the connected database.
-- `supabase/config.toml` still uses `https://lovable.app` as the auth site URL, which is not aligned with the app’s real signup flow or resend links.
+## Why branded email is failing right now
+The `auth-email-hook` was deployed and activated, but the queue/logging backend it depends on is not present in the connected Supabase project:
+
+- `auth-email-hook` enqueues to a pgmq queue (`auth_emails`) via the `enqueue_email` RPC and writes audit rows to `email_send_log`.
+- The connected database does not have `enqueue_email`, `email_send_log`, `email_send_state`, `suppressed_emails`, `email_unsubscribe_tokens`, or the `process-email-queue` cron job set up.
+- Result: when Auth calls the hook, the enqueue fails (or succeeds into a queue with no dispatcher), so no email is ever sent.
+- Recent auth logs confirm this — the only emails going out are still from `noreply@mail.app.supabase.io` (the default mailer), not from `notify.barberhub.tv`. When the hook is the active route, nothing arrives at all.
 
 ## Plan
-1. **Normalize auth URL configuration**
-   - Update the auth configuration to use the project’s real app URL(s) instead of `lovable.app`.
-   - Align every signup, resend, and password-reset redirect with the same origin strategy so confirmation links always return users to the correct app.
 
-2. **Replace the hand-maintained auth email hook with a managed-compatible setup**
-   - Rebuild the auth email setup from the managed template flow so the hook matches the platform’s current contract.
-   - Keep the existing BarberHub branding, copy, and white-background email design.
-   - Redeploy the auth email function after the reset.
+1. **Deactivate branded email (revert to default mailer)**
+   - Toggle Lovable Emails off for the project. This reverts auth emails to the default Supabase/Lovable templates, which we already confirmed are being delivered.
+   - No code changes required for this step — the toggle alone restores the working path.
+   - Confirmation emails will go out from the default sender again immediately.
 
-3. **Repair the missing backend email infrastructure before activating the hook**
-   - Restore the shared email pipeline that the hook depends on in the connected Supabase project.
-   - Confirm the queue/logging pieces exist before relying on the custom hook.
-   - If that infrastructure cannot be restored in this project, switch to the safe fallback path: deliver confirmation emails through the default auth mailer first, then reintroduce branded delivery only after the backend is complete.
+2. **Quarantine the broken hook so it can't be re-enabled accidentally**
+   - Leave the `auth-email-hook` function and templates in place (no deletion) so we don't lose branding work.
+   - Add a clear top-of-file comment noting it is inactive pending email infrastructure setup.
 
-4. **Harden the frontend signup flow**
-   - Make the landing/signup flow consistently surface the user’s next step after signup: sent, resend pending, resend success, and spam-folder guidance.
-   - Ensure both signup entry points in the app use the same redirect target and confirmation messaging.
+3. **Document the prerequisites that must exist before re-activating branded email**
+   The branded path needs the full Lovable Emails infrastructure provisioned in this Supabase project:
+   - `pgmq` extension + `auth_emails` and `transactional_emails` queues
+   - RPC wrappers: `enqueue_email`, `read_email_batch`, `delete_email`, `move_to_dlq`
+   - Tables: `email_send_log`, `email_send_state`, `suppressed_emails`, `email_unsubscribe_tokens` (with RLS)
+   - Vault secret: `email_queue_service_role_key`
+   - `process-email-queue` Edge Function deployed
+   - `pg_cron` job calling `process-email-queue` every 5s
+   - DNS for `notify.barberhub.tv` already verified (already done)
 
-5. **Run an end-to-end verification pass**
-   - Trigger a fresh signup and a resend.
-   - Verify the auth system stops using the default sender for new confirmation emails once the custom path is active.
-   - Confirm the email function receives traffic, the send pipeline records success/failure, and the confirmation link signs the user in and allows prize claiming.
+4. **Re-activation path (for a later turn, not now)**
+   - Run the managed email infrastructure setup so all of step 3 is provisioned in one shot.
+   - Re-enable Lovable Emails (toggle on).
+   - Redeploy `auth-email-hook` so it picks up the now-present `enqueue_email` RPC.
+   - Trigger a fresh signup and verify a row lands in `email_send_log` with status `sent` and the email arrives from `noreply@notify.barberhub.tv`.
 
-## What I will change
-- `supabase/config.toml`
-- `supabase/functions/auth-email-hook/index.ts`
-- Auth email templates under `supabase/functions/_shared/email-templates/`
-- Signup/resend client code where redirects or messaging are inconsistent
-- Optional: add a targeted edge-function test for the auth email hook
+## What I will change in this turn
+- Disable Lovable Emails for the project (auth emails revert to default mailer, delivery resumes).
+- Add an "INACTIVE" header comment to `supabase/functions/auth-email-hook/index.ts` so future work knows it's parked.
+- Update `.lovable/plan.md` to reflect the rollback and the prerequisites needed before re-enabling.
+
+## What I will NOT change
+- No template files will be deleted — branding work is preserved.
+- No DNS changes — `notify.barberhub.tv` stays verified for when we re-enable.
+- No database migrations in this turn — provisioning the email infra is the separate next step you approve when you're ready to try branding again.
 
 ## Success criteria
-- New signups generate a confirmation email that is actually received.
-- The sender/path used is intentional and observable in logs.
-- No missing-table or missing-RPC failures remain in the auth email pipeline.
-- Confirmation links return users to the correct app URL.
-- Prize-claim signup flow works after email confirmation.
+- New signups receive the confirmation email (via the default sender) within seconds.
+- Auth logs show `mail.send` events again for new signups.
+- The branded path is documented as parked, with a clear, ordered checklist of what must be true before we turn it back on.
 
 ## Technical details
 ```text
-Current state
-Auth signup -> default Supabase mailer sends confirmation
-           -> custom auth-email-hook not invoked
+Now (broken)
+  signup -> auth-email-hook -> enqueue_email (missing) -> nothing sent
 
-Current custom hook risk
-custom hook -> tries to write email_send_log / enqueue_email
-            -> database objects are missing
-            -> would fail if activated as-is
+After this plan (working again)
+  signup -> default Supabase mailer -> email delivered
 
-Target state
-Auth signup -> auth-email-hook invoked
-           -> working email backend path
-           -> message delivered
-           -> user confirms -> returns to correct URL -> prize claim continues
+Future re-activation (separate approved turn)
+  provision pgmq + tables + RPCs + cron + vault secret
+    -> re-enable Lovable Emails
+    -> redeploy auth-email-hook
+    -> signup -> hook -> enqueue_email -> process-email-queue -> branded email delivered
 ```
-
-## Notes
-This plan intentionally fixes delivery reliability before branding. Right now the project has verified DNS, inactive custom routing, and missing backend email objects; activating the current hook without repairing that stack would likely turn “not receiving emails” into hard failures.
