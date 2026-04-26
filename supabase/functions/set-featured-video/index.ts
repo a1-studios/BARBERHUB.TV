@@ -112,9 +112,11 @@ Deno.serve(async (req) => {
     }
 
     // Refresh stats view
-    await supabase.rpc('refresh_barber_stats').catch((err) => {
+    try {
+      await supabase.rpc('refresh_barber_stats');
+    } catch (err) {
       console.error('Error refreshing barber stats:', err);
-    });
+    }
 
     return new Response(
       JSON.stringify({ 

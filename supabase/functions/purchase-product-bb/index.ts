@@ -77,7 +77,8 @@ serve(async (req) => {
         .maybeSingle();
 
       if (subscription?.barber_subscription_tiers) {
-        const features = subscription.barber_subscription_tiers.features as any;
+        const tier = subscription.barber_subscription_tiers as any;
+        const features = (Array.isArray(tier) ? tier[0]?.features : tier.features) as any;
         discountPercent = features?.gear_discount_percent || product.barber_discount_percent || 0;
       }
     }
@@ -101,8 +102,10 @@ serve(async (req) => {
           .maybeSingle();
 
         const tierHierarchy = ['bronze', 'silver', 'gold'];
-        const userTierIndex = subscription?.barber_subscription_tiers?.tier_name 
-          ? tierHierarchy.indexOf(subscription.barber_subscription_tiers.tier_name.toLowerCase())
+        const subTier = subscription?.barber_subscription_tiers as any;
+        const tierName = Array.isArray(subTier) ? subTier[0]?.tier_name : subTier?.tier_name;
+        const userTierIndex = tierName
+          ? tierHierarchy.indexOf(String(tierName).toLowerCase())
           : -1;
         const requiredTierIndex = tierHierarchy.indexOf(product.tier_required.toLowerCase());
 

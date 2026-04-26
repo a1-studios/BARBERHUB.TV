@@ -9,7 +9,7 @@ const corsHeaders = {
 const SOVEREIGN_EMAIL = Deno.env.get('SOVEREIGN_EMAIL') || 'a1studios.film@gmail.com';
 
 interface UserRequest {
-  action: 'search_users' | 'get_user_details' | 'assign_role' | 'remove_role' | 'freeze_account' | 'unfreeze_account' | 'force_verify' | 'remove_verify' | 'get_stats' | 'update_profile' | 'mint_bb' | 'burn_bb';
+  action: 'search_users' | 'list_all_users' | 'get_user_details' | 'assign_role' | 'remove_role' | 'freeze_account' | 'unfreeze_account' | 'force_verify' | 'remove_verify' | 'get_stats' | 'update_profile' | 'mint_bb' | 'burn_bb';
   user_id?: string;
   search_query?: string;
   role?: string;
