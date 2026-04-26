@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Lock, Check, Loader2, AlertCircle, ArrowRight } from 'lucide-react';
+import { Lock, Check, Loader2, AlertCircle, ArrowRight, Mail, RefreshCw } from 'lucide-react';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { fbqTrack, getFbp, getFbc } from '@/lib/metaPixel';
@@ -30,6 +30,41 @@ export const StepLiveFinalize = ({ state, onClose }: StepLiveFinalizeProps) => {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [counterValue, setCounterValue] = useState(0);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  const [resendError, setResendError] = useState<string | null>(null);
+
+  // Cooldown ticker
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setTimeout(() => setResendCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendCooldown]);
+
+  const handleResend = async () => {
+    if (resendCooldown > 0 || resendStatus === 'sending') return;
+    setResendStatus('sending');
+    setResendError(null);
+    haptic(15);
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email: state.email,
+        options: { emailRedirectTo: `${window.location.origin}/` },
+      });
+      if (resendError) {
+        setResendStatus('error');
+        setResendError(resendError.message);
+        return;
+      }
+      setResendStatus('sent');
+      setResendCooldown(30);
+    } catch (err) {
+      console.error('[StepLiveFinalize] resend failed', err);
+      setResendStatus('error');
+      setResendError('Could not resend. Try again in a moment.');
+    }
+  };
 
   // Coin pop + confetti + delayed counter tick
   useEffect(() => {
@@ -269,7 +304,7 @@ export const StepLiveFinalize = ({ state, onClose }: StepLiveFinalizeProps) => {
       )}
 
       {done && (
-        <>
+        <div className="space-y-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -283,6 +318,55 @@ export const StepLiveFinalize = ({ state, onClose }: StepLiveFinalizeProps) => {
           >
             <Check className="w-3.5 h-3.5" /> Spot secured
           </motion.div>
+
+          {/* Email instructions */}
+          <div
+            className="text-left rounded-[14px] p-4 space-y-2"
+            style={{
+              background: 'rgba(255,95,31,0.06)',
+              border: '1px solid rgba(255,95,31,0.25)',
+            }}
+          >
+            <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-orange-300">
+              <Mail className="w-3.5 h-3.5" /> Check your inbox
+            </div>
+            <p className="text-xs text-white/70 leading-relaxed">
+              We sent a confirmation link to{' '}
+              <span className="font-mono font-bold text-orange-400">{state.email}</span>.
+              Click it to verify and your prize will land in your wallet automatically.
+            </p>
+            <p className="text-[11px] text-white/45">
+              Don't see it? Check your spam folder — search for "BarberHub".
+            </p>
+          </div>
+
+          {/* Resend button */}
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resendCooldown > 0 || resendStatus === 'sending'}
+            className="w-full h-11 rounded-[12px] text-xs font-bold uppercase tracking-wider text-white/80 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.12)',
+            }}
+          >
+            {resendStatus === 'sending' ? (
+              <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Sending...</>
+            ) : resendCooldown > 0 ? (
+              <>Resend available in {resendCooldown}s</>
+            ) : resendStatus === 'sent' ? (
+              <><Check className="w-3.5 h-3.5 text-green-400" /> Sent — check your inbox</>
+            ) : (
+              <><RefreshCw className="w-3.5 h-3.5" /> Resend confirmation email</>
+            )}
+          </button>
+          {resendError && (
+            <p className="text-xs text-red-400 flex items-center justify-center gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5" /> {resendError}
+            </p>
+          )}
+
           <button
             type="button"
             onClick={() => { haptic(); onClose(); }}
@@ -293,9 +377,9 @@ export const StepLiveFinalize = ({ state, onClose }: StepLiveFinalizeProps) => {
               boxShadow: '0 8px 24px rgba(255,95,31,0.45), inset 0 1px 0 rgba(255,255,255,0.45)',
             }}
           >
-            Enter the Arena
+            Got it
           </button>
-        </>
+        </div>
       )}
     </motion.div>
   );
