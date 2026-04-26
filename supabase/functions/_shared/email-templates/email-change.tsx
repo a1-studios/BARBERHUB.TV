@@ -1,19 +1,18 @@
 /// <reference types="npm:@types/react@18.3.1" />
 
 import * as React from 'npm:react@18.3.1'
+
 import {
   Body,
   Button,
   Container,
   Head,
   Heading,
-  Hr,
   Html,
   Link,
   Preview,
   Text,
 } from 'npm:@react-email/components@0.0.22'
-import { brand } from './_brand.ts'
 
 interface EmailChangeEmailProps {
   siteName: string
@@ -30,38 +29,30 @@ export const EmailChangeEmail = ({
 }: EmailChangeEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Confirm your new email on {siteName}.</Preview>
-    <Body style={brand.main}>
-      <Container style={brand.container}>
-        <div style={brand.header}>
-          <Text style={brand.brandMark}>
-            Barber<span style={brand.brandAccent}>Hub</span>
-          </Text>
-        </div>
-
-        <Heading style={brand.h1}>Confirm your new email</Heading>
-        <Text style={brand.text}>
-          You requested to change the email on your <strong>{siteName}</strong>{' '}
-          account from <strong>{email}</strong> to <strong>{newEmail}</strong>.
-          Tap below to confirm.
+    <Preview>Confirm your email change for {siteName}</Preview>
+    <Body style={main}>
+      <Container style={container}>
+        <Heading style={h1}>Confirm your email change</Heading>
+        <Text style={text}>
+          You requested to change your email address for {siteName} from{' '}
+          <Link href={`mailto:${email}`} style={link}>
+            {email}
+          </Link>{' '}
+          to{' '}
+          <Link href={`mailto:${newEmail}`} style={link}>
+            {newEmail}
+          </Link>
+          .
         </Text>
-
-        <Button style={brand.button} href={confirmationUrl}>
+        <Text style={text}>
+          Click the button below to confirm this change:
+        </Text>
+        <Button style={button} href={confirmationUrl}>
           Confirm Email Change
         </Button>
-
-        <Text style={{ ...brand.text, marginTop: '28px', fontSize: '13px' }}>
-          Or paste this link into your browser:
-          <br />
-          <Link href={confirmationUrl} style={brand.link}>
-            {confirmationUrl}
-          </Link>
-        </Text>
-
-        <Hr style={brand.divider} />
-        <Text style={brand.footer}>
-          Didn't request this change? Ignore this email — your account email
-          stays the same.
+        <Text style={footer}>
+          If you didn't request this change, please secure your account
+          immediately.
         </Text>
       </Container>
     </Body>
@@ -69,3 +60,28 @@ export const EmailChangeEmail = ({
 )
 
 export default EmailChangeEmail
+
+const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
+const container = { padding: '20px 25px' }
+const h1 = {
+  fontSize: '22px',
+  fontWeight: 'bold' as const,
+  color: '#000000',
+  margin: '0 0 20px',
+}
+const text = {
+  fontSize: '14px',
+  color: '#55575d',
+  lineHeight: '1.5',
+  margin: '0 0 25px',
+}
+const link = { color: 'inherit', textDecoration: 'underline' }
+const button = {
+  backgroundColor: '#000000',
+  color: '#ffffff',
+  fontSize: '14px',
+  borderRadius: '8px',
+  padding: '12px 20px',
+  textDecoration: 'none',
+}
+const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
