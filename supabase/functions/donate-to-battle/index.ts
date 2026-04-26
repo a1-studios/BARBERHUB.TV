@@ -104,7 +104,7 @@ serve(async (req) => {
           await roomService.sendData(
             roomName,
             new TextEncoder().encode(payload),
-            { reliable: true }
+            { reliable: true } as any
           );
           console.log('[DONATE-TO-BATTLE] Data Channel broadcast sent');
         }
