@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data.user) {
-        toast.success('Check your email to confirm your account! (Look in spam too.)');
+        toast.success('Confirmation email queued. Check inbox in ~30s (and your spam folder).');
       }
 
       return { error: null };
