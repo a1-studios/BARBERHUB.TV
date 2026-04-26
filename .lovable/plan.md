@@ -1,28 +1,29 @@
-# Email Delivery — State of the World
+## What I found
+- The signup request is succeeding. Recent auth logs show both `POST /signup` and the follow-up email resend request returning `200`, so the app is successfully asking Supabase to send the confirmation email.
+- The app currently shows a success state as soon as signup succeeds, not when inbox delivery is confirmed.
+- The project has a verified sender subdomain: `notify.barberhub.tv`.
+- The repo still contains notes for an older split setup: custom auth email hook is parked, queue tables are not provisioned, and HTML templates were meant to be pasted into Supabase manually.
+- There are no recent auth errors, which points away from a frontend bug and toward email delivery/configuration mismatch.
 
-## Active path: Supabase Auth SMTP → Resend
+## Most likely cause
+The app is reporting “sent” because Supabase accepted the request, but inbox delivery is happening through an email setup that is not fully aligned. Right now the project appears to have:
+1. a verified built-in sender domain (`notify.barberhub.tv`), and
+2. legacy instructions/code assuming a separate SMTP/template path.
 
-- DNS for `barberhub.tv` is verified (NS records in Cloudflare).
-- Supabase Auth → SMTP Settings is configured with Resend SMTP credentials.
-- From address: `BarberHub <noreply@barberhub.tv>`.
-- Branded HTML templates live in `supabase/auth-email-templates/` and must be pasted into **Supabase Dashboard → Authentication → Email Templates** (one per template type). See that folder's README for paste targets and subject lines.
-- Supabase substitutes Go template variables (`{{ .ConfirmationURL }}`, `{{ .Token }}`, `{{ .SiteURL }}`, `{{ .Email }}`, `{{ .NewEmail }}`) at send time.
+That mismatch is the strongest candidate for why requests succeed but emails are not arriving.
 
-## Parked path: Lovable Emails / `auth-email-hook` Edge Function
+## Plan
+1. Audit the live auth email path in project settings and confirm whether auth emails are currently using built-in project email delivery or legacy SMTP templates.
+2. Standardize on a single sending path so signup, magic link, invite, and password reset all use the same verified domain and branded templates.
+3. If needed, set up the proper auth email pipeline end-to-end for the verified domain, deploy the required function(s), and verify with a fresh signup test.
+4. Update the signup UI copy so it no longer implies inbox delivery is guaranteed the moment the request is accepted.
+5. Re-test signup and password recovery, then confirm exactly where the email lands and which sender/from address is being used.
 
-- The Edge Function `supabase/functions/auth-email-hook/index.ts` is marked **INACTIVE** at the top of the file.
-- "Lovable Emails" toggle is **OFF** for this project.
-- This path requires email queue infrastructure that is **not** provisioned: pgmq queues (`auth_emails`, `transactional_emails`), RPCs (`enqueue_email`, `read_email_batch`, `delete_email`, `move_to_dlq`), tables (`email_send_log`, `email_send_state`, `suppressed_emails`, `email_unsubscribe_tokens`), the `process-email-queue` dispatcher function, a pg_cron job, and a Vault secret (`email_queue_service_role_key`).
-- The React Email templates under `supabase/functions/_shared/email-templates/` are preserved but unused on the active path.
-- **Do not re-enable Lovable Emails** unless you also provision the full queue infrastructure first — doing so would route auth emails through a missing `enqueue_email` RPC and break delivery.
+## Technical details
+- Evidence from logs: latest auth activity includes successful `POST /signup` and `POST /resend` responses with status `200` for `onlyfansexpo@gmail.com`.
+- Database check: the user row exists and remains unconfirmed, meaning account creation happened but confirmation completion did not.
+- Repo state: `supabase/functions/auth-email-hook/index.ts` is explicitly marked inactive, and the database does not currently contain the queue tables that hook would need.
+- Current app behavior: `src/hooks/useAuth.tsx` shows a success toast immediately after `signUp()` returns a user.
 
-## Why two paths exist
-
-We initially branded emails through the Lovable Emails / queue path, but the queue infra was never provisioned, so emails stalled. To restore delivery quickly, we switched to a direct SMTP → Resend bridge that bypasses the queue entirely. The branded HTML in `supabase/auth-email-templates/` is the production-aligned version of the `_shared/email-templates/` TSX components, written as raw HTML so Supabase can render them itself.
-
-## How to verify delivery
-
-1. Trigger a fresh signup with a real inbox.
-2. Email should arrive within ~10s from `noreply@barberhub.tv`.
-3. Check Resend dashboard → Logs to confirm the send.
-4. Click the verify link → user is confirmed in Supabase Auth.
+## Result after approval
+I’ll inspect the active email configuration, align it to one working setup, update the messaging, and verify the full confirm-signup flow end to end.

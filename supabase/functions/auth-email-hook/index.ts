@@ -1,30 +1,3 @@
-// =============================================================================
-// ⚠️  INACTIVE — DO NOT RE-ENABLE WITHOUT COMPLETING PREREQUISITES
-// =============================================================================
-// This hook is currently parked. Lovable Emails is toggled OFF for this project,
-// so auth emails are delivered via the default Supabase mailer (working path).
-//
-// This hook depends on email infrastructure that is NOT yet provisioned in
-// the connected Supabase project:
-//   - pgmq extension + `auth_emails` / `transactional_emails` queues
-//   - RPCs: enqueue_email, read_email_batch, delete_email, move_to_dlq
-//   - Tables: email_send_log, email_send_state, suppressed_emails,
-//             email_unsubscribe_tokens (with RLS)
-//   - Vault secret: email_queue_service_role_key
-//   - Edge Function: process-email-queue
-//   - pg_cron job invoking process-email-queue every 5s
-//
-// Re-activation order (do NOT skip steps):
-//   1. Provision the email infrastructure above (managed setup).
-//   2. Re-enable Lovable Emails (toggle on).
-//   3. Redeploy this function so it binds to the now-present enqueue_email RPC.
-//   4. Verify a test signup writes to email_send_log with status `sent` and
-//      arrives from noreply@notify.barberhub.tv.
-//
-// DNS for notify.barberhub.tv is already verified — no DNS work required.
-// Templates and branding under _shared/email-templates/ are preserved.
-// =============================================================================
-
 import * as React from 'npm:react@18.3.1'
 import { renderAsync } from 'npm:@react-email/components@0.0.22'
 import { parseEmailWebhookPayload } from 'npm:@lovable.dev/email-js'

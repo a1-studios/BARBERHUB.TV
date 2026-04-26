@@ -9,8 +9,8 @@ import {
   Head,
   Heading,
   Html,
-  Link,
   Preview,
+  Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
 
@@ -29,30 +29,43 @@ export const SignupEmail = ({
 }: SignupEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Confirm your email for {siteName}</Preview>
+    <Preview>Step into the BarberHub Arena — confirm your email</Preview>
     <Body style={main}>
-      <Container style={container}>
-        <Heading style={h1}>Confirm your email</Heading>
-        <Text style={text}>
-          Thanks for signing up for{' '}
-          <Link href={siteUrl} style={link}>
-            <strong>{siteName}</strong>
-          </Link>
-          !
-        </Text>
-        <Text style={text}>
-          Please confirm your email address (
-          <Link href={`mailto:${recipient}`} style={link}>
-            {recipient}
-          </Link>
-          ) by clicking the button below:
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Verify Email
-        </Button>
-        <Text style={footer}>
-          If you didn't create an account, you can safely ignore this email.
-        </Text>
+      <Container style={outerContainer}>
+        <Section style={card}>
+          <Section style={accentBar} />
+          <Section style={brandHeader}>
+            <Text style={brand}>
+              BARBER<span style={brandAccent}>HUB</span>
+            </Text>
+            <Text style={tagline}>The Global Arena</Text>
+          </Section>
+          <Section style={bodySection}>
+            <Heading style={h1}>Step Into The Arena.</Heading>
+            <Text style={text}>
+              Welcome to BarberHub. You're one tap away from joining the global
+              stage where master barbers compete, fans crown champions, and
+              reputations are built blade by blade.
+            </Text>
+            <Text style={text}>Confirm your email to activate your account.</Text>
+            <Section style={buttonWrap}>
+              <Button style={button} href={confirmationUrl}>
+                ACTIVATE ACCOUNT →
+              </Button>
+            </Section>
+            <Text style={smallMuted}>
+              Or paste this link into your browser:
+            </Text>
+            <Text style={linkText}>{confirmationUrl}</Text>
+            <Text style={footer}>
+              If you didn't create a BarberHub account ({recipient}), you can
+              safely ignore this email.
+            </Text>
+            <Text style={footerBrand}>
+              BarberHub · {siteUrl.replace(/^https?:\/\//, '')}
+            </Text>
+          </Section>
+        </Section>
       </Container>
     </Body>
   </Html>
@@ -60,27 +73,100 @@ export const SignupEmail = ({
 
 export default SignupEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
+const main = {
+  backgroundColor: '#ffffff',
+  fontFamily:
+    "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
+  margin: 0,
+  padding: '32px 16px',
+}
+const outerContainer = { maxWidth: '560px', margin: '0 auto' }
+const card = {
+  backgroundColor: '#0a0a0a',
+  border: '1px solid #1a1a1a',
+  borderRadius: '4px',
+  overflow: 'hidden' as const,
+}
+const accentBar = {
+  height: '4px',
+  background: 'linear-gradient(90deg,#FF5F1F 0%,#FF8C00 50%,#FFB347 100%)',
+  fontSize: 0,
+  lineHeight: 0,
+}
+const brandHeader = {
+  padding: '32px 36px 24px 36px',
+  borderBottom: '1px solid #1a1a1a',
+}
+const brand = {
+  margin: 0,
   fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
+  fontWeight: 900 as const,
+  letterSpacing: '0.18em',
+  color: '#ffffff',
+  textTransform: 'uppercase' as const,
+  lineHeight: 1,
+}
+const brandAccent = { color: '#FF5F1F' }
+const tagline = {
+  margin: '6px 0 0 0',
+  fontSize: '10px',
+  fontWeight: 700 as const,
+  letterSpacing: '0.4em',
+  color: '#FF5F1F',
+  textTransform: 'uppercase' as const,
+}
+const bodySection = { padding: '40px 36px 36px 36px' }
+const h1 = {
+  margin: '0 0 20px 0',
+  fontSize: '28px',
+  fontWeight: 900 as const,
+  color: '#ffffff',
+  lineHeight: 1.1,
+  letterSpacing: '-0.01em',
+  textTransform: 'uppercase' as const,
 }
 const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
+  margin: '0 0 16px 0',
+  fontSize: '15px',
+  lineHeight: 1.65,
+  color: '#b8b8b8',
 }
-const link = { color: 'inherit', textDecoration: 'underline' }
+const buttonWrap = { textAlign: 'center' as const, margin: '28px 0' }
 const button = {
-  backgroundColor: '#000000',
+  backgroundColor: '#FF5F1F',
   color: '#ffffff',
   fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
+  fontWeight: 900 as const,
+  letterSpacing: '0.16em',
+  padding: '16px 38px',
+  borderRadius: '4px',
   textDecoration: 'none',
+  textTransform: 'uppercase' as const,
 }
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const smallMuted = {
+  margin: '24px 0 6px 0',
+  fontSize: '11px',
+  fontWeight: 700 as const,
+  letterSpacing: '0.2em',
+  color: '#666666',
+  textTransform: 'uppercase' as const,
+}
+const linkText = {
+  margin: '0 0 24px 0',
+  fontSize: '12px',
+  color: '#FF5F1F',
+  wordBreak: 'break-all' as const,
+}
+const footer = {
+  margin: '24px 0 0 0',
+  fontSize: '12px',
+  color: '#666666',
+  lineHeight: 1.5,
+}
+const footerBrand = {
+  margin: '16px 0 0 0',
+  fontSize: '11px',
+  letterSpacing: '0.2em',
+  color: '#FF5F1F',
+  textTransform: 'uppercase' as const,
+}
