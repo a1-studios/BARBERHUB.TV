@@ -1,29 +1,34 @@
-## What I found
-- The signup request is succeeding. Recent auth logs show both `POST /signup` and the follow-up email resend request returning `200`, so the app is successfully asking Supabase to send the confirmation email.
-- The app currently shows a success state as soon as signup succeeds, not when inbox delivery is confirmed.
-- The project has a verified sender subdomain: `notify.barberhub.tv`.
-- The repo still contains notes for an older split setup: custom auth email hook is parked, queue tables are not provisioned, and HTML templates were meant to be pasted into Supabase manually.
-- There are no recent auth errors, which points away from a frontend bug and toward email delivery/configuration mismatch.
+# Verify Branded Auth Email Delivery
 
-## Most likely cause
-The app is reporting “sent” because Supabase accepted the request, but inbox delivery is happening through an email setup that is not fully aligned. Right now the project appears to have:
-1. a verified built-in sender domain (`notify.barberhub.tv`), and
-2. legacy instructions/code assuming a separate SMTP/template path.
+## Current state (confirmed)
+- Domain `notify.barberhub.tv` is **verified** ✅
+- `auth-email-hook` is deployed with 6 branded templates ✅
+- BUT the hook uses the **old direct-send pattern** (imports `@lovable.dev/email-js`) instead of the new queue-based pattern (`enqueue_email` RPC). Old hooks miss retry safety + rate-limit handling but still send branded emails.
 
-That mismatch is the strongest candidate for why requests succeed but emails are not arriving.
+## What you do manually (required first)
+1. **Disable Custom SMTP** in Supabase → Authentication → Providers → SMTP Settings (toggle OFF, Save)
+2. **Delete `onlyfansexpo@gmail.com`** from Supabase → Authentication → Users
+3. **Retry signup** in the app
 
-## Plan
-1. Audit the live auth email path in project settings and confirm whether auth emails are currently using built-in project email delivery or legacy SMTP templates.
-2. Standardize on a single sending path so signup, magic link, invite, and password reset all use the same verified domain and branded templates.
-3. If needed, set up the proper auth email pipeline end-to-end for the verified domain, deploy the required function(s), and verify with a fresh signup test.
-4. Update the signup UI copy so it no longer implies inbox delivery is guaranteed the moment the request is accepted.
-5. Re-test signup and password recovery, then confirm exactly where the email lands and which sender/from address is being used.
+## Expected result
+- Email arrives in 5–30 seconds from `noreply@notify.barberhub.tv`
+- Branded dark card with neon orange "Activate Account" button
+- Subject line: "Confirm your email"
 
-## Technical details
-- Evidence from logs: latest auth activity includes successful `POST /signup` and `POST /resend` responses with status `200` for `onlyfansexpo@gmail.com`.
-- Database check: the user row exists and remains unconfirmed, meaning account creation happened but confirmation completion did not.
-- Repo state: `supabase/functions/auth-email-hook/index.ts` is explicitly marked inactive, and the database does not currently contain the queue tables that hook would need.
-- Current app behavior: `src/hooks/useAuth.tsx` shows a success toast immediately after `signUp()` returns a user.
+## What I'll do if email still doesn't arrive
+Once you confirm the result, I'll either:
 
-## Result after approval
-I’ll inspect the active email configuration, align it to one working setup, update the messaging, and verify the full confirm-signup flow end to end.
+**If email arrives but unbranded** → check Supabase auth hook is actually pointed at `auth-email-hook` (Cloud → Emails activation status). If the hook isn't activated server-side, redeploy with `supabase--deploy_edge_functions` to trigger the auto-reconcile.
+
+**If no email arrives at all** → 
+1. Pull `auth-email-hook` logs (`supabase--edge_function_logs`) to see if Supabase is even calling the hook
+2. Pull `email_send_log` rows for the recipient to see queue status
+3. If hook is being called but failing → re-scaffold with the queue-based pattern (`scaffold_auth_email_templates` with `confirm_overwrite: true`) and redeploy. This upgrades the hook to use pgmq for retries while preserving the existing branded templates.
+4. If hook is NOT being called → activation is stuck; surface the Cloud → Emails status and guide remediation.
+
+**If email arrives, branded, working** → done. Optionally upgrade to queue-based pattern as a hardening step (better retry behavior under load), but not required.
+
+## What I will NOT do
+- Won't touch the templates (they're already branded correctly)
+- Won't touch the SMTP/Resend config (you control that in Supabase dashboard)
+- Won't switch back to Resend — Lovable Emails is the right path here
