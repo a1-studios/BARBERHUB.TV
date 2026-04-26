@@ -17,12 +17,12 @@ const corsHeaders = {
 }
 
 const EMAIL_SUBJECTS: Record<string, string> = {
-  signup: 'Confirm your spot in the Arena 🏆',
-  invite: "You've been invited to BarberHub",
-  magiclink: 'Your BarberHub login link',
-  recovery: 'Reset your BarberHub password',
-  email_change: 'Confirm your new BarberHub email',
-  reauthentication: 'Your BarberHub verification code',
+  signup: 'Confirm your email',
+  invite: "You've been invited",
+  magiclink: 'Your login link',
+  recovery: 'Reset your password',
+  email_change: 'Confirm your new email',
+  reauthentication: 'Your verification code',
 }
 
 // Template mapping
@@ -36,7 +36,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "BarberHub"
+const SITE_NAME = "barber-boost-blaze"
 const SENDER_DOMAIN = "notify.barberhub.tv"
 const ROOT_DOMAIN = "barberhub.tv"
 const FROM_DOMAIN = "barberhub.tv" // Domain shown in From address (may be root or sender subdomain)
@@ -159,14 +159,14 @@ async function handleWebhook(req: Request): Promise<Response> {
         case 'missing_timestamp':
         case 'invalid_timestamp':
         case 'stale_timestamp':
-          console.error('Invalid webhook signature', { error: (error as Error).message })
+          console.error('Invalid webhook signature', { error: error.message })
           return new Response(JSON.stringify({ error: 'Invalid signature' }), {
             status: 401,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           })
         case 'invalid_payload':
         case 'invalid_json':
-          console.error('Invalid webhook payload', { error: (error as Error).message })
+          console.error('Invalid webhook payload', { error: error.message })
           return new Response(
             JSON.stringify({ error: 'Invalid webhook payload' }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -308,7 +308,7 @@ Deno.serve(async (req) => {
     return await handleWebhook(req)
   } catch (error) {
     console.error('Webhook handler error:', error)
-    const message = error instanceof Error ? (error as Error).message : 'Unknown error'
+    const message = error instanceof Error ? error.message : 'Unknown error'
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
