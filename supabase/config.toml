@@ -8,11 +8,16 @@ project_id = "msuepyfssovvkjzpfjzu"
   schemas = ["public", "storage", "graphql_public"]
 
 [auth]
-  additional_redirect_urls = ["https://lovable.app"]
+  additional_redirect_urls = [
+    "https://barberhub.tv",
+    "https://www.barberhub.tv",
+    "https://id-preview--64d76cf7-85b6-4715-9c81-e3a2358707e1.lovable.app",
+    "http://localhost:3000",
+  ]
   enabled = true
   jwt_expiry = 3600
   port = 54324
-  site_url = "https://lovable.app"
+  site_url = "https://barberhub.tv"
 
 [db]
   enabled = true

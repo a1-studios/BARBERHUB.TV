@@ -1,44 +1,68 @@
-## What's broken
+## Goal
+Restore reliable account confirmation emails first, then re-enable the branded sender path without leaving the project in a half-configured state.
 
-The signup is succeeding (`/signup` returns 200 in auth logs) and Supabase IS sending the confirmation email — but it's going out from `noreply@mail.app.supabase.io` (Supabase's default mailer), which has aggressive rate limits and frequently lands in spam.
+## Audit findings
+- The sender subdomain is verified and available for email sending.
+- Recent auth logs still show confirmation mail going out from the default Supabase sender, not the BarberHub sender.
+- The custom auth email function has no request logs, which means Auth is not currently routing confirmation emails through it.
+- The current function code expects shared email infrastructure in the database (`email_send_log`, `email_send_state`, suppression tables, and the enqueue RPC), but those objects do not exist in the connected database.
+- `supabase/config.toml` still uses `https://lovable.app` as the auth site URL, which is not aligned with the app’s real signup flow or resend links.
 
-Evidence:
-- Auth log shows `mail_from: noreply@mail.app.supabase.io` (default mailer, not your branded hook)
-- `auth-email-hook` edge function has **zero invocations** in its logs
-- The hook code and `supabase/config.toml` entry exist, but the function was never successfully deployed to Supabase, so Lovable's orchestrator never activated it as the auth email handler
+## Plan
+1. **Normalize auth URL configuration**
+   - Update the auth configuration to use the project’s real app URL(s) instead of `lovable.app`.
+   - Align every signup, resend, and password-reset redirect with the same origin strategy so confirmation links always return users to the correct app.
 
-The `notify.barberhub.tv` domain itself is **verified ✅** — DNS is fine. The problem is purely that the hook isn't live yet.
+2. **Replace the hand-maintained auth email hook with a managed-compatible setup**
+   - Rebuild the auth email setup from the managed template flow so the hook matches the platform’s current contract.
+   - Keep the existing BarberHub branding, copy, and white-background email design.
+   - Redeploy the auth email function after the reset.
 
-## Fix
+3. **Repair the missing backend email infrastructure before activating the hook**
+   - Restore the shared email pipeline that the hook depends on in the connected Supabase project.
+   - Confirm the queue/logging pieces exist before relying on the custom hook.
+   - If that infrastructure cannot be restored in this project, switch to the safe fallback path: deliver confirmation emails through the default auth mailer first, then reintroduce branded delivery only after the backend is complete.
 
-### 1. Deploy `auth-email-hook` to Supabase
-Trigger an explicit deploy of the function. Once it deploys successfully, the Lovable email orchestrator automatically wires it into Supabase Auth's email pipeline, replacing the default `noreply@mail.app.supabase.io` sender with `BarberHub <noreply@barberhub.tv>`.
+4. **Harden the frontend signup flow**
+   - Make the landing/signup flow consistently surface the user’s next step after signup: sent, resend pending, resend success, and spam-folder guidance.
+   - Ensure both signup entry points in the app use the same redirect target and confirmation messaging.
 
-### 2. Verify activation
-After deploy:
-- Confirm the function appears in Supabase's deployed functions list
-- Check that the next signup attempt invokes `auth-email-hook` (logs should show activity)
-- Confirm the user receives a branded email from `noreply@barberhub.tv`
+5. **Run an end-to-end verification pass**
+   - Trigger a fresh signup and a resend.
+   - Verify the auth system stops using the default sender for new confirmation emails once the custom path is active.
+   - Confirm the email function receives traffic, the send pipeline records success/failure, and the confirmation link signs the user in and allows prize claiming.
 
-### 3. Add "Resend confirmation email" affordance in `StepLiveFinalize.tsx`
-Right now if a user doesn't get the email, they're stuck on Step 4 with no recovery path. Add:
-- A "Didn't get the email? Resend" button that calls `supabase.auth.resend({ type: 'signup', email })`
-- A 30-second cooldown on the button to avoid hammering the rate limit
-- A "Check spam folder" hint below the button
-- Optional: a small "change email" link that takes them back to Step 3
+## What I will change
+- `supabase/config.toml`
+- `supabase/functions/auth-email-hook/index.ts`
+- Auth email templates under `supabase/functions/_shared/email-templates/`
+- Signup/resend client code where redirects or messaging are inconsistent
+- Optional: add a targeted edge-function test for the auth email hook
 
-### 4. Smoke test
-Sign up with a fresh email, confirm:
-- Email arrives from `noreply@barberhub.tv` (not `mail.app.supabase.io`)
-- Branded BarberHub orange-on-white template renders
-- Confirmation link successfully signs the user in
-- Pending prize is claimed on first sign-in
+## Success criteria
+- New signups generate a confirmation email that is actually received.
+- The sender/path used is intentional and observable in logs.
+- No missing-table or missing-RPC failures remain in the auth email pipeline.
+- Confirmation links return users to the correct app URL.
+- Prize-claim signup flow works after email confirmation.
 
-## Files touched
+## Technical details
+```text
+Current state
+Auth signup -> default Supabase mailer sends confirmation
+           -> custom auth-email-hook not invoked
 
-- `supabase/functions/auth-email-hook/index.ts` — deploy only, no code changes (already correctly written)
-- `src/components/coming-soon/StepLiveFinalize.tsx` — add resend button + cooldown + spam hint
+Current custom hook risk
+custom hook -> tries to write email_send_log / enqueue_email
+            -> database objects are missing
+            -> would fail if activated as-is
 
-## Why the previous setup didn't fully work
+Target state
+Auth signup -> auth-email-hook invoked
+           -> working email backend path
+           -> message delivered
+           -> user confirms -> returns to correct URL -> prize claim continues
+```
 
-Scaffolding the templates created the files, but the deploy step didn't successfully register the function with Supabase Auth's webhook system. The system contract requires `auth-email-hook` to be deployed before Lovable can flip Supabase from "use default emails" to "call this webhook for every auth email." Until that switch flips, every signup email goes out via the default mailer regardless of how nicely your templates are styled.
+## Notes
+This plan intentionally fixes delivery reliability before branding. Right now the project has verified DNS, inactive custom routing, and missing backend email objects; activating the current hook without repairing that stack would likely turn “not receiving emails” into hard failures.

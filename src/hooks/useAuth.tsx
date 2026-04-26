@@ -59,10 +59,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, displayName?: string, userType?: string, countryCode?: string) => {
     try {
+      const redirectUrl = `${window.location.origin}/`;
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo: redirectUrl,
           data: {
             display_name: displayName || email.split('@')[0],
             user_type: userType || 'fan',
@@ -78,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data.user) {
-        toast.success('Check your email to confirm your account!');
+        toast.success('Check your email to confirm your account! (Look in spam too.)');
       }
 
       return { error: null };
