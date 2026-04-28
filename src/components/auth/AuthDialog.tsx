@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { Loader2, User, Sparkles, MailCheck } from 'lucide-react';
 import { ForgotPasswordForm } from './ForgotPasswordForm';
 import { supabase } from '@/integrations/supabase/client';
+import { authCallbackRedirect } from '@/lib/authRedirects';
 import { toast } from 'sonner';
 
 interface AuthDialogProps {
@@ -86,7 +87,7 @@ export function AuthDialog({
       type: 'signup',
       email: signInData.email.trim().toLowerCase(),
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: authCallbackRedirect(),
       },
     });
     setResending(false);

@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { authCallbackRedirect } from '@/lib/authRedirects';
 import { toast } from 'sonner';
 
 interface AuthContextType {
@@ -59,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, displayName?: string, userType?: string, countryCode?: string) => {
     try {
-      const redirectUrl = `${window.location.origin}/auth/callback`;
+      const redirectUrl = authCallbackRedirect();
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
