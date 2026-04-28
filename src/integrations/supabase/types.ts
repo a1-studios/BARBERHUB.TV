@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      academy_unlocks: {
+        Row: {
+          bb_paid: number
+          content_id: string
+          educator_id: string
+          id: string
+          student_id: string
+          unlocked_at: string
+        }
+        Insert: {
+          bb_paid?: number
+          content_id: string
+          educator_id: string
+          id?: string
+          student_id: string
+          unlocked_at?: string
+        }
+        Update: {
+          bb_paid?: number
+          content_id?: string
+          educator_id?: string
+          id?: string
+          student_id?: string
+          unlocked_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academy_unlocks_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "creator_content"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_action_logs: {
         Row: {
           action_type: string
@@ -1814,6 +1849,7 @@ export type Database = {
           is_published: boolean | null
           likes: number | null
           media_url: string | null
+          price_bb: number
           promote_to_feed: boolean | null
           shares: number | null
           status: string | null
@@ -1835,6 +1871,7 @@ export type Database = {
           is_published?: boolean | null
           likes?: number | null
           media_url?: string | null
+          price_bb?: number
           promote_to_feed?: boolean | null
           shares?: number | null
           status?: string | null
@@ -1856,6 +1893,7 @@ export type Database = {
           is_published?: boolean | null
           likes?: number | null
           media_url?: string | null
+          price_bb?: number
           promote_to_feed?: boolean | null
           shares?: number | null
           status?: string | null
@@ -4141,6 +4179,61 @@ export type Database = {
         }
         Relationships: []
       }
+      tournament_finalists: {
+        Row: {
+          barber_id: string | null
+          barber_name: string | null
+          category: string | null
+          category_rank: number | null
+          country_code: string | null
+          created_at: string | null
+          draws: number | null
+          id: string | null
+          losses: number | null
+          matches_played: number | null
+          phase_id: string | null
+          points: number | null
+          qualified: boolean | null
+          rank: number | null
+          show_up_points: number | null
+          tournament_id: string | null
+          updated_at: string | null
+          vote_difference: number | null
+          votes_against: number | null
+          votes_for: number | null
+          wins: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tournament_standings_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "tournament_standings_barber_id_fkey"
+            columns: ["barber_id"]
+            isOneToOne: false
+            referencedRelation: "public_user_profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "tournament_standings_phase_id_fkey"
+            columns: ["phase_id"]
+            isOneToOne: false
+            referencedRelation: "tournament_phases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tournament_standings_tournament_id_fkey"
+            columns: ["tournament_id"]
+            isOneToOne: false
+            referencedRelation: "tournaments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       assign_social_auth_role: {
@@ -4150,6 +4243,16 @@ export type Database = {
       award_show_up_point: {
         Args: { p_barber_profile_id: string; p_battle_id: string }
         Returns: boolean
+      }
+      award_tournament_points: {
+        Args: {
+          p_is_draw?: boolean
+          p_loser_id: string
+          p_phase_id: string
+          p_tournament_id: string
+          p_winner_id: string
+        }
+        Returns: undefined
       }
       build_universal_feed: {
         Args: { p_limit?: number; p_offset?: number }
@@ -4192,6 +4295,7 @@ export type Database = {
         Args: { battle_id_param: string; creation_id_param: string }
         Returns: boolean
       }
+      cleanup_completed_challenges: { Args: never; Returns: undefined }
       cleanup_old_community_notes: { Args: never; Returns: Json }
       complete_qualification_phase: {
         Args: {
@@ -4348,6 +4452,10 @@ export type Database = {
           user_type: string
           username: string
         }[]
+      }
+      get_nationality_match_priority: {
+        Args: { p_country1: string; p_country2: string }
+        Returns: number
       }
       get_public_barber_profiles: {
         Args: never
