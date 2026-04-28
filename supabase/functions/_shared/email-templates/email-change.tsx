@@ -11,6 +11,7 @@ import {
   Html,
   Link,
   Preview,
+  Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
 
@@ -32,28 +33,24 @@ export const EmailChangeEmail = ({
     <Preview>Confirm your email change for {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm your email change</Heading>
-        <Text style={text}>
-          You requested to change your email address for {siteName} from{' '}
-          <Link href={`mailto:${email}`} style={link}>
-            {email}
-          </Link>{' '}
-          to{' '}
-          <Link href={`mailto:${newEmail}`} style={link}>
-            {newEmail}
-          </Link>
-          .
-        </Text>
-        <Text style={text}>
-          Click the button below to confirm this change:
-        </Text>
-        <Button style={button} href={confirmationUrl}>
-          Confirm Email Change
-        </Button>
-        <Text style={footer}>
-          If you didn't request this change, please secure your account
-          immediately.
-        </Text>
+        <Section style={brandBar} />
+        <Section style={card}>
+          <Heading style={h1}>Confirm your email change</Heading>
+          <Text style={text}>
+            You requested to change your {siteName} email from{' '}
+            <Link href={`mailto:${email}`} style={link}>{email}</Link> to{' '}
+            <Link href={`mailto:${newEmail}`} style={link}>{newEmail}</Link>.
+          </Text>
+          <Section style={buttonWrap}>
+            <Button style={button} href={confirmationUrl}>
+              Confirm Email Change
+            </Button>
+          </Section>
+          <Text style={footer}>
+            If you didn't request this change, secure your account immediately.
+          </Text>
+        </Section>
+        <Text style={signature}>— The BarberHub.tv Team</Text>
       </Container>
     </Body>
   </Html>
@@ -61,27 +58,14 @@ export const EmailChangeEmail = ({
 
 export default EmailChangeEmail
 
-const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
-const container = { padding: '20px 25px' }
-const h1 = {
-  fontSize: '22px',
-  fontWeight: 'bold' as const,
-  color: '#000000',
-  margin: '0 0 20px',
-}
-const text = {
-  fontSize: '14px',
-  color: '#55575d',
-  lineHeight: '1.5',
-  margin: '0 0 25px',
-}
-const link = { color: 'inherit', textDecoration: 'underline' }
-const button = {
-  backgroundColor: '#000000',
-  color: '#ffffff',
-  fontSize: '14px',
-  borderRadius: '8px',
-  padding: '12px 20px',
-  textDecoration: 'none',
-}
-const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
+const main = { backgroundColor: '#ffffff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif', padding: '40px 0' }
+const container = { maxWidth: '560px', margin: '0 auto', padding: '0 20px' }
+const brandBar = { height: '4px', backgroundColor: '#FF6B1A', borderRadius: '4px 4px 0 0' }
+const card = { backgroundColor: '#0a0a0f', padding: '40px 32px', borderRadius: '0 0 12px 12px', color: '#ffffff' }
+const h1 = { fontSize: '26px', fontWeight: 'bold' as const, color: '#ffffff', margin: '0 0 20px', letterSpacing: '-0.02em' }
+const text = { fontSize: '15px', color: '#cfcfd6', lineHeight: '1.6', margin: '0 0 24px' }
+const link = { color: '#FF6B1A', textDecoration: 'none' }
+const buttonWrap = { textAlign: 'center' as const, margin: '8px 0 24px' }
+const button = { backgroundColor: '#FF6B1A', color: '#0a0a0f', fontSize: '15px', fontWeight: 'bold' as const, borderRadius: '10px', padding: '14px 28px', textDecoration: 'none', display: 'inline-block' }
+const footer = { fontSize: '12px', color: '#7a7a85', lineHeight: '1.5', margin: '24px 0 0' }
+const signature = { fontSize: '12px', color: '#999999', textAlign: 'center' as const, margin: '24px 0 0' }

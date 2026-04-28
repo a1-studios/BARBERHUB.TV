@@ -1,64 +1,41 @@
-# Branded Email Audit — Root Cause Found
+## What's broken
 
-## TL;DR
+- **Domain**: `notify.barberhub.tv` is verified ✅
+- **auth-email-hook function**: deployed and correctly written ✅
+- **Database queue infrastructure**: NOT provisioned ❌ ← this is the actual blocker
 
-The branded email pipeline is broken because the **database email infrastructure was never provisioned**. Your `auth-email-hook` edge function correctly tries to enqueue emails by calling the `enqueue_email` RPC — but that RPC, the pgmq queues, the `email_send_log` table, and the cron dispatcher **do not exist** in your Supabase project. So every password-reset / signup email fails silently at the enqueue step. That's exactly why you see "Error sending recovery email" in the screenshot.
+The hook fires when Supabase Auth needs to send a password reset / magic link / signup confirmation. It tries to call `supabase.rpc('enqueue_email', ...)` to push the rendered email into the `auth_emails` pgmq queue. That RPC, the queue, the `email_send_log` table, and the `process-email-queue` cron job **don't exist yet**, so every send fails silently and Supabase surfaces a generic "User needs authorization code" error to the client.
 
----
+The "Finish Lovable Emails setup" button in the Cloud panel can't run the provisioning by itself — it requires a backend tool call from me. That's why clicking it shows "confirmed" but nothing changes downstream.
 
-## Audit Results
+## Fix (one step)
 
-### ✅ What IS configured correctly
+Run the managed email-infrastructure provisioner against the BARBER-HUB Supabase project. This is idempotent and creates everything the `auth-email-hook` already expects:
 
-| Component | Status |
-|---|---|
-| Email domain `notify.barberhub.tv` | **Verified** (DNS active, NS delegated to ns3/ns4.lovable.cloud) |
-| Auth email templates (`signup`, `recovery`, `magic-link`, `invite`, `email-change`, `reauthentication`) | Present in `supabase/functions/_shared/email-templates/` with BarberHub branding |
-| `auth-email-hook` edge function | Deployed, uses correct queue-based pattern (calls `supabase.rpc('enqueue_email', ...)`) |
-| `LOVABLE_API_KEY` secret | Provisioned (managed) |
-| `pgmq` Postgres extension | Installed |
+1. **pgmq extension** + two priority queues: `auth_emails` (high-priority) and `transactional_emails`
+2. **RPC wrappers** (SECURITY DEFINER): `enqueue_email`, `read_email_batch`, `delete_email`, `move_to_dlq`
+3. **Tables**: `email_send_log`, `email_send_state`, `suppressed_emails`, `email_unsubscribe_tokens` — all with RLS
+4. **Vault secret**: `email_queue_service_role_key` (used by cron to authenticate to the dispatcher)
+5. **Edge Function**: `process-email-queue` (drains the queues, handles retries / 429 backoff / DLQ)
+6. **pg_cron job**: `process-email-queue` running every 5 seconds
 
-### ❌ What is BROKEN (root cause)
+After provisioning, I'll redeploy `auth-email-hook` to make sure it picks up the now-existing RPC, then verify by checking that `cron.job` contains `process-email-queue` and the `auth_emails` queue exists.
 
-Database query confirms the email infrastructure is missing:
+## What you'll see after
 
-```
-pgmq_ext:        true   ← extension installed
-enqueue_fn:      false  ← RPC missing  ⛔
-log_tbl:         false  ← email_send_log missing  ⛔
-state_tbl:       false  ← email_send_state missing  ⛔
-suppressed_tbl:  false  ← suppressed_emails missing  ⛔
-cron_job:        false  ← process-email-queue cron missing  ⛔
-```
+- Trigger any auth email (password reset is the easiest test) → the email lands in the inbox from `BarberHub.tv <noreply@barberhub.tv>` within ~5–10 seconds, using your branded Deep Black + Neon Orange templates already in `supabase/functions/_shared/email-templates/`.
+- The "User needs authorization code" error stops appearing.
+- You can monitor every send in **Cloud → Emails** (and query `email_send_log` directly for status: `pending` → `sent`, or `dlq` if anything fails).
 
-**Effect:** When a user clicks "Send Reset Link", Supabase Auth fires the webhook → `auth-email-hook` runs → tries `supabase.rpc('enqueue_email', ...)` → Postgres returns "function does not exist" → hook returns 500 → user sees `Error sending recovery email`.
+## What I will NOT touch
 
-### ➖ Not relevant to branded auth emails
+- The `auth-email-hook` code itself — it's already correct.
+- The 6 branded email templates in `_shared/email-templates/` — already styled to your spec.
+- Any other Edge Function, table, or RLS policy in the project.
+- Resend, RESEND_API_KEY, or any third-party email config — none exist and none are needed.
 
-- No `RESEND_API_KEY` / `SEND_EMAIL_HOOK_SECRET` — correct, Lovable Emails is managed and uses `LOVABLE_API_KEY` automatically. Do not add these.
-- Stripe / Twilio / Gemini / YouTube secrets — unrelated to email pipeline.
+## Throughput defaults
 
----
-
-## Fix Plan (3 steps, single run)
-
-1. **Provision email infrastructure** via the managed setup tool. This creates (idempotently): `pgmq` queues `auth_emails` + `transactional_emails`, RPC wrappers (`enqueue_email`, `read_email_batch`, `delete_email`, `move_to_dlq`), tables (`email_send_log`, `email_send_state`, `suppressed_emails`, `email_unsubscribe_tokens`) with RLS, the `process-email-queue` cron job (every 5s), and the Vault secret for the cron dispatcher.
-
-2. **Redeploy `auth-email-hook`** so it picks up the now-existing RPC at runtime (no code change needed — it's already on the queue-based pattern).
-
-3. **Verify** by:
-   - Querying `cron.job` to confirm `process-email-queue` is scheduled.
-   - Triggering a password reset on `alaguileracorp@gmail.com` from the live UI.
-   - Checking `email_send_log` for a row with `template_name='auth_emails'` transitioning `pending → sent`.
-
-## What you'll see after the fix
-
-- Password reset, signup confirmation, magic link, and email-change emails will arrive within seconds, branded with the BarberHub deep-black + neon orange template, sent from `notify.barberhub.tv`.
-- All sends logged in `email_send_log` (deduplicate by `message_id` for accurate counts).
-- Failures auto-retry up to 5 times via the cron dispatcher; permanent failures land in DLQ.
-
-## Out of scope (not touching)
-
-- Templates themselves (already branded correctly).
-- Domain / DNS (already verified).
-- Transactional (app) emails — separate system; happy to scaffold after auth is confirmed working if you want booking confirmations, contact-form acks, etc.
+- 120 emails/min (batch 10, 200ms delay, cron every 5s) — far above what auth + booking + battle notifications need.
+- Auth emails get priority over transactional. OTP TTL = 15 min so stale codes never send.
+- Tunable later via a one-row update to `email_send_state` — no redeploy needed.

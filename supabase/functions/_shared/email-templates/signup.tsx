@@ -8,7 +8,6 @@ import {
   Container,
   Head,
   Heading,
-  Hr,
   Html,
   Link,
   Preview,
@@ -31,43 +30,29 @@ export const SignupEmail = ({
 }: SignupEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Activate your BarberHub account — the arena awaits</Preview>
+    <Preview>Confirm your email — welcome to BarberHub.tv</Preview>
     <Body style={main}>
       <Container style={container}>
+        <Section style={brandBar} />
         <Section style={card}>
-          <Text style={brandMark}>BARBERHUB.TV</Text>
-          <Hr style={accentBar} />
-          <Heading style={h1}>Activate your account</Heading>
+          <Heading style={h1}>Welcome to BarberHub.tv</Heading>
           <Text style={text}>
-            Welcome to <strong style={brand}>BarberHub</strong>, the global
-            arena where barbers compete, fans vote, and reputations are forged.
-          </Text>
-          <Text style={text}>
-            Confirm your email <strong>{recipient}</strong> to step into the arena:
+            Thanks for joining{' '}
+            <Link href={siteUrl} style={link}>
+              <strong>{siteName}</strong>
+            </Link>
+            . Confirm <strong style={emailStrong}>{recipient}</strong> to step into the arena.
           </Text>
           <Section style={buttonWrap}>
             <Button style={button} href={confirmationUrl}>
-              Activate Account →
+              Verify Email
             </Button>
           </Section>
-          <Text style={fineprint}>
-            Or paste this link into your browser:
-            <br />
-            <Link href={confirmationUrl} style={link}>
-              {confirmationUrl}
-            </Link>
-          </Text>
-          <Hr style={divider} />
           <Text style={footer}>
-            Didn't sign up? Ignore this email — no account will be created.
-          </Text>
-          <Text style={footerBrand}>
-            <Link href={siteUrl} style={footerLink}>
-              {siteName}
-            </Link>{' '}
-            · The Global Barber Arena
+            If you didn't create an account, you can safely ignore this email.
           </Text>
         </Section>
+        <Text style={signature}>— The BarberHub.tv Team</Text>
       </Container>
     </Body>
   </Html>
@@ -75,59 +60,15 @@ export const SignupEmail = ({
 
 export default SignupEmail
 
-const main = {
-  backgroundColor: '#ffffff',
-  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif',
-  margin: 0,
-  padding: 0,
-}
-const container = { maxWidth: '560px', margin: '0 auto', padding: '40px 20px' }
-const card = {
-  backgroundColor: '#0a0a0a',
-  borderRadius: '16px',
-  padding: '40px 32px',
-  border: '1px solid #1f1f1f',
-}
-const brandMark = {
-  fontSize: '11px',
-  fontWeight: 700 as const,
-  letterSpacing: '0.25em',
-  color: '#FF6B1A',
-  margin: '0 0 12px',
-  textTransform: 'uppercase' as const,
-}
-const accentBar = { border: 'none', borderTop: '2px solid #FF6B1A', width: '40px', margin: '0 0 24px' }
-const h1 = {
-  fontSize: '28px',
-  fontWeight: 700 as const,
-  color: '#ffffff',
-  margin: '0 0 20px',
-  lineHeight: '1.2',
-  letterSpacing: '-0.02em',
-}
-const text = { fontSize: '15px', color: '#b8b8b8', lineHeight: '1.6', margin: '0 0 16px' }
-const brand = { color: '#FF6B1A' }
-const buttonWrap = { margin: '32px 0', textAlign: 'center' as const }
-const button = {
-  backgroundColor: '#FF6B1A',
-  color: '#0a0a0a',
-  fontSize: '15px',
-  fontWeight: 700 as const,
-  borderRadius: '10px',
-  padding: '16px 32px',
-  textDecoration: 'none',
-  display: 'inline-block',
-  letterSpacing: '0.02em',
-}
-const fineprint = {
-  fontSize: '12px',
-  color: '#666666',
-  lineHeight: '1.5',
-  margin: '24px 0 0',
-  wordBreak: 'break-all' as const,
-}
-const link = { color: '#FF6B1A', textDecoration: 'underline' }
-const divider = { border: 'none', borderTop: '1px solid #1f1f1f', margin: '32px 0 20px' }
-const footer = { fontSize: '12px', color: '#666666', margin: '0 0 8px' }
-const footerBrand = { fontSize: '11px', color: '#444444', margin: 0 }
-const footerLink = { color: '#888888', textDecoration: 'none' }
+const main = { backgroundColor: '#ffffff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif', padding: '40px 0' }
+const container = { maxWidth: '560px', margin: '0 auto', padding: '0 20px' }
+const brandBar = { height: '4px', backgroundColor: '#FF6B1A', borderRadius: '4px 4px 0 0' }
+const card = { backgroundColor: '#0a0a0f', padding: '40px 32px', borderRadius: '0 0 12px 12px', color: '#ffffff' }
+const h1 = { fontSize: '26px', fontWeight: 'bold' as const, color: '#ffffff', margin: '0 0 20px', letterSpacing: '-0.02em' }
+const text = { fontSize: '15px', color: '#cfcfd6', lineHeight: '1.6', margin: '0 0 24px' }
+const emailStrong = { color: '#FF6B1A' }
+const link = { color: '#FF6B1A', textDecoration: 'none' }
+const buttonWrap = { textAlign: 'center' as const, margin: '8px 0 24px' }
+const button = { backgroundColor: '#FF6B1A', color: '#0a0a0f', fontSize: '15px', fontWeight: 'bold' as const, borderRadius: '10px', padding: '14px 28px', textDecoration: 'none', display: 'inline-block' }
+const footer = { fontSize: '12px', color: '#7a7a85', lineHeight: '1.5', margin: '24px 0 0' }
+const signature = { fontSize: '12px', color: '#999999', textAlign: 'center' as const, margin: '24px 0 0' }
