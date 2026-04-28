@@ -153,6 +153,27 @@ export function AuthDialog({
                   className={inputClass}
                 />
               </div>
+
+              {needsConfirm && (
+                <div className="rounded-[12px] border border-orange-500/40 bg-orange-500/10 p-3 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <MailCheck className="h-4 w-4 mt-0.5 text-orange-400 shrink-0" />
+                    <p className="text-xs text-orange-100 leading-relaxed">
+                      Your email isn't confirmed yet. Check your inbox (and spam folder) for the confirmation link, or resend it below.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleResendConfirm}
+                    disabled={resending}
+                    className="w-full text-xs font-bold uppercase tracking-wider text-orange-300 hover:text-orange-200 underline underline-offset-2 disabled:opacity-60 inline-flex items-center justify-center gap-1.5"
+                  >
+                    {resending && <Loader2 className="h-3 w-3 animate-spin" />}
+                    Resend confirmation email
+                  </button>
+                </div>
+              )}
+
               <Button
                 type="submit"
                 disabled={loading}
