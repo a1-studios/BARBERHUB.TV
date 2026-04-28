@@ -8,10 +8,8 @@ import {
   Container,
   Head,
   Heading,
-  Hr,
   Html,
   Preview,
-  Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
 
@@ -20,30 +18,26 @@ interface MagicLinkEmailProps {
   confirmationUrl: string
 }
 
-export const MagicLinkEmail = ({ siteName, confirmationUrl }: MagicLinkEmailProps) => (
+export const MagicLinkEmail = ({
+  siteName,
+  confirmationUrl,
+}: MagicLinkEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Your BarberHub login link</Preview>
+    <Preview>Your login link for {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Section style={card}>
-          <Text style={brandMark}>BARBERHUB.TV</Text>
-          <Hr style={accentBar} />
-          <Heading style={h1}>Step into the arena</Heading>
-          <Text style={text}>
-            Your secure login link for <strong style={brand}>{siteName}</strong>.
-            Expires shortly.
-          </Text>
-          <Section style={buttonWrap}>
-            <Button style={button} href={confirmationUrl}>
-              Log In →
-            </Button>
-          </Section>
-          <Hr style={divider} />
-          <Text style={footer}>
-            Didn't request this link? Ignore this email.
-          </Text>
-        </Section>
+        <Heading style={h1}>Your login link</Heading>
+        <Text style={text}>
+          Click the button below to log in to {siteName}. This link will expire
+          shortly.
+        </Text>
+        <Button style={button} href={confirmationUrl}>
+          Log In
+        </Button>
+        <Text style={footer}>
+          If you didn't request this link, you can safely ignore this email.
+        </Text>
       </Container>
     </Body>
   </Html>
@@ -51,49 +45,26 @@ export const MagicLinkEmail = ({ siteName, confirmationUrl }: MagicLinkEmailProp
 
 export default MagicLinkEmail
 
-const main = {
-  backgroundColor: '#ffffff',
-  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif',
-  margin: 0,
-  padding: 0,
-}
-const container = { maxWidth: '560px', margin: '0 auto', padding: '40px 20px' }
-const card = {
-  backgroundColor: '#0a0a0a',
-  borderRadius: '16px',
-  padding: '40px 32px',
-  border: '1px solid #1f1f1f',
-}
-const brandMark = {
-  fontSize: '11px',
-  fontWeight: 700 as const,
-  letterSpacing: '0.25em',
-  color: '#FF6B1A',
-  margin: '0 0 12px',
-  textTransform: 'uppercase' as const,
-}
-const accentBar = { border: 'none', borderTop: '2px solid #FF6B1A', width: '40px', margin: '0 0 24px' }
+const main = { backgroundColor: '#ffffff', fontFamily: 'Arial, sans-serif' }
+const container = { padding: '20px 25px' }
 const h1 = {
-  fontSize: '28px',
-  fontWeight: 700 as const,
-  color: '#ffffff',
+  fontSize: '22px',
+  fontWeight: 'bold' as const,
+  color: '#000000',
   margin: '0 0 20px',
-  lineHeight: '1.2',
-  letterSpacing: '-0.02em',
 }
-const text = { fontSize: '15px', color: '#b8b8b8', lineHeight: '1.6', margin: '0 0 16px' }
-const brand = { color: '#FF6B1A' }
-const buttonWrap = { margin: '32px 0', textAlign: 'center' as const }
+const text = {
+  fontSize: '14px',
+  color: '#55575d',
+  lineHeight: '1.5',
+  margin: '0 0 25px',
+}
 const button = {
-  backgroundColor: '#FF6B1A',
-  color: '#0a0a0a',
-  fontSize: '15px',
-  fontWeight: 700 as const,
-  borderRadius: '10px',
-  padding: '16px 32px',
+  backgroundColor: '#000000',
+  color: '#ffffff',
+  fontSize: '14px',
+  borderRadius: '8px',
+  padding: '12px 20px',
   textDecoration: 'none',
-  display: 'inline-block',
-  letterSpacing: '0.02em',
 }
-const divider = { border: 'none', borderTop: '1px solid #1f1f1f', margin: '32px 0 20px' }
-const footer = { fontSize: '12px', color: '#666666', margin: '0 0 8px' }
+const footer = { fontSize: '12px', color: '#999999', margin: '30px 0 0' }
