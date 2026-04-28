@@ -122,6 +122,7 @@ export function EducatorUpload() {
           promote_to_feed: promoteToFeed,
           content_category: category,
           boost_amount_bb: boostBB,
+          price_bb: category === 'tip' ? 0 : priceBB,
           is_published: true,
         } as any)
         .select()
