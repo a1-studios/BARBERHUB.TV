@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Lock, Check, Loader2, AlertCircle, ArrowRight, Mail, RefreshCw } from 'lucide-react';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
+import { authCallbackRedirect } from '@/lib/authRedirects';
 import { fbqTrack, getFbp, getFbc } from '@/lib/metaPixel';
 import { gtagFireRegistration } from '@/lib/googleAds';
 import { readAttribution } from '@/lib/urlParams';
@@ -50,7 +51,7 @@ export const StepLiveFinalize = ({ state, onClose }: StepLiveFinalizeProps) => {
       const { error: resendError } = await supabase.auth.resend({
         type: 'signup',
         email: state.email,
-        options: { emailRedirectTo: `${window.location.origin}/` },
+        options: { emailRedirectTo: authCallbackRedirect() },
       });
       if (resendError) {
         setResendStatus('error');
@@ -99,7 +100,7 @@ export const StepLiveFinalize = ({ state, onClose }: StepLiveFinalizeProps) => {
         email: state.email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: authCallbackRedirect(),
           data: {
             user_type: state.role ?? 'fan',
             display_name: state.username || state.email.split('@')[0],

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { CheckCircle2, AlertTriangle, Loader2, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { authCallbackRedirect } from '@/lib/authRedirects';
 import { toast } from 'sonner';
 
 type Status = 'verifying' | 'success' | 'error';
@@ -88,7 +89,7 @@ export default function AuthCallback() {
       type: 'signup',
       email: resendEmail.trim().toLowerCase(),
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: authCallbackRedirect(),
       },
     });
     setResending(false);
