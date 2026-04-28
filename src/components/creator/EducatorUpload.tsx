@@ -42,6 +42,7 @@ export function EducatorUpload() {
   const [category, setCategory] = useState('tip');
   const [promoteToFeed, setPromoteToFeed] = useState(false);
   const [boostBB, setBoostBB] = useState(0);
+  const [priceBB, setPriceBB] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -121,6 +122,7 @@ export function EducatorUpload() {
           promote_to_feed: promoteToFeed,
           content_category: category,
           boost_amount_bb: boostBB,
+          price_bb: category === 'tip' ? 0 : priceBB,
           is_published: true,
         } as any)
         .select()
@@ -275,6 +277,32 @@ export function EducatorUpload() {
           onChange={(e) => setDescription(e.target.value)}
           className="bg-card/50 border-border/30 text-sm min-h-[80px] resize-none"
         />
+
+        {/* Academy Course Price (only for paid categories) */}
+        {category !== 'tip' && (
+          <Card className="border-primary/30 bg-primary/5">
+            <CardContent className="p-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <GraduationCap className="w-4 h-4 text-primary" />
+                <div>
+                  <p className="text-sm font-medium">Academy Price</p>
+                  <p className="text-[10px] text-muted-foreground">0 = free • You earn 85%</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="number"
+                  min={0}
+                  max={5000}
+                  value={priceBB}
+                  onChange={(e) => setPriceBB(Math.max(0, parseInt(e.target.value) || 0))}
+                  className="w-20 h-8 text-sm text-center bg-background/50"
+                />
+                <span className="text-xs text-primary font-bold">BB</span>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Promote to Feed Toggle */}
         <Card className="border-primary/20 bg-card/30">

@@ -12,10 +12,12 @@ import { CreateBattleDrawer } from '@/components/creator/CreateBattleDrawer';
 import { DealsDrawer } from '@/components/creator/DealsDrawer';
 import { CreatorStatsDrawer } from '@/components/creator/CreatorStatsDrawer';
 import { ChallengeModal } from '@/components/battles/ChallengeModal';
+import { AcademyRail, type AcademyCourse } from '@/components/academy/AcademyRail';
+import { CourseDetailDrawer } from '@/components/academy/CourseDetailDrawer';
 import Header from '@/components/Header';
 import { BottomNavBar } from '@/components/BottomNavBar';
 import { toast } from 'sonner';
-import { Crown, Scissors, Camera, ArrowRight } from 'lucide-react';
+import { Crown, Scissors, Camera, ArrowRight, GraduationCap, Sparkles } from 'lucide-react';
 
 export default function CreatorHub() {
   const { user, loading } = useAuth();
@@ -28,6 +30,7 @@ export default function CreatorHub() {
   const [showChallenge, setShowChallenge] = useState(false);
   const [showDeals, setShowDeals] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<AcademyCourse | null>(null);
 
   // Redirect non-barbers
   if (!loading && !rolesLoading && user && !isBarber) {
@@ -78,8 +81,8 @@ export default function CreatorHub() {
     <>
       <Header />
       <div className="min-h-screen pt-16 pb-20 bg-gradient-to-b from-background to-muted/10">
-        {/* Centered Title — 20% larger with accent */}
-        <div className="flex flex-col items-center justify-center pt-10 md:pt-14 pb-5">
+        {/* Title */}
+        <div className="flex flex-col items-center justify-center pt-8 pb-3">
           <div className="relative">
             <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full scale-150" />
             <Crown className="h-9 w-9 text-primary mb-2 relative" />
@@ -91,45 +94,117 @@ export default function CreatorHub() {
           <p className="text-xs text-muted-foreground mt-2">Your content command center</p>
         </div>
 
-        {/* Action Pills */}
-        <div className="px-4 pb-4">
+        {/* Compact Camera Studio pill — directly under title (~70% smaller) */}
+        <div className="px-4 pb-5 flex justify-center">
+          <button
+            onClick={() => navigate('/studio')}
+            className="group flex items-center gap-2.5 px-4 h-11 rounded-full border border-primary/40 bg-gradient-to-r from-primary/15 via-primary/5 to-background hover:border-primary/60 hover:shadow-[0_0_20px_rgba(255,107,5,0.3)] active:scale-[0.97] transition-all"
+          >
+            <div className="rounded-full bg-primary/15 border border-primary/30 p-1.5">
+              <Camera className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <span className="text-xs font-bold tracking-wider uppercase text-foreground">
+              Camera Studio
+            </span>
+            <ArrowRight className="h-3 w-3 text-primary group-hover:translate-x-0.5 transition-transform" />
+          </button>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="px-4 pb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-primary">
+              Quick Actions
+            </span>
+            <div className="flex-1 h-px bg-border/40" />
+          </div>
           <CreatorActionBar
             onUpload={() => setShowUpload(true)}
             onBattle={() => setShowBattle(true)}
             onChallenge={() => setShowChallenge(true)}
             onDeals={() => setShowDeals(true)}
             onStats={() => setShowStats(true)}
+            onAcademy={() => {
+              // Smooth scroll to Academy section
+              document.getElementById('academy-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
           />
         </div>
 
-        {/* Camera Studio CTA + Content feed */}
-        <div className="px-4 space-y-4">
+        {/* BarberHub Academy Section */}
+        <div id="academy-section" className="px-4 pb-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-primary">
+              BarberHub Academy
+            </span>
+            <div className="flex-1 h-px bg-gradient-to-r from-primary/60 via-border/40 to-transparent" />
+          </div>
+
+          {/* Become an Educator CTA — barbers only */}
           <button
-            onClick={() => navigate('/studio')}
-            className="w-full rounded-2xl border-2 border-primary/40 bg-gradient-to-br from-primary/15 via-primary/5 to-background p-6 text-left transition-all duration-300 hover:border-primary/60 hover:shadow-[0_0_40px_rgba(255,107,5,0.3)] active:scale-[0.98]"
-            style={{ minHeight: '40vh' }}
+            onClick={() => setShowUpload(true)}
+            className="w-full rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-4 text-left hover:border-primary/50 hover:shadow-[0_0_25px_rgba(255,107,5,0.2)] active:scale-[0.98] transition-all"
           >
-            <div className="flex flex-col items-center justify-center h-full gap-4">
-              <div className="relative">
-                <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full scale-150" />
-                <div className="relative rounded-full bg-primary/10 border border-primary/30 p-5">
-                  <Camera className="h-10 w-10 text-primary" />
-                </div>
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-primary/15 border border-primary/30 p-2.5 flex-shrink-0">
+                <GraduationCap className="h-5 w-5 text-primary" />
               </div>
-              <div className="text-center space-y-1.5">
-                <h2 className="text-xl font-black tracking-tight text-foreground">Camera Studio</h2>
-                <p className="text-xs text-muted-foreground max-w-[220px] mx-auto leading-relaxed">
-                  Set up your gear, test lighting & go live in the arena
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-sm font-black text-foreground tracking-tight">Become an Educator</h3>
+                  <Sparkles className="h-3 w-3 text-primary" />
+                </div>
+                <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
+                  Publish technique videos & courses — earn 85% in BB
                 </p>
               </div>
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-                <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Enter Studio</span>
-                <ArrowRight className="w-3 h-3 text-primary" />
-              </div>
+              <ArrowRight className="h-4 w-4 text-primary flex-shrink-0" />
             </div>
           </button>
 
-          <div className="rounded-2xl border border-border/20 bg-card/30 p-6 text-center">
+          {/* Featured Courses */}
+          <div>
+            <div className="flex items-center justify-between mb-2.5">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                Featured Courses
+              </h3>
+              <span className="text-[10px] text-muted-foreground">Pay with BB</span>
+            </div>
+            <AcademyRail onCourseSelect={setSelectedCourse} />
+          </div>
+
+          {/* Mini stat strip */}
+          <div className="grid grid-cols-3 gap-px rounded-xl overflow-hidden border border-border/30 bg-border/30">
+            <div className="bg-card/60 px-3 py-2.5">
+              <div className="text-base font-black text-primary leading-none">85%</div>
+              <div className="text-[9px] text-muted-foreground uppercase tracking-wider mt-1">
+                Educator Cut
+              </div>
+            </div>
+            <div className="bg-card/60 px-3 py-2.5">
+              <div className="text-base font-black text-primary leading-none">BB</div>
+              <div className="text-[9px] text-muted-foreground uppercase tracking-wider mt-1">
+                Paywall Currency
+              </div>
+            </div>
+            <div className="bg-card/60 px-3 py-2.5">
+              <div className="text-base font-black text-primary leading-none">∞</div>
+              <div className="text-[9px] text-muted-foreground uppercase tracking-wider mt-1">
+                Lifetime Access
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Your Content placeholder */}
+        <div className="px-4 pb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-primary">
+              Your Content
+            </span>
+            <div className="flex-1 h-px bg-border/40" />
+          </div>
+          <div className="rounded-2xl border border-border/20 bg-card/30 p-5 text-center">
             <p className="text-xs text-muted-foreground">Your published content will appear here</p>
           </div>
         </div>
@@ -140,10 +215,8 @@ export default function CreatorHub() {
       <CreateBattleDrawer isOpen={showBattle} onClose={() => setShowBattle(false)} />
       <DealsDrawer isOpen={showDeals} onClose={() => setShowDeals(false)} />
       <CreatorStatsDrawer isOpen={showStats} onClose={() => setShowStats(false)} />
-      <ChallengeModal
-        open={showChallenge}
-        onClose={() => setShowChallenge(false)}
-      />
+      <ChallengeModal open={showChallenge} onClose={() => setShowChallenge(false)} />
+      <CourseDetailDrawer course={selectedCourse} onClose={() => setSelectedCourse(null)} />
 
       <BottomNavBar />
     </>
