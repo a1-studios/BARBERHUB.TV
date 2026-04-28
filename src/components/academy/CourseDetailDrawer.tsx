@@ -99,7 +99,7 @@ export function CourseDetailDrawer({ course, onClose }: CourseDetailDrawerProps)
             {/* Video / Paywall */}
             <div className="aspect-video rounded-xl overflow-hidden bg-background border border-border/30 relative">
               {canWatch && course.cloudflare_stream_uid ? (
-                <CloudflareStreamPlayer streamId={course.cloudflare_stream_uid} />
+                <CloudflareStreamPlayer streamUid={course.cloudflare_stream_uid} />
               ) : canWatch && course.media_url ? (
                 <BrandedVideoPlayer src={course.media_url} />
               ) : (
