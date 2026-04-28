@@ -47,6 +47,7 @@ import Rankings from "./pages/Rankings";
 import BroadcastViewer from "./pages/BroadcastViewer";
 import BroadcastStudio from "./pages/BroadcastStudio";
 import ResetPassword from "./pages/ResetPassword";
+import AuthCallback from "./pages/AuthCallback";
 
 const queryClient = new QueryClient();
 
@@ -230,6 +231,7 @@ const AppContent = () => {
               } 
             />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
     </>
