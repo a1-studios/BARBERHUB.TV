@@ -2172,6 +2172,120 @@ export type Database = {
           },
         ]
       }
+      email_send_log: {
+        Row: {
+          attempts: number
+          created_at: string
+          email_type: string
+          error_message: string | null
+          id: string
+          msg_id: number | null
+          queue_name: string
+          recipient_email: string
+          recipient_id: string | null
+          resend_id: string | null
+          sent_at: string | null
+          status: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          email_type?: string
+          error_message?: string | null
+          id?: string
+          msg_id?: number | null
+          queue_name: string
+          recipient_email: string
+          recipient_id?: string | null
+          resend_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          email_type?: string
+          error_message?: string | null
+          id?: string
+          msg_id?: number | null
+          queue_name?: string
+          recipient_email?: string
+          recipient_id?: string | null
+          resend_id?: string | null
+          sent_at?: string | null
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_send_state: {
+        Row: {
+          auth_rate_per_min: number
+          batch_size: number
+          delay_ms: number
+          id: number
+          max_retries: number
+          otp_ttl_seconds: number
+          paused: boolean
+          trans_rate_per_min: number
+          updated_at: string
+        }
+        Insert: {
+          auth_rate_per_min?: number
+          batch_size?: number
+          delay_ms?: number
+          id?: number
+          max_retries?: number
+          otp_ttl_seconds?: number
+          paused?: boolean
+          trans_rate_per_min?: number
+          updated_at?: string
+        }
+        Update: {
+          auth_rate_per_min?: number
+          batch_size?: number
+          delay_ms?: number
+          id?: number
+          max_retries?: number
+          otp_ttl_seconds?: number
+          paused?: boolean
+          trans_rate_per_min?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_unsubscribe_tokens: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          token: string
+          used_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          token?: string
+          used_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          token?: string
+          used_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       feed_items: {
         Row: {
           content_id: string
@@ -3650,6 +3764,27 @@ export type Database = {
           },
         ]
       }
+      suppressed_emails: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          reason: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          reason?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          reason?: string
+        }
+        Relationships: []
+      }
       system_announcements: {
         Row: {
           active: boolean | null
@@ -4327,6 +4462,14 @@ export type Database = {
         Args: { p_amount_bb?: number; p_category: string; p_user_id: string }
         Returns: Json
       }
+      delete_email: {
+        Args: { p_msg_id: number; p_queue: string }
+        Returns: undefined
+      }
+      enqueue_email: {
+        Args: { p_delay_secs?: number; p_payload: Json; p_queue: string }
+        Returns: number
+      }
       expire_bounties_batch: { Args: never; Returns: number }
       finalize_vod_prize_split: {
         Args: {
@@ -4536,6 +4679,15 @@ export type Database = {
       }
       increment_vote_count: {
         Args: { increment_by?: number; submission_id: string }
+        Returns: undefined
+      }
+      mark_email_failed: {
+        Args: {
+          p_error: string
+          p_move_to_dlq?: boolean
+          p_msg_id: number
+          p_queue: string
+        }
         Returns: undefined
       }
       mark_marketing_lead_converted: {
