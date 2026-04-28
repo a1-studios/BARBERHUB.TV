@@ -42,6 +42,7 @@ export function EducatorUpload() {
   const [category, setCategory] = useState('tip');
   const [promoteToFeed, setPromoteToFeed] = useState(false);
   const [boostBB, setBoostBB] = useState(0);
+  const [priceBB, setPriceBB] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
