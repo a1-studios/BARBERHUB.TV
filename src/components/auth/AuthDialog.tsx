@@ -5,8 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, User, Sparkles } from 'lucide-react';
+import { Loader2, User, Sparkles, MailCheck } from 'lucide-react';
 import { ForgotPasswordForm } from './ForgotPasswordForm';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface AuthDialogProps {
   children: React.ReactNode;
@@ -35,6 +37,8 @@ export function AuthDialog({
   const [open, setOpen] = useState(autoOpen);
   const [loading, setLoading] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
+  const [needsConfirm, setNeedsConfirm] = useState(false);
+  const [resending, setResending] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
 
@@ -49,18 +53,48 @@ export function AuthDialog({
 
   const handleOpenChange = (newOpen: boolean) => {
     setOpen(newOpen);
+    if (!newOpen) setNeedsConfirm(false);
     onOpenChange?.(newOpen);
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setNeedsConfirm(false);
     const { error } = await signIn(signInData.email, signInData.password);
     if (!error) {
       handleOpenChange(false);
       setSignInData({ email: '', password: '' });
+    } else {
+      // Detect "email not confirmed" so we can offer a recovery action
+      const code = (error as any).code as string | undefined;
+      const msg = (error.message || '').toLowerCase();
+      if (code === 'email_not_confirmed' || msg.includes('not confirmed') || msg.includes('email not confirmed')) {
+        setNeedsConfirm(true);
+      }
     }
     setLoading(false);
+  };
+
+  const handleResendConfirm = async () => {
+    if (!signInData.email.trim()) {
+      toast.error('Enter your email first');
+      return;
+    }
+    setResending(true);
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: signInData.email.trim().toLowerCase(),
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+    setResending(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success('Confirmation email sent. Check your inbox (and spam folder).');
   };
 
   const handleStartSignup = () => {
