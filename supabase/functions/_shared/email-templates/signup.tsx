@@ -81,11 +81,7 @@ const main = {
   margin: 0,
   padding: 0,
 }
-const container = {
-  maxWidth: '560px',
-  margin: '0 auto',
-  padding: '40px 20px',
-}
+const container = { maxWidth: '560px', margin: '0 auto', padding: '40px 20px' }
 const card = {
   backgroundColor: '#0a0a0a',
   borderRadius: '16px',
@@ -100,12 +96,7 @@ const brandMark = {
   margin: '0 0 12px',
   textTransform: 'uppercase' as const,
 }
-const accentBar = {
-  border: 'none',
-  borderTop: '2px solid #FF6B1A',
-  width: '40px',
-  margin: '0 0 24px',
-}
+const accentBar = { border: 'none', borderTop: '2px solid #FF6B1A', width: '40px', margin: '0 0 24px' }
 const h1 = {
   fontSize: '28px',
   fontWeight: 700 as const,
@@ -114,12 +105,7 @@ const h1 = {
   lineHeight: '1.2',
   letterSpacing: '-0.02em',
 }
-const text = {
-  fontSize: '15px',
-  color: '#b8b8b8',
-  lineHeight: '1.6',
-  margin: '0 0 16px',
-}
+const text = { fontSize: '15px', color: '#b8b8b8', lineHeight: '1.6', margin: '0 0 16px' }
 const brand = { color: '#FF6B1A' }
 const buttonWrap = { margin: '32px 0', textAlign: 'center' as const }
 const button = {
@@ -141,11 +127,7 @@ const fineprint = {
   wordBreak: 'break-all' as const,
 }
 const link = { color: '#FF6B1A', textDecoration: 'underline' }
-const divider = {
-  border: 'none',
-  borderTop: '1px solid #1f1f1f',
-  margin: '32px 0 20px',
-}
+const divider = { border: 'none', borderTop: '1px solid #1f1f1f', margin: '32px 0 20px' }
 const footer = { fontSize: '12px', color: '#666666', margin: '0 0 8px' }
 const footerBrand = { fontSize: '11px', color: '#444444', margin: 0 }
 const footerLink = { color: '#888888', textDecoration: 'none' }
