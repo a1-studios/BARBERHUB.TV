@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Lock, Check, Loader2, AlertCircle, ArrowRight, Mail, RefreshCw } from 'lucide-react';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
-import { authCallbackRedirect, homeRedirect } from '@/lib/authRedirects';
+import { authCallbackRedirect } from '@/lib/authRedirects';
 import { fbqTrack, getFbp, getFbc } from '@/lib/metaPixel';
 import { gtagFireRegistration } from '@/lib/googleAds';
 import { readAttribution } from '@/lib/urlParams';
