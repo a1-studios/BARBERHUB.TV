@@ -49,6 +49,84 @@ export type Database = {
           },
         ]
       }
+      ad_events: {
+        Row: {
+          content_id: string | null
+          content_type: string | null
+          country: string | null
+          created_at: string
+          currency: string | null
+          email_hashed: string | null
+          event_id: string
+          event_name: string
+          fbc: string | null
+          fbp: string | null
+          id: string
+          meta_response: Json | null
+          phone_hashed: string | null
+          platform: string
+          status: string
+          tiktok_response: Json | null
+          ttclid: string | null
+          ttp: string | null
+          user_id: string | null
+          utm_campaign: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          value_usd: number | null
+        }
+        Insert: {
+          content_id?: string | null
+          content_type?: string | null
+          country?: string | null
+          created_at?: string
+          currency?: string | null
+          email_hashed?: string | null
+          event_id: string
+          event_name: string
+          fbc?: string | null
+          fbp?: string | null
+          id?: string
+          meta_response?: Json | null
+          phone_hashed?: string | null
+          platform?: string
+          status?: string
+          tiktok_response?: Json | null
+          ttclid?: string | null
+          ttp?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          value_usd?: number | null
+        }
+        Update: {
+          content_id?: string | null
+          content_type?: string | null
+          country?: string | null
+          created_at?: string
+          currency?: string | null
+          email_hashed?: string | null
+          event_id?: string
+          event_name?: string
+          fbc?: string | null
+          fbp?: string | null
+          id?: string
+          meta_response?: Json | null
+          phone_hashed?: string | null
+          platform?: string
+          status?: string
+          tiktok_response?: Json | null
+          ttclid?: string | null
+          ttp?: string | null
+          user_id?: string | null
+          utm_campaign?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          value_usd?: number | null
+        }
+        Relationships: []
+      }
       admin_action_logs: {
         Row: {
           action_type: string
@@ -2588,6 +2666,7 @@ export type Database = {
       }
       marketing_leads: {
         Row: {
+          claimed_user_id: string | null
           converted: boolean | null
           country_code: string | null
           created_at: string | null
@@ -2600,18 +2679,25 @@ export type Database = {
           id: string
           max_spins: number | null
           prize_bb: number | null
+          prize_duration_months: number | null
+          prize_expires_at: string | null
           prize_id: string | null
           prize_label: string | null
+          prize_locked_at: string | null
           role: string
           shared: boolean | null
           source_url: string | null
+          spin_ip: string | null
           spins_used: number | null
+          ttclid: string | null
+          ttp: string | null
           utm_campaign: string | null
           utm_medium: string | null
           utm_source: string | null
           wbraid: string | null
         }
         Insert: {
+          claimed_user_id?: string | null
           converted?: boolean | null
           country_code?: string | null
           created_at?: string | null
@@ -2624,18 +2710,25 @@ export type Database = {
           id?: string
           max_spins?: number | null
           prize_bb?: number | null
+          prize_duration_months?: number | null
+          prize_expires_at?: string | null
           prize_id?: string | null
           prize_label?: string | null
+          prize_locked_at?: string | null
           role: string
           shared?: boolean | null
           source_url?: string | null
+          spin_ip?: string | null
           spins_used?: number | null
+          ttclid?: string | null
+          ttp?: string | null
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
           wbraid?: string | null
         }
         Update: {
+          claimed_user_id?: string | null
           converted?: boolean | null
           country_code?: string | null
           created_at?: string | null
@@ -2648,12 +2741,18 @@ export type Database = {
           id?: string
           max_spins?: number | null
           prize_bb?: number | null
+          prize_duration_months?: number | null
+          prize_expires_at?: string | null
           prize_id?: string | null
           prize_label?: string | null
+          prize_locked_at?: string | null
           role?: string
           shared?: boolean | null
           source_url?: string | null
+          spin_ip?: string | null
           spins_used?: number | null
+          ttclid?: string | null
+          ttp?: string | null
           utm_campaign?: string | null
           utm_medium?: string | null
           utm_source?: string | null
@@ -3463,6 +3562,75 @@ export type Database = {
           },
         ]
       }
+      skill_memory: {
+        Row: {
+          confidence: number | null
+          id: string
+          memory_key: string
+          memory_value: Json
+          skill_id: string
+          source_run_ids: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          confidence?: number | null
+          id?: string
+          memory_key: string
+          memory_value?: Json
+          skill_id: string
+          source_run_ids?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          confidence?: number | null
+          id?: string
+          memory_key?: string
+          memory_value?: Json
+          skill_id?: string
+          source_run_ids?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      skill_runs: {
+        Row: {
+          confidence: number | null
+          decision: Json | null
+          id: string
+          metrics_after: Json | null
+          metrics_before: Json | null
+          outcome_notes: string | null
+          outcome_score: number | null
+          ran_at: string
+          reasoning: string | null
+          skill_id: string
+        }
+        Insert: {
+          confidence?: number | null
+          decision?: Json | null
+          id?: string
+          metrics_after?: Json | null
+          metrics_before?: Json | null
+          outcome_notes?: string | null
+          outcome_score?: number | null
+          ran_at?: string
+          reasoning?: string | null
+          skill_id: string
+        }
+        Update: {
+          confidence?: number | null
+          decision?: Json | null
+          id?: string
+          metrics_after?: Json | null
+          metrics_before?: Json | null
+          outcome_notes?: string | null
+          outcome_score?: number | null
+          ran_at?: string
+          reasoning?: string | null
+          skill_id?: string
+        }
+        Relationships: []
+      }
       sovereign_audit_log: {
         Row: {
           action_category: string
@@ -4187,6 +4355,51 @@ export type Database = {
           },
         ]
       }
+      workflow_runs: {
+        Row: {
+          channel: string | null
+          created_at: string
+          id: string
+          message_variant: string | null
+          metadata: Json | null
+          outcome: string | null
+          outcome_at: string | null
+          reference_id: string | null
+          step_name: string
+          trigger_event: string
+          user_id: string | null
+          workflow_id: string
+        }
+        Insert: {
+          channel?: string | null
+          created_at?: string
+          id?: string
+          message_variant?: string | null
+          metadata?: Json | null
+          outcome?: string | null
+          outcome_at?: string | null
+          reference_id?: string | null
+          step_name: string
+          trigger_event: string
+          user_id?: string | null
+          workflow_id: string
+        }
+        Update: {
+          channel?: string | null
+          created_at?: string
+          id?: string
+          message_variant?: string | null
+          metadata?: Json | null
+          outcome?: string | null
+          outcome_at?: string | null
+          reference_id?: string | null
+          step_name?: string
+          trigger_event?: string
+          user_id?: string | null
+          workflow_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       barber_stats: {
@@ -4551,6 +4764,7 @@ export type Database = {
       get_marketing_lead_by_fingerprint: {
         Args: { p_fingerprint: string }
         Returns: {
+          claimed_user_id: string | null
           converted: boolean | null
           country_code: string | null
           created_at: string | null
@@ -4563,12 +4777,18 @@ export type Database = {
           id: string
           max_spins: number | null
           prize_bb: number | null
+          prize_duration_months: number | null
+          prize_expires_at: string | null
           prize_id: string | null
           prize_label: string | null
+          prize_locked_at: string | null
           role: string
           shared: boolean | null
           source_url: string | null
+          spin_ip: string | null
           spins_used: number | null
+          ttclid: string | null
+          ttp: string | null
           utm_campaign: string | null
           utm_medium: string | null
           utm_source: string | null
