@@ -1,50 +1,82 @@
-## What's still broken
+# Lead-First Raffle Funnel
 
-You pasted the redirect URLs into Supabase (good — `https://barberhub.tv/**` is now in the allowlist). But the **old confirmation emails already in your inbox** still won't work, because Supabase baked the `redirectTo` into them at send time — and at that time it was the bare Site URL `https://barberhub.tv/`, not `/auth/callback`.
+Convert the current 4-step launch wizard into a strict **Lead → Role Detail → Spin → Ticket → Account** flow. The spin button is locked until contact info AND role-specific details are saved. Each identity gets exactly one raffle ticket (e.g. `BH-9921`) for the manual Sunday draw. Account creation is moved to the end and is **optional / social-auth only**.
 
-When you click "Activate Account" in those old emails, Supabase verifies the token and redirects to:
-
-```
-https://barberhub.tv/#access_token=...&refresh_token=...&type=signup
-```
-
-That lands on the **home page**, which has no logic to process the hash. The SDK silently consumes the token, you stay on the home screen, and the next sign-in attempt returns "Email not confirmed" because the token is now spent.
-
-## Fix: a tiny safety net component
-
-Add one small mounted-once component that watches every route for a Supabase auth hash and forwards the user to `/auth/callback` (or `/reset-password` for recovery), preserving the hash. After this, **even old emails that point at `/` will work** — the hash gets caught and handled.
-
-### Files
-
-| File | Change |
-|---|---|
-| `src/components/auth/AuthHashHandler.tsx` | **Create** — listens for `#access_token=...` / `type=signup` / `type=recovery` etc. on any route and redirects to the right callback page |
-| `src/App.tsx` | Mount `<AuthHashHandler />` once inside `<BrowserRouter>` (one import + one line) |
-
-### How `AuthHashHandler` works
+## New flow (5 steps)
 
 ```text
-On every route change:
-  Read window.location.hash
-  If hash contains access_token / type=signup / type=recovery / error_code:
-    If already on /auth/callback or /reset-password → do nothing
-    If type=recovery → navigate('/reset-password' + hash, replace)
-    Else → navigate('/auth/callback' + hash, replace)
+Step 1  IDENTITY HOOK          email or phone (one of two) → upsert lead
+Step 2  ROLE PICK              barber | fan
+Step 3a FAN DETAILS            nationality (dropdown only)
+Step 3b BARBER DETAILS         zip, nationality, status, specialties (1-3)
+Step 4  SPIN                   wheel enabled → 15-50 BB random + raffle code BH-XXXX
+Step 5  CLAIM ACCOUNT          Google / Apple / Meta one-click (Email fallback)
 ```
 
-`AuthCallback.tsx` already handles the rest: shows the spinner, listens for `SIGNED_IN`, shows the "Account Confirmed" success screen, redirects home. On error/expired token, it surfaces the "Resend confirmation" form.
+The Spin button stays visually locked (pad-lock + greyed CTA) until steps 1 and 3 are validated server-side.
 
-### Why this is safe
+## Database changes
 
-- Mounted at the app root → covers `Index`, `ComingSoon`, and every other page.
-- Only fires when a Supabase-shaped hash is present — won't interfere with normal navigation, anchor links, or LiveKit/video URL fragments.
-- Uses `replace: true` so the auth hash doesn't pollute browser history.
-- If the user is already on the correct page, it no-ops (so direct clicks on freshly-issued `/auth/callback` links continue to work exactly as today).
+New table `raffle_entries` (one row per identity):
 
-## After this is in
+| column | type | notes |
+|---|---|---|
+| id | uuid pk | |
+| ticket_code | text unique | format `BH-XXXX`, generated server-side |
+| email | text | nullable, unique when present |
+| phone | text | nullable, unique when present |
+| role | text | `barber` \| `fan` |
+| country_code | text | required |
+| zip_code | text | barbers only |
+| barber_status | text | `licensed` \| `student` \| `unlicensed` \| `beginner` |
+| specialties | text[] | barbers only, max 3 |
+| bb_awarded | int | 15–50 |
+| draw_week | date | next Sunday, for sovereign export |
+| device_fingerprint | text | anti-fishing |
+| ip_address | text | anti-fishing |
+| claimed_user_id | uuid | filled when user finishes social signup |
+| created_at | timestamptz | |
 
-1. Click "Activate Account" in any branded email (old or new) → success screen → signed in → home.
-2. Click "Reset Password" in the recovery email → `/reset-password` form → set new password.
-3. If a token is already expired/used, the AuthCallback page shows the "Resend confirmation email" form so you're never stuck.
+- Unique partial indexes on `email` and `phone` so a contact can only spin once.
+- RLS: insert/select restricted to service role; admin (sovereign) read via `has_role(auth.uid(),'admin')`.
+- Existing `marketing_leads` is kept for analytics; we add a `raffle_ticket_code` column to link the two.
 
-Reply **"approve"** and I'll implement just these two changes.
+## Edge functions
+
+1. **`register-lead`** (new) — validates email/phone, inserts/updates `marketing_leads`, returns a `lead_token` (signed JWT, 30 min) for subsequent calls. Anti-duplicate by email+fingerprint+IP.
+2. **`submit-role-details`** (new) — accepts `lead_token` + role payload (fan: country; barber: country, zip, status, specialties). Validates with Zod, marks lead as "spin-eligible".
+3. **`claim-raffle-ticket`** (new) — requires a spin-eligible `lead_token`; rolls 15–50 BB server-side; generates collision-free `BH-XXXX` (4 alphanumeric, retry on conflict); inserts into `raffle_entries`; returns `{ ticket_code, bb_awarded }`. Hard rule: one ticket per email/phone/fingerprint.
+4. **`link-raffle-to-user`** (new) — called after social signup; matches by email and stamps `claimed_user_id`, credits the BB into the user's wallet via `barber_bucks_transactions`.
+
+## Frontend changes
+
+- Replace `LaunchWizard` step set:
+  - `StepIdentityHook` (new) — email **or** phone toggle; calls `register-lead`.
+  - `StepRole` (existing, kept).
+  - `StepFanDetails` (new) — only `CountrySelector`.
+  - `StepBarberDetails` (new) — country + zip + radio status + specialty pills (reuse `SPECIALTY_TAGS`, max 3).
+  - `StepSpin` (modified) — wheel now calls `claim-raffle-ticket`; shows the BH-XXXX ticket reveal animation; removes existing client-side prize generation.
+  - `StepClaim` (new, replaces `StepLiveFinalize`) — three big buttons: Google, Apple, Meta; small "use email" fallback. On success → calls `link-raffle-to-user`.
+- `SegmentedProgress` updated to 5 steps.
+- The **Spin** CTA inside `StepSpin` reads server response; the wheel UI itself becomes a visual representation of the server roll (no client RNG for the prize).
+- Specialty selector reuses `src/config/specialtyTags.ts` (`SPECIALTY_TAGS`, `MAX_SPECIALTIES = 3`).
+
+## Sovereign HQ export
+
+Add a "Raffle Tickets" panel under `/sovereign-hq` that lists `raffle_entries` with filters by `draw_week` and a CSV export button (uses existing `has_role(auth.uid(),'admin')` guard). This satisfies the manual-Sunday-draw requirement.
+
+## Anti-fishing guarantees
+
+- Spin endpoint refuses if `(email | phone | fingerprint | IP)` already has a ticket.
+- Wheel button is `disabled` until `lead_token` is present **and** role details have been submitted.
+- All BB awards are written server-side in `claim-raffle-ticket` (consistent with the existing economy-integrity rule).
+
+## Out of scope
+
+- Reworking the existing prize wheel cosmetics (kept).
+- Email-confirmation copy (separate prior task already covers branded templates).
+- Tournament / battle systems.
+
+## Open question (will ask before coding)
+
+Should the social-auth step be **required** to actually receive the BB into a wallet (ticket alone is kept anonymously until then), or should the BB be locked to the email and credited automatically when the user later signs up by any method?
