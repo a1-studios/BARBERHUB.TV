@@ -2666,6 +2666,7 @@ export type Database = {
       }
       marketing_leads: {
         Row: {
+          barber_status: string | null
           claimed_user_id: string | null
           converted: boolean | null
           country_code: string | null
@@ -2684,9 +2685,12 @@ export type Database = {
           prize_id: string | null
           prize_label: string | null
           prize_locked_at: string | null
+          raffle_ticket_code: string | null
           role: string
           shared: boolean | null
           source_url: string | null
+          specialties: string[] | null
+          spin_eligible: boolean | null
           spin_ip: string | null
           spins_used: number | null
           ttclid: string | null
@@ -2695,8 +2699,10 @@ export type Database = {
           utm_medium: string | null
           utm_source: string | null
           wbraid: string | null
+          zip_code: string | null
         }
         Insert: {
+          barber_status?: string | null
           claimed_user_id?: string | null
           converted?: boolean | null
           country_code?: string | null
@@ -2715,9 +2721,12 @@ export type Database = {
           prize_id?: string | null
           prize_label?: string | null
           prize_locked_at?: string | null
+          raffle_ticket_code?: string | null
           role: string
           shared?: boolean | null
           source_url?: string | null
+          specialties?: string[] | null
+          spin_eligible?: boolean | null
           spin_ip?: string | null
           spins_used?: number | null
           ttclid?: string | null
@@ -2726,8 +2735,10 @@ export type Database = {
           utm_medium?: string | null
           utm_source?: string | null
           wbraid?: string | null
+          zip_code?: string | null
         }
         Update: {
+          barber_status?: string | null
           claimed_user_id?: string | null
           converted?: boolean | null
           country_code?: string | null
@@ -2746,9 +2757,12 @@ export type Database = {
           prize_id?: string | null
           prize_label?: string | null
           prize_locked_at?: string | null
+          raffle_ticket_code?: string | null
           role?: string
           shared?: boolean | null
           source_url?: string | null
+          specialties?: string[] | null
+          spin_eligible?: boolean | null
           spin_ip?: string | null
           spins_used?: number | null
           ttclid?: string | null
@@ -2757,6 +2771,7 @@ export type Database = {
           utm_medium?: string | null
           utm_source?: string | null
           wbraid?: string | null
+          zip_code?: string | null
         }
         Relationships: []
       }
@@ -3435,6 +3450,60 @@ export type Database = {
           skipped?: boolean
           updated_at?: string
           user_agent?: string | null
+        }
+        Relationships: []
+      }
+      raffle_entries: {
+        Row: {
+          barber_status: string | null
+          bb_awarded: number
+          claimed_at: string | null
+          claimed_user_id: string | null
+          country_code: string
+          created_at: string
+          device_fingerprint: string | null
+          draw_week: string
+          email: string
+          id: string
+          ip_address: string | null
+          role: string
+          specialties: string[] | null
+          ticket_code: string
+          zip_code: string | null
+        }
+        Insert: {
+          barber_status?: string | null
+          bb_awarded: number
+          claimed_at?: string | null
+          claimed_user_id?: string | null
+          country_code: string
+          created_at?: string
+          device_fingerprint?: string | null
+          draw_week: string
+          email: string
+          id?: string
+          ip_address?: string | null
+          role: string
+          specialties?: string[] | null
+          ticket_code: string
+          zip_code?: string | null
+        }
+        Update: {
+          barber_status?: string | null
+          bb_awarded?: number
+          claimed_at?: string | null
+          claimed_user_id?: string | null
+          country_code?: string
+          created_at?: string
+          device_fingerprint?: string | null
+          draw_week?: string
+          email?: string
+          id?: string
+          ip_address?: string | null
+          role?: string
+          specialties?: string[] | null
+          ticket_code?: string
+          zip_code?: string | null
         }
         Relationships: []
       }
@@ -4764,6 +4833,7 @@ export type Database = {
       get_marketing_lead_by_fingerprint: {
         Args: { p_fingerprint: string }
         Returns: {
+          barber_status: string | null
           claimed_user_id: string | null
           converted: boolean | null
           country_code: string | null
@@ -4782,9 +4852,12 @@ export type Database = {
           prize_id: string | null
           prize_label: string | null
           prize_locked_at: string | null
+          raffle_ticket_code: string | null
           role: string
           shared: boolean | null
           source_url: string | null
+          specialties: string[] | null
+          spin_eligible: boolean | null
           spin_ip: string | null
           spins_used: number | null
           ttclid: string | null
@@ -4793,6 +4866,7 @@ export type Database = {
           utm_medium: string | null
           utm_source: string | null
           wbraid: string | null
+          zip_code: string | null
         }[]
         SetofOptions: {
           from: "*"
