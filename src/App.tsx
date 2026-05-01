@@ -48,6 +48,7 @@ import BroadcastViewer from "./pages/BroadcastViewer";
 import BroadcastStudio from "./pages/BroadcastStudio";
 import ResetPassword from "./pages/ResetPassword";
 import AuthCallback from "./pages/AuthCallback";
+import { AuthHashHandler } from "./components/auth/AuthHashHandler";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,7 @@ const AppContent = () => {
   
   return (
     <>
+      <AuthHashHandler />
       <Routes>
             <Route path="/" element={IS_COMING_SOON ? <ComingSoon /> : <Index />} />
             <Route path="/coming-soon" element={<ComingSoon />} />
