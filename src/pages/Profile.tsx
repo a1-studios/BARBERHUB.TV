@@ -33,6 +33,7 @@ import { parseSpecialties, getSpecialtyDisplay } from '@/config/specialtyTags';
 import { PostAppointmentReviewModal } from '@/components/reviews/PostAppointmentReviewModal';
 import { requireProfileComplete } from '@/components/auth/ProfileCompletionGate';
 import { AlertCircle } from 'lucide-react';
+import { DisplayNameEditor } from '@/components/profile/DisplayNameEditor';
 
 const ProfileCompletionBanner = ({ profile }: { profile: any }) => {
   if (!profile) return null;
