@@ -234,9 +234,14 @@ const Profile = () => {
     );
   }
 
-  const displayName = isBarber
-    ? (profile?.display_name || barberProfile?.name || 'Barber')
-    : (profile?.display_name || 'Fan');
+  const rawDisplay = isBarber
+    ? (profile?.display_name || barberProfile?.name || '')
+    : (profile?.display_name || '');
+  // Hide emails — never display the user's email as their public name
+  const looksLikeEmail = rawDisplay.includes('@');
+  const displayName = (!rawDisplay || looksLikeEmail)
+    ? (isBarber ? 'Set your name' : 'Set your name')
+    : rawDisplay;
   const specialty = barberProfile?.specialty;
   const countryCode = isBarber ? barberProfile?.country_code : (profile?.country_code || (clientProfile as any)?.country_code);
   const subscriptionTier = barberProfile?.active_subscription_tier;
