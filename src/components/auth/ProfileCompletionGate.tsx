@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Scissors, Heart, Sparkles, Globe, Phone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -52,6 +53,14 @@ export const ProfileCompletionGate = () => {
 
   // Auto-open shortly after sign-in so users see the prompt
   useEffect(() => { if (needs) { const t = setTimeout(() => setOpen(true), 800); return () => clearTimeout(t); } }, [needs]);
+
+  // Re-open when navigating to gated routes if still incomplete
+  const location = useLocation();
+  useEffect(() => {
+    if (!needs) return;
+    const gated = ['/profile', '/portal', '/creator-hub', '/studio', '/analytics'];
+    if (gated.some((p) => location.pathname.startsWith(p))) setOpen(true);
+  }, [location.pathname, needs]);
 
   if (!user || !needs || !open) return null;
 
