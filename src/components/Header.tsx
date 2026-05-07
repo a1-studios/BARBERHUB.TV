@@ -2,7 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Plus, User, Zap, Scissors, Crown, Bell } from 'lucide-react';
+import { Plus, User, Zap, Scissors, Crown, Bell, AlertCircle } from 'lucide-react';
+import { useProfileIncomplete } from '@/hooks/useProfileIncomplete';
+import { requireProfileComplete } from '@/components/auth/ProfileCompletionGate';
+import { QuickSocialSignIn } from '@/components/auth/QuickSocialSignIn';
 import { useNavigate, Link } from 'react-router-dom';
 import barberPole from '@/assets/barber-pole.png';
 import { cn } from '@/lib/utils';
@@ -38,6 +41,7 @@ const Header = () => {
   const navigate = useNavigate();
   const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
   const { unreadCount } = useNotifications();
+  const { incomplete: profileIncomplete } = useProfileIncomplete();
   const [showNotifications, setShowNotifications] = useState(false);
   const [acceptChallenge, setAcceptChallenge] = useState<any | null>(null);
 
@@ -252,6 +256,9 @@ const Header = () => {
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </span>
                 )}
+                {user && profileIncomplete && unreadCount === 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-orange-500 ring-2 ring-background animate-pulse pointer-events-none" />
+                )}
               </div>
 
               {/* BB Dropdown Menu */}
@@ -286,6 +293,15 @@ const Header = () => {
                       
                       {/* Actions */}
                       <div className="p-1.5 space-y-1">
+                        {profileIncomplete && (
+                          <button
+                            onClick={() => { requireProfileComplete(); setBbDropdownOpen(false); }}
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm bg-orange-500/15 hover:bg-orange-500/25 transition-colors"
+                          >
+                            <AlertCircle className="h-4 w-4 text-orange-400" />
+                            <span className="text-orange-200 font-semibold">Complete profile</span>
+                          </button>
+                        )}
                         <button
                           onClick={() => setShowNotifications(true)}
                           className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm hover:bg-primary/10 transition-colors"
@@ -343,6 +359,9 @@ const Header = () => {
           onClose={() => setAcceptChallenge(null)}
         />
       )}
+
+      {/* Tiny social sign-in strip — only for logged-out users */}
+      <QuickSocialSignIn />
 
       {/* Floating live activity pill — sits just under the header */}
       <LiveActivityPill />

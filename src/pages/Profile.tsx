@@ -31,6 +31,38 @@ import { BottomNavBar } from '@/components/BottomNavBar';
 import { cn } from '@/lib/utils';
 import { parseSpecialties, getSpecialtyDisplay } from '@/config/specialtyTags';
 import { PostAppointmentReviewModal } from '@/components/reviews/PostAppointmentReviewModal';
+import { requireProfileComplete } from '@/components/auth/ProfileCompletionGate';
+import { AlertCircle } from 'lucide-react';
+
+const ProfileCompletionBanner = ({ profile }: { profile: any }) => {
+  if (!profile) return null;
+  if (profile.user_type && profile.country_code) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => requireProfileComplete()}
+      className="w-full mt-3 mb-2 px-4 py-3 rounded-2xl flex items-center gap-3 text-left transition-transform active:scale-[0.98] animate-pulse-slow"
+      style={{
+        background: 'linear-gradient(135deg, hsla(20,100%,56%,0.18) 0%, hsla(28,100%,50%,0.14) 100%)',
+        border: '1.5px solid hsla(20,100%,56%,0.55)',
+        boxShadow: '0 6px 22px hsla(20,100%,56%,0.3)',
+      }}
+    >
+      <AlertCircle className="h-5 w-5 text-orange-400 flex-shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-black uppercase tracking-tight text-white">
+          Complete your profile 🎟️
+        </div>
+        <div className="text-[11px] text-white/70 leading-snug">
+          Required to claim your Barber Bucks and ticket reward.
+        </div>
+      </div>
+      <span className="text-[10px] font-bold uppercase tracking-wider text-orange-300">
+        Finish ›
+      </span>
+    </button>
+  );
+};
 
 const Profile = () => {
   const { user, signOut } = useAuth();
@@ -238,6 +270,7 @@ const Profile = () => {
 
       <main className="relative z-10 flex-1 pt-16 pb-20 px-4">
         <div className="max-w-md mx-auto min-h-[calc(100dvh-4rem-5rem)] flex flex-col">
+          <ProfileCompletionBanner profile={profile} />
 
           {/* ===== HERO: Avatar ===== */}
           <div className="relative flex flex-col items-center pt-8 pb-2">
