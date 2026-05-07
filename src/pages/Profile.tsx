@@ -311,7 +311,13 @@ const Profile = () => {
             )}
 
             {/* Name + meta */}
-            <h1 className="text-xl font-bold text-foreground mt-2 text-center">{displayName}</h1>
+            <h1 className="text-xl font-bold text-foreground mt-2 text-center flex items-center justify-center gap-1">
+              {displayName}
+              <DisplayNameEditor
+                currentName={looksLikeEmail ? '' : rawDisplay}
+                changedAt={(profile as any)?.display_name_changed_at}
+              />
+            </h1>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               {profile?.username && <span>@{profile.username}</span>}
               {countryCode && <span>{getCountryFlag(countryCode)}</span>}
