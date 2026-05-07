@@ -1,82 +1,117 @@
-# Lead-First Raffle Funnel
+# Fix Google OAuth + Add One-Click Google Sign-In
 
-Convert the current 4-step launch wizard into a strict **Lead → Role Detail → Spin → Ticket → Account** flow. The spin button is locked until contact info AND role-specific details are saved. Each identity gets exactly one raffle ticket (e.g. `BH-9921`) for the manual Sunday draw. Account creation is moved to the end and is **optional / social-auth only**.
+## What's actually broken
 
-## New flow (5 steps)
+The screenshot shows `barberhub.tv/auth/callback#access_token=...` returning a Vercel **404 NOT_FOUND** (the `iad1::` ID and styling are Vercel's). The React route `/auth/callback` exists in `App.tsx`, but Vercel isn't serving `index.html` for unknown deep paths — so the SPA never loads, the token never gets parsed, and Supabase never creates a session. That's why no email/account ever shows up.
 
-```text
-Step 1  IDENTITY HOOK          email or phone (one of two) → upsert lead
-Step 2  ROLE PICK              barber | fan
-Step 3a FAN DETAILS            nationality (dropdown only)
-Step 3b BARBER DETAILS         zip, nationality, status, specialties (1-3)
-Step 4  SPIN                   wheel enabled → 15-50 BB random + raffle code BH-XXXX
-Step 5  CLAIM ACCOUNT          Google / Apple / Meta one-click (Email fallback)
+This is a **hosting config issue**, not an auth code issue. The same flow works in the Lovable preview (where SPA fallback is automatic) but fails on `barberhub.tv`.
+
+## Plan
+
+### 1. Add Vercel SPA rewrite (fixes the 404)
+
+Create `vercel.json` at the project root:
+
+```json
+{
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
 ```
 
-The Spin button stays visually locked (pad-lock + greyed CTA) until steps 1 and 3 are validated server-side.
+This makes Vercel serve `index.html` for `/auth/callback`, `/reset-password`, and every other client route. After redeploy, the existing `AuthCallback.tsx` page picks up the hash and signs the user in.
 
-## Database changes
+### 2. Verify Supabase Google provider redirect URLs
 
-New table `raffle_entries` (one row per identity):
+In the Supabase dashboard (Auth → URL Configuration), make sure both are listed under **Redirect URLs**:
+- `https://barberhub.tv/auth/callback`
+- `https://barberhub.tv/**`
 
-| column | type | notes |
-|---|---|---|
-| id | uuid pk | |
-| ticket_code | text unique | format `BH-XXXX`, generated server-side |
-| email | text | nullable, unique when present |
-| phone | text | nullable, unique when present |
-| role | text | `barber` \| `fan` |
-| country_code | text | required |
-| zip_code | text | barbers only |
-| barber_status | text | `licensed` \| `student` \| `unlicensed` \| `beginner` |
-| specialties | text[] | barbers only, max 3 |
-| bb_awarded | int | 15–50 |
-| draw_week | date | next Sunday, for sovereign export |
-| device_fingerprint | text | anti-fishing |
-| ip_address | text | anti-fishing |
-| claimed_user_id | uuid | filled when user finishes social signup |
-| created_at | timestamptz | |
+And **Site URL** = `https://barberhub.tv`. (User said redirects are already pasted — I'll just confirm via instructions; this is dashboard work, not code.)
 
-- Unique partial indexes on `email` and `phone` so a contact can only spin once.
-- RLS: insert/select restricted to service role; admin (sovereign) read via `has_role(auth.uid(),'admin')`.
-- Existing `marketing_leads` is kept for analytics; we add a `raffle_ticket_code` column to link the two.
+### 3. Add Google One Tap — true one-click signup
 
-## Edge functions
+To capture leads with the lowest possible friction, add Google One Tap on top of the existing OAuth button. When a user has a Google session in their browser, a small prompt appears auto-suggesting their Google account — one tap and they're signed in, no redirect, no extra page.
 
-1. **`register-lead`** (new) — validates email/phone, inserts/updates `marketing_leads`, returns a `lead_token` (signed JWT, 30 min) for subsequent calls. Anti-duplicate by email+fingerprint+IP.
-2. **`submit-role-details`** (new) — accepts `lead_token` + role payload (fan: country; barber: country, zip, status, specialties). Validates with Zod, marks lead as "spin-eligible".
-3. **`claim-raffle-ticket`** (new) — requires a spin-eligible `lead_token`; rolls 15–50 BB server-side; generates collision-free `BH-XXXX` (4 alphanumeric, retry on conflict); inserts into `raffle_entries`; returns `{ ticket_code, bb_awarded }`. Hard rule: one ticket per email/phone/fingerprint.
-4. **`link-raffle-to-user`** (new) — called after social signup; matches by email and stamps `claimed_user_id`, credits the BB into the user's wallet via `barber_bucks_transactions`.
+**New file**: `src/components/auth/GoogleOneTap.tsx`
+- Loads `https://accounts.google.com/gsi/client` script once.
+- Calls `google.accounts.id.initialize` with the Google Web Client ID and a nonce.
+- Calls `google.accounts.id.prompt()` to surface the One Tap UI.
+- On credential callback, calls `supabase.auth.signInWithIdToken({ provider: 'google', token: credential, nonce })`.
+- Skips itself when a Supabase session already exists.
+- Stashes the same `raffle_pending_claim` payload that `StepClaimAccount` writes, so the raffle ticket still attaches if the user one-taps mid-funnel.
 
-## Frontend changes
+**New env var**: `VITE_GOOGLE_CLIENT_ID` (added to `.env`). User provides the Web Client ID from the same Google Cloud OAuth credential that Supabase already uses. No secret needed — this is the public client ID.
 
-- Replace `LaunchWizard` step set:
-  - `StepIdentityHook` (new) — email **or** phone toggle; calls `register-lead`.
-  - `StepRole` (existing, kept).
-  - `StepFanDetails` (new) — only `CountrySelector`.
-  - `StepBarberDetails` (new) — country + zip + radio status + specialty pills (reuse `SPECIALTY_TAGS`, max 3).
-  - `StepSpin` (modified) — wheel now calls `claim-raffle-ticket`; shows the BH-XXXX ticket reveal animation; removes existing client-side prize generation.
-  - `StepClaim` (new, replaces `StepLiveFinalize`) — three big buttons: Google, Apple, Meta; small "use email" fallback. On success → calls `link-raffle-to-user`.
-- `SegmentedProgress` updated to 5 steps.
-- The **Spin** CTA inside `StepSpin` reads server response; the wheel UI itself becomes a visual representation of the server roll (no client RNG for the prize).
-- Specialty selector reuses `src/config/specialtyTags.ts` (`SPECIALTY_TAGS`, `MAX_SPECIALTIES = 3`).
+**Mount points**:
+- `src/pages/ComingSoon.tsx` — render `<GoogleOneTap />` so visitors get a one-tap prompt before they even start the funnel.
+- `src/components/coming-soon/StepClaimAccount.tsx` — render it on the final step too, so users who reached the spin still get a one-tap option above the existing buttons.
 
-## Sovereign HQ export
+**Updated lead-capture wiring**:
+When One Tap fires before the user has an email registered, the `register-lead` flow runs server-side from a new tiny `src/hooks/useOneTapLeadCapture.ts` that, on successful sign-in, calls the existing `register-lead` and `link-raffle-to-user` edge functions with the user's Google email. This guarantees the lead row exists even when the user skipped the email step entirely.
 
-Add a "Raffle Tickets" panel under `/sovereign-hq` that lists `raffle_entries` with filters by `draw_week` and a CSV export button (uses existing `has_role(auth.uid(),'admin')` guard). This satisfies the manual-Sunday-draw requirement.
+### 4. Tighten the OAuth button fallback
 
-## Anti-fishing guarantees
+In `StepClaimAccount.tsx`, the existing "Continue with Google" button stays as the fallback for users where One Tap doesn't render (Safari with strict ITP, incognito, browsers without a Google session). No behavioral change — only a tiny copy tweak: rename to "Sign up with Google — 1 click" so it visually matches the new aesthetic.
 
-- Spin endpoint refuses if `(email | phone | fingerprint | IP)` already has a ticket.
-- Wheel button is `disabled` until `lead_token` is present **and** role details have been submitted.
-- All BB awards are written server-side in `claim-raffle-ticket` (consistent with the existing economy-integrity rule).
+## Technical details
 
-## Out of scope
+```text
+User journey (Google One Tap, happy path)
+─────────────────────────────────────────
+visit barberhub.tv
+   │
+   ▼
+GoogleOneTap mounts → google.accounts.id.prompt()
+   │
+   ▼
+User taps their Google account chip
+   │
+   ▼
+Google returns id_token (JWT) → supabase.auth.signInWithIdToken
+   │
+   ▼
+Session created in-place (NO redirect, NO email)
+   │
+   ▼
+useOneTapLeadCapture: register-lead({email}) + link-raffle-to-user
+   │
+   ▼
+User is signed in + raffle ticket attached
+```
 
-- Reworking the existing prize wheel cosmetics (kept).
-- Email-confirmation copy (separate prior task already covers branded templates).
-- Tournament / battle systems.
+```text
+User journey (classic OAuth, after fix)
+─────────────────────────────────────────
+Click "Continue with Google"
+   │
+   ▼
+Redirect to accounts.google.com
+   │
+   ▼
+Redirect to barberhub.tv/auth/callback#access_token=…
+   │
+   ▼  (was 404 — now works because of vercel.json)
+AuthCallback.tsx parses hash → onAuthStateChange fires SIGNED_IN
+   │
+   ▼
+Navigate to "/" → user is in
+```
 
-## Open question (will ask before coding)
+### Files touched
 
-Should the social-auth step be **required** to actually receive the BB into a wallet (ticket alone is kept anonymously until then), or should the BB be locked to the email and credited automatically when the user later signs up by any method?
+- **Created**: `vercel.json`
+- **Created**: `src/components/auth/GoogleOneTap.tsx`
+- **Created**: `src/hooks/useOneTapLeadCapture.ts`
+- **Edited**: `src/pages/ComingSoon.tsx` (mount `<GoogleOneTap />`)
+- **Edited**: `src/components/coming-soon/StepClaimAccount.tsx` (mount One Tap above existing buttons + copy tweak)
+- **Edited**: `.env` (add `VITE_GOOGLE_CLIENT_ID` placeholder)
+
+### What I'll need from you after I implement
+
+1. **Redeploy `barberhub.tv` on Vercel** so `vercel.json` takes effect. Without redeploy, the 404 stays.
+2. **Paste your Google Web Client ID** (from Google Cloud → APIs & Services → Credentials → the OAuth 2.0 Web client you already use for Supabase). I'll set it in `VITE_GOOGLE_CLIENT_ID`. If you'd rather, just tell me when you've pasted it into `.env` and I'll proceed without seeing the value.
+3. In Google Cloud, under that OAuth client, make sure **Authorized JavaScript origins** includes `https://barberhub.tv` (One Tap requires this — it's separate from the redirect URI).
+
+Once you approve, I'll make all the code changes in one pass.
