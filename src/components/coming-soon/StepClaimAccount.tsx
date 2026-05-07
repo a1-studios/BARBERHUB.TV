@@ -76,12 +76,12 @@ export const StepClaimAccount = ({ email, role, country, ticketCode, bbAwarded, 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5 text-center pb-2">
       <div className="space-y-1.5">
-        <span className="text-[10px] uppercase tracking-wider text-white/40 font-bold">Step 5 of 5</span>
+        <span className="text-[10px] uppercase tracking-wider text-white/40 font-bold">Final step</span>
         <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight bg-gradient-to-r from-amber-300 via-orange-500 to-orange-600 bg-clip-text text-transparent">
-          Claim & save your ticket
+          Save your ticket
         </h2>
         <p className="text-xs text-white/65">
-          Save <span className="font-mono font-bold text-orange-400">{ticketCode}</span> + {bbAwarded} BB to your account.
+          Lock <span className="font-mono font-bold text-orange-400">{ticketCode}</span> to your account so we can reach you Sunday.
         </p>
       </div>
 
@@ -93,10 +93,7 @@ export const StepClaimAccount = ({ email, role, country, ticketCode, bbAwarded, 
           <span className="text-white/50 uppercase tracking-wider font-bold">Your raffle ticket</span>
           <span className="font-mono font-black text-orange-300">{ticketCode}</span>
         </div>
-        <div className="flex items-center justify-between text-[11px] mt-1">
-          <span className="text-white/50 uppercase tracking-wider font-bold">Welcome BB</span>
-          <span className="font-black text-orange-300">+{bbAwarded}</span>
-        </div>
+        <div className="text-[10px] text-white/45 mt-1">Sunday draw · winners revealed live</div>
       </div>
 
       {!emailSent && (
