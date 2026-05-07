@@ -366,7 +366,7 @@ const Header = () => {
     </header>
 
     {/* Tiny social sign-in strip — outside the header box, just below it */}
-    <div className="fixed left-0 right-0 z-40 mt-1 pointer-events-none top-[72px] sm:top-[88px]">
+    <div className="fixed left-0 right-0 z-40 pointer-events-none top-[88px] sm:top-[104px]">
       <div className="pointer-events-auto">
         <QuickSocialSignIn />
       </div>
