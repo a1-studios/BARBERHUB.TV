@@ -56,17 +56,21 @@ Deno.serve(async (req) => {
     const admin = createClient(supabaseUrl, serviceKey);
     const email = (user.email ?? '').toLowerCase();
 
-    // 1. Update profile
-    await admin.from('profiles').update({
-      user_type: role,
-      country_code,
-    }).eq('user_id', user.id);
+    // 1. Update country_code on profiles up front (sync function preserves it)
+    await admin.from('profiles').update({ country_code }).eq('user_id', user.id);
 
-    // 2. Ensure user_roles row
-    await admin.from('user_roles').upsert(
-      { user_id: user.id, role },
-      { onConflict: 'user_id,role' }
-    );
+    // 2. Enforce binary role: ensures profiles.user_type, user_roles, and the
+    //    correct specialized profile row (barber_profiles or client_profiles)
+    //    are all consistent — and removes the opposite specialized row.
+    const { error: syncErr } = await admin.rpc('sync_user_binary_role', {
+      p_user_id: user.id,
+      p_role: role,
+    });
+    if (syncErr) {
+      return new Response(JSON.stringify({ error: syncErr.message }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // 3. Link the marketing lead and credit BB if not already claimed
     const { data: lead } = await admin

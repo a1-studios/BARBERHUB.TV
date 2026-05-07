@@ -138,7 +138,9 @@ const Index = () => {
 
   // Recover any pending BB purchase that wasn't verified
   useEffect(() => {
-    if (!user || loading || recoveryAttempted.current) return;
+    // Wait until auth + role data has fully hydrated so we don't compare
+    // a pending prize role against a still-loading "false/false" role state.
+    if (!user || loading || roleLoading || recoveryAttempted.current) return;
     recoveryAttempted.current = true;
 
     // 1. Recover pending BB purchases
@@ -171,24 +173,25 @@ const Index = () => {
     }
 
     // 2. Auto-claim pending spin prize from guest session
-    // 2. Auto-claim pending spin prize from guest session
     try {
       const spinRaw = localStorage.getItem('pending_prize');
       if (spinRaw) {
         const pending = JSON.parse(spinRaw);
         const ageMs = Date.now() - (pending.timestamp || 0);
 
-        // Validate role match — discard if prize role doesn't match user's actual role
-        const userActualRole = isFan ? 'fan' : 'barber';
-        if (pending.role && pending.role !== userActualRole) {
-          console.log('[Spin Recovery] Role mismatch: prize for', pending.role, 'but user is', userActualRole);
+        // Use the resolved primary role from useUserRole (hydrated by now).
+        // Fall back to the prize's stored role rather than dropping the prize.
+        const userActualRole = isFan ? 'fan' : (profile?.user_type === 'barber' ? 'barber' : (pending.role || 'fan'));
+
+        if (ageMs > 24 * 60 * 60 * 1000) {
           localStorage.removeItem('pending_prize');
-        } else if (ageMs > 24 * 60 * 60 * 1000) {
-          localStorage.removeItem('pending_prize');
+        } else if (pending.role && pending.role !== userActualRole) {
+          // Roles legitimately differ → keep prize for now, let user decide later.
+          console.log('[Spin Recovery] Role mismatch, deferring claim:', pending.role, 'vs', userActualRole);
         } else {
           supabase.functions.invoke('spin-wheel', {
             body: {
-              role: pending.role || 'fan',
+              role: userActualRole,
               prize_id: pending.prize_id,
               prize_bb: pending.prize_bb || 0,
               prize_type: pending.prize_type || 'bb',
@@ -203,11 +206,11 @@ const Index = () => {
               queryClient.invalidateQueries({ queryKey: ['barber_bucks_transactions'] });
               queryClient.invalidateQueries({ queryKey: ['user_prizes'] });
               toast.success(`🎰 Your spin prize was claimed: ${pending.prize_label}!`);
-            } else if (data?.already_claimed) {
+            } else if (data?.already_claimed || data?.expired) {
               localStorage.removeItem('pending_prize');
             } else {
               console.log('[Spin Recovery] Claim unsuccessful:', data?.error || error);
-              localStorage.removeItem('pending_prize');
+              // Don't drop the prize — let it retry next visit
             }
           });
         }
@@ -215,7 +218,7 @@ const Index = () => {
     } catch {
       localStorage.removeItem('pending_prize');
     }
-  }, [user, loading]);
+  }, [user, loading, roleLoading, isFan, profile?.user_type]);
 
   if (loading) {
     return (
