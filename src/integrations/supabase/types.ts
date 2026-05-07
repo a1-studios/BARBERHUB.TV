@@ -3348,6 +3348,7 @@ export type Database = {
           created_at: string
           creator_level: string | null
           display_name: string | null
+          display_name_changed_at: string | null
           favorite_creator_id: string | null
           id: string
           is_creator: boolean | null
@@ -3371,6 +3372,7 @@ export type Database = {
           created_at?: string
           creator_level?: string | null
           display_name?: string | null
+          display_name_changed_at?: string | null
           favorite_creator_id?: string | null
           id?: string
           is_creator?: boolean | null
@@ -3394,6 +3396,7 @@ export type Database = {
           created_at?: string
           creator_level?: string | null
           display_name?: string | null
+          display_name_changed_at?: string | null
           favorite_creator_id?: string | null
           id?: string
           is_creator?: boolean | null
@@ -5079,6 +5082,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      update_display_name: { Args: { new_name: string }; Returns: Json }
       update_marketing_lead_by_fingerprint: {
         Args: {
           p_converted?: boolean
