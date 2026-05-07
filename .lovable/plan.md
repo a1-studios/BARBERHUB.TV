@@ -1,158 +1,130 @@
-# Intake Flow v2 — Dopamine Capture, Hidden Prizes, Sunday Reveal
+# Intake Flow v3 — Fix OAuth Role Lock, Color-Tier Reveal, New Wheel
 
-## Core Principle
+## Problems to Fix
 
-**Never reveal what they won.** Every user gets a raffle ticket. The thrill is the unknown — winners are announced manually from Sovereign HQ on Sundays.
+1. **OAuth auto-assigns Fan role** — users go through Google/Apple/Meta and never get to pick Barber/Fan, never get to spin, never pick country.
+2. **Wheel reveal is flat** — no visual hint of prize quality. Want a 3-tier color reveal (white = low, blue = medium, orange = high) without disclosing actual prize.
+3. **Email path still shows "Continue with Google/Apple/Meta" buttons at the end** — needs a clean, intelligent finish (no duplicate socials at claim step).
+4. **Wheel visuals** — replace with the supplied `scroll-morph-hero` component, restyled with our orange/black/blue branding (no Unsplash, no "AI" copy).
 
 ---
 
-## New Wizard Structure (still ~3 visible steps)
+## New OAuth Flow (deferred role + auto-credit)
+
+OAuth one-tap should NOT lock a role at signup. Instead:
 
 ```text
-Step 1: HOOK            → 1-click socials (icons up top) OR email
-Step 2: PICK YOUR SIDE  → Barber / Fan
-   ├─ if Barber → inline status sub-picker (5 options incl. Aspiring)
-Step 3: TICKET REVEAL   → Animated wheel → "🎟️ TICKET #XXXX-YYY"
-                          (no prize, no BB amount shown)
-Step 4: CLAIM           → conditional, see below
+1-click OAuth tap
+   → register-lead (email only, role=null)
+   → claim-raffle-ticket (role=null, hidden tier still computed)
+   → Step 3: spin + ticket reveal (color-coded)
+   → auth.signInWithOAuth() launches provider
+   → AuthCallback: ticket already linked by email
+   → On first app load: ProfileCompletionGate modal
+        - Pick role (Barber / Fan)
+        - If barber: pick status (5 options incl. Aspiring)
+        - Pick country (flag, incl. Puerto Rico)
+        - Optional phone
+        - "Lock in my prize" CTA
+   → Background job (DB trigger or edge function on profile update)
+        credits ticket + BB to the now-completed account
 ```
 
----
+### Files
 
-## Step 1 — The Hook (`StepIdentityHook.tsx`)
+- `**StepIdentityHook.tsx**` — keep 1-tap socials at top, but socials now go straight to spin (skip Step 2 Role entirely).
+- `**LaunchWizard.tsx**` — add `flow: 'oauth' | 'email'` branch. OAuth flow = Hook → Spin → OAuth redirect. Email flow = Hook → Role → Spin → Claim.
+- `**StepClaimAccount.tsx**` — for email flow only: show ONLY the magic-link button. Remove the Google/Apple/Meta buttons at the bottom (user explicitly called this out).
+- **NEW `src/components/auth/ProfileCompletionGate.tsx**` — modal shown on first authed app load if `profiles.user_type IS NULL` or `country_code IS NULL`. Forces role + country pick. Optional phone, optional barber status.
+- **NEW edge function `finalize-oauth-claim**` — invoked from ProfileCompletionGate. Atomically:
+  1. Sets `profiles.user_type`, `country_code`, `phone_number`, `barber_status`.
+  2. Links any pending `marketing_leads` row by email to this `user_id`.
+  3. Credits the BB amount tied to the hidden `prize_tier`.
+  4. Marks the lead as `claimed_at = now()`.
 
-**Re-arranged so 1-click is FIRST, not buried at the end:**
+### DB
 
-Layout top-to-bottom:
-
-1. Headline: **"Your Sunday could change."** Sub: *"Tune in Sunday. Winners pulled live."*
-2. **Row of 3 small circular icon buttons at the top** — Google, Apple, Meta. Tap = OAuth → skip directly to Step 2 with email pre-filled from provider.
-3. Tiny "or use email" divider.
-4. Email input + Continue (existing `register-lead` invoke).
-5. Remove the "15–50 BB + raffle ticket" pill copy entirely. Replace with mysterious one-liner: *"be of the One lucky 🍀 winners. tune in this sunday to find out."*
-
----
-
-## Step 2 — Pick Your Side (`StepRole.tsx`)
-
-Two big role cards. **If Barber tapped, expand inline sub-status picker** (no extra step)
-
-
-| ID               | Label          | Desc                                            |
-| ---------------- | -------------- | ----------------------------------------------- |
-| `licensed`       | Licensed Pro   | Active license                                  |
-| `unlicensed`     | Unlicensed Pro | Cuts professionally                             |
-| `student`        | Student        | In barber school                                |
-| `beginner`       | Beginner       | Just getting started                            |
-| `**aspiring**` ⭐ | **Aspiring**   | **Thinking about it** *(highlighted with glow)* |
-
-
-Tapping any sub-status (or "Fan") auto-advances to Step 3.
-
-**Also captured here (lightweight, optional-looking):**
-
-- Country flag picker (compact) — *captures nationality but not strictly required to advance*
-- Phone number input — *optional, no validation gate*
-
-These are inline on the same card, small inputs. The country selector list must include **Puerto Rico (PR / 🇵🇷)** — currently missing.
+- Add `marketing_leads.linked_user_id uuid` (nullable) + `claimed_at timestamptz`.
+- Add `marketing_leads.prize_tier_color text` denormalized for fast wheel reveal (`white | blue | orange`).
+- Optional: nightly cron (pg_cron) to backfill any stranded leads where `auth.users.email` matches.
 
 ---
 
-## Step 3 — Ticket Reveal (`StepRaffleSpin.tsx` rewrite)
+## Color-Tier Wheel Reveal
 
-Same orange wheel animation, but **no prize segments shown**. After the spin lands:
+After the new wheel finishes its spin, instead of showing prize copy, the ticket card pulses one of three colors based on the hidden `prize_tier`:
 
-```
-   🎟️
-  TICKET
- #A7K-2291
- ────────
- Tune in Sunday
- to see if you won
-```
 
-Server still selects + persists a hidden prize tier (segmented by role/status) on the lead row, but the UI never reveals it. Sovereign HQ uses these segments when picking Sunday winners.
+| Tier   | Color                            | Glow           | Probability |
+| ------ | -------------------------------- | -------------- | ----------- |
+| Low    | White (`hsl(0 0% 100%)`)         | soft cool glow | ~70%        |
+| Medium | Zion Blue (`hsl(195 100% 50%)`)  | electric pulse | ~25%        |
+| High   | Neon Orange (`hsl(20 100% 56%)`) | intense bloom  | ~5%         |
 
----
 
-## Step 4 — Claim Account (conditional)
+UI never says "low/medium/high" — color is the only signal. Copy stays mysterious: *"Your color is locked. Tune in Sunday."*
 
-**If user came in via OAuth (Step 1 socials):** they're already authenticated → ticket auto-linked → show the **"Complete your profile to lock in your prize" prompt immediately** (per user's note: 1-click users skipped detail capture, so we ask now).
+### Files
 
-**If user came in via email-only:** show the existing magic-link CTA (no profile prompt — they'll complete it post-magic-link). Country/phone were already captured at Step 2.
+- `**StepRaffleSpin.tsx**` — read `tier_color` from `claim-raffle-ticket` response, animate ticket card border + bg gradient to that color after spin lands.
+- `**claim-raffle-ticket/index.ts**` — return `{ ticket_code, tier_color }` (still no prize amount, no BB number).
+- Weighting table moved server-side; segments by role/status preserved per existing v2 plan.
 
 ---
 
-## Profile Completion Prompt (new, post-claim)
+## New Wheel (scroll-morph-hero, rebranded)
 
-Shown only to OAuth-completed users. Single lightweight card with:
+Drop the user-supplied `scroll-morph-hero.tsx` into `src/components/ui/` and rebrand:
 
-- Country (required, flag picker — incl. Puerto Rico)
-- Phone (optional)
-- For barbers: Zip + 1–3 specialty pills
-- "Skip for now" link (non-blocking)
+- **No Unsplash** — replace `IMAGES` with 20 procedurally-generated card faces using our brand: alternating Deep Black / Zion Blue / Neon Orange tiles with the BarberHub mark (use `RotatingBBCoin` SVG or a simple BB monogram).
+- **No "AI / future" copy** — replace intro text with *"Spin the wheel. Lock your color."* and arc-active text with *"Your ticket is forming…"*.
+- **Trigger spin programmatically** — Step 3 doesn't rely on user scroll. On mount, drive `virtualScroll` from 0 → 3000 over ~2.8s with an ease-out curve, then snap-stop. After stop, fire the color reveal.
+- **Mount inside Step 3** — replaces the current orange wheel inside `StepRaffleSpin.tsx`. Container locked at ~520px tall on mobile.
+- **Brand tokens** — pull from `index.css` HSL tokens, no hex.
 
-Lives in a new component `StepProfileBoost.tsx`. Repurposes pieces from current `StepBarberDetails` / `StepFanDetails`.
+### Files
+
+- **NEW `src/components/ui/scroll-morph-hero.tsx**` — pasted + adapted (TS clean, branded, no Unsplash, no AI text, programmatic auto-spin).
+- `**StepRaffleSpin.tsx**` — swap orange wheel for `<ScrollMorphHero autoSpin onSettle={revealColor} tierColor={tier} />`.
+- `**tailwind.config.ts**` — confirm `framer-motion` keyframes / no extra plugin needed (already installed).
 
 ---
 
-## Backend Changes
+## Cleanup
 
-1. **Migration**
-  - Add `'aspiring'` to `barber_status` enum (or text constraint).
-  - Ensure `marketing_leads` has columns: `phone_number text` (nullable), `prize_segment text`, `prize_tier text`, `prize_revealed_at timestamptz`.
-  - Index on `prize_segment` for Sunday draw filtering.
-2. `**claim-raffle-ticket` edge function**
-  - Accept `role`, `barber_status` (optional).
-  - Server picks a hidden `prize_tier` (small / medium / grand) weighted by segment.
-  - Returns ONLY `{ ticket_code }` to the client. No prize, no BB amount.
-3. `**submit-role-details` edge function**
-  - Make `country_code`, `zip_code`, `specialties` optional.
-  - Accept optional `phone_number`.
-  - Required: `role`, and (if barber) `barber_status`.
-4. `**register-lead**` — accept optional `country_code` and `phone_number` so OAuth callback can pass through provider data.
-5. **Country list fix**
-  - Find the country source (likely `src/components/CountrySelector.tsx` or a config file) and add Puerto Rico: `{ code: 'PR', name: 'Puerto Rico', flag: '🇵🇷', dial: '+1' }`.
-6. **Sovereign HQ — new panel `RaffleTicketsPanel**`
-  - Table of all tickets: email, role, segment, hidden prize_tier, issued_at.
-  - Filter by segment (fan / aspiring / student / unlicensed / licensed).
-  - "Pick Sunday Winner" action → manually mark a ticket as winner per tier, triggers notification.
+- Remove the trailing social buttons in `StepClaimAccount.tsx` (only show magic-link CTA + ticket recap).
+- Remove `StepRole` from the OAuth branch of `LaunchWizard.tsx` (still used for email branch).
+- Add a tiny "Step 1 of 2" pill for OAuth flow (since they skip role pick).
 
 ---
 
 ## Files Touched
 
-**Rewrite**
-
-- `src/components/coming-soon/StepIdentityHook.tsx` — socials at top, mysterious copy
-- `src/components/coming-soon/StepRole.tsx` — inline sub-status (5 incl. Aspiring) + country + optional phone
-- `src/components/coming-soon/StepRaffleSpin.tsx` — ticket-only reveal, no prize
-- `src/components/coming-soon/LaunchWizard.tsx` — collapse to 3 main steps + conditional profile prompt
-- `src/components/coming-soon/SegmentedProgress.tsx` — 3 dots
-
 **New**
 
-- `src/components/coming-soon/StepProfileBoost.tsx` — post-claim profile prompt for OAuth users
-- `src/components/sovereign/RaffleTicketsPanel.tsx`
+- `src/components/auth/ProfileCompletionGate.tsx`
+- `src/components/ui/scroll-morph-hero.tsx`
+- `supabase/functions/finalize-oauth-claim/index.ts`
 
-**Light edits**
+**Edited**
 
-- `src/components/coming-soon/StepClaimAccount.tsx` — branch: OAuth vs email
-- `src/components/CountrySelector.tsx` (or country config file) — add Puerto Rico
-- `supabase/functions/claim-raffle-ticket/index.ts`
-- `supabase/functions/submit-role-details/index.ts`
-- `supabase/functions/register-lead/index.ts`
+- `src/components/coming-soon/LaunchWizard.tsx` (oauth vs email branching)
+- `src/components/coming-soon/StepIdentityHook.tsx` (OAuth → skip to spin)
+- `src/components/coming-soon/StepRaffleSpin.tsx` (new wheel + color reveal)
+- `src/components/coming-soon/StepClaimAccount.tsx` (remove duplicate socials)
+- `src/App.tsx` (mount ProfileCompletionGate inside authed shell)
+- `supabase/functions/claim-raffle-ticket/index.ts` (return tier_color, allow null role)
+- `supabase/functions/register-lead/index.ts` (allow null role)
 
-**Remove from required path** (still keep files for now)
+**Migration**
 
-- `StepBarberDetails.tsx`, `StepFanDetails.tsx` → no longer in main wizard
+- Add `linked_user_id`, `claimed_at`, `prize_tier_color` to `marketing_leads`.
+- Allow `marketing_leads.role` NULL.
 
 ---
 
-## Summary of User-Locked Decisions
+## Open Questions
 
-- ✅ Hide all prizes; only show ticket code; reveal Sunday via Sovereign HQ
-- ✅ "Aspiring" added as 5th barber status
-- ✅ Profile-completion prompt fires **immediately** but **only** for 1-click OAuth users
-- ✅ Capture nationality (country) and optional phone in the main flow
-- ✅ Add Puerto Rico to the country/flag list
+1. **Tier color probabilities** — keep my proposed 70/25/5, or do you want different odds (e.g. 60/30/10)? yes just keep the collors with a 3 different barbers symbles like a comb or razor 
+2. **ProfileCompletionGate dismissibility** — block the whole app until completed, or allow "skip for now" with a persistent top banner? allow users to watch the videos and scroll but once they want to interact or do anything they most complete the profile for us to know we we serving if the barber or the fan .
+3. **Card faces in the new wheel** — generate 20 abstract brand tiles (BB monogram + scissors + flame + crown rotating colors), or pull from existing project assets (champion banners, faction crests)? Priority for mobile use and watching and just esu a few cars showing our assets like videos profiles showing the bationality and make this card have a cyan blue wuth a trasparent holografic style 
