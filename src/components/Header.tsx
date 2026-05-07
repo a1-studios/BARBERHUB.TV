@@ -163,6 +163,7 @@ const Header = () => {
   }, [quickActionsOpen, bbDropdownOpen]);
 
   return (
+    <>
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-2 border-primary/40 rounded-xl mx-4 mt-2">
       {/* Energy pulse effects - pointer-events-none ensures clicks pass through */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl z-0">
@@ -360,12 +361,17 @@ const Header = () => {
         />
       )}
 
-      {/* Tiny social sign-in strip — only for logged-out users */}
-      <QuickSocialSignIn />
-
       {/* Floating live activity pill — sits just under the header */}
       <LiveActivityPill />
     </header>
+
+    {/* Tiny social sign-in strip — outside the header box, just below it */}
+    <div className="fixed left-0 right-0 z-40 mt-1 pointer-events-none top-[72px] sm:top-[88px]">
+      <div className="pointer-events-auto">
+        <QuickSocialSignIn />
+      </div>
+    </div>
+    </>
   );
 };
 
