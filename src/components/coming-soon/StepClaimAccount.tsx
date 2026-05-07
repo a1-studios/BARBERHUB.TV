@@ -4,6 +4,7 @@ import { Check, Loader2, AlertCircle, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { authCallbackRedirect } from '@/lib/authRedirects';
 import { markGateCompleted } from '@/components/promotion-gate/useGateState';
+import { GoogleOneTap } from '@/components/auth/GoogleOneTap';
 
 interface Props {
   email: string;
@@ -100,7 +101,8 @@ export const StepClaimAccount = ({ email, role, country, ticketCode, bbAwarded, 
 
       {!emailSent && (
         <div className="space-y-2">
-          <SocialBtn label="Continue with Google" busy={busy === 'google'} onClick={() => oauth('google')} />
+          <GoogleOneTap />
+          <SocialBtn label="Sign up with Google — 1 click" busy={busy === 'google'} onClick={() => oauth('google')} />
           <SocialBtn label="Continue with Apple" busy={busy === 'apple'} onClick={() => oauth('apple')} />
           <SocialBtn label="Continue with Meta" busy={busy === 'facebook'} onClick={() => oauth('facebook')} />
 

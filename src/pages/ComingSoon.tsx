@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { LaunchWizard } from '@/components/coming-soon/LaunchWizard';
+import { GoogleOneTap } from '@/components/auth/GoogleOneTap';
 import { captureAttribution } from '@/lib/urlParams';
 
 const ComingSoon = () => {
@@ -26,6 +27,7 @@ const ComingSoon = () => {
 
   return (
     <div className="min-h-screen w-full bg-background text-white relative overflow-hidden">
+      <GoogleOneTap />
       {/* Cinematic looping video backdrop */}
       <video
         ref={videoRef}
