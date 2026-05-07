@@ -25,10 +25,7 @@ export const QuickSocialSignIn = () => {
   if (user) return null;
 
   return (
-    <div className="flex items-center justify-center gap-3 px-4 pt-1.5 pb-1">
-      <span className="text-[9px] uppercase tracking-wider text-white/40 font-bold">
-        Sign in:
-      </span>
+    <div className="flex items-center justify-center gap-4 px-4 py-2">
       <Icon provider="google" onClick={() => oauth('google')} />
       <Icon provider="apple" onClick={() => oauth('apple')} />
       <Icon provider="facebook" onClick={() => oauth('facebook')} />
