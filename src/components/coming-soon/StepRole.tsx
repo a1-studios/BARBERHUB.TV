@@ -1,147 +1,88 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Scissors, Heart } from 'lucide-react';
+import { Scissors, Heart, ArrowLeft } from 'lucide-react';
 import { SwipeableStep } from './SwipeableStep';
 import { useStepDirection } from './LaunchWizard';
 import type { LaunchRole } from './LaunchWizard';
 
-interface StepRoleProps {
+interface Props {
   value: LaunchRole | null;
   onSelect: (role: LaunchRole) => void;
   onBack: () => void;
   onSkip: () => void;
-  /** Hide the back button (e.g. when this is the first visible step in a pre-fill flow). */
-  hideBack?: boolean;
 }
 
-const haptic = () => {
-  try { navigator.vibrate?.(10); } catch { /* ignore */ }
-};
+const haptic = () => { try { navigator.vibrate?.(10); } catch { /* */ } };
 
-export const StepRole = ({ value, onSelect, onBack, onSkip, hideBack = false }: StepRoleProps) => {
+export const StepRole = ({ value, onSelect, onBack }: Props) => {
   const direction = useStepDirection();
-  const [pending, setPending] = useState<LaunchRole | null>(null);
 
-  const handlePick = (role: LaunchRole) => {
+  const pick = (role: LaunchRole) => {
     haptic();
-    setPending(role);
-    // 180ms scale-pulse + bloom before advancing — quick enough to feel responsive,
-    // long enough that the user sees their pick "lock in" before the spin appears.
-    setTimeout(() => onSelect(role), 180);
+    onSelect(role);
   };
 
   return (
-    <SwipeableStep direction={direction} canAdvance={false} onSwipeBack={onBack}>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between -mt-1 min-h-[20px]">
-          {hideBack ? (
-            <span />
-          ) : (
-            <button
-              type="button"
-              onClick={() => { haptic(); onBack(); }}
-              className="flex items-center gap-1.5 text-sm text-white/60 hover:text-orange-400 transition-colors active:scale-95"
-            >
-              <ArrowLeft className="w-4 h-4" /> Back
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onSkip}
-            className="text-sm text-white/60 hover:text-orange-400 transition-colors"
-          >
-            Skip
-          </button>
-        </div>
-
+    <SwipeableStep direction={direction} canAdvance={false} onSwipeNext={() => { /* no-op */ }} onSwipeBack={onBack}>
+      <div className="space-y-5">
         <div className="text-center space-y-1.5">
+          <span className="text-[10px] uppercase tracking-wider text-white/40 font-bold">Step 2 of 5</span>
           <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight bg-gradient-to-r from-amber-300 via-orange-500 to-orange-600 bg-clip-text text-transparent">
-            Who's joining?
+            Pick your side
           </h2>
-          <p className="text-sm text-white/65">Pick your side of the chair.</p>
+          <p className="text-sm text-white/65">Permanent. Choose carefully.</p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3">
           <RoleCard
-            icon={<Scissors className="w-7 h-7" />}
-            title="Barber"
-            desc="Compete & earn"
+            icon={<Scissors className="w-6 h-6" />}
+            title="I'm a Barber"
+            sub="Compete, educate, withdraw BB"
             active={value === 'barber'}
-            pulsing={pending === 'barber'}
-            onClick={() => handlePick('barber')}
+            onClick={() => pick('barber')}
           />
           <RoleCard
-            icon={<Heart className="w-7 h-7" />}
-            title="Fan"
-            desc="Vote & support"
+            icon={<Heart className="w-6 h-6" />}
+            title="I'm a Fan"
+            sub="Watch, vote, sponsor"
             active={value === 'fan'}
-            pulsing={pending === 'fan'}
-            onClick={() => handlePick('fan')}
+            onClick={() => pick('fan')}
           />
         </div>
+
+        <button
+          type="button"
+          onClick={onBack}
+          className="w-full text-[11px] uppercase tracking-wider text-white/50 hover:text-white py-2 flex items-center justify-center gap-1.5"
+        >
+          <ArrowLeft className="w-3 h-3" /> Back
+        </button>
       </div>
     </SwipeableStep>
   );
 };
 
 const RoleCard = ({
-  icon,
-  title,
-  desc,
-  active,
-  pulsing,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  desc: string;
-  active: boolean;
-  pulsing: boolean;
-  onClick: () => void;
-}) => (
+  icon, title, sub, active, onClick,
+}: { icon: React.ReactNode; title: string; sub: string; active: boolean; onClick: () => void }) => (
   <motion.button
     type="button"
-    animate={pulsing ? { scale: [1, 1.06, 1] } : { scale: 1 }}
-    transition={{ duration: 0.28, ease: 'easeOut' }}
-    whileHover={{ scale: 1.02 }}
-    whileTap={{ scale: 0.95 }}
     onClick={onClick}
-    className={`relative h-44 rounded-[18px] flex flex-col items-center justify-center gap-3 transition-all overflow-hidden`}
+    whileTap={{ scale: 0.97 }}
+    className="w-full flex items-center gap-3 p-4 rounded-[14px] text-left transition-all"
     style={{
-      background: active || pulsing
-        ? 'linear-gradient(160deg, rgba(255,95,31,0.18), rgba(255,140,0,0.08))'
-        : 'rgba(255,255,255,0.04)',
-      border: active || pulsing
-        ? '1.5px solid rgba(255,95,31,0.85)'
-        : '1px solid rgba(255,95,31,0.22)',
-      boxShadow: pulsing
-        ? '0 0 30px rgba(255,95,31,0.7), inset 0 0 20px rgba(255,140,0,0.25)'
-        : active
-          ? '0 0 18px rgba(255,95,31,0.4)'
-          : '0 4px 12px rgba(0,0,0,0.2)',
-      backdropFilter: 'blur(8px)',
+      background: active ? 'rgba(255,95,31,0.15)' : 'rgba(255,255,255,0.04)',
+      border: `1px solid ${active ? 'rgba(255,95,31,0.6)' : 'rgba(255,255,255,0.12)'}`,
     }}
   >
     <div
-      className="w-14 h-14 rounded-full flex items-center justify-center"
-      style={{
-        background: active || pulsing
-          ? 'linear-gradient(135deg, #FF5F1F, #FFB347)'
-          : 'rgba(255,95,31,0.15)',
-        color: active || pulsing ? '#000' : 'rgb(255,140,0)',
-        boxShadow: active || pulsing ? '0 0 20px rgba(255,95,31,0.6)' : 'none',
-      }}
+      className="w-12 h-12 rounded-[12px] flex items-center justify-center text-orange-300"
+      style={{ background: 'rgba(255,95,31,0.12)', border: '1px solid rgba(255,95,31,0.3)' }}
     >
       {icon}
     </div>
-    <div className="text-center">
-      <div className="font-black uppercase tracking-wide text-white text-base">{title}</div>
-      <div className="text-[11px] text-white/55 mt-0.5">{desc}</div>
-      {pulsing && (
-        <div className="text-[10px] uppercase tracking-[0.18em] font-bold text-orange-300 mt-1.5 animate-pulse">
-          Locked in
-        </div>
-      )}
+    <div className="flex-1">
+      <div className="text-sm font-black uppercase tracking-wide text-white">{title}</div>
+      <div className="text-[11px] text-white/55 mt-0.5">{sub}</div>
     </div>
   </motion.button>
 );
