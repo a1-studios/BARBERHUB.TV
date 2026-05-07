@@ -140,6 +140,7 @@ const COUNTRIES = [
   { code: 'CR', name: 'Costa Rica' },
   { code: 'PA', name: 'Panama' },
   { code: 'CU', name: 'Cuba' },
+  { code: 'PR', name: 'Puerto Rico' },
   { code: 'JM', name: 'Jamaica' },
   { code: 'HT', name: 'Haiti' },
   { code: 'DO', name: 'Dominican Republic' },
