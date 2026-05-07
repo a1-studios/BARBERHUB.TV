@@ -5065,6 +5065,10 @@ export type Database = {
       }
       refresh_barber_stats: { Args: never; Returns: undefined }
       reset_monthly_battle_counters: { Args: never; Returns: undefined }
+      sync_user_binary_role: {
+        Args: { p_role: string; p_user_id: string }
+        Returns: undefined
+      }
       update_category_prize_pool: {
         Args: {
           p_category: string
