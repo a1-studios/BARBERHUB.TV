@@ -172,13 +172,21 @@ export const ProfileCompletionGate = () => {
                 className="w-full h-11 pl-9 pr-3 rounded-[12px] bg-black/40 text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/60 appearance-none"
                 style={{ border: '1px solid hsla(20,100%,56%,0.3)' }}
               >
-                <option value="" disabled>Country (required)</option>
-                {COUNTRIES.map((c) => (
-                  <option key={c.code} value={c.code} className="bg-black text-white">
-                    {c.name}
-                  </option>
-                ))}
+                <option value="" disabled>🌐 Country (required)</option>
+                {COUNTRIES.map((c) => {
+                  const flag = String.fromCodePoint(...c.code.toUpperCase().split('').map(ch => 127397 + ch.charCodeAt(0)));
+                  return (
+                    <option key={c.code} value={c.code} className="bg-black text-white">
+                      {flag}  {c.name}
+                    </option>
+                  );
+                })}
               </select>
+              {country && (
+                <span className="absolute right-9 top-1/2 -translate-y-1/2 text-lg pointer-events-none">
+                  {String.fromCodePoint(...country.toUpperCase().split('').map(ch => 127397 + ch.charCodeAt(0)))}
+                </span>
+              )}
             </div>
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-400/70 pointer-events-none z-10" />
