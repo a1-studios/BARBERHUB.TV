@@ -2,7 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Plus, User, Zap, Scissors, Crown, Bell } from 'lucide-react';
+import { Plus, User, Zap, Scissors, Crown, Bell, AlertCircle } from 'lucide-react';
+import { useProfileIncomplete } from '@/hooks/useProfileIncomplete';
+import { requireProfileComplete } from '@/components/auth/ProfileCompletionGate';
+import { QuickSocialSignIn } from '@/components/auth/QuickSocialSignIn';
 import { useNavigate, Link } from 'react-router-dom';
 import barberPole from '@/assets/barber-pole.png';
 import { cn } from '@/lib/utils';
@@ -38,6 +41,7 @@ const Header = () => {
   const navigate = useNavigate();
   const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
   const { unreadCount } = useNotifications();
+  const { incomplete: profileIncomplete } = useProfileIncomplete();
   const [showNotifications, setShowNotifications] = useState(false);
   const [acceptChallenge, setAcceptChallenge] = useState<any | null>(null);
 
