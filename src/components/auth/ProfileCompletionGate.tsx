@@ -82,6 +82,10 @@ export const ProfileCompletionGate = () => {
     }
     setNeeds(false);
     setOpen(false);
+    qc.invalidateQueries({ queryKey: ['profile-incomplete'] });
+    qc.invalidateQueries({ queryKey: ['profile'] });
+    qc.invalidateQueries({ queryKey: ['userRoles'] });
+    qc.invalidateQueries({ queryKey: ['header-profile'] });
   };
 
   return (
