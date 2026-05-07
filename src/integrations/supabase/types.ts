@@ -4975,6 +4975,7 @@ export type Database = {
         Args: { increment_by?: number; submission_id: string }
         Returns: undefined
       }
+      is_sovereign: { Args: never; Returns: boolean }
       mark_email_failed: {
         Args: {
           p_error: string
