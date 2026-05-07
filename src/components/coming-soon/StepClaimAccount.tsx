@@ -98,27 +98,23 @@ export const StepClaimAccount = ({ email, role, country, ticketCode, bbAwarded, 
 
       {!emailSent && (
         <div className="space-y-2">
-          <GoogleOneTap />
-          <SocialBtn label="Sign up with Google — 1 click" busy={busy === 'google'} onClick={() => oauth('google')} />
-          <SocialBtn label="Continue with Apple" busy={busy === 'apple'} onClick={() => oauth('apple')} />
-          <SocialBtn label="Continue with Meta" busy={busy === 'facebook'} onClick={() => oauth('facebook')} />
-
-          <div className="relative my-3 flex items-center gap-2">
-            <div className="flex-1 h-px bg-white/10" />
-            <span className="text-[10px] uppercase tracking-wider text-white/40">or</span>
-            <div className="flex-1 h-px bg-white/10" />
-          </div>
-
           <button
             type="button"
             onClick={emailMagicLink}
             disabled={busy !== null}
-            className="w-full h-11 rounded-[12px] text-xs font-bold uppercase tracking-wider text-white/85 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-60"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)' }}
+            className="w-full h-12 rounded-[14px] font-black uppercase tracking-wider text-sm text-white flex items-center justify-center gap-2 transition-transform active:scale-95 disabled:opacity-60"
+            style={{
+              background: 'linear-gradient(135deg, hsl(20,100%,56%) 0%, hsl(28,100%,50%) 50%, hsl(35,100%,65%) 100%)',
+              border: '1px solid hsla(0,0%,100%,0.3)',
+              boxShadow: '0 8px 24px hsla(20,100%,56%,0.45), inset 0 1px 0 hsla(0,0%,100%,0.45)',
+            }}
           >
-            {busy === 'email' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
-            Send magic link to {email}
+            {busy === 'email' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+            Send magic link
           </button>
+          <p className="text-[10px] text-center text-white/40">
+            We'll email <span className="font-mono text-white/60">{email}</span> a one-tap login.
+          </p>
         </div>
       )}
 
