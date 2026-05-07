@@ -10,16 +10,18 @@ const corsHeaders = {
 const FanBody = z.object({
   email: z.string().trim().toLowerCase().email(),
   role: z.literal('fan'),
-  country_code: z.string().min(2).max(3),
+  country_code: z.string().min(2).max(3).optional().nullable(),
+  phone_number: z.string().max(40).optional().nullable(),
 });
 
 const BarberBody = z.object({
   email: z.string().trim().toLowerCase().email(),
   role: z.literal('barber'),
-  country_code: z.string().min(2).max(3),
-  zip_code: z.string().trim().min(2).max(20),
-  barber_status: z.enum(['licensed', 'student', 'unlicensed', 'beginner']),
-  specialties: z.array(z.string().max(40)).min(1).max(3),
+  barber_status: z.enum(['licensed', 'student', 'unlicensed', 'beginner', 'aspiring']),
+  country_code: z.string().min(2).max(3).optional().nullable(),
+  phone_number: z.string().max(40).optional().nullable(),
+  zip_code: z.string().trim().min(2).max(20).optional().nullable(),
+  specialties: z.array(z.string().max(40)).max(3).optional(),
 });
 
 const Body = z.union([FanBody, BarberBody]);
@@ -45,13 +47,14 @@ Deno.serve(async (req) => {
     const update: Record<string, unknown> = {
       email: data.email,
       role: data.role,
-      country_code: data.country_code,
       spin_eligible: true,
     };
+    if (data.country_code) update.country_code = data.country_code;
+    if (data.phone_number) update.phone_number = data.phone_number;
     if (data.role === 'barber') {
-      update.zip_code = data.zip_code;
       update.barber_status = data.barber_status;
-      update.specialties = data.specialties;
+      if (data.zip_code) update.zip_code = data.zip_code;
+      if (data.specialties && data.specialties.length > 0) update.specialties = data.specialties;
     }
 
     const { error } = await supabase

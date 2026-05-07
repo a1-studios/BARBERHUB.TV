@@ -2679,12 +2679,14 @@ export type Database = {
           gclid: string | null
           id: string
           max_spins: number | null
+          phone_number: string | null
           prize_bb: number | null
           prize_duration_months: number | null
           prize_expires_at: string | null
           prize_id: string | null
           prize_label: string | null
           prize_locked_at: string | null
+          prize_tier: string | null
           raffle_ticket_code: string | null
           role: string
           shared: boolean | null
@@ -2715,12 +2717,14 @@ export type Database = {
           gclid?: string | null
           id?: string
           max_spins?: number | null
+          phone_number?: string | null
           prize_bb?: number | null
           prize_duration_months?: number | null
           prize_expires_at?: string | null
           prize_id?: string | null
           prize_label?: string | null
           prize_locked_at?: string | null
+          prize_tier?: string | null
           raffle_ticket_code?: string | null
           role: string
           shared?: boolean | null
@@ -2751,12 +2755,14 @@ export type Database = {
           gclid?: string | null
           id?: string
           max_spins?: number | null
+          phone_number?: string | null
           prize_bb?: number | null
           prize_duration_months?: number | null
           prize_expires_at?: string | null
           prize_id?: string | null
           prize_label?: string | null
           prize_locked_at?: string | null
+          prize_tier?: string | null
           raffle_ticket_code?: string | null
           role?: string
           shared?: boolean | null
@@ -4846,12 +4852,14 @@ export type Database = {
           gclid: string | null
           id: string
           max_spins: number | null
+          phone_number: string | null
           prize_bb: number | null
           prize_duration_months: number | null
           prize_expires_at: string | null
           prize_id: string | null
           prize_label: string | null
           prize_locked_at: string | null
+          prize_tier: string | null
           raffle_ticket_code: string | null
           role: string
           shared: boolean | null

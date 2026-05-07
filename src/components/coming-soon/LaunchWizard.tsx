@@ -3,20 +3,21 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { StepIdentityHook } from './StepIdentityHook';
 import { StepRole } from './StepRole';
-import { StepFanDetails } from './StepFanDetails';
-import { StepBarberDetails } from './StepBarberDetails';
 import { StepRaffleSpin } from './StepRaffleSpin';
 import { StepClaimAccount } from './StepClaimAccount';
+import { StepProfileBoost } from './StepProfileBoost';
 import { SegmentedProgress } from './SegmentedProgress';
 import { captureAttribution, getCountryFromUrl, getEmailFromUrl } from '@/lib/urlParams';
+import { supabase } from '@/integrations/supabase/client';
 
 export type LaunchRole = 'barber' | 'fan';
+export type BarberStatus = 'licensed' | 'unlicensed' | 'student' | 'beginner' | 'aspiring';
 
 interface LaunchWizardProps {
   onClose: () => void;
 }
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 3;
 
 const DirectionContext = createContext<1 | -1>(1);
 export const useStepDirection = () => useContext(DirectionContext);
@@ -34,27 +35,53 @@ const useIsMobile = () => {
 interface State {
   email: string;
   role: LaunchRole | null;
+  barberStatus: BarberStatus | null;
   country: string | null;
+  phone: string;
   ticketCode: string | null;
-  bbAwarded: number;
+  // True if the user signed up via OAuth (skipped manual capture)
+  isAuthed: boolean;
 }
 
 export const LaunchWizard = ({ onClose }: LaunchWizardProps) => {
+  // Step 1 = hook, 2 = role, 3 = spin, 4 = claim/profile-boost (final card)
   const [step, setStep] = useState(1);
   const [direction, setDirection] = useState<1 | -1>(1);
   const isMobile = useIsMobile();
   const [state, setState] = useState<State>({
     email: getEmailFromUrl() ?? '',
     role: null,
+    barberStatus: null,
     country: getCountryFromUrl() ?? null,
+    phone: '',
     ticketCode: null,
-    bbAwarded: 0,
+    isAuthed: false,
   });
 
   useEffect(() => { captureAttribution(); }, []);
 
+  // Detect already-authed session (e.g. Google One Tap fired before wizard opened
+  // or user just returned from OAuth).
+  useEffect(() => {
+    let mounted = true;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted || !session) return;
+      const email = session.user.email ?? '';
+      setState((s) => ({ ...s, email: s.email || email, isAuthed: true }));
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (!session) return;
+      const email = session.user.email ?? '';
+      setState((s) => ({ ...s, email: s.email || email, isAuthed: true }));
+      // If user just OAuth'd from the hook screen, jump them to role pick
+      setStep((cur) => (cur === 1 ? 2 : cur));
+      setDirection(1);
+    });
+    return () => { mounted = false; sub.subscription.unsubscribe(); };
+  }, []);
+
   const update = (patch: Partial<State>) => setState((s) => ({ ...s, ...patch }));
-  const goNext = () => { setDirection(1); setStep((s) => Math.min(s + 1, TOTAL_STEPS)); };
+  const goNext = () => { setDirection(1); setStep((s) => Math.min(s + 1, TOTAL_STEPS + 1)); };
   const goBack = () => { setDirection(-1); setStep((s) => Math.max(s - 1, 1)); };
 
   const shellMotion = isMobile
@@ -89,7 +116,7 @@ export const LaunchWizard = ({ onClose }: LaunchWizardProps) => {
           )}
 
           <div className={`px-1 ${isMobile ? 'mb-5' : 'mb-6'}`}>
-            <SegmentedProgress total={TOTAL_STEPS} current={step} />
+            <SegmentedProgress total={TOTAL_STEPS} current={Math.min(step, TOTAL_STEPS)} />
           </div>
 
           <div className="relative flex-1 overflow-y-auto overflow-x-hidden">
@@ -104,51 +131,51 @@ export const LaunchWizard = ({ onClose }: LaunchWizardProps) => {
               {step === 2 && (
                 <StepRole
                   key="step-2"
-                  value={state.role}
-                  onSelect={(role) => { update({ role }); goNext(); }}
-                  onBack={goBack}
-                  onSkip={onClose}
-                />
-              )}
-              {step === 3 && state.role === 'fan' && (
-                <StepFanDetails
-                  key="step-3-fan"
                   email={state.email}
+                  initialRole={state.role}
                   initialCountry={state.country}
-                  onContinue={(country) => { update({ country }); goNext(); }}
-                  onBack={goBack}
-                />
-              )}
-              {step === 3 && state.role === 'barber' && (
-                <StepBarberDetails
-                  key="step-3-barber"
-                  email={state.email}
-                  initialCountry={state.country}
-                  onContinue={({ country }) => { update({ country }); goNext(); }}
-                  onBack={goBack}
-                />
-              )}
-              {step === 4 && (
-                <StepRaffleSpin
-                  key="step-4"
-                  email={state.email}
-                  onResult={({ ticket_code, bb_awarded }) => {
-                    update({ ticketCode: ticket_code, bbAwarded: bb_awarded });
+                  initialPhone={state.phone}
+                  onContinue={({ role, barberStatus, country, phone }) => {
+                    update({ role, barberStatus, country, phone });
                     goNext();
                   }}
                   onBack={goBack}
                 />
               )}
-              {step === 5 && state.ticketCode && state.role && (
-                <StepClaimAccount
-                  key="step-5"
+              {step === 3 && (
+                <StepRaffleSpin
+                  key="step-3"
                   email={state.email}
-                  role={state.role}
-                  country={state.country}
-                  ticketCode={state.ticketCode}
-                  bbAwarded={state.bbAwarded}
-                  onClose={onClose}
+                  onResult={({ ticket_code }) => {
+                    update({ ticketCode: ticket_code });
+                    goNext();
+                  }}
+                  onBack={goBack}
                 />
+              )}
+              {step === 4 && state.ticketCode && state.role && (
+                state.isAuthed ? (
+                  <StepProfileBoost
+                    key="step-4-boost"
+                    email={state.email}
+                    role={state.role}
+                    barberStatus={state.barberStatus}
+                    initialCountry={state.country}
+                    initialPhone={state.phone}
+                    ticketCode={state.ticketCode}
+                    onClose={onClose}
+                  />
+                ) : (
+                  <StepClaimAccount
+                    key="step-4-claim"
+                    email={state.email}
+                    role={state.role}
+                    country={state.country}
+                    ticketCode={state.ticketCode}
+                    bbAwarded={0}
+                    onClose={onClose}
+                  />
+                )
               )}
             </AnimatePresence>
           </div>

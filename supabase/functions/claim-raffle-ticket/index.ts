@@ -27,6 +27,16 @@ function nextSunday(): string {
   return d.toISOString().slice(0, 10);
 }
 
+// Hidden prize tier weighting per audience segment.
+// We never reveal this to the client — Sovereign HQ uses it for the Sunday draw.
+function pickTier(segment: string): string {
+  const r = Math.random();
+  // small ~85%, medium ~13%, grand ~2%
+  if (r < 0.85) return `${segment}:small`;
+  if (r < 0.98) return `${segment}:medium`;
+  return `${segment}:grand`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
@@ -46,7 +56,6 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Verify lead is spin-eligible
     const { data: lead } = await supabase
       .from('marketing_leads')
       .select('email, role, country_code, zip_code, barber_status, specialties, spin_eligible')
@@ -60,7 +69,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Refuse duplicate tickets
     const { data: existing } = await supabase
       .from('raffle_entries')
       .select('ticket_code, bb_awarded')
@@ -69,18 +77,21 @@ Deno.serve(async (req) => {
     if (existing) {
       return new Response(
         JSON.stringify({
-          error: 'already_entered',
+          ok: true,
           ticket_code: existing.ticket_code,
-          bb_awarded: existing.bb_awarded,
         }),
-        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Server-side roll: random integer in [15, 50]
+    // Hidden prize segment: combines role + barber_status (or 'fan')
+    const segment =
+      lead.role === 'barber' ? `barber:${lead.barber_status ?? 'unknown'}` : 'fan';
+    const prize_tier = pickTier(segment);
+
+    // Internal BB ledger value — never returned to client. Kept for future reconciliation.
     const bb = 15 + Math.floor(Math.random() * 36);
 
-    // Try to insert with collision-resistant ticket code
     let ticket_code = '';
     let lastErr: unknown = null;
     for (let attempt = 0; attempt < 6; attempt++) {
@@ -102,11 +113,10 @@ Deno.serve(async (req) => {
         lastErr = null;
         break;
       }
-      // 23505 = unique violation: retry on ticket_code collision, abort on email
       if (error.code === '23505' && error.message.includes('email_unique')) {
         return new Response(
-          JSON.stringify({ error: 'already_entered' }),
-          { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          JSON.stringify({ ok: true, error: 'already_entered' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       lastErr = error;
@@ -118,14 +128,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Link ticket back to marketing_leads for analytics
     await supabase
       .from('marketing_leads')
-      .update({ raffle_ticket_code: ticket_code, prize_bb: bb, prize_label: `${bb} BB + Ticket ${ticket_code}` })
+      .update({
+        raffle_ticket_code: ticket_code,
+        prize_bb: bb,
+        prize_tier,
+        prize_label: `Hidden — Sunday draw`,
+      })
       .ilike('email', email);
 
+    // IMPORTANT: never return bb_awarded or prize tier — client only sees the ticket.
     return new Response(
-      JSON.stringify({ ok: true, ticket_code, bb_awarded: bb }),
+      JSON.stringify({ ok: true, ticket_code }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err) {

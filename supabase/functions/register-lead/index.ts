@@ -11,6 +11,8 @@ const Body = z.object({
   email: z.string().trim().toLowerCase().email().max(255),
   fingerprint: z.string().max(128).optional(),
   source_url: z.string().max(2048).optional(),
+  country_code: z.string().min(2).max(3).optional().nullable(),
+  phone_number: z.string().max(40).optional().nullable(),
 });
 
 Deno.serve(async (req) => {
@@ -25,7 +27,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { email, fingerprint, source_url } = parsed.data;
+    const { email, fingerprint, source_url, country_code, phone_number } = parsed.data;
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null;
 
     const supabase = createClient(
@@ -47,19 +49,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    await supabase.from('marketing_leads').upsert(
-      {
-        email,
-        role: 'fan', // placeholder; will be overwritten in submit-role-details
-        device_fingerprint: fingerprint ?? null,
-        source_url: source_url ?? null,
-        spin_eligible: false,
-      },
-      { onConflict: 'email' }
-    );
+    const upsert: Record<string, unknown> = {
+      email,
+      role: 'fan', // placeholder; will be overwritten in submit-role-details
+      device_fingerprint: fingerprint ?? null,
+      source_url: source_url ?? null,
+      spin_eligible: false,
+    };
+    if (country_code) upsert.country_code = country_code;
+    if (phone_number) upsert.phone_number = phone_number;
 
-    // Stateless lead token (signed JWT-lite via shared secret would be heavier — we keep it simple
-    // and just echo the email; the spin endpoint enforces the same gates server-side).
+    await supabase.from('marketing_leads').upsert(upsert, { onConflict: 'email' });
+
     return new Response(
       JSON.stringify({ ok: true, lead_token: btoa(`${email}|${Date.now()}`) }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
