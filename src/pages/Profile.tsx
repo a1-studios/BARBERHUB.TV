@@ -33,6 +33,7 @@ import { parseSpecialties, getSpecialtyDisplay } from '@/config/specialtyTags';
 import { PostAppointmentReviewModal } from '@/components/reviews/PostAppointmentReviewModal';
 import { requireProfileComplete } from '@/components/auth/ProfileCompletionGate';
 import { AlertCircle } from 'lucide-react';
+import { DisplayNameEditor } from '@/components/profile/DisplayNameEditor';
 
 const ProfileCompletionBanner = ({ profile }: { profile: any }) => {
   if (!profile) return null;
@@ -233,9 +234,14 @@ const Profile = () => {
     );
   }
 
-  const displayName = isBarber
-    ? (profile?.display_name || barberProfile?.name || 'Barber')
-    : (profile?.display_name || 'Fan');
+  const rawDisplay = isBarber
+    ? (profile?.display_name || barberProfile?.name || '')
+    : (profile?.display_name || '');
+  // Hide emails — never display the user's email as their public name
+  const looksLikeEmail = rawDisplay.includes('@');
+  const displayName = (!rawDisplay || looksLikeEmail)
+    ? (isBarber ? 'Set your name' : 'Set your name')
+    : rawDisplay;
   const specialty = barberProfile?.specialty;
   const countryCode = isBarber ? barberProfile?.country_code : (profile?.country_code || (clientProfile as any)?.country_code);
   const subscriptionTier = barberProfile?.active_subscription_tier;
@@ -305,7 +311,13 @@ const Profile = () => {
             )}
 
             {/* Name + meta */}
-            <h1 className="text-xl font-bold text-foreground mt-2 text-center">{displayName}</h1>
+            <h1 className="text-xl font-bold text-foreground mt-2 text-center flex items-center justify-center gap-1">
+              {displayName}
+              <DisplayNameEditor
+                currentName={looksLikeEmail ? '' : rawDisplay}
+                changedAt={(profile as any)?.display_name_changed_at}
+              />
+            </h1>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               {profile?.username && <span>@{profile.username}</span>}
               {countryCode && <span>{getCountryFlag(countryCode)}</span>}
