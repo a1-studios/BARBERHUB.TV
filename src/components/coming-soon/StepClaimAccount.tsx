@@ -4,7 +4,6 @@ import { Check, Loader2, AlertCircle, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { authCallbackRedirect } from '@/lib/authRedirects';
 import { markGateCompleted } from '@/components/promotion-gate/useGateState';
-import { GoogleOneTap } from '@/components/auth/GoogleOneTap';
 
 interface Props {
   email: string;
@@ -18,31 +17,9 @@ interface Props {
 const haptic = (ms = 15) => { try { navigator.vibrate?.(ms); } catch { /* */ } };
 
 export const StepClaimAccount = ({ email, role, country, ticketCode, bbAwarded, onClose }: Props) => {
-  const [busy, setBusy] = useState<'google' | 'apple' | 'facebook' | 'email' | null>(null);
+  const [busy, setBusy] = useState<'email' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
-
-  const oauth = async (provider: 'google' | 'apple' | 'facebook') => {
-    setBusy(provider);
-    setError(null);
-    haptic();
-    // Stash claim metadata so the callback function can credit the ticket
-    try {
-      localStorage.setItem('raffle_pending_claim', JSON.stringify({ email, role, country, ticketCode, bbAwarded }));
-    } catch { /* ignore */ }
-
-    const { error: authErr } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: authCallbackRedirect(),
-        queryParams: { prompt: 'select_account' },
-      },
-    });
-    if (authErr) {
-      setError(authErr.message);
-      setBusy(null);
-    }
-  };
 
   const emailMagicLink = async () => {
     setBusy('email');
