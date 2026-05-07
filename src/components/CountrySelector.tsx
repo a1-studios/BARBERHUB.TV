@@ -6,7 +6,7 @@ import { Check, ChevronDown, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Popular countries list
-const COUNTRIES = [
+export const COUNTRIES = [
   { code: 'US', name: 'United States' },
   { code: 'CA', name: 'Canada' },
   { code: 'GB', name: 'United Kingdom' },
