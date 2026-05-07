@@ -127,19 +127,3 @@ export const StepClaimAccount = ({ email, role, country, ticketCode, bbAwarded, 
   );
 };
 
-const SocialBtn = ({ label, busy, onClick }: { label: string; busy: boolean; onClick: () => void }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    disabled={busy}
-    className="w-full h-12 rounded-[14px] font-black uppercase tracking-wider text-sm text-white flex items-center justify-center gap-2 transition-transform active:scale-95 disabled:opacity-60"
-    style={{
-      background: 'linear-gradient(135deg, #FF5F1F 0%, #FF8C00 50%, #FFB347 100%)',
-      border: '1px solid rgba(255,255,255,0.3)',
-      boxShadow: '0 8px 24px rgba(255,95,31,0.45), inset 0 1px 0 rgba(255,255,255,0.45)',
-    }}
-  >
-    {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-    {label}
-  </button>
-);
