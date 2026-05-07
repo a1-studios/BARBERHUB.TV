@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { CountrySelector } from '@/components/CountrySelector';
 
+import { useQueryClient } from '@tanstack/react-query';
 type Role = 'barber' | 'fan';
 type BarberStatus = 'licensed' | 'unlicensed' | 'student' | 'beginner' | 'aspiring';
 
@@ -24,6 +25,7 @@ const STATUSES: { id: BarberStatus; label: string }[] = [
  */
 export const ProfileCompletionGate = () => {
   const { user } = useAuth();
+  const qc = useQueryClient();
   const [needs, setNeeds] = useState(false);
   const [open, setOpen] = useState(false);
   const [role, setRole] = useState<Role | null>(null);
