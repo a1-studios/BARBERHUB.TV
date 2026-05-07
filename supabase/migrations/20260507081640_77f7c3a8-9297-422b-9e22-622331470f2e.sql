@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.sync_user_binary_role(uuid, text) FROM PUBLIC, anon, authenticated;
