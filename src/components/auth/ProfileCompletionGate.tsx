@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Scissors, Heart, Sparkles, Globe, Phone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { CountrySelector } from '@/components/CountrySelector';
+import { COUNTRIES } from '@/components/CountrySelector';
 
 import { useQueryClient } from '@tanstack/react-query';
 type Role = 'barber' | 'fan';
