@@ -1,51 +1,89 @@
-# Fix profile-completion follow-through + add social sign-in shortcuts
+## What I’ll fix
 
-Two small, scoped changes — frontend only, no business logic touched.
+1. **Repair the binary role flow** so a user cannot end up half-barber / half-fan.
+2. **Stop the profile page from re-asking for setup** after the barber already completed the first step.
+3. **Restore the spin-wheel claim path** so new barber and fan signups can actually receive their prize.
 
-## 1. Persistent "Complete your profile" prompt
+## Why this is happening
 
-Today, if a OAuth user dismisses the `ProfileCompletionGate` ("Watch first, decide later"), nothing reminds them — and their Barber Bucks ticket can't be credited until role + country are set. Add a permanent reminder until the profile is completed.
+I found a live mismatch in the current data:
+- A recent user has `profiles.user_type = barber`
+- The same user still has a **fan/client profile**
+- The same user has **both `barber` and `fan` roles**
+- That user has **no `barber_profiles` row**
 
-**A. Sticky banner on the Profile page (`src/pages/Profile.tsx`)**
+So the app is currently treating “profile complete” in **two different ways**:
+- `ProfileCompletionGate` only checks the basic `profiles` row (`user_type` + `country_code`)
+- `Profile` page also checks whether the specialized row exists (`barber_profiles` or `client_profiles`)
 
-- At the top of `<main>`, render a dismissible-but-persistent orange banner whenever `!profile?.user_type || !profile?.country_code`.
-- Copy: "Complete your profile to claim your Barber Bucks 🎟️" + a "Complete now" button that calls `requireProfileComplete()` (re-opens the existing gate modal).
-- Style: orange gradient, pulsing ring, sits above the avatar hero so it's the first thing they see.
+That means the first step succeeds, but the second system still thinks the account is incomplete.
 
-**B. Header pulse dot (`src/components/Header.tsx`)**
+I also found the spin recovery path is fragile:
+- it decides the user role before role/profile data is fully hydrated
+- it can discard a pending prize if the role looks mismatched during that window
+- it relies on a very tight “new account” timing check on the edge function
 
-- Add a small orange pulsing dot on the profile coin (similar to the existing `unreadCount` badge, but distinct color/position) when the profile is incomplete.
-- Tapping the coin still opens the wallet dropdown; we add a new "⚠️ Complete profile" row at the top of that dropdown that triggers `requireProfileComplete()`.
-- Uses the same query the gate uses (`profiles.user_type` + `country_code`) wrapped in a tiny `useProfileIncomplete()` hook so both Header and Profile share one source of truth.
+## Implementation plan
 
-**C. Auto re-trigger on app focus**
+### 1) Enforce the binary system on the backend
+Create a database-side repair/sync path so barber vs fan stays consistent.
 
-- `ProfileCompletionGate` already auto-opens 800 ms after sign-in. Extend its `useEffect` so it also re-opens once per session if the user navigates to `/profile`, `/portal`, or `/creator-hub` while incomplete (read-only — no DB changes).
+This will:
+- backfill any broken recent accounts
+- ensure only **one primary role** exists between `barber` and `fan`
+- keep admin/sovereign roles intact
+- create the matching specialized profile row when missing
+  - `barber_profiles` for barbers
+  - `client_profiles` for fans
+- remove the opposite specialized row when the account was incorrectly registered on the wrong side
 
-No edge function or DB changes — `finalize-oauth-claim` already handles linking the lead to the user and crediting BB once the form is submitted.
+### 2) Update the OAuth/profile-finalization flow
+Refactor `finalize-oauth-claim` so it does not only write `profiles.user_type` and add a role.
 
-## 2. Small social sign-in icons under the header (logged-out users)
+Instead it will:
+- call the backend sync logic
+- guarantee the correct specialized profile exists immediately
+- guarantee the wrong side is cleaned up
+- keep the BB prize credit linked to the correct account
 
-A new lightweight strip rendered just under the header for users who are **not signed in**, so OAuth is always one tap away (matches the one-click pattern from the intake flow).
+### 3) Fix the profile page gating logic
+Unify the frontend checks so the app does not treat the same user as complete in one place and incomplete in another.
 
-**New component: `src/components/auth/QuickSocialSignIn.tsx**`
+This will include:
+- using a single source of truth for “what is still missing?”
+- distinguishing between:
+  - **basic account completion**
+  - **barber/fan specialized profile completion**
+- showing the right CTA for barbers who still need to finish their barber profile instead of bouncing them through the wrong prompt state
 
-- Three small (28 px) circular icons: Google, Apple, Meta — same SVGs as `StepIdentityHook`'s `SocialCircle`, scaled down.
-- Reuses the same `signInWithOAuth(...)` call with `authCallbackRedirect()`.
-- Subtle row: `flex items-center justify-center gap-3 px-4 py-1.5` with a tiny "Sign in:" label on the left.
-- Hidden when `user` exists.
+### 4) Fix spin-wheel prize recovery after signup
+Adjust the homepage recovery flow so it waits for the actual resolved role/profile state before claiming or rejecting the prize.
 
-**Mount point: `src/components/Header.tsx**`
+This will include:
+- waiting for role hydration before comparing the pending prize role
+- using the resolved primary role from the account, not a fallback assumption
+- preventing false role-mismatch deletes
+- making the new-user prize claim path work reliably for both barber and fan signups
 
-- Render `<QuickSocialSignIn />` directly under the closing `</div>` of the header bar, before the `<LiveActivityPill />`. It sits flush under the rounded header card so it reads as part of the chrome.
-- Mobile-first: icons are 28 px, total strip height ~36 px, no horizontal scroll.
+### 5) Validate with live-data scenarios
+After the fix, I’ll verify these cases:
+- new barber signup → completes claim → no repeat “complete profile” loop
+- new fan signup → claim succeeds
+- barber prize is not rejected as fan prize, and vice versa
+- existing broken account is repaired into the correct side of the binary system
 
-## Files touched
+## Technical details
 
-- `src/pages/Profile.tsx` — sticky completion banner.
-- `src/components/Header.tsx` — pulse dot, dropdown row, mount social strip.
-- `src/components/auth/ProfileCompletionGate.tsx` — re-open on protected route visits.
-- `src/hooks/useProfileIncomplete.tsx` — **new**, shared incomplete-check.
-- `src/components/auth/QuickSocialSignIn.tsx` — **new**, small icon row.
+### Files likely to change
+- `supabase/functions/finalize-oauth-claim/index.ts`
+- `src/pages/Profile.tsx`
+- `src/hooks/useProfileSetup.tsx`
+- `src/hooks/useProfileIncomplete.tsx`
+- `src/pages/Index.tsx`
 
-No database, RLS, or edge function changes.  ensure the users barbers are eble to imput their flag phone and all the agreed info when they completing their account last build was having issues 
+### Database work likely needed
+A migration will likely add secure server-side role/profile synchronization and backfill broken users already created with mixed state.
+
+### Key rule preserved
+- Users remain permanently either **Barber** or **Fan** in the binary ecosystem
+- Admin/Sovereign access can still coexist without turning a user into both Barber and Fan
