@@ -4,7 +4,6 @@ import { Check, Loader2, AlertCircle, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { authCallbackRedirect } from '@/lib/authRedirects';
 import { markGateCompleted } from '@/components/promotion-gate/useGateState';
-import { GoogleOneTap } from '@/components/auth/GoogleOneTap';
 
 interface Props {
   email: string;
@@ -18,31 +17,9 @@ interface Props {
 const haptic = (ms = 15) => { try { navigator.vibrate?.(ms); } catch { /* */ } };
 
 export const StepClaimAccount = ({ email, role, country, ticketCode, bbAwarded, onClose }: Props) => {
-  const [busy, setBusy] = useState<'google' | 'apple' | 'facebook' | 'email' | null>(null);
+  const [busy, setBusy] = useState<'email' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
-
-  const oauth = async (provider: 'google' | 'apple' | 'facebook') => {
-    setBusy(provider);
-    setError(null);
-    haptic();
-    // Stash claim metadata so the callback function can credit the ticket
-    try {
-      localStorage.setItem('raffle_pending_claim', JSON.stringify({ email, role, country, ticketCode, bbAwarded }));
-    } catch { /* ignore */ }
-
-    const { error: authErr } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: authCallbackRedirect(),
-        queryParams: { prompt: 'select_account' },
-      },
-    });
-    if (authErr) {
-      setError(authErr.message);
-      setBusy(null);
-    }
-  };
 
   const emailMagicLink = async () => {
     setBusy('email');
@@ -98,27 +75,23 @@ export const StepClaimAccount = ({ email, role, country, ticketCode, bbAwarded, 
 
       {!emailSent && (
         <div className="space-y-2">
-          <GoogleOneTap />
-          <SocialBtn label="Sign up with Google — 1 click" busy={busy === 'google'} onClick={() => oauth('google')} />
-          <SocialBtn label="Continue with Apple" busy={busy === 'apple'} onClick={() => oauth('apple')} />
-          <SocialBtn label="Continue with Meta" busy={busy === 'facebook'} onClick={() => oauth('facebook')} />
-
-          <div className="relative my-3 flex items-center gap-2">
-            <div className="flex-1 h-px bg-white/10" />
-            <span className="text-[10px] uppercase tracking-wider text-white/40">or</span>
-            <div className="flex-1 h-px bg-white/10" />
-          </div>
-
           <button
             type="button"
             onClick={emailMagicLink}
             disabled={busy !== null}
-            className="w-full h-11 rounded-[12px] text-xs font-bold uppercase tracking-wider text-white/85 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-60"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)' }}
+            className="w-full h-12 rounded-[14px] font-black uppercase tracking-wider text-sm text-white flex items-center justify-center gap-2 transition-transform active:scale-95 disabled:opacity-60"
+            style={{
+              background: 'linear-gradient(135deg, hsl(20,100%,56%) 0%, hsl(28,100%,50%) 50%, hsl(35,100%,65%) 100%)',
+              border: '1px solid hsla(0,0%,100%,0.3)',
+              boxShadow: '0 8px 24px hsla(20,100%,56%,0.45), inset 0 1px 0 hsla(0,0%,100%,0.45)',
+            }}
           >
-            {busy === 'email' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
-            Send magic link to {email}
+            {busy === 'email' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+            Send magic link
           </button>
+          <p className="text-[10px] text-center text-white/40">
+            We'll email <span className="font-mono text-white/60">{email}</span> a one-tap login.
+          </p>
         </div>
       )}
 
@@ -154,19 +127,3 @@ export const StepClaimAccount = ({ email, role, country, ticketCode, bbAwarded, 
   );
 };
 
-const SocialBtn = ({ label, busy, onClick }: { label: string; busy: boolean; onClick: () => void }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    disabled={busy}
-    className="w-full h-12 rounded-[14px] font-black uppercase tracking-wider text-sm text-white flex items-center justify-center gap-2 transition-transform active:scale-95 disabled:opacity-60"
-    style={{
-      background: 'linear-gradient(135deg, #FF5F1F 0%, #FF8C00 50%, #FFB347 100%)',
-      border: '1px solid rgba(255,255,255,0.3)',
-      boxShadow: '0 8px 24px rgba(255,95,31,0.45), inset 0 1px 0 rgba(255,255,255,0.45)',
-    }}
-  >
-    {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-    {label}
-  </button>
-);

@@ -60,8 +60,8 @@ export const LaunchWizard = ({ onClose }: LaunchWizardProps) => {
 
   useEffect(() => { captureAttribution(); }, []);
 
-  // Detect already-authed session (e.g. Google One Tap fired before wizard opened
-  // or user just returned from OAuth).
+  // Detect already-authed session — OAuth users skip role pick (deferred to ProfileCompletionGate
+  // post sign-in) and go straight to the spin step.
   useEffect(() => {
     let mounted = true;
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -72,9 +72,10 @@ export const LaunchWizard = ({ onClose }: LaunchWizardProps) => {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
       if (!session) return;
       const email = session.user.email ?? '';
-      setState((s) => ({ ...s, email: s.email || email, isAuthed: true }));
-      // If user just OAuth'd from the hook screen, jump them to role pick
-      setStep((cur) => (cur === 1 ? 2 : cur));
+      setState((s) => ({ ...s, email: s.email || email, isAuthed: true, role: s.role ?? 'fan' }));
+      // OAuth user — register the lead by email then jump straight to spin
+      void supabase.functions.invoke('register-lead', { body: { email } }).catch(() => {});
+      setStep((cur) => (cur === 1 ? 3 : cur));
       setDirection(1);
     });
     return () => { mounted = false; sub.subscription.unsubscribe(); };

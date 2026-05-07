@@ -49,6 +49,7 @@ import BroadcastStudio from "./pages/BroadcastStudio";
 import ResetPassword from "./pages/ResetPassword";
 import AuthCallback from "./pages/AuthCallback";
 import { AuthHashHandler } from "./components/auth/AuthHashHandler";
+import { ProfileCompletionGate } from "./components/auth/ProfileCompletionGate";
 
 const queryClient = new QueryClient();
 
@@ -62,6 +63,7 @@ const AppContent = () => {
   return (
     <>
       <AuthHashHandler />
+      <ProfileCompletionGate />
       <Routes>
             <Route path="/" element={IS_COMING_SOON ? <ComingSoon /> : <Index />} />
             <Route path="/coming-soon" element={<ComingSoon />} />

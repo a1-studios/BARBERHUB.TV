@@ -51,10 +51,11 @@ Deno.serve(async (req) => {
 
     const upsert: Record<string, unknown> = {
       email,
-      role: 'fan', // placeholder; will be overwritten in submit-role-details
+      // role left null — set by submit-role-details (email flow)
+      // or finalize-oauth-claim (OAuth flow, post sign-in)
       device_fingerprint: fingerprint ?? null,
       source_url: source_url ?? null,
-      spin_eligible: false,
+      spin_eligible: true, // OAuth flow goes straight to spin
     };
     if (country_code) upsert.country_code = country_code;
     if (phone_number) upsert.phone_number = phone_number;

@@ -2667,6 +2667,7 @@ export type Database = {
       marketing_leads: {
         Row: {
           barber_status: string | null
+          claimed_at: string | null
           claimed_user_id: string | null
           converted: boolean | null
           country_code: string | null
@@ -2678,6 +2679,7 @@ export type Database = {
           gbraid: string | null
           gclid: string | null
           id: string
+          linked_user_id: string | null
           max_spins: number | null
           phone_number: string | null
           prize_bb: number | null
@@ -2687,8 +2689,9 @@ export type Database = {
           prize_label: string | null
           prize_locked_at: string | null
           prize_tier: string | null
+          prize_tier_color: string | null
           raffle_ticket_code: string | null
-          role: string
+          role: string | null
           shared: boolean | null
           source_url: string | null
           specialties: string[] | null
@@ -2705,6 +2708,7 @@ export type Database = {
         }
         Insert: {
           barber_status?: string | null
+          claimed_at?: string | null
           claimed_user_id?: string | null
           converted?: boolean | null
           country_code?: string | null
@@ -2716,6 +2720,7 @@ export type Database = {
           gbraid?: string | null
           gclid?: string | null
           id?: string
+          linked_user_id?: string | null
           max_spins?: number | null
           phone_number?: string | null
           prize_bb?: number | null
@@ -2725,8 +2730,9 @@ export type Database = {
           prize_label?: string | null
           prize_locked_at?: string | null
           prize_tier?: string | null
+          prize_tier_color?: string | null
           raffle_ticket_code?: string | null
-          role: string
+          role?: string | null
           shared?: boolean | null
           source_url?: string | null
           specialties?: string[] | null
@@ -2743,6 +2749,7 @@ export type Database = {
         }
         Update: {
           barber_status?: string | null
+          claimed_at?: string | null
           claimed_user_id?: string | null
           converted?: boolean | null
           country_code?: string | null
@@ -2754,6 +2761,7 @@ export type Database = {
           gbraid?: string | null
           gclid?: string | null
           id?: string
+          linked_user_id?: string | null
           max_spins?: number | null
           phone_number?: string | null
           prize_bb?: number | null
@@ -2763,8 +2771,9 @@ export type Database = {
           prize_label?: string | null
           prize_locked_at?: string | null
           prize_tier?: string | null
+          prize_tier_color?: string | null
           raffle_ticket_code?: string | null
-          role?: string
+          role?: string | null
           shared?: boolean | null
           source_url?: string | null
           specialties?: string[] | null
@@ -4840,6 +4849,7 @@ export type Database = {
         Args: { p_fingerprint: string }
         Returns: {
           barber_status: string | null
+          claimed_at: string | null
           claimed_user_id: string | null
           converted: boolean | null
           country_code: string | null
@@ -4851,6 +4861,7 @@ export type Database = {
           gbraid: string | null
           gclid: string | null
           id: string
+          linked_user_id: string | null
           max_spins: number | null
           phone_number: string | null
           prize_bb: number | null
@@ -4860,8 +4871,9 @@ export type Database = {
           prize_label: string | null
           prize_locked_at: string | null
           prize_tier: string | null
+          prize_tier_color: string | null
           raffle_ticket_code: string | null
-          role: string
+          role: string | null
           shared: boolean | null
           source_url: string | null
           specialties: string[] | null
