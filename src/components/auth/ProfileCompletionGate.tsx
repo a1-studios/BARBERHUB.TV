@@ -166,11 +166,19 @@ export const ProfileCompletionGate = () => {
           <div className="space-y-2">
             <div className="relative">
               <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-400/70 pointer-events-none z-10" />
-              <div className="rounded-[12px] overflow-hidden" style={{ border: '1px solid hsla(20,100%,56%,0.3)', background: 'hsla(0,0%,0%,0.4)' }}>
-                <div className="[&_button]:!rounded-[12px] [&_button]:!border-0 [&_button]:!bg-transparent [&_button]:!h-11 [&_button]:!pl-9 [&_button]:!text-white [&_button]:!text-sm">
-                  <CountrySelector value={country} onChange={setCountry} placeholder="Country (required)" />
-                </div>
-              </div>
+              <select
+                value={country ?? ''}
+                onChange={(e) => setCountry(e.target.value || null)}
+                className="w-full h-11 pl-9 pr-3 rounded-[12px] bg-black/40 text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/60 appearance-none"
+                style={{ border: '1px solid hsla(20,100%,56%,0.3)' }}
+              >
+                <option value="" disabled>Country (required)</option>
+                {COUNTRIES.map((c) => (
+                  <option key={c.code} value={c.code} className="bg-black text-white">
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-400/70 pointer-events-none z-10" />
