@@ -4,6 +4,7 @@
  * Server mirror runs through the `meta-capi-track` Supabase Edge Function.
  */
 import { supabase } from '@/integrations/supabase/client';
+import { getConsent } from './consent';
 
 declare global {
   interface Window {
@@ -61,6 +62,7 @@ export function newEventId(): string {
 /** Fire a basic PageView (used by SPA route hook). */
 export function fbqTrackPageView() {
   if (typeof window === 'undefined' || typeof window.fbq !== 'function') return;
+  if (!getConsent().marketing) return;
   window.fbq('track', 'PageView');
 }
 
@@ -73,6 +75,7 @@ export async function fbqTrack(
   options: MetaTrackOptions = {}
 ): Promise<string> {
   const event_id = newEventId();
+  if (!getConsent().marketing) return event_id;
   const { email, country, user_type, extra = {} } = options;
 
   const customData: Record<string, unknown> = { ...extra };

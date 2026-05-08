@@ -50,6 +50,13 @@ import ResetPassword from "./pages/ResetPassword";
 import AuthCallback from "./pages/AuthCallback";
 import { AuthHashHandler } from "./components/auth/AuthHashHandler";
 import { ProfileCompletionGate } from "./components/auth/ProfileCompletionGate";
+import { CookieConsentBanner } from "./components/legal/CookieConsentBanner";
+import { initPixelGate } from "./lib/metaPixelGate";
+import Terms from "./pages/legal/Terms";
+import Privacy from "./pages/legal/Privacy";
+import AUP from "./pages/legal/AUP";
+import Cookies from "./pages/legal/Cookies";
+import { useEffect } from "react";
 
 const queryClient = new QueryClient();
 
@@ -59,11 +66,16 @@ const AppContent = () => {
   // Track SPA route changes in Meta Pixel + Google Ads
   useMetaPixelPageView();
   useGoogleAdsPageView();
-  
+
+  useEffect(() => {
+    initPixelGate();
+  }, []);
+
   return (
     <>
       <AuthHashHandler />
       <ProfileCompletionGate />
+      <CookieConsentBanner />
       <Routes>
             <Route path="/" element={IS_COMING_SOON ? <ComingSoon /> : <Index />} />
             <Route path="/coming-soon" element={<ComingSoon />} />
@@ -236,6 +248,10 @@ const AppContent = () => {
             />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/aup" element={<AUP />} />
+            <Route path="/cookies" element={<Cookies />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
     </>

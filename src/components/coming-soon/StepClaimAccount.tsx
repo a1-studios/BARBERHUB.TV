@@ -20,8 +20,14 @@ export const StepClaimAccount = ({ email, role, country, ticketCode, bbAwarded, 
   const [busy, setBusy] = useState<'email' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
+  const [agreed, setAgreed] = useState(false);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
 
   const emailMagicLink = async () => {
+    if (!agreed) {
+      setError('You must agree to the Terms, Privacy Policy and AUP.');
+      return;
+    }
     setBusy('email');
     setError(null);
     haptic();
@@ -37,6 +43,8 @@ export const StepClaimAccount = ({ email, role, country, ticketCode, bbAwarded, 
           user_type: role,
           display_name: email.split('@')[0],
           country_code: country,
+          tos_accepted_at: new Date().toISOString(),
+          marketing_opt_in: marketingOptIn,
         },
       },
     });
@@ -74,12 +82,35 @@ export const StepClaimAccount = ({ email, role, country, ticketCode, bbAwarded, 
       </div>
 
       {!emailSent && (
-        <div className="space-y-2">
+        <div className="space-y-3">
+          <label className="flex items-start gap-2 text-left text-[11px] text-white/75 leading-snug cursor-pointer">
+            <input
+              type="checkbox"
+              checked={agreed}
+              onChange={(e) => setAgreed(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-orange-500 shrink-0"
+            />
+            <span>
+              I agree to Barber-Hub's{' '}
+              <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-cyan-300 underline underline-offset-2">Terms of Service</a>,{' '}
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-cyan-300 underline underline-offset-2">Privacy Policy</a>, and{' '}
+              <a href="/aup" target="_blank" rel="noopener noreferrer" className="text-cyan-300 underline underline-offset-2">Acceptable Use Policy</a>. I confirm I am at least 18 years old.
+            </span>
+          </label>
+          <label className="flex items-start gap-2 text-left text-[11px] text-white/60 leading-snug cursor-pointer">
+            <input
+              type="checkbox"
+              checked={marketingOptIn}
+              onChange={(e) => setMarketingOptIn(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-cyan-400 shrink-0"
+            />
+            <span>I'd like to receive updates, competition alerts, and Barber-Hub news by email.</span>
+          </label>
           <button
             type="button"
             onClick={emailMagicLink}
-            disabled={busy !== null}
-            className="w-full h-12 rounded-[14px] font-black uppercase tracking-wider text-sm text-white flex items-center justify-center gap-2 transition-transform active:scale-95 disabled:opacity-60"
+            disabled={busy !== null || !agreed}
+            className="w-full h-12 rounded-[14px] font-black uppercase tracking-wider text-sm text-white flex items-center justify-center gap-2 transition-transform active:scale-95 disabled:opacity-50"
             style={{
               background: 'linear-gradient(135deg, hsl(20,100%,56%) 0%, hsl(28,100%,50%) 50%, hsl(35,100%,65%) 100%)',
               border: '1px solid hsla(0,0%,100%,0.3)',
