@@ -1,28 +1,30 @@
-## Update site metadata, favicon, and Open Graph image
+## Goal
+Make the bottom quick-options bar (BottomNavBar) visually distinct from the content underneath and available on tablets.
 
-### 1. Favicon assets → `public/`
-Copy from uploaded `favicon.zip` (the Barber Hub pole):
-- `favicon.ico` (replaces existing)
-- `favicon.svg`
-- `favicon-96x96.png`
-- `apple-touch-icon.png`
-- `web-app-manifest-192x192.png`
-- `web-app-manifest-512x512.png`
-- `site.webmanifest`
+## Changes
 
-Delete the existing `public/favicon.ico` first so the new one takes effect.
+### 1. Visual treatment — `src/components/BottomNavBar.tsx`
+The bar currently has no background; icons float over whatever video/content sits beneath, hurting legibility.
 
-### 2. Open Graph / social image → `public/og-image.png`
-Copy the uploaded `Untitled_design_3.png` (the BarberHubTV global competition arena render) to `public/og-image.png`. This is what appears when the site is shared on Facebook, X, iMessage, WhatsApp, LinkedIn, etc.
+Add a layered treatment using existing semantic tokens (no hard-coded colors):
+- A subtle dark backdrop strip behind the bar: `bg-background/70 backdrop-blur-xl`
+- A cyan gradient top border (1px) using the project's Zion Blue / cyan token — `bg-gradient-to-r from-transparent via-cyan/70 to-transparent`
+- A soft cyan glow above the bar: `shadow-[0_-8px_24px_-8px_hsl(var(--cyan)/0.35)]`
+- Keep the FAB orange (primary) — it remains the focal action. Its ring gets a thin cyan outline (`ring-1 ring-cyan/40`) so it pops against the new bar.
 
-### 3. Update `index.html` `<head>`
-- **Title**: `BARBER-HUB | Global Competitions, Scheduling, Currency, Country & Community Representation Ecosystem`
-- **Meta description**: `The ultimate streaming platform & FIFA-style tournament for head-to-head barber battles. Join the global community and earn Barber Bucks.`
-- **Favicon links**: add `.ico`, `.svg`, 96×96 PNG, apple-touch-icon, and `<link rel="manifest" href="/site.webmanifest">`
-- **Open Graph**: update `og:title`, `og:description`, set `og:image` → `/og-image.png`, add `og:image:width=1200`, `og:image:height=630`, `og:url`, `og:site_name`
-- **Twitter**: update `twitter:title`, `twitter:description`, `twitter:image` → `/og-image.png`, keep `summary_large_image`
+Active tab color stays `text-primary` (orange). Inactive icons stay white with drop-shadow.
 
-### Files changed
-- `public/favicon.ico` (replaced) + 6 new favicon/manifest files
-- `public/og-image.png` (new — uploaded social render)
-- `index.html` (title, description, favicon links, OG/Twitter tags)
+### 2. Tablet support
+Today the nav uses `md:hidden`, hiding it on every device ≥768px (iPad portrait, iPad Pro, etc.).
+
+Replace with `lg:hidden` so it shows on phones AND tablets, and only disappears on true desktop (≥1024px). On wider tablet widths the bar naturally stretches; tab spacing already uses `flex-1` so it scales cleanly.
+
+No other component changes — `QuickActionsMenu` FAB (top-left) is already visible across all viewports.
+
+## Technical notes
+- The `cyan` token already exists in the theme (used elsewhere as `text-cyan`). All new classes use semantic tokens.
+- Height (`h-11`), safe-area inset, and FAB offset (`-mt-5`) remain unchanged.
+- No business logic, routing, or state changes.
+
+## Files touched
+- `src/components/BottomNavBar.tsx` (only)

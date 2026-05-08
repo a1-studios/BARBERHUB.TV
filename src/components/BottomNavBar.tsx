@@ -70,9 +70,10 @@ export function BottomNavBar() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
+      className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-background/70 backdrop-blur-xl shadow-[0_-8px_24px_-8px_hsl(var(--cyan)/0.35)]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan/70 to-transparent" />
       <div className="relative flex items-end justify-around px-2 h-11">
         {tabs.map((tab, i) => {
           if ('isFab' in tab && tab.isFab) {
