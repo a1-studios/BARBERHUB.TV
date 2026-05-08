@@ -84,7 +84,7 @@ export function BottomNavBar() {
                 onClick={handleFabPress}
                 className={cn(
                   'relative -mt-5 flex items-center justify-center',
-                  'w-10 h-10 rounded-full',
+                  'w-10 h-10 rounded-full ring-1 ring-cyan/40',
                   'bg-primary shadow-lg shadow-primary/40',
                   'active:scale-95 transition-transform duration-100',
                 )}
