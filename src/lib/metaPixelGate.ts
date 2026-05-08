@@ -42,8 +42,11 @@ function loadPixelScript() {
   })(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
   /* eslint-enable */
   initialized = true;
-  window.fbq?.('init', PIXEL_ID);
-  window.fbq?.('track', 'PageView');
+  const fbq = (window as Window & { fbq?: (...a: unknown[]) => void }).fbq;
+  if (typeof fbq === 'function') {
+    fbq('init', PIXEL_ID);
+    fbq('track', 'PageView');
+  }
 }
 
 export function initPixelGate() {
