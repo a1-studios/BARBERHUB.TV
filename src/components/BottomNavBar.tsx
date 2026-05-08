@@ -70,9 +70,10 @@ export function BottomNavBar() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
+      className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-background/70 backdrop-blur-xl shadow-[0_-8px_24px_-8px_hsl(var(--cyan)/0.35)]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan/70 to-transparent" />
       <div className="relative flex items-end justify-around px-2 h-11">
         {tabs.map((tab, i) => {
           if ('isFab' in tab && tab.isFab) {
@@ -83,7 +84,7 @@ export function BottomNavBar() {
                 onClick={handleFabPress}
                 className={cn(
                   'relative -mt-5 flex items-center justify-center',
-                  'w-10 h-10 rounded-full',
+                  'w-10 h-10 rounded-full ring-1 ring-cyan/40',
                   'bg-primary shadow-lg shadow-primary/40',
                   'active:scale-95 transition-transform duration-100',
                 )}
