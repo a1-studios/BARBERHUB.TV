@@ -20,8 +20,14 @@ export const StepClaimAccount = ({ email, role, country, ticketCode, bbAwarded, 
   const [busy, setBusy] = useState<'email' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
+  const [agreed, setAgreed] = useState(false);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
 
   const emailMagicLink = async () => {
+    if (!agreed) {
+      setError('You must agree to the Terms, Privacy Policy and AUP.');
+      return;
+    }
     setBusy('email');
     setError(null);
     haptic();
@@ -37,6 +43,8 @@ export const StepClaimAccount = ({ email, role, country, ticketCode, bbAwarded, 
           user_type: role,
           display_name: email.split('@')[0],
           country_code: country,
+          tos_accepted_at: new Date().toISOString(),
+          marketing_opt_in: marketingOptIn,
         },
       },
     });
