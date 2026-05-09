@@ -255,51 +255,45 @@ const WatchFeed = () => {
     return arr;
   }, [profileVideos, creatorVideos, creationVideos, submissionVideos, isFan]);
 
-  const allContent: FeedItem[] = shuffledContent;
+  // Only build a feed from real content — no empty-thumbnail placeholders
+  const allContent: FeedItem[] = shuffledContent.filter((item) => {
+    if (!item.media_url) return !!item.cloudflare_stream_uid;
+    return /^https?:\/\//.test(item.media_url);
+  });
 
   const feed: FeedItem[] = [];
   let sponsorIdx = 0;
   let battleIdx = 0;
-  let platformIdx = 0;
 
-  const contentPool = allContent.length > 0 ? allContent : Array.from({ length: 8 }, (_, i) => ({
-    ...PLATFORM_PROMOS[0],
-    id: `platform-fill-${i}`,
-    type: "platform" as const,
-  }));
+  if (allContent.length > 0) {
+    let contentIdx = 0;
+    let loopPass = 0;
+    while (feed.length < Math.max(20, allContent.length + 10)) {
+      const item = allContent[contentIdx % allContent.length];
+      feed.push({ ...item, id: loopPass > 0 ? `${item.id}-loop-${loopPass}` : item.id });
+      contentIdx++;
 
-  let contentIdx = 0;
-  let loopPass = 0;
-  while (feed.length < Math.max(20, contentPool.length + 10)) {
-    const item = contentPool[contentIdx % contentPool.length];
-    feed.push({ ...item, id: loopPass > 0 ? `${item.id}-loop-${loopPass}` : item.id });
-    contentIdx++;
+      if (contentIdx % 3 === 0 && sponsors.length > 0) {
+        const sponsor = sponsors[sponsorIdx % sponsors.length];
+        feed.push({
+          type: "sponsor",
+          id: `sponsor-${sponsor.id}-${sponsorIdx}`,
+          name: sponsor.name,
+          message: sponsor.message,
+          logo_url: sponsor.logo_url,
+          link: sponsor.link,
+        });
+        sponsorIdx++;
+      }
 
-    if (contentIdx % 3 === 0 && sponsors.length > 0) {
-      const sponsor = sponsors[sponsorIdx % sponsors.length];
-      feed.push({
-        type: "sponsor",
-        id: `sponsor-${sponsor.id}-${sponsorIdx}`,
-        name: sponsor.name,
-        message: sponsor.message,
-        logo_url: sponsor.logo_url,
-        link: sponsor.link,
-      });
-      sponsorIdx++;
+      if (contentIdx % 6 === 0 && battleItems.length > 0) {
+        feed.push({ ...battleItems[battleIdx % battleItems.length], id: `battle-feed-${battleIdx}` });
+        battleIdx++;
+      }
+
+      if (contentIdx % allContent.length === 0) loopPass++;
+      if (loopPass > 3) break;
     }
-
-    if (contentIdx % 6 === 0 && battleItems.length > 0) {
-      feed.push({ ...battleItems[battleIdx % battleItems.length], id: `battle-feed-${battleIdx}` });
-      battleIdx++;
-    }
-
-    if (allContent.length > 0 && contentIdx % 8 === 0) {
-      feed.push({ ...PLATFORM_PROMOS[platformIdx % PLATFORM_PROMOS.length], id: `platform-${platformIdx}` });
-      platformIdx++;
-    }
-
-    if (contentIdx % contentPool.length === 0) loopPass++;
-    if (loopPass > 3) break;
   }
 
   // If ?video= param is set, find the matching feed item and jump to it
