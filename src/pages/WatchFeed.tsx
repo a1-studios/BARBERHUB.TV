@@ -11,6 +11,8 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { DonationModal } from "@/components/DonationModal";
 import { useUserRole } from "@/hooks/useUserRole";
 import { CloudflareStreamPlayer } from "@/components/CloudflareStreamPlayer";
+import { cleanDisplayTitle } from "@/lib/utils";
+import { usePersistedMute } from "@/hooks/usePersistedMute";
 
 interface FeedItem {
   type: "video" | "sponsor" | "educator" | "platform" | "battle";
@@ -54,7 +56,7 @@ const WatchFeed = () => {
   const targetVideoBarber = searchParams.get('video');
   const { isFan } = useUserRole();
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = usePersistedMute();
   const [donationTarget, setDonationTarget] = useState<{ userId: string; name: string } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
