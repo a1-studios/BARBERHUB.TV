@@ -407,20 +407,20 @@ const WatchFeed = () => {
     if (item.type === "sponsor" || item.type === "battle") return null;
     return (
       <div className="absolute right-3 bottom-28 flex flex-col gap-5 items-center z-30">
-        {/* Creator avatar → profile */}
-        <button
-          onClick={() => item.barber_user_id && navigate(`/barber/${item.barber_user_id}`)}
-          className="drop-shadow-lg"
-        >
-          <Avatar className="h-10 w-10 border-2 border-white/80">
-            {item.creator_avatar ? (
+        {/* Creator avatar → profile (only when there's a real profile + avatar to show) */}
+        {item.barber_user_id && item.creator_avatar && (
+          <button
+            onClick={() => navigate(`/barber/${item.barber_user_id}`)}
+            className="drop-shadow-lg"
+          >
+            <Avatar className="h-10 w-10 border-2 border-white/80">
               <AvatarImage src={item.creator_avatar} />
-            ) : null}
-            <AvatarFallback className="bg-black/40 text-white text-xs">
-              <User className="w-4 h-4" />
-            </AvatarFallback>
-          </Avatar>
-        </button>
+              <AvatarFallback className="bg-black/40 text-white text-xs">
+                <User className="w-4 h-4" />
+              </AvatarFallback>
+            </Avatar>
+          </button>
+        )}
 
         {/* Donate */}
         <button
