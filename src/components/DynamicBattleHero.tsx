@@ -18,6 +18,8 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
 import { useSponsorAds } from "@/hooks/useSponsorAds";
+import { cleanDisplayTitle } from "@/lib/utils";
+import { usePersistedMute } from "@/hooks/usePersistedMute";
 
 const SponsorStrip = () => {
   const { data: sponsors = [] } = useSponsorAds(true);
@@ -146,7 +148,7 @@ export const DynamicBattleHero = () => {
           id: `creator-${c.id}`,
           featured_video_id: c.media_url!,
           barber_name: 'Creator',
-          display_name: c.title || 'Creator',
+          display_name: cleanDisplayTitle(c.title) || 'Creator',
           avatar_url: null as string | null,
           country_code: null as string | null,
           barber_id: c.id,
@@ -176,7 +178,7 @@ export const DynamicBattleHero = () => {
           id: `creation-${c.id}`,
           featured_video_id: c.media_url!,
           barber_name: nameMap[c.barber_id] || 'Barber',
-          display_name: c.title || nameMap[c.barber_id] || 'Barber',
+          display_name: cleanDisplayTitle(c.title) || nameMap[c.barber_id] || 'Barber',
           avatar_url: null as string | null,
           country_code: null as string | null,
           barber_id: c.id,
@@ -200,7 +202,7 @@ export const DynamicBattleHero = () => {
           id: `submission-${s.id}`,
           featured_video_id: s.media_url!,
           barber_name: 'Competitor',
-          display_name: s.title || 'Competitor',
+          display_name: cleanDisplayTitle(s.title) || 'Competitor',
           avatar_url: null as string | null,
           country_code: null as string | null,
           barber_id: s.id,
@@ -395,13 +397,14 @@ export const DynamicBattleHero = () => {
 
   // State for fallback video audio (must be before early returns)
   const fallbackVideoRef = useRef<HTMLVideoElement>(null);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = usePersistedMute();
   const toggleMute = useCallback(() => {
-    if (fallbackVideoRef.current) {
-      fallbackVideoRef.current.muted = !fallbackVideoRef.current.muted;
-      setIsMuted(fallbackVideoRef.current.muted);
-    }
-  }, []);
+    setIsMuted();
+  }, [setIsMuted]);
+  // Apply muted state to the underlying video element whenever it changes
+  useEffect(() => {
+    if (fallbackVideoRef.current) fallbackVideoRef.current.muted = isMuted;
+  }, [isMuted]);
 
   // Loading state
   if (battleLoading || barbersLoading) {
@@ -430,7 +433,7 @@ export const DynamicBattleHero = () => {
                 autoPlay
                 loop
                 playsInline
-                muted
+                muted={isMuted}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
