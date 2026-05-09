@@ -255,10 +255,14 @@ const WatchFeed = () => {
     return arr;
   }, [profileVideos, creatorVideos, creationVideos, submissionVideos, isFan]);
 
-  // Only build a feed from real content — no empty-thumbnail placeholders
+  // Only build a feed from real, playable content — no empty-thumbnail placeholders.
+  // Require either a Cloudflare Stream UID, or an http(s) URL ending in a known video extension.
+  const VIDEO_EXT = /\.(mp4|mov|webm|m4v|m3u8)(\?.*)?$/i;
   const allContent: FeedItem[] = shuffledContent.filter((item) => {
-    if (!item.media_url) return !!item.cloudflare_stream_uid;
-    return /^https?:\/\//.test(item.media_url);
+    if (item.cloudflare_stream_uid) return true;
+    if (!item.media_url) return false;
+    if (!/^https?:\/\//.test(item.media_url)) return false;
+    return VIDEO_EXT.test(item.media_url);
   });
 
   const feed: FeedItem[] = [];
