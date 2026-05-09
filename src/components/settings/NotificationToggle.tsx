@@ -66,7 +66,7 @@ export default function NotificationToggle() {
               {
                 user_id: user.id,
                 endpoint: subJson.endpoint,
-                subscription: subJson as unknown as Record<string, unknown>,
+                subscription: JSON.parse(JSON.stringify(subJson)),
                 user_agent: navigator.userAgent,
                 platform: platformLabel(),
                 last_seen_at: new Date().toISOString(),
