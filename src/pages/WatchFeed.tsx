@@ -538,18 +538,21 @@ const WatchFeed = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-background z-50 flex flex-col">
+    <div
+      className="fixed inset-0 bg-black z-50 flex flex-col"
+      style={{ height: '100dvh' }}
+    >
       {/* Minimal back button */}
       <button
         onClick={() => navigate("/")}
-        className="absolute top-4 left-4 z-20 p-2 rounded-full bg-black/30 backdrop-blur-sm border border-white/10"
+        className="absolute top-2 left-2 z-30 p-2 rounded-full bg-black/40 backdrop-blur-sm border border-white/10"
       >
         <ArrowLeft className="w-4 h-4 text-white" />
       </button>
 
       <div ref={containerRef} className="flex-1 overflow-y-scroll snap-y snap-mandatory scrollbar-hide">
         {feed.length === 0 && (
-          <div className="h-screen flex items-center justify-center">
+          <div className="flex items-center justify-center" style={{ height: '100dvh' }}>
             <p className="text-muted-foreground text-sm">No content yet — check back soon!</p>
           </div>
         )}
@@ -557,7 +560,8 @@ const WatchFeed = () => {
           <div
             key={item.id}
             data-index={idx}
-            className="h-screen w-full snap-start snap-always relative flex items-center justify-center"
+            className="w-full snap-start snap-always relative flex items-center justify-center"
+            style={{ height: '100dvh' }}
           >
             {item.type === "battle" ? (
               <SplitScreenBattle
