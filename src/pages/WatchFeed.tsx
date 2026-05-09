@@ -76,9 +76,16 @@ const WatchFeed = () => {
       const filtered = (data || []).filter((b) => b.featured_video_id && b.featured_video_id.startsWith("http"));
       const barberIds = filtered.map((b) => b.barber_id).filter(Boolean) as string[];
       let specMap: Record<string, string | null> = {};
+      let uidMap: Record<string, string | null> = {};
       if (barberIds.length > 0) {
-        const { data: bps } = await supabase.from("barber_profiles").select("id, specialty").in("id", barberIds);
-        bps?.forEach((p) => { specMap[p.id] = p.specialty; });
+        const { data: bps } = await supabase
+          .from("barber_profiles")
+          .select("id, specialty, cloudflare_stream_uid")
+          .in("id", barberIds);
+        bps?.forEach((p: any) => {
+          specMap[p.id] = p.specialty;
+          uidMap[p.id] = p.cloudflare_stream_uid ?? null;
+        });
       }
       return filtered.map((b) => ({
         type: "video" as const,
@@ -88,6 +95,7 @@ const WatchFeed = () => {
         creator_avatar: b.avatar_url,
         specialty: specMap[b.barber_id] ?? null,
         barber_user_id: b.user_id,
+        cloudflare_stream_uid: uidMap[b.barber_id] ?? null,
       }));
     },
   });
@@ -98,25 +106,26 @@ const WatchFeed = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("creator_content")
-        .select("id, title, description, media_url, thumbnail_url, content_type, creator_id, created_at")
+        .select("id, title, description, media_url, thumbnail_url, content_type, creator_id, created_at, cloudflare_stream_uid")
         .eq("status", "published")
         .not("media_url", "is", null)
         .order("created_at", { ascending: false })
         .limit(30);
       if (error) throw error;
       return (data || [])
-        .filter((c) => c.media_url && c.media_url.startsWith("http"))
-        .map((c) => ({
+        .filter((c: any) => c.media_url && c.media_url.startsWith("http"))
+        .map((c: any) => ({
           type: (c.content_type === "course_teaser" ? "educator" : "video") as "educator" | "video",
           id: `creator-${c.id}`,
           content_id: c.id,
           media_url: c.media_url!,
-          title: c.title,
+          title: cleanDisplayTitle(c.title) ?? undefined,
           description: c.description,
           thumbnail_url: c.thumbnail_url,
           barber_name: "Creator",
           specialty: null,
           barber_user_id: c.creator_id,
+          cloudflare_stream_uid: c.cloudflare_stream_uid ?? null,
         }));
     },
   });
@@ -127,13 +136,13 @@ const WatchFeed = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("creations")
-        .select("id, title, description, media_url, thumbnail_url, barber_id, created_at")
+        .select("id, title, description, media_url, thumbnail_url, barber_id, created_at, cloudflare_stream_uid")
         .not("media_url", "is", null)
         .order("created_at", { ascending: false })
         .limit(30);
       if (error) throw error;
 
-      const barberIds = [...new Set((data || []).map((c) => c.barber_id).filter(Boolean))] as string[];
+      const barberIds = [...new Set((data || []).map((c: any) => c.barber_id).filter(Boolean))] as string[];
       let barberMap: Record<string, { name: string; specialty: string | null; user_id: string }> = {};
       if (barberIds.length > 0) {
         const { data: profiles } = await supabase
@@ -146,17 +155,18 @@ const WatchFeed = () => {
       }
 
       return (data || [])
-        .filter((c) => c.media_url?.startsWith("http"))
-        .map((c) => ({
+        .filter((c: any) => c.media_url?.startsWith("http"))
+        .map((c: any) => ({
           type: "video" as const,
           id: `creation-${c.id}`,
           media_url: c.media_url,
-          title: c.title,
+          title: cleanDisplayTitle(c.title) ?? undefined,
           description: c.description,
           thumbnail_url: c.thumbnail_url,
           barber_name: barberMap[c.barber_id]?.name || "Barber",
           specialty: barberMap[c.barber_id]?.specialty ?? null,
           barber_user_id: barberMap[c.barber_id]?.user_id,
+          cloudflare_stream_uid: c.cloudflare_stream_uid ?? null,
         }));
     },
   });
@@ -167,23 +177,24 @@ const WatchFeed = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("battle_submissions")
-        .select("id, title, description, media_url, thumbnail_url, user_id, created_at")
+        .select("id, title, description, media_url, thumbnail_url, user_id, created_at, cloudflare_stream_uid")
         .not("media_url", "is", null)
         .order("created_at", { ascending: false })
         .limit(30);
       if (error) throw error;
       return (data || [])
-        .filter((s) => s.media_url?.startsWith("http"))
-        .map((s) => ({
+        .filter((s: any) => s.media_url?.startsWith("http"))
+        .map((s: any) => ({
           type: "video" as const,
           id: `submission-${s.id}`,
           media_url: s.media_url,
-          title: s.title,
+          title: cleanDisplayTitle(s.title) ?? undefined,
           description: s.description,
           thumbnail_url: s.thumbnail_url,
           barber_name: "Competitor",
           specialty: null,
           barber_user_id: s.user_id,
+          cloudflare_stream_uid: s.cloudflare_stream_uid ?? null,
         }));
     },
   });
