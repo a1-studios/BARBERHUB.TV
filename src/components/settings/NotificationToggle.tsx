@@ -62,14 +62,16 @@ export default function NotificationToggle() {
         const { error } = await supabase
           .from("push_subscriptions")
           .upsert(
-            {
-              user_id: user.id,
-              endpoint: subJson.endpoint,
-              subscription: subJson as unknown as Record<string, unknown>,
-              user_agent: navigator.userAgent,
-              platform: platformLabel(),
-              last_seen_at: new Date().toISOString(),
-            },
+            [
+              {
+                user_id: user.id,
+                endpoint: subJson.endpoint,
+                subscription: subJson as unknown as Record<string, unknown>,
+                user_agent: navigator.userAgent,
+                platform: platformLabel(),
+                last_seen_at: new Date().toISOString(),
+              },
+            ],
             { onConflict: "endpoint" }
           );
         if (error) throw error;
