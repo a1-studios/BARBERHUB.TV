@@ -11,6 +11,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Settings, ExternalLink, Edit3, LogOut, Trash2, ChevronRight, Receipt, CalendarDays, Award, Instagram, Twitter, Youtube, Facebook, Plus, Gift } from 'lucide-react';
+import NotificationToggle from '@/components/settings/NotificationToggle';
 import { MyPrizesSection } from '@/components/profile/MyPrizesSection';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { AddFundsModal } from '@/components/AddFundsModal';
@@ -464,6 +465,10 @@ const Profile = () => {
                 </CollapsibleContent>
               </Collapsible>
             </div>
+
+            {/* NOTIFICATIONS */}
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-4 pb-1">Notifications</p>
+            <NotificationToggle />
 
             {/* ACCOUNT section */}
             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-4 pb-1">Account</p>
