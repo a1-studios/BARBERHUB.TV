@@ -1,96 +1,114 @@
 ## Goal
-Polish the /watch + Home hero feed: stop showing raw filenames, remember audio choice, eliminate the mobile top gap, hide empty/placeholder cards, and make playback feel snappy via Cloudflare Stream + smarter preloading.
 
----
+Ship the complete PWA notification + install funnel: persistent push subscriptions, server-side fan-out via Web Push, an iOS install nudge, an opt-in toggle, and a custom service worker that handles `push` and `notificationclick` events.
 
-## 1. Filename leaking as title (e.g. `f99cfb17-...mp4`)
+## 1. Database (Supabase migration)
 
-**Root cause:** When uploads are saved, `title` is set to the original filename. `DynamicBattleHero` and `WatchFeed` then render `title` directly under the video, overriding the barber name.
+Create two tables (RLS-secured, owner-scoped):
 
-**Files:**
-- `src/components/DynamicBattleHero.tsx` lines ~149, 179, 203, 449
-- `src/pages/WatchFeed.tsx` lines 112, 152, 179, 514
+- `**push_subscriptions**`
+  - `id uuid pk`, `user_id uuid` (FK profiles, indexed)
+  - `endpoint text unique not null` — the URL inside the subscription, used for upsert keying
+  - `subscription jsonb not null` — full PushSubscription JSON (keys, endpoint, expirationTime)
+  - `user_agent text`, `platform text` (ios | android | desktop)
+  - `last_seen_at timestamptz`, `created_at timestamptz`
+  - RLS: owner can `SELECT/INSERT/UPDATE/DELETE` rows where `user_id = auth.uid()`. Service role (edge functions) implicitly bypasses.
+- We already have `notifications` (in-app feed). We will **not** duplicate it; the new edge function reads `push_subscriptions` and pushes the same payload that's also written to `notifications` so both in-app + native alerts stay in sync.
 
-**Fix:** Add a small helper `cleanDisplayTitle(t)` in `src/lib/utils.ts` that returns `null` if the string:
-- ends in a media extension (`.mp4|.mov|.webm|.m4v|.avi|.mkv|.jpg|.png`)
-- is a UUID / contains `__` or hex-only blocks of 16+ chars
-- equals the storage path basename
+## 2. Edge function: `send-push`
 
-Use it everywhere `title` is rendered. `display_name` in the hero falls back to `barber_name` when the cleaned title is null. In WatchFeed only render the title `<p>` when `cleanDisplayTitle(item.title)` is truthy. The barber name continues to be the primary label.
+`supabase/functions/send-push/index.ts`
 
----
+- Auth: requires service-role caller (used from triggers / other edge functions) OR a JWT user calling for themselves (e.g. self-test). Validates with Zod.
+- Body: `{ user_ids: string[], title: string, body: string, url?: string, icon?: string, tag?: string, data?: Record<string, unknown> }`
+- Uses `npm:web-push@3` with `VAPID_SUBJECT`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` from `Deno.env`.
+- Loads all rows in `push_subscriptions` for the given users, sends in parallel, removes any subscription returning `404/410` (Gone) so dead endpoints don't pile up.
+- Returns `{ sent, failed, removed }`.
 
-## 2. Audio preference doesn't persist
+CORS via `corsHeaders` from `@supabase/supabase-js/cors`. Deploys with `verify_jwt = false` (we validate manually).
 
-**Files:** `src/pages/WatchFeed.tsx` (line 57), `src/components/DynamicBattleHero.tsx`, `src/components/battles/SplitScreenBattle.tsx` (mute toggles).
+## 3. Service worker (`public/sw-push.js`)
 
-**Fix:** Create `src/hooks/usePersistedMute.ts` — a tiny hook backed by `localStorage['bh_feed_muted']` (default `true` to satisfy autoplay). Replace the local `useState(true)` mute states in the three components with this hook. Toggle writes back to storage so /watch, the hero, and split-screen all share one preference across navigations and reloads.
+vite-plugin-pwa's auto-generated SW handles caching; for **push** we register a separate file using `injectManifest` mode OR we extend with a small custom worker. Simplest: switch `vite-plugin-pwa` to `strategies: 'injectManifest'` with a single `src/sw.ts` that:
 
----
+- Imports Workbox precache + NetworkFirst (same caching we have today).
+- Adds:
+  ```ts
+  self.addEventListener('push', (event) => {
+    const payload = event.data?.json() ?? {};
+    event.waitUntil(self.registration.showNotification(payload.title || 'Barber-Hub', {
+      body: payload.body,
+      icon: '/web-app-manifest-192x192.png',
+      badge: '/web-app-manifest-192x192.png',
+      tag: payload.tag,
+      data: { url: payload.url || '/', ...payload.data },
+    }));
+  });
+  self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    const target = event.notification.data?.url || '/appointments';
+    event.waitUntil((async () => {
+      const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const c of all) { if ('focus' in c) { c.navigate(target); return c.focus(); } }
+      return self.clients.openWindow(target);
+    })());
+  });
+  ```
+- Default click target = `/appointments` (Profile → My Appointments). Override per-notification with `data.url`.
 
-## 3. Mobile gap above the video on /watch
+## 4. Frontend — install nudge (iOS)
 
-**Cause:** On iOS Safari the `fixed inset-0` container respects the dynamic toolbar; the actual issue is `h-screen` inside the scroller (line 541) using `100vh` instead of the visible viewport, plus no safe-area inset reset, which leaves a top band before the first item snaps.
+New component `src/components/pwa/IOSInstallPrompt.tsx`:
 
-**Fix in `src/pages/WatchFeed.tsx`:**
-- Outer wrapper: `fixed inset-0 z-50 bg-black` + inline `style={{ height: '100dvh', paddingTop: 'env(safe-area-inset-top, 0)' }}` → switch padding to 0 because the back button already floats absolutely; we want the video flush.
-- Each snap item: replace `h-screen` with `style={{ height: '100dvh' }}` so the first card fills the visible viewport with no gap.
-- Move the floating back button to `top-2 left-2` and add `pointer-events-auto` so it doesn't push layout.
+- Detection: `/iphone|ipad|ipod/i.test(ua)` AND `!window.matchMedia('(display-mode: standalone)').matches` AND `!window.navigator.standalone`.
+- Skip in Lovable preview / iframe (reuse guards from `pwa.ts`).
+- Skip if `localStorage['bh_install_dismissed_until']` timestamp is in the future.
+- Mounted globally in `App.tsx`. After 10 s timeout, opens a `Dialog` with branded copy + screenshot of Share → Add to Home Screen.
+- Copy: **"Never miss a booking. Install Barber-Hub to your home screen for real-time schedule updates."**
+- Buttons:
+  - "Show me how" → expands a 3-step illustrated guide (Share icon → Add to Home Screen → Add).
+  - "Dismiss" → sets `bh_install_dismissed_until = Date.now() + 24*3600*1000`, closes dialog.
+- Android/desktop fallback: listen for `beforeinstallprompt`, stash the event, show a smaller bottom-sheet CTA on next session.
 
----
+## 5. Frontend — Notification Settings toggle
 
-## 4. Don't render empty/placeholder cards
+New component `src/components/settings/NotificationToggle.tsx`, mounted inside Profile → Settings (next to existing controls):
 
-**Files:** `src/pages/WatchFeed.tsx` lines 254-292 (feed builder) and 479-491 (no-video fallback).
+- Reads current state from `navigator.serviceWorker.getRegistration().pushManager.getSubscription()`.
+- ON: calls `subscribeToPush()` → upserts into `push_subscriptions` keyed on `endpoint` (so multiple devices per user are supported). Stores `user_agent`, `platform`.
+- OFF: `subscription.unsubscribe()` and deletes the row by endpoint.
+- Disabled state with helper text on iOS Safari **outside** standalone mode (Apple gates Web Push to installed PWAs); points users back to the install prompt.
 
-**Fix:**
-- In the feed builder, remove the `Array.from({ length: 8 }, ...)` PLATFORM fill loop — only push real `allContent` items.
-- In `renderVideoItem`, drop the `else` branch that renders a `<Play>` icon over a thumbnail. If neither `cloudflare_stream_uid` nor a usable `media_url` exists, return `null` so the parent skips that index.
-- Pre-filter `allContent` to require `media_url?.startsWith('http')` AND a recognised video extension OR a `cloudflare_stream_uid`. Same filter applied to creator/creation/submission queries already; tighten the `profileVideos` query so missing `featured_video_id` rows are excluded (they already are via `.not(...is null)` but also reject thumbnail-only items).
-- Remove the empty `AvatarFallback` `<User />` icon button when `creator_avatar` is missing AND `barber_user_id` is null — i.e. don't render the avatar action when there's no profile to link to.
+## 6. Hardware permission persistence (camera/mic)
 
----
+- Once the app is installed (standalone), Safari/Chrome treat origin permissions as durable, but our code re-prompts on every mount in some places. Adjust `src/hooks/useCameraPermission.tsx` to:
+  - Use `navigator.permissions.query({ name: 'camera' })` and `'microphone'` first; only call `getUserMedia` if state is `prompt`. If `granted`, skip prompt entirely.
+  - Cache last-known state in `sessionStorage` so re-mounts don't flicker.
 
-## 5. Low-latency playback via Cloudflare Stream
+## 7. Verification
 
-**Current pain points:**
-- Raw R2 `.mp4` URLs play in a plain `<video>` — no ABR, full file download before seek.
-- Every feed item is mounted and starts buffering simultaneously.
-- No `<link rel="preconnect">` to CF endpoints.
+- `bunx vitest run` on any affected hooks (no new tests required unless you want them).
+- Deploy `send-push`, then call it via `supabase--curl_edge_functions` with a fabricated `user_ids` payload (target the logged-in preview user). Check that:
+  - `notifications` row appears in the in-app bell.
+  - Browser receives and displays the push (only on the **published** domain — not in the editor iframe).
+- Lovable preview won't show the install prompt or push (iframe guard); test on `barberhub-tv.lovable.app`.
 
-**Fixes:**
+## File map
 
-a) **Always prefer Cloudflare Stream UID.** In all four feed queries, also `select('cloudflare_stream_uid')` (already exists on `creations`, `battle_submissions`, `creator_content`, `barber_profiles`). Pass it through to feed items and let `CloudflareStreamPlayer` decide. The component already short-circuits to the adaptive HLS player when `streamUid` is set.
-
-b) **Virtualise the video pool.** Only mount the player for `idx ∈ {activeIndex-1, activeIndex, activeIndex+1, activeIndex+2}`. For other indices render a lightweight thumbnail div (poster only). This drops simultaneous network connections from 20+ to 4, which is the main cause of the "laggy" first play.
-
-c) **Smart preload hints.**
-- Active index: `preload="auto"` and CF Stream `<Stream preload="auto">`.
-- Neighbours: `preload="metadata"`.
-- Others: not mounted.
-
-d) **Connection warm-up in `index.html`:**
-```html
-<link rel="preconnect" href="https://customer-<accountHash>.cloudflarestream.com" crossorigin>
-<link rel="preconnect" href="https://videodelivery.net" crossorigin>
-<link rel="dns-prefetch" href="https://<r2-public-host>">
+```text
+supabase/migrations/<ts>_push_subscriptions.sql      new
+supabase/functions/send-push/index.ts                new
+public/                                              icons already in place
+src/sw.ts                                            new (injectManifest)
+vite.config.ts                                       switch to injectManifest, srcDir
+src/lib/pwa.ts                                       no change
+src/components/pwa/IOSInstallPrompt.tsx              new
+src/components/settings/NotificationToggle.tsx      new
+src/hooks/useCameraPermission.tsx                    edit (Permissions API)
+src/App.tsx                                          mount IOSInstallPrompt globally
+src/pages/Profile.tsx                                mount NotificationToggle in settings
 ```
-Read the host values from existing env / `R2_PUBLIC_URL` references; commit only the static known hosts.
 
-e) **HLS for legacy R2 mp4s.** Where only an R2 URL exists (no UID yet), kick off a one-off ingest by calling the existing `livekit-egress-webhook` ingest helper pattern via a new tiny edge function `ingest-r2-to-stream` triggered lazily from the client when a video has been viewed but lacks a UID. Out of scope for this round if you'd rather keep it pure-frontend — flag for a follow-up.
+## Open question
 
-f) **Drop autoplay on hidden items.** The current `useEffect` plays the active index, but unmounting via virtualisation makes this cheaper and removes the `video.play().catch(() => {})` thrash.
-
----
-
-## Out of scope
-- No DB schema changes, no RLS edits.
-- No changes to upload pipeline (titles entered by users on creator-hub remain as-is — only the renderer filters bad ones).
-- No new third-party players.
-
-## Verification
-1. Visit `/watch` on mobile preview → first card sits flush against the top, no gap.
-2. Tap unmute → reload, navigate away and back → audio remains on.
-3. Confirm no card shows a UUID/filename string under the barber name.
-4. Confirm placeholder Play-icon cards no longer appear.
-5. Network panel: only 3-4 video requests in flight at any time; CF Stream HLS used whenever `cloudflare_stream_uid` is present.
+Where should `NotificationToggle` live in the UI — inside **Profile → Account settings** list, or as a standalone row at the top of the notifications bell panel? Default is Profile settings unless you say otherwise. they should be in the users profile 
