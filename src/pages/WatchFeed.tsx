@@ -449,79 +449,93 @@ const WatchFeed = () => {
     );
   };
 
-  const renderVideoItem = (item: FeedItem, idx: number) => (
-    <div className="relative w-full h-full bg-black">
-      {/* Small pill watermark at bottom-third center */}
-      <div className="absolute bottom-[18%] left-1/2 -translate-x-1/2 z-20 pointer-events-none select-none px-3 py-1 rounded-full border border-white/30 bg-black/20 backdrop-blur-sm">
-        <span className="text-[10px] font-black tracking-[0.2em] uppercase">
-          <span className="text-white/40">BARBER</span>
-          <span className="text-primary/50">-HUB</span>
-        </span>
-      </div>
+  const renderVideoItem = (item: FeedItem, idx: number) => {
+    // Don't render placeholder cards — only real playable media
+    const hasPlayable = !!item.cloudflare_stream_uid || (item.media_url && /^https?:\/\//.test(item.media_url));
+    if (!hasPlayable) return null;
 
-      {item.cloudflare_stream_uid ? (
-        <div className="absolute inset-0 w-full h-full">
-          <CloudflareStreamPlayer
-            streamUid={item.cloudflare_stream_uid}
-            fallbackUrl={item.media_url}
-            autoPlay={activeIndex === idx}
-            muted={isMuted}
-            controls={false}
-            className="w-full h-full"
-            onEnded={() => handleVideoEnded(idx)}
-          />
-        </div>
-      ) : item.media_url && (item.media_url.includes(".mp4") || item.media_url.includes(".webm") || item.media_url.startsWith("http")) ? (
-        <video
-          ref={(el) => { if (el) videoRefs.current.set(item.id, el); }}
-          src={item.media_url}
-          className="absolute inset-0 w-full h-full object-contain"
-          autoPlay={activeIndex === idx}
-          muted
-          playsInline
-          onEnded={() => handleVideoEnded(idx)}
-        />
-      ) : (
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: item.thumbnail_url || item.media_url
-              ? `url(${item.thumbnail_url || item.media_url})`
-              : "none",
-          }}
-        >
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <Play className="w-12 h-12 text-white/80" />
-          </div>
-        </div>
-      )}
+    // Virtualize: only mount the player for items near the active index
+    const distance = Math.abs(idx - activeIndex);
+    const shouldMount = distance <= 2;
+    const isActive = activeIndex === idx;
+    const preload = isActive ? "auto" : distance === 1 ? "metadata" : "none";
+    const cleanTitle = cleanDisplayTitle(item.title);
 
-      {item.type === "educator" && (
-        <div className="absolute top-4 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/80 backdrop-blur-sm">
-          <GraduationCap className="w-3 h-3 text-primary-foreground" />
-          <span className="text-[10px] font-bold text-primary-foreground uppercase tracking-wider">Masterclass</span>
+    return (
+      <div className="relative w-full h-full bg-black">
+        {/* Small pill watermark at bottom-third center */}
+        <div className="absolute bottom-[18%] left-1/2 -translate-x-1/2 z-20 pointer-events-none select-none px-3 py-1 rounded-full border border-white/30 bg-black/20 backdrop-blur-sm">
+          <span className="text-[10px] font-black tracking-[0.2em] uppercase">
+            <span className="text-white/40">BARBER</span>
+            <span className="text-primary/50">-HUB</span>
+          </span>
         </div>
-      )}
-      {item.type === "platform" && (
-        <div className="absolute top-4 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent/80 backdrop-blur-sm border border-primary/30">
-          <Flame className="w-3 h-3 text-primary" />
-          <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Official</span>
-        </div>
-      )}
 
-      {/* Right-side action stack */}
-      {renderActionStack(item)}
-
-      {/* Creator info + specialty pills */}
-      <div className="absolute bottom-0 left-0 right-16 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
-        {renderSpecialtyPills(item.specialty)}
-        <p className="text-white font-semibold text-sm mt-1">{item.barber_name}</p>
-        {item.title && (
-          <p className="text-white/70 text-xs mt-0.5 line-clamp-2">{item.title}</p>
+        {shouldMount ? (
+          item.cloudflare_stream_uid ? (
+            <div className="absolute inset-0 w-full h-full">
+              <CloudflareStreamPlayer
+                streamUid={item.cloudflare_stream_uid}
+                fallbackUrl={item.media_url}
+                autoPlay={isActive}
+                muted={isMuted}
+                controls={false}
+                className="w-full h-full"
+                onEnded={() => handleVideoEnded(idx)}
+              />
+            </div>
+          ) : (
+            <video
+              ref={(el) => { if (el) videoRefs.current.set(item.id, el); }}
+              src={item.media_url}
+              poster={item.thumbnail_url || undefined}
+              className="absolute inset-0 w-full h-full object-contain"
+              autoPlay={isActive}
+              muted={isMuted}
+              playsInline
+              preload={preload}
+              onEnded={() => handleVideoEnded(idx)}
+            />
+          )
+        ) : (
+          // Lightweight poster while off-screen — saves bandwidth + CPU
+          item.thumbnail_url ? (
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url(${item.thumbnail_url})` }}
+            />
+          ) : (
+            <div className="absolute inset-0 bg-black" />
+          )
         )}
+
+        {item.type === "educator" && (
+          <div className="absolute top-4 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/80 backdrop-blur-sm">
+            <GraduationCap className="w-3 h-3 text-primary-foreground" />
+            <span className="text-[10px] font-bold text-primary-foreground uppercase tracking-wider">Masterclass</span>
+          </div>
+        )}
+        {item.type === "platform" && (
+          <div className="absolute top-4 left-3 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-accent/80 backdrop-blur-sm border border-primary/30">
+            <Flame className="w-3 h-3 text-primary" />
+            <span className="text-[10px] font-bold text-primary uppercase tracking-wider">Official</span>
+          </div>
+        )}
+
+        {/* Right-side action stack */}
+        {renderActionStack(item)}
+
+        {/* Creator info + specialty pills */}
+        <div className="absolute bottom-0 left-0 right-16 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+          {renderSpecialtyPills(item.specialty)}
+          <p className="text-white font-semibold text-sm mt-1">{item.barber_name}</p>
+          {cleanTitle && (
+            <p className="text-white/70 text-xs mt-0.5 line-clamp-2">{cleanTitle}</p>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="fixed inset-0 bg-background z-50 flex flex-col">
