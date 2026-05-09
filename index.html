@@ -13,6 +13,12 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
 
+    <!-- Cloudflare Stream / R2 — warm up TLS for faster first video frame -->
+    <link rel="preconnect" href="https://videodelivery.net" crossorigin />
+    <link rel="preconnect" href="https://customer-2lf3jb1uo7lwddeo.cloudflarestream.com" crossorigin />
+    <link rel="dns-prefetch" href="https://videodelivery.net" />
+    <link rel="dns-prefetch" href="https://r2.cloudflarestorage.com" />
+
     
     
     <meta property="og:type" content="website" />
