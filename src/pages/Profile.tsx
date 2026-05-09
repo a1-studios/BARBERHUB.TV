@@ -12,6 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Settings, ExternalLink, Edit3, LogOut, Trash2, ChevronRight, Receipt, CalendarDays, Award, Instagram, Twitter, Youtube, Facebook, Plus, Gift } from 'lucide-react';
 import NotificationToggle from '@/components/settings/NotificationToggle';
+import InstallAppButton from '@/components/settings/InstallAppButton';
 import { MyPrizesSection } from '@/components/profile/MyPrizesSection';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { AddFundsModal } from '@/components/AddFundsModal';
