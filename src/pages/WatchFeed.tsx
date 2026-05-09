@@ -76,15 +76,13 @@ const WatchFeed = () => {
       const filtered = (data || []).filter((b) => b.featured_video_id && b.featured_video_id.startsWith("http"));
       const barberIds = filtered.map((b) => b.barber_id).filter(Boolean) as string[];
       let specMap: Record<string, string | null> = {};
-      let uidMap: Record<string, string | null> = {};
       if (barberIds.length > 0) {
         const { data: bps } = await supabase
           .from("barber_profiles")
-          .select("id, specialty, cloudflare_stream_uid")
+          .select("id, specialty")
           .in("id", barberIds);
         bps?.forEach((p: any) => {
           specMap[p.id] = p.specialty;
-          uidMap[p.id] = p.cloudflare_stream_uid ?? null;
         });
       }
       return filtered.map((b) => ({
@@ -95,7 +93,7 @@ const WatchFeed = () => {
         creator_avatar: b.avatar_url,
         specialty: specMap[b.barber_id] ?? null,
         barber_user_id: b.user_id,
-        cloudflare_stream_uid: uidMap[b.barber_id] ?? null,
+        cloudflare_stream_uid: null,
       }));
     },
   });
