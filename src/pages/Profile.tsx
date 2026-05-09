@@ -470,6 +470,7 @@ const Profile = () => {
             {/* NOTIFICATIONS */}
             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-4 pb-1">Notifications</p>
             <NotificationToggle />
+            <InstallAppButton />
 
             {/* ACCOUNT section */}
             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-4 pb-1">Account</p>
