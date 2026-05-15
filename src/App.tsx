@@ -32,6 +32,7 @@ import NotFound from "./pages/NotFound";
 import WatchFeed from "./pages/WatchFeed";
 import BarberPublicProfile from "./pages/BarberPublicProfile";
 import BarbersDirectory from "./pages/BarbersDirectory";
+import BookBarberLanding from "./pages/seo/BookBarberLanding";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
 import BattleManagement from "./pages/admin/BattleManagement";
@@ -149,6 +150,9 @@ const AppContent = () => {
           <Route path="/tournaments/:tournamentId" element={<TournamentDetails />} />
             <Route path="/barber/:userId" element={<BarberPublicProfile />} />
             <Route path="/barbers" element={<BarbersDirectory />} />
+            <Route path="/book-barber-near-me" element={<BookBarberLanding />} />
+            <Route path="/book-barber/:city" element={<BookBarberLanding />} />
+            <Route path="/book-barber/:city/:service" element={<BookBarberLanding />} />
             <Route 
               path="/analytics" 
               element={
