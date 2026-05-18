@@ -96,6 +96,7 @@ const SovereignHQ = () => {
         <AffiliateControlPanel onRefresh={refresh} />
         <M4MFundPanel />
         <VaultMetricsPanel />
+        <MediaPipelinePanel />
         <BattleDirectoryPanel onRefresh={refresh} />
         <TournamentQueuePanel onRefresh={refresh} />
         <TournamentManagerPanel onRefresh={refresh} />
