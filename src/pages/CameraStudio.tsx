@@ -779,6 +779,17 @@ export default function CameraStudio() {
 
       {/* Challenge Modal */}
       <ChallengeModal open={challengeModalOpen} onClose={() => setChallengeModalOpen(false)} />
+
+      {/* Post-record review: retake / save draft / publish + captions + thumbnail */}
+      <RecordingReviewSheet
+        blob={pendingBlob}
+        defaultTitle={`Studio ${studioMode} ${new Date().toLocaleDateString()}`}
+        isUploading={isUploading}
+        uploadProgress={uploadProgress}
+        onRetake={handleRetake}
+        onClose={() => !isUploading && setPendingBlob(null)}
+        onSubmit={(result) => pendingBlob && uploadRecording(pendingBlob, result)}
+      />
     </div>
   );
 }
