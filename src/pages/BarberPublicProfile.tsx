@@ -644,8 +644,19 @@ export default function BarberPublicProfile() {
           <TabsContent value="video">
             <Card>
               <CardHeader>
-                <CardTitle>
-                  {barberData.is_live ? '🔴 Live Stream' : 'Featured Video'}
+                <CardTitle className="flex items-center gap-2">
+                  {barberData.is_live && (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-500">
+                      <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                      LIVE
+                    </span>
+                  )}
+                  <span>{displayName}</span>
+                  {sponsorPill && (
+                    <Badge variant="outline" className="ml-auto text-[10px] border-primary/30 text-primary/90">
+                      Sponsored by {sponsorPill}
+                    </Badge>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -664,6 +675,7 @@ export default function BarberPublicProfile() {
               </CardContent>
             </Card>
           </TabsContent>
+
 
           <TabsContent value="portfolio">
             <Card>
