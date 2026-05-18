@@ -17,16 +17,15 @@ export const activeVideoStore = {
   },
   subscribe(l: Listener) {
     listeners.add(l);
-    return () => listeners.delete(l);
+    return () => {
+      listeners.delete(l);
+    };
   },
 };
 
 import { useEffect, useState } from 'react';
 export function useActiveVideoId() {
   const [id, setId] = useState<string | null>(activeVideoStore.get());
-  useEffect(() => {
-    const unsub = activeVideoStore.subscribe(setId);
-    return () => { unsub; };
-  }, []);
+  useEffect(() => activeVideoStore.subscribe(setId), []);
   return id;
 }
