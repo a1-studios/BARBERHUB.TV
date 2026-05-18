@@ -187,25 +187,16 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
                 <div key={item.id} className="relative group">
                   <div className="aspect-square rounded-lg overflow-hidden bg-muted">
                     {isVid ? (
-                      (item as any).cloudflare_stream_uid ? (
-                        <CloudflareStreamPlayer
-                          streamUid={(item as any).cloudflare_stream_uid}
-                          fallbackUrl={mediaUrl}
-                          autoPlay={false}
-                          muted
-                          controls={false}
-                          loop={false}
-                          className="w-full h-full"
-                        />
-                      ) : (
-                        <video
-                          src={mediaUrl}
-                          className="w-full h-full object-cover"
-                          muted
-                          playsInline
-                          preload="metadata"
-                        />
-                      )
+                      <SmartVideoPlayer
+                        streamUid={(item as any).cloudflare_stream_uid ?? null}
+                        fallbackUrl={mediaUrl}
+                        poster={item.thumbnail_url ?? null}
+                        autoPlayWhenVisible={false}
+                        muted
+                        controls={false}
+                        loop={false}
+                        className="w-full h-full"
+                      />
                     ) : (
                       <img
                         src={item.thumbnail_url || mediaUrl}
