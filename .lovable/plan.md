@@ -1,62 +1,95 @@
-## Goals
+## Goal
 
-1. WatchFeed: no back-to-back duplicates, keep randomness, prepared to scale.
-2. Stop labeling the "Featured Video" — show creator name + sponsor only.
-3. Complete the three deferred follow-ups from the video pipeline work:
-   - Backfill legacy R2 videos into Cloudflare Stream.
-   - Sovereign HQ "Media Pipeline" panel.
-   - Swap secondary players (PortfolioManager, SubmissionPreview) to SmartVideoPlayer.
+Add a "Text" tab to the recording review step that lets creators place one or more text overlays on top of their video. Each overlay stores its content, font, styling, and spatial position. On Publish, ship that as a clean JSON payload next to the R2 video path so the backend rendering engine can burn the overlays into the final video later.
 
-## Implementation
+## UX (mobile-first, native iOS feel)
 
-### 1. WatchFeed de-duplication (`src/pages/WatchFeed.tsx`)
-- Dedupe sources before shuffling: build `allItems` then `uniqueByMediaUrl` (and by `cloudflare_stream_uid` when present) so a video that exists in both `creations` and `barber_profiles.featured_video_id` only appears once.
-- Replace the simple Fisher–Yates + modulo loop with an **anti-adjacent shuffle**: after shuffling, walk the array and swap any item whose `barber_user_id` (or `media_url`) matches the previous one with the next non-conflicting item. Falls back gracefully when the pool is small.
-- When extending the feed past `allContent.length` (the loop-pass logic), guarantee the first repeat is not the same item as the last unique entry.
-- Keep query `.limit(30)` per source today, but extract a `FEED_SOURCE_LIMIT` constant and add a `// scale: paginate via range()` TODO comment so we can swap to keyset pagination later without refactoring the merger.
+In `RecordingReviewSheet`, add a fourth tab: **Text** (alongside Preview, Captions, Cover).
 
-### 2. Remove "Featured Video" label
-- `BarberPublicProfile.tsx` (line ~648): replace the `Featured Video` / `🔴 Live Stream` header with creator name + active sponsor pill (reuse `useSponsorAds`, pick first active). Live state still shows the red `LIVE` dot but no "Featured Video" copy.
-- `BarberVideoSection.tsx`: stop inserting `title: 'Featured Video'` into `creations` — use the file name (or null) so portfolio gallery doesn't show that label either.
-- Sweep: no other UI strings reference "Featured Video".
+The Text tab shows:
+- Video preview (aspect-video, same player style as Captions tab) with overlays rendered as absolutely-positioned, draggable `div`s on top.
+- "+ Add text" button — inserts a new overlay centered on the frame at the current playback time.
+- Selected overlay editor panel:
+  - Text input (max 60 chars)
+  - Font family picker (curated list: Inter, Bebas Neue, Space Grotesk, DM Serif Display, Archivo Black, JetBrains Mono)
+  - Font size slider (12–72 px, normalized)
+  - Color swatches (white, black, neon orange `#FF6B00`, Zion blue, plus custom hex input)
+  - Optional background pill toggle (transparent vs solid)
+  - Start/end time inputs defaulting to `[current_time, current_time + 3s]`
+  - Delete button
+- Drag to reposition (pointer events, clamped to video bounds). Position stored as **normalized 0–1 coordinates** of the overlay's center, so it survives any output resolution.
 
-### 3. Backfill script (`scripts/backfill-cloudflare-stream.ts`)
-- Node/tsx script using the service-role key from env. Scans `creations`, `creator_content`, `battle_submissions`, `barber_profiles.featured_video_id` for rows where `cloudflare_stream_uid IS NULL` and `media_url` is an http(s) `.mp4|.mov|.webm`.
-- Batched (10 at a time, 2s gap) calls to existing `upload-to-cloudflare-stream` edge function with `{ sourceUrl, table, recordId }`.
-- Dry-run flag (`--dry`), per-table filter (`--table=creations`), progress log + final summary written to `/tmp/backfill-report.json`.
-- Add `"backfill:cf-stream": "tsx scripts/backfill-cloudflare-stream.ts"` to `package.json`.
+No backend rendering work in this task — frontend captures intent only.
 
-### 4. Sovereign HQ — Media Pipeline panel
-- New `src/components/sovereign/MediaPipelinePanel.tsx`:
-  - Counters: total video rows, ingested (`cloudflare_stream_uid` set), pending, failed (per table).
-  - Recent ingest log table (last 50) reading from `creator_content` / `creations` ordered by `updated_at`.
-  - "Run backfill" CTA that calls a new `sovereign-system-control` action `run_media_backfill` which enqueues by invoking `upload-to-cloudflare-stream` for the next N pending rows (no shell script needed in prod).
-  - Health bar: % ingested, with red/amber/green thresholds.
-- Register panel in `src/pages/SovereignHQ.tsx` alongside the existing 13 panels.
-- Extend `supabase/functions/sovereign-system-control/index.ts` with the `run_media_backfill` action (auth-gated to SOVEREIGN_EMAIL, batches up to 25 rows per call).
+## Data Model
 
-### 5. Secondary player refactors
-- `src/components/profiles/PortfolioManager.tsx`: replace the inline `<video>` / `CloudflareStreamPlayer` block in the grid with `SmartVideoPlayer` (autoplay off, muted, poster = `thumbnail_url`). Keeps single-decoder guard active for portfolio grids.
-- `src/components/battles/SubmissionPreview.tsx`: same swap for the preview player.
-- Both keep their existing props/styling — purely an implementation swap.
+New type in `src/components/camera/TextOverlayEditor.tsx`:
 
-## Out of Scope
-- Server-side ffmpeg caption burn-in.
-- Real-time SSE for backfill progress (panel polls every 10s).
-- Pagination/keyset rewrite of WatchFeed queries (marked as TODO, not done now).
+```ts
+export interface TextOverlay {
+  id: string;            // uuid
+  text: string;
+  font_family: string;
+  font_size: number;     // px at 1080p reference
+  color: string;         // hex
+  background: 'none' | 'solid';
+  x: number;             // 0..1 (center x, normalized)
+  y: number;             // 0..1 (center y, normalized)
+  start: number;         // seconds
+  end: number;           // seconds
+}
+```
+
+Extend `ReviewResult` in `RecordingReviewSheet.tsx`:
+
+```ts
+textOverlays: TextOverlay[];   // [] when none
+```
+
+## Publish Payload
+
+In `CameraStudio.uploadRecording`, after the R2 PUT succeeds, build a single overlay payload object and persist it on the same DB row that already holds `media_url`:
+
+```ts
+const overlayPayload = {
+  version: 1,
+  source: { r2_key: filename, r2_url: publicUrl },
+  reference_resolution: { width: 1080, height: 1920 },
+  overlays: result.textOverlays.map(o => ({
+    id: o.id,
+    type: 'text',
+    text: o.text,
+    style: {
+      font_family: o.font_family,
+      font_size: o.font_size,
+      color: o.color,
+      background: o.background,
+    },
+    position: { x: o.x, y: o.y, anchor: 'center' },
+    timing: { start: o.start, end: o.end },
+  })),
+};
+```
+
+Write this to a new nullable JSONB column `overlay_payload` on the two rows already touched today: `creator_content` and `creations`. The Cloudflare Stream ingest call gets the same object forwarded under `overlayPayload` so the backend worker can pick it up when it's built later — for now the edge function just accepts and ignores it.
 
 ## Files
 
-**Create**
-- `scripts/backfill-cloudflare-stream.ts`
-- `src/components/sovereign/MediaPipelinePanel.tsx`
+**New**
+- `src/components/camera/TextOverlayEditor.tsx` — tab content, draggable overlay rendering, per-overlay editor.
 
-**Modify**
-- `src/pages/WatchFeed.tsx` (dedup + anti-adjacent shuffle)
-- `src/pages/BarberPublicProfile.tsx` (remove "Featured Video" label)
-- `src/components/barber/BarberVideoSection.tsx` (stop seeding "Featured Video" title)
-- `src/components/profiles/PortfolioManager.tsx` (use SmartVideoPlayer)
-- `src/components/battles/SubmissionPreview.tsx` (use SmartVideoPlayer)
-- `src/pages/SovereignHQ.tsx` (mount new panel)
-- `supabase/functions/sovereign-system-control/index.ts` (`run_media_backfill` action)
-- `package.json` (script entry)
+**Edited**
+- `src/components/camera/RecordingReviewSheet.tsx` — add Text tab, `textOverlays` state, include in `ReviewResult`.
+- `src/pages/CameraStudio.tsx` — build `overlayPayload`, insert into `creations` / `creator_content`, forward to `upload-to-cloudflare-stream`.
+- `supabase/functions/upload-to-cloudflare-stream/index.ts` — accept optional `overlayPayload` field (no-op for now, logged).
+- `src/integrations/supabase/types.ts` — regenerated after migration.
+
+**Migration**
+- Add `overlay_payload jsonb` to `creator_content` and `creations`.
+
+## Out of scope
+
+- Actually rendering/burning the overlays into the video — backend engine work, handled separately.
+- Animations, stickers, emojis, multi-line rich text — text-only v1.
+- Editing overlays after publish.
+

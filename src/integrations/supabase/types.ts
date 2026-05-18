@@ -1899,6 +1899,7 @@ export type Database = {
           id: string
           is_published: boolean
           media_url: string
+          overlay_payload: Json | null
           thumbnail_url: string | null
           title: string | null
           updated_at: string
@@ -1913,6 +1914,7 @@ export type Database = {
           id?: string
           is_published?: boolean
           media_url: string
+          overlay_payload?: Json | null
           thumbnail_url?: string | null
           title?: string | null
           updated_at?: string
@@ -1927,6 +1929,7 @@ export type Database = {
           id?: string
           is_published?: boolean
           media_url?: string
+          overlay_payload?: Json | null
           thumbnail_url?: string | null
           title?: string | null
           updated_at?: string
@@ -1970,6 +1973,7 @@ export type Database = {
           is_published: boolean | null
           likes: number | null
           media_url: string | null
+          overlay_payload: Json | null
           price_bb: number
           promote_to_feed: boolean | null
           shares: number | null
@@ -1993,6 +1997,7 @@ export type Database = {
           is_published?: boolean | null
           likes?: number | null
           media_url?: string | null
+          overlay_payload?: Json | null
           price_bb?: number
           promote_to_feed?: boolean | null
           shares?: number | null
@@ -2016,6 +2021,7 @@ export type Database = {
           is_published?: boolean | null
           likes?: number | null
           media_url?: string | null
+          overlay_payload?: Json | null
           price_bb?: number
           promote_to_feed?: boolean | null
           shares?: number | null
