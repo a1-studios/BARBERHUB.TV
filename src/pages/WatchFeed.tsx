@@ -245,19 +245,48 @@ const WatchFeed = () => {
   const { data: sponsors = [] } = useSponsorAds(true);
 
   // ─── Build unified feed ───
-  // Shuffle content for a fresh feel each visit
+  // 1) Merge sources, 2) dedupe (by stream UID or media_url), 3) shuffle,
+  // 4) anti-adjacent pass so the same video/creator never plays back-to-back.
+  // scale: paginate via .range() / keyset; merger handles arbitrary length already.
   const shuffledContent = useMemo(() => {
-    const arr = [...profileVideos, ...creatorVideos, ...creationVideos, ...submissionVideos]
+    const merged = [...profileVideos, ...creatorVideos, ...creationVideos, ...submissionVideos]
       .filter(item => !(isFan && item.type === 'educator'));
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
+
+    // Dedupe — a featured_video_id can also exist in `creations` for the same barber.
+    const seen = new Set<string>();
+    const unique: typeof merged = [];
+    for (const item of merged) {
+      const key = item.cloudflare_stream_uid || item.media_url || item.id;
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      unique.push(item);
     }
-    return arr;
+
+    // Fisher–Yates
+    for (let i = unique.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [unique[i], unique[j]] = [unique[j], unique[i]];
+    }
+
+    // Anti-adjacent: never two in a row with same creator or same media_url
+    const sameAs = (a: typeof unique[number], b: typeof unique[number]) =>
+      (!!a.barber_user_id && a.barber_user_id === b.barber_user_id) ||
+      (!!a.media_url && a.media_url === b.media_url);
+    for (let i = 1; i < unique.length; i++) {
+      if (!sameAs(unique[i], unique[i - 1])) continue;
+      // find next item that doesn't conflict with i-1 and (if exists) i+1
+      let swap = -1;
+      for (let k = i + 1; k < unique.length; k++) {
+        if (!sameAs(unique[k], unique[i - 1])) { swap = k; break; }
+      }
+      if (swap > 0) {
+        [unique[i], unique[swap]] = [unique[swap], unique[i]];
+      }
+    }
+    return unique;
   }, [profileVideos, creatorVideos, creationVideos, submissionVideos, isFan]);
 
   // Only build a feed from real, playable content — no empty-thumbnail placeholders.
-  // Require either a Cloudflare Stream UID, or an http(s) URL ending in a known video extension.
   const VIDEO_EXT = /\.(mp4|mov|webm|m4v|m3u8)(\?.*)?$/i;
   const allContent: FeedItem[] = shuffledContent.filter((item) => {
     if (item.cloudflare_stream_uid) return true;
@@ -275,6 +304,15 @@ const WatchFeed = () => {
     let loopPass = 0;
     while (feed.length < Math.max(20, allContent.length + 10)) {
       const item = allContent[contentIdx % allContent.length];
+      // Guard against the wrap-around producing back-to-back duplicate creator
+      const prev = feed[feed.length - 1];
+      const isDupe = prev && prev.type !== 'sponsor' && prev.type !== 'battle' &&
+        ((prev.barber_user_id && prev.barber_user_id === item.barber_user_id) ||
+         (prev.media_url && prev.media_url === item.media_url));
+      if (isDupe && allContent.length > 1) {
+        contentIdx++;
+        continue;
+      }
       feed.push({ ...item, id: loopPass > 0 ? `${item.id}-loop-${loopPass}` : item.id });
       contentIdx++;
 
