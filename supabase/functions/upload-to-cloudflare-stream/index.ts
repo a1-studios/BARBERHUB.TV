@@ -111,6 +111,26 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Optional: upload sidecar WebVTT captions track to Cloudflare Stream
+    if (captionsVtt && captionsVtt.trim()) {
+      try {
+        const form = new FormData();
+        form.append("file", new Blob([captionsVtt], { type: "text/vtt" }), "captions.vtt");
+        const cap = await fetch(
+          `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/stream/${streamUid}/captions/en`,
+          {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${cfApiToken}` },
+            body: form,
+          }
+        );
+        if (!cap.ok) console.warn("Caption upload failed:", await cap.text());
+      } catch (e) {
+        console.warn("Caption upload error (non-fatal):", e);
+      }
+    }
+
+
     return new Response(
       JSON.stringify({ uid: streamUid, status: cfData.result.status?.state || "queued" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
