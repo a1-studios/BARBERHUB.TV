@@ -7,7 +7,7 @@ import { Plus, Upload, Trash2, Image as ImageIcon, Video, Loader2 } from 'lucide
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { uploadPortfolioMedia } from '@/lib/storage';
-import { CloudflareStreamPlayer } from '@/components/CloudflareStreamPlayer';
+import { SmartVideoPlayer } from '@/components/video/SmartVideoPlayer';
 import { toast } from 'sonner';
 
 interface PortfolioManagerProps {
