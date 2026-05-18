@@ -228,11 +228,29 @@ export default function CameraStudio() {
     setIsRecording(false);
   }, []);
 
-  const handleRecordingComplete = async () => {
-    const mimeType = activeMimeTypeRef.current;
-    const blob = new Blob(chunksRef.current, { type: mimeType });
-    if (blob.size < 1000) { toast.error('Recording too short'); return; }
+  // Upload a thumbnail data URL to R2 (best-effort) — returns public URL or null
+  const uploadThumbnail = async (dataUrl: string): Promise<string | null> => {
+    try {
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const key = `thumbnails/${Date.now()}_studio.jpg`;
+      const { data: urlData } = await supabase.functions.invoke('get-r2-presigned-url', {
+        body: { key, contentType: 'image/jpeg' },
+      });
+      if (!urlData?.uploadUrl) return null;
+      const put = await fetch(urlData.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'image/jpeg' },
+        body: blob,
+      });
+      return put.ok ? (urlData.publicUrl as string) : null;
+    } catch {
+      return null;
+    }
+  };
 
+  const uploadRecording = async (blob: Blob, result: ReviewResult) => {
+    const mimeType = activeMimeTypeRef.current;
     const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
     const folder = R2_FOLDERS[studioMode] || 'portfolios';
     const filename = `${folder}/${Date.now()}_studio.${ext}`;
@@ -242,7 +260,6 @@ export default function CameraStudio() {
     setUploadProgress(10);
 
     try {
-      // 1. Get presigned URL & upload to R2
       const { data: urlData, error: urlErr } = await supabase.functions.invoke('get-r2-presigned-url', {
         body: { key: filename, contentType },
       });
@@ -257,10 +274,17 @@ export default function CameraStudio() {
       });
       if (!res.ok) throw new Error('Upload failed');
 
-      setUploadProgress(70);
+      setUploadProgress(60);
       const publicUrl = urlData.publicUrl as string;
 
-      // 2. Create database record so video isn't orphaned
+      // Optional thumbnail upload (parallel-ish, but kept simple/sequential)
+      let thumbnailUrl: string | null = null;
+      if (result.thumbnailDataUrl) {
+        thumbnailUrl = await uploadThumbnail(result.thumbnailDataUrl);
+      }
+
+      setUploadProgress(75);
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
@@ -270,45 +294,62 @@ export default function CameraStudio() {
         .eq('user_id', user.id)
         .single();
 
+      const title = result.title || `Studio ${studioMode} ${new Date().toLocaleDateString()}`;
+
       if (barberProfile) {
         if (studioMode === 'course') {
-          // Insert into creator_content for courses
           const { data: record } = await supabase.from('creator_content').insert({
             creator_id: user.id,
-            title: `Studio ${studioMode} ${new Date().toLocaleDateString()}`,
+            title,
+            description: result.description || null,
             content_type: 'course_teaser',
             content_category: 'course',
             media_url: publicUrl,
-            is_published: true,
+            thumbnail_url: thumbnailUrl,
+            captions_vtt: result.captionsVtt,
+            is_published: result.publish,
           }).select('id').single();
 
-          if (record) {
-            toast.info('Optimizing video for playback...');
+          if (record && result.publish) {
             supabase.functions.invoke('upload-to-cloudflare-stream', {
-              body: { sourceUrl: publicUrl, table: 'creator_content', recordId: record.id },
+              body: {
+                sourceUrl: publicUrl,
+                table: 'creator_content',
+                recordId: record.id,
+                captionsVtt: result.captionsVtt,
+              },
             }).catch((err: any) => console.error('CF Stream ingest error:', err));
           }
         } else {
-          // Insert into creations for portfolio/tips
           const category = studioMode === 'tips' ? 'tips' : 'haircut';
           const { data: record } = await supabase.from('creations').insert({
             barber_id: barberProfile.id,
             media_url: publicUrl,
+            thumbnail_url: thumbnailUrl,
+            captions_vtt: result.captionsVtt,
             category,
-            title: `Studio ${studioMode} ${new Date().toLocaleDateString()}`,
+            title,
+            description: result.description || null,
+            is_published: result.publish,
           }).select('id').single();
 
-          if (record) {
-            toast.info('Optimizing video for playback...');
+          if (record && result.publish) {
             supabase.functions.invoke('upload-to-cloudflare-stream', {
-              body: { sourceUrl: publicUrl, table: 'creations', recordId: record.id },
+              body: {
+                sourceUrl: publicUrl,
+                table: 'creations',
+                recordId: record.id,
+                captionsVtt: result.captionsVtt,
+              },
             }).catch((err: any) => console.error('CF Stream ingest error:', err));
           }
         }
       }
 
       setUploadProgress(100);
-      toast.success(`${studioMode === 'course' ? 'Course' : studioMode === 'tips' ? 'Tip' : 'Portfolio'} video saved!`);
+      toast.success(result.publish ? 'Video published!' : 'Draft saved');
+      setPendingBlob(null);
+      chunksRef.current = [];
     } catch (err: any) {
       toast.error(err.message || 'Upload failed');
     } finally {
@@ -316,6 +357,13 @@ export default function CameraStudio() {
       setUploadProgress(0);
     }
   };
+
+  const handleRetake = () => {
+    setPendingBlob(null);
+    chunksRef.current = [];
+    setRecordingDuration(0);
+  };
+
 
   const formatDuration = (s: number) => {
     const m = Math.floor(s / 60);
