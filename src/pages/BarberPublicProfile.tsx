@@ -399,6 +399,8 @@ export default function BarberPublicProfile() {
     );
   };
 
+  const { data: activeSponsors = [] } = useSponsorAds(true);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -434,7 +436,6 @@ export default function BarberPublicProfile() {
   }
 
   const displayName = barberData.display_name || barberData.barber_name;
-  const { data: activeSponsors = [] } = useSponsorAds(true);
   const sponsorPill = activeSponsors?.[0]?.name ?? null;
 
 
