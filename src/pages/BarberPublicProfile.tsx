@@ -23,6 +23,7 @@ import { AvatarCrest } from '@/components/AvatarCrest';
 import { AvatarUpload } from '@/components/profiles/AvatarUpload';
 import { SpecialtyPillSelector } from '@/components/profiles/SpecialtyPillSelector';
 import { ServicesManager } from '@/components/profiles/ServicesManager';
+import { useSponsorAds } from '@/hooks/useSponsorAds';
 import { WeeklyAvailabilityManager } from '@/components/profiles/WeeklyAvailabilityManager';
 import { useState, useEffect, useRef } from 'react';
 import { DonationModal } from '@/components/DonationModal';
