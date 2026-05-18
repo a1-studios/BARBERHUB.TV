@@ -1,8 +1,14 @@
+import { useEffect } from 'react';
 import { Helmet } from 'react-helmet';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { MapPin, Calendar, Star, Scissors, Clock, Shield } from 'lucide-react';
 import { SEO_CITIES, SEO_SERVICES, findCity, findService } from '@/data/seoCities';
+import SeoFAQ, { type FAQItem } from '@/components/seo/SeoFAQ';
+import CityCopyBlock from '@/components/seo/CityCopyBlock';
+import InternalLinkGrid from '@/components/seo/InternalLinkGrid';
+import BreadcrumbsNav, { type Crumb } from '@/components/seo/BreadcrumbsNav';
+import { trackSeoEvent } from '@/lib/seoAnalytics';
 
 const BASE = 'https://barberhub-tv.lovable.app';
 
@@ -45,6 +51,15 @@ export default function BookBarberLanding() {
     : city ? `/book-barber/${city.slug}` : '/book-barber-near-me';
   const canonical = `${BASE}${path}`;
 
+  // ---- Tracking -------------------------------------------------------------
+  useEffect(() => {
+    trackSeoEvent('seo_landing_view', {
+      city_slug: city?.slug ?? null,
+      service_slug: service?.slug ?? null,
+      variant: service && city ? 'service' : city ? 'city' : 'hub',
+    });
+  }, [city?.slug, service?.slug]);
+
   // ---- Structured data (LocalBusiness + FAQ + Breadcrumbs) ------------------
   const localBusiness = {
     '@context': 'https://schema.org',
@@ -67,31 +82,37 @@ export default function BookBarberLanding() {
     }),
   };
 
-  const faq = {
+  const faqItems: FAQItem[] = [
+    {
+      question: `How do I book a barber in ${cityLabel}?`,
+      answer: `Open the Barber-Hub directory, filter by ${cityLabel}, pick a verified barber, choose a time and confirm. No phone calls, no waiting on hold.`,
+    },
+    {
+      question: 'Do barbers confirm appointments instantly?',
+      answer: 'Yes. Most barbers on Barber-Hub use real-time availability, so you get instant confirmation. A small Barber Bucks deposit holds your slot and is refunded if you cancel 2+ hours ahead.',
+    },
+    {
+      question: `How much does a ${service?.name?.toLowerCase() ?? 'haircut'} cost in ${cityLabel}?`,
+      answer: `Prices in ${cityLabel} typically start at $${service?.priceFromUsd ?? city?.avgPriceUsd ?? 25}. Each barber sets their own pricing visible upfront before you book.`,
+    },
+    {
+      question: 'Can I book a house-call barber?',
+      answer: 'Yes. Many Barber-Hub barbers offer house-call bounties — they come to you, your office, or your event. Set your bounty and verified barbers will accept the job.',
+    },
+    {
+      question: 'Are reviews verified?',
+      answer: 'Every review on Barber-Hub comes from a client who booked and paid for an appointment through the platform. No anonymous one-star drive-bys.',
+    },
+  ];
+
+  const faqLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: [
-      {
-        '@type': 'Question',
-        name: `How do I book a barber in ${cityLabel}?`,
-        acceptedAnswer: { '@type': 'Answer', text: `Open the Barber-Hub directory, filter by ${cityLabel}, pick a verified barber, choose a time and confirm. No phone calls, no waiting on hold.` },
-      },
-      {
-        '@type': 'Question',
-        name: 'Do barbers confirm appointments instantly?',
-        acceptedAnswer: { '@type': 'Answer', text: 'Yes. Most barbers on Barber-Hub use real-time availability, so you get instant confirmation. A small Barber Bucks deposit holds your slot and is refunded if you cancel 2+ hours ahead.' },
-      },
-      {
-        '@type': 'Question',
-        name: `How much does a ${service?.name?.toLowerCase() ?? 'haircut'} cost in ${cityLabel}?`,
-        acceptedAnswer: { '@type': 'Answer', text: `Prices in ${cityLabel} typically start at $${service?.priceFromUsd ?? 25}. Each barber sets their own pricing visible upfront before you book.` },
-      },
-      {
-        '@type': 'Question',
-        name: 'Can I book a house-call barber?',
-        acceptedAnswer: { '@type': 'Answer', text: 'Yes. Many Barber-Hub barbers offer house-call bounties — they come to you, your office, or your event. Set your bounty and verified barbers will accept the job.' },
-      },
-    ],
+    mainEntity: faqItems.map((q) => ({
+      '@type': 'Question',
+      name: q.question,
+      acceptedAnswer: { '@type': 'Answer', text: q.answer },
+    })),
   };
 
   const breadcrumbs = {
@@ -105,9 +126,20 @@ export default function BookBarberLanding() {
     ],
   };
 
+  const visibleCrumbs: Crumb[] = [
+    { label: 'Home', href: '/' },
+    { label: 'Book a Barber', href: '/book-barber-near-me' },
+    ...(city ? [{ label: city.name, href: `/book-barber/${city.slug}` }] : []),
+    ...(service && city ? [{ label: service.name }] : []),
+  ];
+
   // ---- CTA wiring -----------------------------------------------------------
-  const handleFindBarbers = () => {
-    // Funnel into the existing directory with city context preserved as query.
+  const handleFindBarbers = (label: string) => {
+    trackSeoEvent('seo_cta_click', {
+      city_slug: city?.slug ?? null,
+      service_slug: service?.slug ?? null,
+      label,
+    });
     const q = city ? `?city=${encodeURIComponent(city.name)}` : '';
     navigate(`/barbers${q}`);
   };
@@ -125,26 +157,41 @@ export default function BookBarberLanding() {
         <meta name="twitter:title" content={title} />
         <meta name="twitter:description" content={description} />
         <script type="application/ld+json">{JSON.stringify(localBusiness)}</script>
-        <script type="application/ld+json">{JSON.stringify(faq)}</script>
+        <script type="application/ld+json">{JSON.stringify(faqLd)}</script>
         <script type="application/ld+json">{JSON.stringify(breadcrumbs)}</script>
       </Helmet>
 
       <main className="min-h-screen bg-background text-foreground">
+        <BreadcrumbsNav crumbs={visibleCrumbs} />
+
         {/* Hero */}
-        <section className="relative px-4 pt-16 pb-12 text-center max-w-3xl mx-auto">
+        <section className="relative px-4 pt-10 pb-12 text-center max-w-3xl mx-auto">
           <p className="text-xs uppercase tracking-[0.3em] text-primary mb-3">
             {city ? `${city.name} · ${city.state}` : 'United States'}
           </p>
           <h1 className="text-4xl md:text-6xl font-black mb-4 leading-tight">{h1}</h1>
-          <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">{description}</p>
+          <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+            {city?.tagline ?? description}
+          </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button size="lg" onClick={handleFindBarbers} className="font-bold">
+            <Button
+              size="lg"
+              onClick={() => handleFindBarbers('hero_find_barbers')}
+              className="font-bold"
+            >
               <Scissors className="h-4 w-4 mr-2" />
               {service ? `Find ${service.name} Barbers` : 'Find Barbers'}
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <Link to="/barbers">
+              <Link
+                to="/barbers"
+                onClick={() => trackSeoEvent('seo_cta_click', {
+                  city_slug: city?.slug ?? null,
+                  service_slug: service?.slug ?? null,
+                  label: 'hero_browse_map',
+                })}
+              >
                 <MapPin className="h-4 w-4 mr-2" /> Browse the Map
               </Link>
             </Button>
@@ -158,54 +205,77 @@ export default function BookBarberLanding() {
           <Trust icon={<Star className="h-5 w-5 text-primary" />} label="Real reviews" />
         </section>
 
-        {/* Why book online */}
-        <section className="max-w-4xl mx-auto px-4 pb-16">
-          <h2 className="text-2xl md:text-3xl font-bold mb-6">
-            Why book {service?.name.toLowerCase() ?? 'your next cut'} online{city ? ` in ${city.name}` : ''}?
-          </h2>
-          <div className="grid md:grid-cols-3 gap-4">
-            <Card icon={<Clock />} title="No phone tag">
-              See live availability for every barber and lock in a slot in seconds — even at 2am.
-            </Card>
-            <Card icon={<Shield />} title="Held by deposit">
-              A small refundable deposit guarantees your appointment and protects your barber from no-shows.
-            </Card>
-            <Card icon={<Star />} title="Reviewed by clients">
-              Every barber on Barber-Hub is reviewed by real, verified clients — no fake five-stars.
-            </Card>
-          </div>
-        </section>
+        {/* City-specific long copy */}
+        {city && <CityCopyBlock city={city} serviceName={service?.name} />}
 
-        {/* Service grid (only on city or hub) */}
-        {!service && (
+        {/* Why book online (national hub only) */}
+        {!city && (
           <section className="max-w-4xl mx-auto px-4 pb-16">
             <h2 className="text-2xl md:text-3xl font-bold mb-6">
-              Popular services{city ? ` in ${city.name}` : ''}
+              Why book your next cut online?
+            </h2>
+            <div className="grid md:grid-cols-3 gap-4">
+              <Card icon={<Clock />} title="No phone tag">
+                See live availability for every barber and lock in a slot in seconds — even at 2am.
+              </Card>
+              <Card icon={<Shield />} title="Held by deposit">
+                A small refundable deposit guarantees your appointment and protects your barber from no-shows.
+              </Card>
+              <Card icon={<Star />} title="Reviewed by clients">
+                Every barber on Barber-Hub is reviewed by real, verified clients — no fake five-stars.
+              </Card>
+            </div>
+          </section>
+        )}
+
+        {/* Service grid (city hub only) */}
+        {city && !service && (
+          <section className="max-w-4xl mx-auto px-4 pb-16">
+            <h2 className="text-2xl md:text-3xl font-bold mb-6">
+              Popular services in {city.name}
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {SEO_SERVICES.map((s) => (
                 <Link
                   key={s.slug}
-                  to={city ? `/book-barber/${city.slug}/${s.slug}` : `/barbers`}
+                  to={`/book-barber/${city.slug}/${s.slug}`}
+                  onClick={() =>
+                    trackSeoEvent('seo_internal_link_click', {
+                      city_slug: city.slug,
+                      service_slug: s.slug,
+                      label: 'service_grid',
+                    })
+                  }
                   className="block p-4 rounded-lg border border-border hover:border-primary/60 transition-colors"
                 >
                   <p className="font-bold">{s.name}</p>
-                  <p className="text-xs text-muted-foreground mt-1">From ${s.priceFromUsd} · {s.durationMin}min</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    From ${s.priceFromUsd} · {s.durationMin}min
+                  </p>
                 </Link>
               ))}
             </div>
           </section>
         )}
 
-        {/* City grid (only on hub or service-only) */}
+        {/* Internal link grid (sibling cities + other services) */}
+        <InternalLinkGrid currentCity={city} currentServiceSlug={service?.slug} />
+
+        {/* All cities (hub only) */}
         {!city && (
           <section className="max-w-4xl mx-auto px-4 pb-16">
-            <h2 className="text-2xl md:text-3xl font-bold mb-6">Cities we cover</h2>
+            <h2 className="text-2xl md:text-3xl font-bold mb-6">All cities</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
               {SEO_CITIES.map((c) => (
                 <Link
                   key={c.slug}
                   to={`/book-barber/${c.slug}`}
+                  onClick={() =>
+                    trackSeoEvent('seo_internal_link_click', {
+                      city_slug: c.slug,
+                      label: 'all_cities',
+                    })
+                  }
                   className="text-muted-foreground hover:text-primary transition-colors"
                 >
                   Barbers in {c.name}, {c.state}
@@ -216,28 +286,20 @@ export default function BookBarberLanding() {
         )}
 
         {/* FAQ */}
-        <section className="max-w-3xl mx-auto px-4 pb-20">
-          <h2 className="text-2xl md:text-3xl font-bold mb-6">Frequently asked</h2>
-          <div className="space-y-4">
-            {(faq.mainEntity as any[]).map((q) => (
-              <details key={q.name} className="p-4 rounded-lg border border-border group">
-                <summary className="font-semibold cursor-pointer list-none flex justify-between">
-                  {q.name}
-                  <span className="text-primary group-open:rotate-45 transition-transform">+</span>
-                </summary>
-                <p className="text-sm text-muted-foreground mt-3">{q.acceptedAnswer.text}</p>
-              </details>
-            ))}
-          </div>
-        </section>
+        <SeoFAQ items={faqItems} citySlug={city?.slug} serviceSlug={service?.slug} />
 
         {/* Final CTA */}
         <section className="bg-primary/10 border-t border-primary/20 py-16 px-4 text-center">
           <h2 className="text-3xl font-black mb-3">Ready for your best cut?</h2>
           <p className="text-muted-foreground mb-6 max-w-xl mx-auto">
-            Join thousands using Barber-Hub to skip the wait and book the right barber{city ? ` in ${city.name}` : ' near them'}.
+            Join thousands using Barber-Hub to skip the wait and book the right barber
+            {city ? ` in ${city.name}` : ' near them'}.
           </p>
-          <Button size="lg" onClick={handleFindBarbers} className="font-bold">
+          <Button
+            size="lg"
+            onClick={() => handleFindBarbers('footer_find_barbers')}
+            className="font-bold"
+          >
             <Calendar className="h-4 w-4 mr-2" />
             Book {serviceLabel} {city ? `in ${city.name}` : 'Now'}
           </Button>
