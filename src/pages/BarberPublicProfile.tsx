@@ -433,6 +433,8 @@ export default function BarberPublicProfile() {
   }
 
   const displayName = barberData.display_name || barberData.barber_name;
+  const sponsorPill = activeSponsors?.[0]?.name ?? null;
+
 
   return (
     <div className="min-h-screen bg-background">
