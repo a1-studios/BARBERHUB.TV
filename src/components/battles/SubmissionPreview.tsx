@@ -7,6 +7,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { SmartVideoPlayer } from '@/components/video/SmartVideoPlayer';
 
 interface SubmissionPreviewProps {
   submission: {
@@ -74,11 +75,13 @@ export const SubmissionPreview = ({ submission, canEdit, onEdit, onDelete }: Sub
       <CardContent className="space-y-4">
         {videoUrl && (
           <div className="relative aspect-video rounded-lg overflow-hidden bg-muted">
-            <video
-              src={videoUrl}
+            <SmartVideoPlayer
+              streamUid={(submission as any).cloudflare_stream_uid ?? null}
+              fallbackUrl={videoUrl}
+              autoPlayWhenVisible={false}
+              muted={false}
               controls
-              preload="metadata"
-              className="w-full h-full object-cover"
+              className="w-full h-full"
             />
           </div>
         )}

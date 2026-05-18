@@ -23,6 +23,7 @@ import { AvatarCrest } from '@/components/AvatarCrest';
 import { AvatarUpload } from '@/components/profiles/AvatarUpload';
 import { SpecialtyPillSelector } from '@/components/profiles/SpecialtyPillSelector';
 import { ServicesManager } from '@/components/profiles/ServicesManager';
+import { useSponsorAds } from '@/hooks/useSponsorAds';
 import { WeeklyAvailabilityManager } from '@/components/profiles/WeeklyAvailabilityManager';
 import { useState, useEffect, useRef } from 'react';
 import { DonationModal } from '@/components/DonationModal';
@@ -433,6 +434,11 @@ export default function BarberPublicProfile() {
   }
 
   const displayName = barberData.display_name || barberData.barber_name;
+  const { data: activeSponsors = [] } = useSponsorAds(true);
+  const sponsorPill = activeSponsors?.[0]?.name ?? null;
+
+
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -644,8 +650,19 @@ export default function BarberPublicProfile() {
           <TabsContent value="video">
             <Card>
               <CardHeader>
-                <CardTitle>
-                  {barberData.is_live ? '🔴 Live Stream' : 'Featured Video'}
+                <CardTitle className="flex items-center gap-2">
+                  {barberData.is_live && (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-500">
+                      <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                      LIVE
+                    </span>
+                  )}
+                  <span>{displayName}</span>
+                  {sponsorPill && (
+                    <Badge variant="outline" className="ml-auto text-[10px] border-primary/30 text-primary/90">
+                      Sponsored by {sponsorPill}
+                    </Badge>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -664,6 +681,7 @@ export default function BarberPublicProfile() {
               </CardContent>
             </Card>
           </TabsContent>
+
 
           <TabsContent value="portfolio">
             <Card>

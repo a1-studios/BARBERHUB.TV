@@ -9,7 +9,7 @@ const corsHeaders = {
 const SOVEREIGN_EMAIL = Deno.env.get('SOVEREIGN_EMAIL') || 'a1studios.film@gmail.com';
 
 interface SystemRequest {
-  action: 'get_status' | 'pause_battles' | 'resume_battles' | 'freeze_economy' | 'unfreeze_economy' | 'maintenance_mode' | 'exit_maintenance' | 'get_audit_log' | 'get_platform_stats' | 'enforce_tiers_on' | 'enforce_tiers_off' | 'tiers_enable' | 'tiers_disable' | 'challenge_stakes_enable' | 'challenge_stakes_disable' | 'challenge_set_min_stake' | 'quick_play_enable' | 'quick_play_disable' | 'quick_play_feed_enable' | 'quick_play_feed_disable' | 'dev_mode_enable' | 'dev_mode_disable';
+  action: 'get_status' | 'pause_battles' | 'resume_battles' | 'freeze_economy' | 'unfreeze_economy' | 'maintenance_mode' | 'exit_maintenance' | 'get_audit_log' | 'get_platform_stats' | 'enforce_tiers_on' | 'enforce_tiers_off' | 'tiers_enable' | 'tiers_disable' | 'challenge_stakes_enable' | 'challenge_stakes_disable' | 'challenge_set_min_stake' | 'quick_play_enable' | 'quick_play_disable' | 'quick_play_feed_enable' | 'quick_play_feed_disable' | 'dev_mode_enable' | 'dev_mode_disable' | 'run_media_backfill';
   reason?: string;
   notes?: string;
   limit?: number;
@@ -422,6 +422,42 @@ serve(async (req) => {
 
         afterState = { challenge_min_stake_bb: String(newMin) };
         result = { success: true, message: `Minimum challenge stake set to ${newMin} BB.`, min_stake_bb: newMin };
+        break;
+      }
+
+      case 'run_media_backfill': {
+        severity = 'normal';
+        const VIDEO_EXT = /\.(mp4|mov|webm|m4v)(\?.*)?$/i;
+        const tables = ['creations', 'creator_content', 'battle_submissions'];
+        const batchCap = Math.min(50, Math.max(1, Number(limit) || 25));
+        let queued = 0;
+        const failures: any[] = [];
+
+        for (const table of tables) {
+          if (queued >= batchCap) break;
+          const remaining = batchCap - queued;
+          const { data: rows } = await supabase
+            .from(table)
+            .select('id, media_url')
+            .is('cloudflare_stream_uid', null)
+            .not('media_url', 'is', null)
+            .limit(remaining * 2);
+          const eligible = (rows ?? []).filter((r: any) =>
+            typeof r.media_url === 'string' && /^https?:\/\//.test(r.media_url) && VIDEO_EXT.test(r.media_url)
+          ).slice(0, remaining);
+
+          for (const row of eligible) {
+            const res = await supabase.functions.invoke('upload-to-cloudflare-stream', {
+              body: { sourceUrl: row.media_url, table, recordId: row.id },
+            });
+            if (res.error) failures.push({ table, id: row.id, error: res.error.message });
+            else queued++;
+          }
+        }
+
+        beforeState = {};
+        afterState = { queued, failures: failures.length };
+        result = { success: true, queued, failures };
         break;
       }
 
