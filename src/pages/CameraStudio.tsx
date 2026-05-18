@@ -208,7 +208,11 @@ export default function CameraStudio() {
     activeMimeTypeRef.current = mimeType;
     const mr = new MediaRecorder(streamRef.current, { mimeType });
     mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-    mr.onstop = () => handleRecordingComplete();
+    mr.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: activeMimeTypeRef.current });
+      if (blob.size < 1000) { toast.error('Recording too short'); return; }
+      setPendingBlob(blob);
+    };
     mr.start(1000);
     mediaRecorderRef.current = mr;
     setIsRecording(true);
