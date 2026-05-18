@@ -47,12 +47,17 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { sourceUrl, table, recordId, captionsVtt } = body as {
+    const { sourceUrl, table, recordId, captionsVtt, overlayPayload } = body as {
       sourceUrl?: string;
       table?: string;
       recordId?: string;
       captionsVtt?: string | null;
+      overlayPayload?: unknown;
     };
+
+    if (overlayPayload) {
+      console.log(`[overlay] received payload for ${table}/${recordId}`, JSON.stringify(overlayPayload).slice(0, 500));
+    }
 
     if (!sourceUrl || !table || !recordId) {
       return new Response(
