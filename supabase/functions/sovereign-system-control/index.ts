@@ -399,6 +399,7 @@ serve(async (req) => {
         afterState = { dev_mode: false };
         result = { success: true, message: 'Developer Mode DISABLED. Production gates active.' };
         break;
+      }
 
       case 'challenge_set_min_stake': {
         const newMin = Math.max(1, Math.floor(Number(min_stake_bb) || 0));
