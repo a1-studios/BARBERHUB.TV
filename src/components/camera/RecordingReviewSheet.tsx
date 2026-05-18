@@ -67,9 +67,10 @@ export function RecordingReviewSheet({
         {videoUrl && (
           <div className="px-4 pb-4 overflow-y-auto">
             <Tabs defaultValue="preview">
-              <TabsList className="grid grid-cols-3 w-full">
+              <TabsList className="grid grid-cols-4 w-full">
                 <TabsTrigger value="preview"><Eye className="h-3 w-3 mr-1" /> Preview</TabsTrigger>
                 <TabsTrigger value="captions"><Type className="h-3 w-3 mr-1" /> Captions</TabsTrigger>
+                <TabsTrigger value="text"><TextCursorInput className="h-3 w-3 mr-1" /> Text</TabsTrigger>
                 <TabsTrigger value="thumb"><ImageIcon className="h-3 w-3 mr-1" /> Cover</TabsTrigger>
               </TabsList>
 
