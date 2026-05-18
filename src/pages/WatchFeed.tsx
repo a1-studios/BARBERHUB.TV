@@ -11,6 +11,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { DonationModal } from "@/components/DonationModal";
 import { useUserRole } from "@/hooks/useUserRole";
 import { CloudflareStreamPlayer } from "@/components/CloudflareStreamPlayer";
+import { SmartVideoPlayer } from "@/components/video/SmartVideoPlayer";
 import { cleanDisplayTitle } from "@/lib/utils";
 import { usePersistedMute } from "@/hooks/usePersistedMute";
 
@@ -476,31 +477,19 @@ const WatchFeed = () => {
         </div>
 
         {shouldMount ? (
-          item.cloudflare_stream_uid ? (
-            <div className="absolute inset-0 w-full h-full">
-              <CloudflareStreamPlayer
-                streamUid={item.cloudflare_stream_uid}
-                fallbackUrl={item.media_url}
-                autoPlay={isActive}
-                muted={isMuted}
-                controls={false}
-                className="w-full h-full"
-                onEnded={() => handleVideoEnded(idx)}
-              />
-            </div>
-          ) : (
-            <video
-              ref={(el) => { if (el) videoRefs.current.set(item.id, el); }}
-              src={item.media_url}
-              poster={item.thumbnail_url || undefined}
-              className="absolute inset-0 w-full h-full object-contain"
-              autoPlay={isActive}
+          <div className="absolute inset-0 w-full h-full">
+            <SmartVideoPlayer
+              streamUid={item.cloudflare_stream_uid}
+              fallbackUrl={item.media_url}
+              poster={item.thumbnail_url}
+              forceActive={isActive}
+              autoPlayWhenVisible={false}
               muted={isMuted}
-              playsInline
-              preload={preload}
+              controls={false}
+              className="w-full h-full"
               onEnded={() => handleVideoEnded(idx)}
             />
-          )
+          </div>
         ) : (
           // Lightweight poster while off-screen — saves bandwidth + CPU
           item.thumbnail_url ? (

@@ -1,119 +1,127 @@
-## Goal
+# Video Creation & Playback Overhaul
 
-Finish the SEO booking funnel started in `BookBarberLanding.tsx`, add proper analytics tracking, and move `DEV_MODE` from a hardcoded flag to a Sovereign-HQ-controlled kill switch (defaulting OFF in production).
-
----
-
-## 1. SEO Engine Completion
-
-### 1a. City copy enrichment (`src/data/seoCities.ts`)
-Extend each city record with editorial fields used by the landing page:
-- `tagline` (one-line hook), `intro` (2–3 sentence paragraph), `neighborhoods: string[]` (4–6 popular areas), `avgPriceUsd`, `popularServiceSlugs: string[]`.
-Backfill the existing 25 cities with realistic copy (e.g. NYC neighborhoods: Williamsburg, SoHo, Harlem, LES, Astoria).
-
-### 1b. New shared components (`src/components/seo/`)
-- **`SeoFAQ.tsx`** — accessible accordion with structured `Q/A` props; renders both visible UI and emits the JSON-LD already produced in the page. Move the inline FAQ markup from `BookBarberLanding` into it.
-- **`CityCopyBlock.tsx`** — long-form section using the new `intro`, `neighborhoods` list, and "average price" stat. Replaces the thin "Why book online" cards on city/service pages (kept on the national hub).
-- **`InternalLinkGrid.tsx`** — two grids: "Other cities" (sibling cities, alphabetical, 12 max) and "Other services in {city}" (when on a service page). Improves crawl depth & internal PageRank distribution. Replaces the bare anchor lists currently at the bottom of `BookBarberLanding`.
-- **`BreadcrumbsNav.tsx`** — visible breadcrumb trail matching the existing JSON-LD `BreadcrumbList`.
-
-`BookBarberLanding.tsx` is refactored to compose these (no behavior loss; tags, canonical, helmet untouched).
-
-### 1c. Analytics & tracking
-- **`src/lib/seoAnalytics.ts`** — thin wrapper exposing `trackSeoEvent(name, props)` that fans out to: `gtag` (if `window.gtag` present), `fbq` (Meta Pixel — already gated), and a Supabase insert into a new `seo_events` table for first-party attribution.
-- Instrument:
-  - `seo_landing_view` on mount (city, service, path)
-  - `seo_cta_click` on "Find Barbers" / "Browse Map"
-  - `seo_internal_link_click` on city/service grid clicks
-  - `seo_faq_open` on FAQ expand
-- Reuse existing `useGoogleAdsPageView` / `useMetaPixelPageView` hooks for pageview firing; only add custom events here.
-
-### 1d. Database (one migration)
-```sql
-create table public.seo_events (
-  id uuid primary key default gen_random_uuid(),
-  event_name text not null,
-  path text,
-  city_slug text,
-  service_slug text,
-  referrer text,
-  user_id uuid,
-  session_id text,
-  props jsonb default '{}'::jsonb,
-  created_at timestamptz default now()
-);
-alter table public.seo_events enable row level security;
-create policy "anyone can insert seo events"
-  on public.seo_events for insert to anon, authenticated with check (true);
-create policy "sovereign can read seo events"
-  on public.seo_events for select to authenticated
-  using (public.has_role(auth.uid(), 'sovereign'));
-create index seo_events_created_idx on public.seo_events(created_at desc);
-create index seo_events_path_idx on public.seo_events(path);
-```
+Three connected upgrades to bring CameraStudio + playback to enterprise grade.
 
 ---
 
-## 2. DEV_MODE → Sovereign Kill Switch
+## 1. Post-Record Review Flow (Retake / Save / Publish)
 
-Currently `src/config/features.ts` exports `export const DEV_MODE = true;` as a hardcoded constant. We will:
+Today `CameraStudio.handleRecordingComplete` auto-uploads the blob as soon as `MediaRecorder.onstop` fires. We will insert a **Review Sheet** between "stop" and "upload".
 
-### 2a. Default off + runtime override
-- Change `DEV_MODE` constant to `false` (production safe).
-- Add `src/hooks/useDevMode.tsx` — reads `platform_state.dev_mode` via the same pattern as `useTiersEnabled` (TanStack Query + Realtime subscription, default `'false'`).
-- Add helper `getDevModeSync()` for non-React call sites by listening to the same query cache.
+**New component:** `src/components/camera/RecordingReviewSheet.tsx`
+- Full-screen overlay on top of the studio
+- Local `<video>` previewing the just-recorded `Blob` via `URL.createObjectURL`
+- Scrubber, play/pause, mute, duration
+- Three primary actions:
+  - **Retake** → discard blob, return to live preview, reset timer
+  - **Save Draft** → upload to R2 + insert `creations`/`creator_content` row with `is_published: false` (new column, default `true` for backward compat)
+  - **Publish** → existing upload + Cloudflare Stream ingest path, marked published
+- Secondary: **Add Captions** (opens Caption Editor — section 2)
+- Title + description inputs (pre-filled with current placeholder)
+- Thumbnail picker: grab 3 frames via `<canvas>` at 25/50/75% and let user pick
 
-### 2b. Migrate call sites
-Files using `DEV_MODE` (already located):
-- `src/hooks/useSubscriptionLimits.tsx`
-- `src/pages/CreateBattle.tsx`
-- `src/components/battles/AcceptChallengeModal.tsx`
-- `src/components/battles/ChallengeFeed.tsx`
+**Wiring in `CameraStudio.tsx`:**
+- Replace `mr.onstop = () => handleRecordingComplete()` with `mr.onstop = () => setPendingBlob(...)` which opens the sheet
+- Move all upload logic out of inline handler into `uploadRecording(blob, { publish, captions, thumbnail })`
 
-Each is updated to call `const { devMode } = useDevMode();` (or sync helper) instead of the constant. Behavior identical when flag is true; default false means production behaves as if DEV is off.
-
-### 2c. Sovereign HQ control
-- Extend `KillSwitchPanel.tsx` with a **"Developer Mode"** card (same visual pattern as Tier System / Quick Play). Confirms with typed `DISABLE` / `ENABLE`.
-- Extend `supabase/functions/sovereign-system-control/index.ts` with two actions: `dev_mode_enable`, `dev_mode_disable` (upserts `platform_state` key `dev_mode`, writes audit log entry).
-- Extend `KillSwitchPanelProps.platformState` type with `dev_mode?: { value: string }`.
-
----
-
-## 3. Build safety guardrails
-
-- All new files are additive; existing exports preserved.
-- `react-helmet` already in deps (used by current landing page) — no new packages needed.
-- New components are tree-shakeable and only imported by `BookBarberLanding.tsx` and (eventually) the future analytics dashboard.
-- Sitemap generator untouched.
-- After implementation: run typecheck via build, view preview, fire test event to confirm `seo_events` insert.
+**DB migration:**
+- Add `is_published BOOLEAN DEFAULT true`, `captions_vtt TEXT`, `thumbnail_url TEXT` to `creations` and `creator_content` (if not present)
+- Add RLS: barber can SELECT/UPDATE own drafts; public sees only `is_published = true`
 
 ---
 
-## Files to touch
+## 2. Caption Authoring + Burned/Sidecar Display
 
-**Create**
-- `src/components/seo/SeoFAQ.tsx`
-- `src/components/seo/CityCopyBlock.tsx`
-- `src/components/seo/InternalLinkGrid.tsx`
-- `src/components/seo/BreadcrumbsNav.tsx`
-- `src/lib/seoAnalytics.ts`
-- `src/hooks/useDevMode.tsx`
-- `supabase/migrations/<ts>_seo_events_and_dev_mode.sql`
+**Editor:** `src/components/camera/CaptionEditor.tsx`
+- Opens from the review sheet
+- Timeline strip with the local video
+- "Add caption at current time" → row with start/end (seconds) + text
+- Live preview overlays caption on the video using a positioned div
+- Export to **WebVTT** string
 
-**Edit**
-- `src/data/seoCities.ts` (enrich)
-- `src/pages/seo/BookBarberLanding.tsx` (compose new components + tracking)
-- `src/config/features.ts` (`DEV_MODE = false`)
-- `src/hooks/useSubscriptionLimits.tsx`
-- `src/pages/CreateBattle.tsx`
-- `src/components/battles/AcceptChallengeModal.tsx`
-- `src/components/battles/ChallengeFeed.tsx`
-- `src/components/sovereign/KillSwitchPanel.tsx` (Dev Mode card)
-- `supabase/functions/sovereign-system-control/index.ts` (dev_mode actions)
+**Storage strategy (sidecar, not burned in):**
+- Save `.vtt` text to a new `captions` column on the media row (`captions_vtt TEXT`)
+- Cheaper, editable later, and respects accessibility
+- Burned-in captions would require ffmpeg in an Edge Function — out of scope; sidecar gives equivalent UX
+
+**Playback rendering:**
+- Extend `CloudflareStreamPlayer` to accept `captionsVtt?: string`
+- For Cloudflare Stream: upload VTT track via `/stream/:uid/captions/:lang` in a follow-up call from `upload-to-cloudflare-stream` once `streamUid` is known
+- For native `<video>` fallback: render `<track kind="subtitles" srcLang="en" default src={blobUrlFromVtt}>`
 
 ---
 
-## Out of scope (ask if wanted)
-- Sovereign HQ analytics dashboard reading `seo_events` (charts / top cities). Can be a follow-up.
-- Server-side rendering for crawlers that don't run JS (would require migrating off pure Vite SPA).
-- Programmatic neighborhood landing pages (`/book-barber/:city/:neighborhood`) — bigger scope.
+## 3. Enterprise-Grade Playback (the "why is it laggy" fix)
+
+Root causes in the current setup:
+
+1. **`creations` legacy rows** play the raw R2 MP4 via native `<video>` — single bitrate, no ABR, full file pulled, no edge caching tuned for video
+2. **`CloudflareStreamPlayer`** uses `@cloudflare/stream-react` which is fine but we never:
+   - Set a proper `poster` (cold-start jank)
+   - Preload metadata for the next item in feeds (no prefetch)
+   - Pause off-screen videos (multiple decoders fight for GPU)
+3. **WatchFeed** (vertical TikTok-style) keeps every mounted video decoding — biggest perf killer on mobile
+4. R2 fallback URLs aren't served through Cloudflare's video-optimized cache rules
+
+**Fixes:**
+
+### 3a. Force CF Stream for all new videos (already happening) + backfill
+- Add `scripts/backfill-cloudflare-stream.ts` that finds `creations` / `creator_content` / `battle_submissions` rows with `media_url` but no `cloudflare_stream_uid` and invokes the existing `upload-to-cloudflare-stream` function in batches
+- Surface progress in Sovereign HQ → new "Media Pipeline" card
+
+### 3b. Smart player upgrade — `src/components/video/SmartVideoPlayer.tsx`
+Wraps `CloudflareStreamPlayer` and adds:
+- **IntersectionObserver** — only the video with ≥60% visibility plays; others pause and release decoder
+- **Preload neighbor** — when item N enters, prefetch poster + first HLS segment of N+1 (via `<link rel="prefetch">`)
+- **Adaptive quality hints** — pass `preload="metadata"` + `defaultTextTrack="en"`
+- **Buffering telemetry** — log stall events to `seo_events` table (reuse from prior SEO work) for later optimization
+- **Single-decoder guarantee** — global Zustand store tracks the currently-playing video id; mounting a new one pauses the previous
+
+### 3c. WatchFeed refactor
+- Replace direct `<video>` usage with `<SmartVideoPlayer>`
+- Virtualize the list so only ±2 items around the active one are mounted (use `@tanstack/react-virtual`, already used elsewhere or add it)
+
+### 3d. R2 fallback tuning
+- Add `Cache-Control: public, max-age=31536000, immutable` on the presigned-PUT response in `get-r2-presigned-url` so CF edge caches segments
+- Document required Cloudflare rule: enable "Cache Everything" + tiered cache on the R2 custom domain
+
+### 3e. Posters
+- During recording review, save the chosen thumbnail to a new `thumbnail_url` column
+- `SmartVideoPlayer` always renders the poster first → eliminates black flash
+
+---
+
+## File Inventory
+
+**Created**
+- `src/components/camera/RecordingReviewSheet.tsx`
+- `src/components/camera/CaptionEditor.tsx`
+- `src/components/camera/ThumbnailPicker.tsx`
+- `src/components/video/SmartVideoPlayer.tsx`
+- `src/stores/activeVideoStore.ts` (Zustand, single-decoder guard)
+- `scripts/backfill-cloudflare-stream.ts`
+- `supabase/migrations/<ts>_media_review_and_captions.sql`
+
+**Modified**
+- `src/pages/CameraStudio.tsx` — split upload from stop, open review sheet
+- `src/components/CloudflareStreamPlayer.tsx` — accept `captionsVtt`, `posterUrl`, expose play/pause via ref
+- `src/pages/WatchFeed.tsx` — virtualize + use SmartVideoPlayer
+- `src/components/profiles/PortfolioManager.tsx` — render via SmartVideoPlayer
+- `src/components/battles/SubmissionPreview.tsx` — same
+- `src/components/VideoPlayer.tsx` — same
+- `supabase/functions/get-r2-presigned-url/index.ts` — set Cache-Control
+- `supabase/functions/upload-to-cloudflare-stream/index.ts` — also upload VTT track when present
+- `src/components/sovereign/` — add MediaPipelinePanel showing backfill progress
+
+**DB columns added**
+- `creations`: `is_published`, `captions_vtt`, `thumbnail_url`
+- `creator_content`: `captions_vtt`, `thumbnail_url`
+- `battle_submissions`: `captions_vtt`, `thumbnail_url`
+
+---
+
+## Out of scope
+- Server-side caption burn-in (would need ffmpeg in a worker)
+- AI auto-captions (can be added later via Whisper)
+- DRM / signed playback URLs
+- Native iOS app changes

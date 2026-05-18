@@ -18,12 +18,14 @@ interface CloudflareStreamPlayerProps {
   processingMessage?: string;
   /** Called when the video finishes playing */
   onEnded?: () => void;
+  /** Sidecar WebVTT captions (only applied to the native <video> fallback path) */
+  captionsVtt?: string | null;
 }
 
 /**
  * Unified VOD player:
  *  1. Cloudflare Stream <Stream> component (adaptive HLS) when streamUid is set
- *  2. Native <video> fallback for R2 URLs
+ *  2. Native <video> fallback for R2 URLs (with optional sidecar WebVTT captions)
  *  3. Polished transcoding/processing state when neither is available
  */
 export const CloudflareStreamPlayer = ({
@@ -37,7 +39,18 @@ export const CloudflareStreamPlayer = ({
   className = '',
   processingMessage = 'Optimizing for high-quality playback…',
   onEnded,
+  captionsVtt,
 }: CloudflareStreamPlayerProps) => {
+  // Sidecar VTT blob URL for the fallback player
+  const vttUrl = (() => {
+    if (!captionsVtt) return null;
+    try {
+      return URL.createObjectURL(new Blob([captionsVtt], { type: 'text/vtt' }));
+    } catch {
+      return null;
+    }
+  })();
+
   // Priority 1: Cloudflare Stream adaptive player
   if (streamUid) {
     return (
@@ -71,7 +84,9 @@ export const CloudflareStreamPlayer = ({
           className="w-full h-full object-cover"
           preload="metadata"
           onEnded={onEnded}
-        />
+        >
+          {vttUrl && <track kind="subtitles" srcLang="en" src={vttUrl} default />}
+        </video>
       </div>
     );
   }

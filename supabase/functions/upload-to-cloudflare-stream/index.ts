@@ -47,10 +47,11 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { sourceUrl, table, recordId } = body as {
+    const { sourceUrl, table, recordId, captionsVtt } = body as {
       sourceUrl?: string;
       table?: string;
       recordId?: string;
+      captionsVtt?: string | null;
     };
 
     if (!sourceUrl || !table || !recordId) {
@@ -109,6 +110,26 @@ Deno.serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Optional: upload sidecar WebVTT captions track to Cloudflare Stream
+    if (captionsVtt && captionsVtt.trim()) {
+      try {
+        const form = new FormData();
+        form.append("file", new Blob([captionsVtt], { type: "text/vtt" }), "captions.vtt");
+        const cap = await fetch(
+          `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/stream/${streamUid}/captions/en`,
+          {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${cfApiToken}` },
+            body: form,
+          }
+        );
+        if (!cap.ok) console.warn("Caption upload failed:", await cap.text());
+      } catch (e) {
+        console.warn("Caption upload error (non-fatal):", e);
+      }
+    }
+
 
     return new Response(
       JSON.stringify({ uid: streamUid, status: cfData.result.status?.state || "queued" }),
