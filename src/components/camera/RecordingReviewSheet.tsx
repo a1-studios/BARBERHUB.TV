@@ -99,6 +99,10 @@ export function RecordingReviewSheet({
                 <CaptionEditor videoUrl={videoUrl} captions={captions} onChange={setCaptions} />
               </TabsContent>
 
+              <TabsContent value="text" className="mt-4">
+                <TextOverlayEditor videoUrl={videoUrl} overlays={textOverlays} onChange={setTextOverlays} />
+              </TabsContent>
+
               <TabsContent value="thumb" className="mt-4">
                 <ThumbnailPicker
                   videoUrl={videoUrl}
