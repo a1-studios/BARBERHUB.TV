@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Loader2, RotateCcw, Save, Send, Type, Image as ImageIcon, Eye } from 'lucide-react';
+import { Loader2, RotateCcw, Save, Send, Type, Image as ImageIcon, Eye, TextCursorInput } from 'lucide-react';
 import { ThumbnailPicker } from './ThumbnailPicker';
 import { CaptionEditor, captionsToVtt, type Caption } from './CaptionEditor';
+import { TextOverlayEditor, type TextOverlay } from './TextOverlayEditor';
 
 export interface ReviewResult {
+  textOverlays: TextOverlay[];
   publish: boolean;
   title: string;
   description: string;
@@ -42,6 +44,7 @@ export function RecordingReviewSheet({
   const [description, setDescription] = useState('');
   const [captions, setCaptions] = useState<Caption[]>([]);
   const [thumbnail, setThumbnail] = useState<string | null>(null);
+  const [textOverlays, setTextOverlays] = useState<TextOverlay[]>([]);
 
   const handle = async (publish: boolean) => {
     await onSubmit({
@@ -50,6 +53,7 @@ export function RecordingReviewSheet({
       description,
       captionsVtt: captions.length ? captionsToVtt(captions) : null,
       thumbnailDataUrl: thumbnail,
+      textOverlays,
     });
   };
 
@@ -63,9 +67,10 @@ export function RecordingReviewSheet({
         {videoUrl && (
           <div className="px-4 pb-4 overflow-y-auto">
             <Tabs defaultValue="preview">
-              <TabsList className="grid grid-cols-3 w-full">
+              <TabsList className="grid grid-cols-4 w-full">
                 <TabsTrigger value="preview"><Eye className="h-3 w-3 mr-1" /> Preview</TabsTrigger>
                 <TabsTrigger value="captions"><Type className="h-3 w-3 mr-1" /> Captions</TabsTrigger>
+                <TabsTrigger value="text"><TextCursorInput className="h-3 w-3 mr-1" /> Text</TabsTrigger>
                 <TabsTrigger value="thumb"><ImageIcon className="h-3 w-3 mr-1" /> Cover</TabsTrigger>
               </TabsList>
 
@@ -92,6 +97,10 @@ export function RecordingReviewSheet({
 
               <TabsContent value="captions" className="mt-4">
                 <CaptionEditor videoUrl={videoUrl} captions={captions} onChange={setCaptions} />
+              </TabsContent>
+
+              <TabsContent value="text" className="mt-4">
+                <TextOverlayEditor videoUrl={videoUrl} overlays={textOverlays} onChange={setTextOverlays} />
               </TabsContent>
 
               <TabsContent value="thumb" className="mt-4">
