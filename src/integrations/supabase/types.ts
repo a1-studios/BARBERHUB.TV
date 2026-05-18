@@ -3715,6 +3715,45 @@ export type Database = {
           },
         ]
       }
+      seo_events: {
+        Row: {
+          city_slug: string | null
+          created_at: string
+          event_name: string
+          id: string
+          path: string | null
+          props: Json
+          referrer: string | null
+          service_slug: string | null
+          session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          city_slug?: string | null
+          created_at?: string
+          event_name: string
+          id?: string
+          path?: string | null
+          props?: Json
+          referrer?: string | null
+          service_slug?: string | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          city_slug?: string | null
+          created_at?: string
+          event_name?: string
+          id?: string
+          path?: string | null
+          props?: Json
+          referrer?: string | null
+          service_slug?: string | null
+          session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       skill_memory: {
         Row: {
           confidence: number | null

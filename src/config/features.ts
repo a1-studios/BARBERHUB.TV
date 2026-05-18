@@ -1,7 +1,9 @@
 // Feature flags to control which elements appear in the app
 
-// 🔴 MASTER SWITCH — set to false before going live
-export const DEV_MODE = true;
+// 🔴 LEGACY constant — kept for backward compatibility only.
+// Runtime developer mode is now controlled from Sovereign HQ via
+// the `dev_mode` platform_state flag. Use `useDevMode()` instead.
+export const DEV_MODE = false;
 
 export const FEATURES = {
   // Header elements

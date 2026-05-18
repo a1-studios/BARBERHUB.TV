@@ -9,7 +9,7 @@ const corsHeaders = {
 const SOVEREIGN_EMAIL = Deno.env.get('SOVEREIGN_EMAIL') || 'a1studios.film@gmail.com';
 
 interface SystemRequest {
-  action: 'get_status' | 'pause_battles' | 'resume_battles' | 'freeze_economy' | 'unfreeze_economy' | 'maintenance_mode' | 'exit_maintenance' | 'get_audit_log' | 'get_platform_stats' | 'enforce_tiers_on' | 'enforce_tiers_off' | 'tiers_enable' | 'tiers_disable' | 'challenge_stakes_enable' | 'challenge_stakes_disable' | 'challenge_set_min_stake' | 'quick_play_enable' | 'quick_play_disable' | 'quick_play_feed_enable' | 'quick_play_feed_disable';
+  action: 'get_status' | 'pause_battles' | 'resume_battles' | 'freeze_economy' | 'unfreeze_economy' | 'maintenance_mode' | 'exit_maintenance' | 'get_audit_log' | 'get_platform_stats' | 'enforce_tiers_on' | 'enforce_tiers_off' | 'tiers_enable' | 'tiers_disable' | 'challenge_stakes_enable' | 'challenge_stakes_disable' | 'challenge_set_min_stake' | 'quick_play_enable' | 'quick_play_disable' | 'quick_play_feed_enable' | 'quick_play_feed_disable' | 'dev_mode_enable' | 'dev_mode_disable';
   reason?: string;
   notes?: string;
   limit?: number;
@@ -376,6 +376,28 @@ serve(async (req) => {
           .upsert({ key: 'quick_play_feed_publish', value: 'false', updated_at: new Date().toISOString(), updated_by: user.id }, { onConflict: 'key' });
         afterState = { quick_play_feed_publish: false };
         result = { success: true, message: 'Quick Play matches will NOT be published to the watch feed.' };
+        break;
+      }
+
+      case 'dev_mode_enable': {
+        beforeState = { dev_mode: false };
+        severity = 'emergency';
+        await supabase
+          .from('platform_state')
+          .upsert({ key: 'dev_mode', value: 'true', updated_at: new Date().toISOString(), updated_by: user.id }, { onConflict: 'key' });
+        afterState = { dev_mode: true };
+        result = { success: true, message: 'Developer Mode ENABLED. Tier limits bypassed platform-wide.' };
+        break;
+      }
+
+      case 'dev_mode_disable': {
+        beforeState = { dev_mode: true };
+        severity = 'critical';
+        await supabase
+          .from('platform_state')
+          .upsert({ key: 'dev_mode', value: 'false', updated_at: new Date().toISOString(), updated_by: user.id }, { onConflict: 'key' });
+        afterState = { dev_mode: false };
+        result = { success: true, message: 'Developer Mode DISABLED. Production gates active.' };
         break;
       }
 
