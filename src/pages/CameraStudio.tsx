@@ -296,38 +296,40 @@ export default function CameraStudio() {
 
       const title = result.title || `Studio ${studioMode} ${new Date().toLocaleDateString()}`;
 
-      const overlayPayload = result.textOverlays.length
-        ? {
-            version: 1,
-            source: { r2_key: filename, r2_url: publicUrl },
-            reference_resolution: { width: 1080, height: 1920 },
-            overlays: result.textOverlays.map((o) => ({
-              id: o.id,
-              type: 'text' as const,
-              text: o.text,
-              style: {
-                font_family: o.font_family,
-                font_size: o.font_size,
-                color: o.color,
-                background: o.background,
-              },
-              position: { x: o.x, y: o.y, anchor: 'center' as const },
-              timing: { start: o.start, end: o.end },
-            })),
-          }
-        : null;
+      const overlayPayload = {
+        version: 2,
+        source: { r2_key: filename, r2_url: publicUrl },
+        reference_resolution:
+          result.aspect === '9:16'
+            ? { width: 1080, height: 1920 }
+            : { width: 1920, height: 1080 },
+        aspect: result.aspect,
+        trim: result.trim,
+        sound: result.sound,
+        overlays: result.textOverlays.map((o) => ({
+          id: o.id,
+          type: 'text' as const,
+          text: o.text,
+          style: {
+            font_family: o.font_family,
+            font_size: o.font_size,
+            color: o.color,
+            background: o.background,
+          },
+          position: { x: o.x, y: o.y, anchor: 'center' as const },
+          timing: { start: o.start, end: o.end },
+        })),
+      };
 
       if (barberProfile) {
         if (studioMode === 'course') {
           const { data: record } = await supabase.from('creator_content').insert({
             creator_id: user.id,
             title,
-            description: result.description || null,
             content_type: 'course_teaser',
             content_category: 'course',
             media_url: publicUrl,
             thumbnail_url: thumbnailUrl,
-            captions_vtt: result.captionsVtt,
             overlay_payload: overlayPayload as any,
             is_published: result.publish,
           }).select('id').single();
@@ -338,7 +340,6 @@ export default function CameraStudio() {
                 sourceUrl: publicUrl,
                 table: 'creator_content',
                 recordId: record.id,
-                captionsVtt: result.captionsVtt,
                 overlayPayload,
               },
             }).catch((err: any) => console.error('CF Stream ingest error:', err));
@@ -349,11 +350,9 @@ export default function CameraStudio() {
             barber_id: barberProfile.id,
             media_url: publicUrl,
             thumbnail_url: thumbnailUrl,
-            captions_vtt: result.captionsVtt,
             overlay_payload: overlayPayload as any,
             category,
             title,
-            description: result.description || null,
             is_published: result.publish,
           }).select('id').single();
 
@@ -363,7 +362,6 @@ export default function CameraStudio() {
                 sourceUrl: publicUrl,
                 table: 'creations',
                 recordId: record.id,
-                captionsVtt: result.captionsVtt,
                 overlayPayload,
               },
             }).catch((err: any) => console.error('CF Stream ingest error:', err));
