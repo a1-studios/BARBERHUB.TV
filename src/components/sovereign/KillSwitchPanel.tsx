@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, Pause, Play, Lock, Unlock, Wrench, ShieldCheck, Layers, Coins, Save, Swords } from 'lucide-react';
+import { AlertTriangle, Pause, Play, Lock, Unlock, Wrench, ShieldCheck, Layers, Coins, Save, Swords, Code2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -26,6 +26,7 @@ interface KillSwitchPanelProps {
     challenge_min_stake_bb?: { value: string };
     quick_play_enabled?: { value: string };
     quick_play_feed_publish?: { value: string };
+    dev_mode?: { value: string };
   };
   onRefresh: () => void;
 }
@@ -54,6 +55,8 @@ const KillSwitchPanel = ({ platformState, onRefresh }: KillSwitchPanelProps) => 
   // Quick Play feed publish — default OFF (only ON when explicitly 'true')
   const quickPlayFeedEnabled = platformState?.quick_play_feed_publish?.value === 'true';
   const minStakeFromState = parseInt(platformState?.challenge_min_stake_bb?.value || '100', 10) || 100;
+  // Developer Mode — default OFF (only enabled when explicitly 'true')
+  const devModeEnabled = platformState?.dev_mode?.value === 'true';
   const [minStakeInput, setMinStakeInput] = useState<number>(minStakeFromState);
   const [savingMinStake, setSavingMinStake] = useState(false);
 
@@ -385,7 +388,41 @@ const KillSwitchPanel = ({ platformState, onRefresh }: KillSwitchPanelProps) => 
               </div>
             )}
           </div>
+
+          {/* Developer Mode — Sovereign-controlled */}
+          <div className="p-4 rounded-lg bg-[#0a0a0f] border border-white/[0.06]">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-white/40 uppercase tracking-wider">Developer Mode</span>
+              <div className="flex items-center gap-1.5">
+                <div className={`h-1.5 w-1.5 rounded-full ${devModeEnabled ? 'bg-orange-500' : 'bg-green-500'}`} />
+                <span className={`text-[10px] ${devModeEnabled ? 'text-orange-500' : 'text-green-400'}`}>
+                  {devModeEnabled ? 'ENABLED (DEV)' : 'PRODUCTION'}
+                </span>
+              </div>
+            </div>
+            <p className="text-[10px] text-white/30 mb-2 leading-snug">
+              Bypasses tier limits, subscription checks, and gating across the entire app. Keep OFF in production.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full border-white/10 text-white hover:bg-white/[0.04] bg-transparent"
+              disabled={loading}
+              onClick={() => openConfirmDialog(
+                devModeEnabled ? 'dev_mode_disable' : 'dev_mode_enable',
+                devModeEnabled ? 'Disable Developer Mode' : 'Enable Developer Mode',
+                devModeEnabled
+                  ? 'Production gates will re-engage. Free users will hit tier limits, premium prompts will appear. Type DISABLE to confirm.'
+                  : 'ALL tier limits, subscription checks, and gating will be bypassed platform-wide. ONLY for QA/staging. Type ENABLE to confirm.',
+                devModeEnabled ? 'DISABLE' : 'ENABLE'
+              )}
+            >
+              <Code2 className="h-3 w-3 mr-2" />
+              {devModeEnabled ? 'Disable Dev Mode' : 'Enable Dev Mode'}
+            </Button>
+          </div>
         </div>
+
 
       {/* Confirmation Dialog */}
       <AlertDialog open={confirmDialog?.open} onOpenChange={() => setConfirmDialog(null)}>
