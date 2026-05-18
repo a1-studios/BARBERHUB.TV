@@ -425,6 +425,42 @@ serve(async (req) => {
         break;
       }
 
+      case 'run_media_backfill': {
+        severity = 'normal';
+        const VIDEO_EXT = /\.(mp4|mov|webm|m4v)(\?.*)?$/i;
+        const tables = ['creations', 'creator_content', 'battle_submissions'];
+        const batchCap = Math.min(50, Math.max(1, Number(limit) || 25));
+        let queued = 0;
+        const failures: any[] = [];
+
+        for (const table of tables) {
+          if (queued >= batchCap) break;
+          const remaining = batchCap - queued;
+          const { data: rows } = await supabase
+            .from(table)
+            .select('id, media_url')
+            .is('cloudflare_stream_uid', null)
+            .not('media_url', 'is', null)
+            .limit(remaining * 2);
+          const eligible = (rows ?? []).filter((r: any) =>
+            typeof r.media_url === 'string' && /^https?:\/\//.test(r.media_url) && VIDEO_EXT.test(r.media_url)
+          ).slice(0, remaining);
+
+          for (const row of eligible) {
+            const res = await supabase.functions.invoke('upload-to-cloudflare-stream', {
+              body: { sourceUrl: row.media_url, table, recordId: row.id },
+            });
+            if (res.error) failures.push({ table, id: row.id, error: res.error.message });
+            else queued++;
+          }
+        }
+
+        beforeState = {};
+        afterState = { queued, failures: failures.length };
+        result = { success: true, queued, failures };
+        break;
+      }
+
       default:
         throw new Error(`Unknown action: ${action}`);
     }
