@@ -4,11 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Loader2, RotateCcw, Save, Send, Type, Image as ImageIcon, Eye } from 'lucide-react';
+import { Loader2, RotateCcw, Save, Send, Type, Image as ImageIcon, Eye, TextCursorInput } from 'lucide-react';
 import { ThumbnailPicker } from './ThumbnailPicker';
 import { CaptionEditor, captionsToVtt, type Caption } from './CaptionEditor';
+import { TextOverlayEditor, type TextOverlay } from './TextOverlayEditor';
 
 export interface ReviewResult {
+  textOverlays: TextOverlay[];
   publish: boolean;
   title: string;
   description: string;
