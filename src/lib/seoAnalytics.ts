@@ -2,8 +2,8 @@ import { supabase } from '@/integrations/supabase/client';
 
 declare global {
   interface Window {
-    gtag?: (...args: any[]) => void;
-    fbq?: (...args: any[]) => void;
+    gtag?: (...args: unknown[]) => void;
+    fbq?: (...args: unknown[]) => void;
   }
 }
 
@@ -56,7 +56,7 @@ export async function trackSeoEvent(eventName: string, props: SeoEventProps = {}
   // First-party storage
   try {
     const { data: { user } } = await supabase.auth.getUser();
-    await supabase.from('seo_events').insert({
+    await supabase.from('seo_events').insert([{
       event_name: eventName,
       path,
       city_slug: (props.city_slug as string | null) ?? null,
@@ -65,7 +65,7 @@ export async function trackSeoEvent(eventName: string, props: SeoEventProps = {}
       user_id: user?.id ?? null,
       session_id: getSessionId(),
       props: props as Record<string, unknown>,
-    });
+    }]);
   } catch {
     // ignore — analytics must never break UX
   }
