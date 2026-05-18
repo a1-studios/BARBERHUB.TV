@@ -47,10 +47,11 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { sourceUrl, table, recordId } = body as {
+    const { sourceUrl, table, recordId, captionsVtt } = body as {
       sourceUrl?: string;
       table?: string;
       recordId?: string;
+      captionsVtt?: string | null;
     };
 
     if (!sourceUrl || !table || !recordId) {

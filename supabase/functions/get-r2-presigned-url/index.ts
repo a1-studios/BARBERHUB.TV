@@ -61,6 +61,8 @@ serve(async (req) => {
       Bucket: BUCKET,
       Key: key,
       ContentType: contentType || "application/octet-stream",
+      // Long-lived edge cache — videos are immutable per key (we always mint new keys)
+      CacheControl: "public, max-age=31536000, immutable",
     });
 
     const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
