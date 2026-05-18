@@ -64,7 +64,7 @@ export async function trackSeoEvent(eventName: string, props: SeoEventProps = {}
       referrer,
       user_id: user?.id ?? null,
       session_id: getSessionId(),
-      props: props as Record<string, unknown>,
+      props: JSON.parse(JSON.stringify(props)),
     }]);
   } catch {
     // ignore — analytics must never break UX
