@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "predev": "bunx tsx scripts/generate-sitemap.ts",
-    "prebuild": "bunx tsx scripts/generate-sitemap.ts"
+    "prebuild": "bunx tsx scripts/generate-sitemap.ts",
+    "backfill:cf-stream": "bunx tsx scripts/backfill-cloudflare-stream.ts"
   },
   "dependencies": {
     "@cloudflare/stream-react": "^1.9.3",
