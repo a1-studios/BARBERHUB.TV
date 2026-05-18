@@ -1,114 +1,119 @@
 ## Goal
 
-Ship the complete PWA notification + install funnel: persistent push subscriptions, server-side fan-out via Web Push, an iOS install nudge, an opt-in toggle, and a custom service worker that handles `push` and `notificationclick` events.
+Finish the SEO booking funnel started in `BookBarberLanding.tsx`, add proper analytics tracking, and move `DEV_MODE` from a hardcoded flag to a Sovereign-HQ-controlled kill switch (defaulting OFF in production).
 
-## 1. Database (Supabase migration)
+---
 
-Create two tables (RLS-secured, owner-scoped):
+## 1. SEO Engine Completion
 
-- `**push_subscriptions**`
-  - `id uuid pk`, `user_id uuid` (FK profiles, indexed)
-  - `endpoint text unique not null` — the URL inside the subscription, used for upsert keying
-  - `subscription jsonb not null` — full PushSubscription JSON (keys, endpoint, expirationTime)
-  - `user_agent text`, `platform text` (ios | android | desktop)
-  - `last_seen_at timestamptz`, `created_at timestamptz`
-  - RLS: owner can `SELECT/INSERT/UPDATE/DELETE` rows where `user_id = auth.uid()`. Service role (edge functions) implicitly bypasses.
-- We already have `notifications` (in-app feed). We will **not** duplicate it; the new edge function reads `push_subscriptions` and pushes the same payload that's also written to `notifications` so both in-app + native alerts stay in sync.
+### 1a. City copy enrichment (`src/data/seoCities.ts`)
+Extend each city record with editorial fields used by the landing page:
+- `tagline` (one-line hook), `intro` (2–3 sentence paragraph), `neighborhoods: string[]` (4–6 popular areas), `avgPriceUsd`, `popularServiceSlugs: string[]`.
+Backfill the existing 25 cities with realistic copy (e.g. NYC neighborhoods: Williamsburg, SoHo, Harlem, LES, Astoria).
 
-## 2. Edge function: `send-push`
+### 1b. New shared components (`src/components/seo/`)
+- **`SeoFAQ.tsx`** — accessible accordion with structured `Q/A` props; renders both visible UI and emits the JSON-LD already produced in the page. Move the inline FAQ markup from `BookBarberLanding` into it.
+- **`CityCopyBlock.tsx`** — long-form section using the new `intro`, `neighborhoods` list, and "average price" stat. Replaces the thin "Why book online" cards on city/service pages (kept on the national hub).
+- **`InternalLinkGrid.tsx`** — two grids: "Other cities" (sibling cities, alphabetical, 12 max) and "Other services in {city}" (when on a service page). Improves crawl depth & internal PageRank distribution. Replaces the bare anchor lists currently at the bottom of `BookBarberLanding`.
+- **`BreadcrumbsNav.tsx`** — visible breadcrumb trail matching the existing JSON-LD `BreadcrumbList`.
 
-`supabase/functions/send-push/index.ts`
+`BookBarberLanding.tsx` is refactored to compose these (no behavior loss; tags, canonical, helmet untouched).
 
-- Auth: requires service-role caller (used from triggers / other edge functions) OR a JWT user calling for themselves (e.g. self-test). Validates with Zod.
-- Body: `{ user_ids: string[], title: string, body: string, url?: string, icon?: string, tag?: string, data?: Record<string, unknown> }`
-- Uses `npm:web-push@3` with `VAPID_SUBJECT`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` from `Deno.env`.
-- Loads all rows in `push_subscriptions` for the given users, sends in parallel, removes any subscription returning `404/410` (Gone) so dead endpoints don't pile up.
-- Returns `{ sent, failed, removed }`.
+### 1c. Analytics & tracking
+- **`src/lib/seoAnalytics.ts`** — thin wrapper exposing `trackSeoEvent(name, props)` that fans out to: `gtag` (if `window.gtag` present), `fbq` (Meta Pixel — already gated), and a Supabase insert into a new `seo_events` table for first-party attribution.
+- Instrument:
+  - `seo_landing_view` on mount (city, service, path)
+  - `seo_cta_click` on "Find Barbers" / "Browse Map"
+  - `seo_internal_link_click` on city/service grid clicks
+  - `seo_faq_open` on FAQ expand
+- Reuse existing `useGoogleAdsPageView` / `useMetaPixelPageView` hooks for pageview firing; only add custom events here.
 
-CORS via `corsHeaders` from `@supabase/supabase-js/cors`. Deploys with `verify_jwt = false` (we validate manually).
-
-## 3. Service worker (`public/sw-push.js`)
-
-vite-plugin-pwa's auto-generated SW handles caching; for **push** we register a separate file using `injectManifest` mode OR we extend with a small custom worker. Simplest: switch `vite-plugin-pwa` to `strategies: 'injectManifest'` with a single `src/sw.ts` that:
-
-- Imports Workbox precache + NetworkFirst (same caching we have today).
-- Adds:
-  ```ts
-  self.addEventListener('push', (event) => {
-    const payload = event.data?.json() ?? {};
-    event.waitUntil(self.registration.showNotification(payload.title || 'Barber-Hub', {
-      body: payload.body,
-      icon: '/web-app-manifest-192x192.png',
-      badge: '/web-app-manifest-192x192.png',
-      tag: payload.tag,
-      data: { url: payload.url || '/', ...payload.data },
-    }));
-  });
-  self.addEventListener('notificationclick', (event) => {
-    event.notification.close();
-    const target = event.notification.data?.url || '/appointments';
-    event.waitUntil((async () => {
-      const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-      for (const c of all) { if ('focus' in c) { c.navigate(target); return c.focus(); } }
-      return self.clients.openWindow(target);
-    })());
-  });
-  ```
-- Default click target = `/appointments` (Profile → My Appointments). Override per-notification with `data.url`.
-
-## 4. Frontend — install nudge (iOS)
-
-New component `src/components/pwa/IOSInstallPrompt.tsx`:
-
-- Detection: `/iphone|ipad|ipod/i.test(ua)` AND `!window.matchMedia('(display-mode: standalone)').matches` AND `!window.navigator.standalone`.
-- Skip in Lovable preview / iframe (reuse guards from `pwa.ts`).
-- Skip if `localStorage['bh_install_dismissed_until']` timestamp is in the future.
-- Mounted globally in `App.tsx`. After 10 s timeout, opens a `Dialog` with branded copy + screenshot of Share → Add to Home Screen.
-- Copy: **"Never miss a booking. Install Barber-Hub to your home screen for real-time schedule updates."**
-- Buttons:
-  - "Show me how" → expands a 3-step illustrated guide (Share icon → Add to Home Screen → Add).
-  - "Dismiss" → sets `bh_install_dismissed_until = Date.now() + 24*3600*1000`, closes dialog.
-- Android/desktop fallback: listen for `beforeinstallprompt`, stash the event, show a smaller bottom-sheet CTA on next session.
-
-## 5. Frontend — Notification Settings toggle
-
-New component `src/components/settings/NotificationToggle.tsx`, mounted inside Profile → Settings (next to existing controls):
-
-- Reads current state from `navigator.serviceWorker.getRegistration().pushManager.getSubscription()`.
-- ON: calls `subscribeToPush()` → upserts into `push_subscriptions` keyed on `endpoint` (so multiple devices per user are supported). Stores `user_agent`, `platform`.
-- OFF: `subscription.unsubscribe()` and deletes the row by endpoint.
-- Disabled state with helper text on iOS Safari **outside** standalone mode (Apple gates Web Push to installed PWAs); points users back to the install prompt.
-
-## 6. Hardware permission persistence (camera/mic)
-
-- Once the app is installed (standalone), Safari/Chrome treat origin permissions as durable, but our code re-prompts on every mount in some places. Adjust `src/hooks/useCameraPermission.tsx` to:
-  - Use `navigator.permissions.query({ name: 'camera' })` and `'microphone'` first; only call `getUserMedia` if state is `prompt`. If `granted`, skip prompt entirely.
-  - Cache last-known state in `sessionStorage` so re-mounts don't flicker.
-
-## 7. Verification
-
-- `bunx vitest run` on any affected hooks (no new tests required unless you want them).
-- Deploy `send-push`, then call it via `supabase--curl_edge_functions` with a fabricated `user_ids` payload (target the logged-in preview user). Check that:
-  - `notifications` row appears in the in-app bell.
-  - Browser receives and displays the push (only on the **published** domain — not in the editor iframe).
-- Lovable preview won't show the install prompt or push (iframe guard); test on `barberhub-tv.lovable.app`.
-
-## File map
-
-```text
-supabase/migrations/<ts>_push_subscriptions.sql      new
-supabase/functions/send-push/index.ts                new
-public/                                              icons already in place
-src/sw.ts                                            new (injectManifest)
-vite.config.ts                                       switch to injectManifest, srcDir
-src/lib/pwa.ts                                       no change
-src/components/pwa/IOSInstallPrompt.tsx              new
-src/components/settings/NotificationToggle.tsx      new
-src/hooks/useCameraPermission.tsx                    edit (Permissions API)
-src/App.tsx                                          mount IOSInstallPrompt globally
-src/pages/Profile.tsx                                mount NotificationToggle in settings
+### 1d. Database (one migration)
+```sql
+create table public.seo_events (
+  id uuid primary key default gen_random_uuid(),
+  event_name text not null,
+  path text,
+  city_slug text,
+  service_slug text,
+  referrer text,
+  user_id uuid,
+  session_id text,
+  props jsonb default '{}'::jsonb,
+  created_at timestamptz default now()
+);
+alter table public.seo_events enable row level security;
+create policy "anyone can insert seo events"
+  on public.seo_events for insert to anon, authenticated with check (true);
+create policy "sovereign can read seo events"
+  on public.seo_events for select to authenticated
+  using (public.has_role(auth.uid(), 'sovereign'));
+create index seo_events_created_idx on public.seo_events(created_at desc);
+create index seo_events_path_idx on public.seo_events(path);
 ```
 
-## Open question
+---
 
-Where should `NotificationToggle` live in the UI — inside **Profile → Account settings** list, or as a standalone row at the top of the notifications bell panel? Default is Profile settings unless you say otherwise. they should be in the users profile 
+## 2. DEV_MODE → Sovereign Kill Switch
+
+Currently `src/config/features.ts` exports `export const DEV_MODE = true;` as a hardcoded constant. We will:
+
+### 2a. Default off + runtime override
+- Change `DEV_MODE` constant to `false` (production safe).
+- Add `src/hooks/useDevMode.tsx` — reads `platform_state.dev_mode` via the same pattern as `useTiersEnabled` (TanStack Query + Realtime subscription, default `'false'`).
+- Add helper `getDevModeSync()` for non-React call sites by listening to the same query cache.
+
+### 2b. Migrate call sites
+Files using `DEV_MODE` (already located):
+- `src/hooks/useSubscriptionLimits.tsx`
+- `src/pages/CreateBattle.tsx`
+- `src/components/battles/AcceptChallengeModal.tsx`
+- `src/components/battles/ChallengeFeed.tsx`
+
+Each is updated to call `const { devMode } = useDevMode();` (or sync helper) instead of the constant. Behavior identical when flag is true; default false means production behaves as if DEV is off.
+
+### 2c. Sovereign HQ control
+- Extend `KillSwitchPanel.tsx` with a **"Developer Mode"** card (same visual pattern as Tier System / Quick Play). Confirms with typed `DISABLE` / `ENABLE`.
+- Extend `supabase/functions/sovereign-system-control/index.ts` with two actions: `dev_mode_enable`, `dev_mode_disable` (upserts `platform_state` key `dev_mode`, writes audit log entry).
+- Extend `KillSwitchPanelProps.platformState` type with `dev_mode?: { value: string }`.
+
+---
+
+## 3. Build safety guardrails
+
+- All new files are additive; existing exports preserved.
+- `react-helmet` already in deps (used by current landing page) — no new packages needed.
+- New components are tree-shakeable and only imported by `BookBarberLanding.tsx` and (eventually) the future analytics dashboard.
+- Sitemap generator untouched.
+- After implementation: run typecheck via build, view preview, fire test event to confirm `seo_events` insert.
+
+---
+
+## Files to touch
+
+**Create**
+- `src/components/seo/SeoFAQ.tsx`
+- `src/components/seo/CityCopyBlock.tsx`
+- `src/components/seo/InternalLinkGrid.tsx`
+- `src/components/seo/BreadcrumbsNav.tsx`
+- `src/lib/seoAnalytics.ts`
+- `src/hooks/useDevMode.tsx`
+- `supabase/migrations/<ts>_seo_events_and_dev_mode.sql`
+
+**Edit**
+- `src/data/seoCities.ts` (enrich)
+- `src/pages/seo/BookBarberLanding.tsx` (compose new components + tracking)
+- `src/config/features.ts` (`DEV_MODE = false`)
+- `src/hooks/useSubscriptionLimits.tsx`
+- `src/pages/CreateBattle.tsx`
+- `src/components/battles/AcceptChallengeModal.tsx`
+- `src/components/battles/ChallengeFeed.tsx`
+- `src/components/sovereign/KillSwitchPanel.tsx` (Dev Mode card)
+- `supabase/functions/sovereign-system-control/index.ts` (dev_mode actions)
+
+---
+
+## Out of scope (ask if wanted)
+- Sovereign HQ analytics dashboard reading `seo_events` (charts / top cities). Can be a follow-up.
+- Server-side rendering for crawlers that don't run JS (would require migrating off pure Vite SPA).
+- Programmatic neighborhood landing pages (`/book-barber/:city/:neighborhood`) — bigger scope.
