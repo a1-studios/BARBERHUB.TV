@@ -399,6 +399,8 @@ export default function BarberPublicProfile() {
     );
   };
 
+  const { data: activeSponsors = [] } = useSponsorAds(true);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
