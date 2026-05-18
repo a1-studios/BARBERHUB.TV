@@ -24,6 +24,9 @@ export const activeVideoStore = {
 import { useEffect, useState } from 'react';
 export function useActiveVideoId() {
   const [id, setId] = useState<string | null>(activeVideoStore.get());
-  useEffect(() => activeVideoStore.subscribe(setId), []);
+  useEffect(() => {
+    const unsub = activeVideoStore.subscribe(setId);
+    return () => { unsub; };
+  }, []);
   return id;
 }
