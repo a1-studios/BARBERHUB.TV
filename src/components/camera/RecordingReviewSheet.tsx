@@ -44,6 +44,7 @@ export function RecordingReviewSheet({
   const [description, setDescription] = useState('');
   const [captions, setCaptions] = useState<Caption[]>([]);
   const [thumbnail, setThumbnail] = useState<string | null>(null);
+  const [textOverlays, setTextOverlays] = useState<TextOverlay[]>([]);
 
   const handle = async (publish: boolean) => {
     await onSubmit({
@@ -52,6 +53,7 @@ export function RecordingReviewSheet({
       description,
       captionsVtt: captions.length ? captionsToVtt(captions) : null,
       thumbnailDataUrl: thumbnail,
+      textOverlays,
     });
   };
 
