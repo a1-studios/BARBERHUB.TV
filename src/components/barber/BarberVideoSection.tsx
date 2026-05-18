@@ -114,7 +114,7 @@ export const BarberVideoSection = ({
           barber_id: barberProfileId,
           media_url: publicUrl,
           category: 'video',
-          title: 'Featured Video',
+          title: file.name.replace(/\.[^.]+$/, '').slice(0, 80) || null,
         });
       }
 
