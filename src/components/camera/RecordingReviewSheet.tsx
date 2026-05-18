@@ -1,20 +1,19 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Loader2, RotateCcw, Save, Send, Type, Image as ImageIcon, Eye, TextCursorInput } from 'lucide-react';
-import { ThumbnailPicker } from './ThumbnailPicker';
-import { CaptionEditor, captionsToVtt, type Caption } from './CaptionEditor';
-import { TextOverlayEditor, type TextOverlay } from './TextOverlayEditor';
+import { Loader2, RotateCcw, Send, Pencil } from 'lucide-react';
+import { type TextOverlay } from './TextOverlayEditor';
+import { EditPanel, type EditState } from './EditPanel';
+import type { SoundChoice } from './SoundPicker';
 
 export interface ReviewResult {
-  textOverlays: TextOverlay[];
   publish: boolean;
   title: string;
-  description: string;
-  captionsVtt: string | null;
+  aspect: '9:16' | '16:9';
+  trim: { start: number; end: number } | null;
+  sound: SoundChoice | null;
+  textOverlays: TextOverlay[];
   thumbnailDataUrl: string | null;
 }
 
@@ -40,102 +39,126 @@ export function RecordingReviewSheet({
   const videoUrl = useMemo(() => (blob ? URL.createObjectURL(blob) : null), [blob]);
   useEffect(() => () => { if (videoUrl) URL.revokeObjectURL(videoUrl); }, [videoUrl]);
 
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
   const [title, setTitle] = useState(defaultTitle);
-  const [description, setDescription] = useState('');
-  const [captions, setCaptions] = useState<Caption[]>([]);
-  const [thumbnail, setThumbnail] = useState<string | null>(null);
-  const [textOverlays, setTextOverlays] = useState<TextOverlay[]>([]);
+  const [aspect, setAspect] = useState<'9:16' | '16:9'>('9:16');
+  const [editOpen, setEditOpen] = useState(false);
+
+  const [edit, setEdit] = useState<EditState>({
+    trim: null,
+    sound: null,
+    textOverlays: [],
+    thumbnail: null,
+  });
 
   const handle = async (publish: boolean) => {
     await onSubmit({
       publish,
       title: title || defaultTitle,
-      description,
-      captionsVtt: captions.length ? captionsToVtt(captions) : null,
-      thumbnailDataUrl: thumbnail,
-      textOverlays,
+      aspect,
+      trim: edit.trim,
+      sound: edit.sound,
+      textOverlays: edit.textOverlays,
+      thumbnailDataUrl: edit.thumbnail,
     });
   };
 
+  const aspectClass = aspect === '9:16' ? 'aspect-[9/16]' : 'aspect-video';
+  const visibleOverlays = edit.textOverlays.filter(
+    (o) => currentTime >= o.start && currentTime <= o.end
+  );
+
   return (
     <Drawer open={!!blob} onOpenChange={(open) => !open && !isUploading && onClose()}>
-      <DrawerContent className="max-h-[92vh]">
-        <DrawerHeader>
-          <DrawerTitle>Review your recording</DrawerTitle>
+      <DrawerContent className="max-h-[95vh]">
+        <DrawerHeader className="py-3">
+          <DrawerTitle className="text-center text-base">Review</DrawerTitle>
         </DrawerHeader>
 
         {videoUrl && (
           <div className="px-4 pb-4 overflow-y-auto">
-            <Tabs defaultValue="preview">
-              <TabsList className="grid grid-cols-4 w-full">
-                <TabsTrigger value="preview"><Eye className="h-3 w-3 mr-1" /> Preview</TabsTrigger>
-                <TabsTrigger value="captions"><Type className="h-3 w-3 mr-1" /> Captions</TabsTrigger>
-                <TabsTrigger value="text"><TextCursorInput className="h-3 w-3 mr-1" /> Text</TabsTrigger>
-                <TabsTrigger value="thumb"><ImageIcon className="h-3 w-3 mr-1" /> Cover</TabsTrigger>
-              </TabsList>
+            {/* Aspect toggle */}
+            <div className="flex justify-center mb-3">
+              <div className="inline-flex rounded-full bg-muted p-1">
+                {(['9:16', '16:9'] as const).map((a) => (
+                  <button
+                    key={a}
+                    onClick={() => setAspect(a)}
+                    className={`px-3 py-1 text-xs rounded-full transition ${
+                      aspect === a ? 'bg-background shadow-sm font-medium' : 'text-muted-foreground'
+                    }`}
+                  >
+                    {a}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-              <TabsContent value="preview" className="space-y-3 mt-4">
-                <div className="relative bg-black rounded-lg overflow-hidden aspect-video">
-                  <video src={videoUrl} controls className="w-full h-full object-contain" />
-                </div>
-                <div className="space-y-2">
-                  <Input
-                    placeholder="Title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    maxLength={80}
-                  />
-                  <Textarea
-                    placeholder="Description (optional)"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    maxLength={280}
-                    rows={2}
-                  />
-                </div>
-              </TabsContent>
-
-              <TabsContent value="captions" className="mt-4">
-                <CaptionEditor videoUrl={videoUrl} captions={captions} onChange={setCaptions} />
-              </TabsContent>
-
-              <TabsContent value="text" className="mt-4">
-                <TextOverlayEditor videoUrl={videoUrl} overlays={textOverlays} onChange={setTextOverlays} />
-              </TabsContent>
-
-              <TabsContent value="thumb" className="mt-4">
-                <ThumbnailPicker
-                  videoUrl={videoUrl}
-                  onSelect={setThumbnail}
-                  selected={thumbnail}
+            {/* Video preview with live overlays */}
+            <div className="flex justify-center">
+              <div
+                className={`relative bg-black rounded-lg overflow-hidden ${aspectClass}`}
+                style={{ maxHeight: '55vh', width: 'auto' }}
+              >
+                <video
+                  ref={videoRef}
+                  src={videoUrl}
+                  controls
+                  playsInline
+                  className="h-full w-full object-contain"
+                  onLoadedMetadata={(e) => setDuration((e.target as HTMLVideoElement).duration || 0)}
+                  onTimeUpdate={(e) => setCurrentTime((e.target as HTMLVideoElement).currentTime)}
                 />
-                <p className="text-[11px] text-muted-foreground mt-2 text-center">
-                  Pick the frame that grabs attention
-                </p>
-              </TabsContent>
-            </Tabs>
+                {visibleOverlays.map((o) => (
+                  <div
+                    key={o.id}
+                    className={`absolute -translate-x-1/2 -translate-y-1/2 px-2 py-1 rounded pointer-events-none ${
+                      o.background === 'solid' ? 'bg-black/80' : ''
+                    }`}
+                    style={{
+                      left: `${o.x * 100}%`,
+                      top: `${o.y * 100}%`,
+                      color: o.color,
+                      fontFamily: `'${o.font_family}', sans-serif`,
+                      fontSize: `${o.font_size * 0.5}px`,
+                      lineHeight: 1.1,
+                      textShadow: o.background === 'none' ? '0 1px 3px rgba(0,0,0,0.6)' : 'none',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {o.text}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Title */}
+            <div className="mt-4">
+              <Input
+                placeholder="Add a title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                maxLength={80}
+                className="text-center"
+              />
+            </div>
 
             {isUploading && (
-              <div className="mt-4 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <div className="mt-3 flex items-center justify-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Uploading… {uploadProgress}%
               </div>
             )}
 
+            {/* Actions */}
             <div className="grid grid-cols-3 gap-2 mt-4 sticky bottom-0 pb-2 bg-background">
-              <Button
-                variant="outline"
-                onClick={onRetake}
-                disabled={isUploading}
-              >
+              <Button variant="outline" onClick={onRetake} disabled={isUploading}>
                 <RotateCcw className="h-4 w-4 mr-1" /> Retake
               </Button>
-              <Button
-                variant="secondary"
-                onClick={() => handle(false)}
-                disabled={isUploading}
-              >
-                <Save className="h-4 w-4 mr-1" /> Save Draft
+              <Button variant="secondary" onClick={() => setEditOpen(true)} disabled={isUploading}>
+                <Pencil className="h-4 w-4 mr-1" /> Edit
               </Button>
               <Button
                 onClick={() => handle(true)}
@@ -146,6 +169,17 @@ export function RecordingReviewSheet({
               </Button>
             </div>
           </div>
+        )}
+
+        {videoUrl && (
+          <EditPanel
+            open={editOpen}
+            onClose={() => setEditOpen(false)}
+            videoUrl={videoUrl}
+            duration={duration}
+            state={edit}
+            onCommit={setEdit}
+          />
         )}
       </DrawerContent>
     </Drawer>
