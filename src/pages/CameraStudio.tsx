@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useBattleVideoRoom } from '@/hooks/useBattleVideoRoom';
 import { ChallengeModal } from '@/components/battles/ChallengeModal';
+import { RecordingReviewSheet, type ReviewResult } from '@/components/camera/RecordingReviewSheet';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -78,6 +79,7 @@ export default function CameraStudio() {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [pendingBlob, setPendingBlob] = useState<Blob | null>(null);
 
   // LiveKit room connection (only when battleId is present)
   const battleRoom = useBattleVideoRoom({ battleId: battleId || 'studio-test' });
