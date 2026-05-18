@@ -434,7 +434,6 @@ export default function BarberPublicProfile() {
   }
 
   const displayName = barberData.display_name || barberData.barber_name;
-  const { data: activeSponsors = [] } = useSponsorAds(true);
   const sponsorPill = activeSponsors?.[0]?.name ?? null;
 
 
