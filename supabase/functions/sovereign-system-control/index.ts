@@ -9,7 +9,7 @@ const corsHeaders = {
 const SOVEREIGN_EMAIL = Deno.env.get('SOVEREIGN_EMAIL') || 'a1studios.film@gmail.com';
 
 interface SystemRequest {
-  action: 'get_status' | 'pause_battles' | 'resume_battles' | 'freeze_economy' | 'unfreeze_economy' | 'maintenance_mode' | 'exit_maintenance' | 'get_audit_log' | 'get_platform_stats' | 'enforce_tiers_on' | 'enforce_tiers_off' | 'tiers_enable' | 'tiers_disable' | 'challenge_stakes_enable' | 'challenge_stakes_disable' | 'challenge_set_min_stake' | 'quick_play_enable' | 'quick_play_disable' | 'quick_play_feed_enable' | 'quick_play_feed_disable' | 'dev_mode_enable' | 'dev_mode_disable';
+  action: 'get_status' | 'pause_battles' | 'resume_battles' | 'freeze_economy' | 'unfreeze_economy' | 'maintenance_mode' | 'exit_maintenance' | 'get_audit_log' | 'get_platform_stats' | 'enforce_tiers_on' | 'enforce_tiers_off' | 'tiers_enable' | 'tiers_disable' | 'challenge_stakes_enable' | 'challenge_stakes_disable' | 'challenge_set_min_stake' | 'quick_play_enable' | 'quick_play_disable' | 'quick_play_feed_enable' | 'quick_play_feed_disable' | 'dev_mode_enable' | 'dev_mode_disable' | 'run_media_backfill';
   reason?: string;
   notes?: string;
   limit?: number;
