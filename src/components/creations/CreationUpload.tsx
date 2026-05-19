@@ -92,7 +92,7 @@ export function CreationUpload({ onCreationUploaded, barberProfileId }: Creation
       const mediaUrl = await uploadImage(imageFile);
 
       // Create creation record
-      const { error } = await supabase
+      const { data: created, error } = await supabase
         .from('creations')
         .insert({
           barber_id: barberProfileId,
@@ -100,11 +100,23 @@ export function CreationUpload({ onCreationUploaded, barberProfileId }: Creation
           title: formData.title || null,
           description: formData.description || null,
           category: formData.category || null
-        });
+        })
+        .select('id')
+        .single();
 
       if (error) throw error;
 
+      // Log DMCA certification
+      await supabase.from('dmca_certifications').insert({
+        user_id: user.id,
+        content_type: 'creation',
+        content_id: created?.id,
+        content_url: mediaUrl,
+        user_agent: navigator.userAgent.slice(0, 500),
+      });
+
       toast.success('Creation uploaded successfully!');
+      
       
       // Reset form
       setFormData({ title: '', description: '', category: '' });
