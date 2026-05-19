@@ -619,8 +619,9 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
                                   setGettingLocation(false);
                                 },
                                 () => {
-                                  toast.error('Location access denied. Please allow location in your browser settings.');
+                                  toast.error('Location denied. Open in a full browser window or use the Quick Toggle on your profile to set by zip.');
                                   setGettingLocation(false);
+                                  queryClient.invalidateQueries({ queryKey: ['barberProfile', user.id] });
                                 },
                                 { enableHighAccuracy: true, timeout: 10000 }
                               );

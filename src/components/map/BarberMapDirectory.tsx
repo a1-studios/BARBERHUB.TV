@@ -8,6 +8,9 @@ import { useMapVisibilityWeights } from '@/hooks/useMapVisibilityWeights';
 import { calculateVisibilityScore, scoreToScale } from '@/lib/visibilityScore';
 import { toast } from 'sonner';
 import { BarberLocationSearch } from './BarberLocationSearch';
+import { NearbyBarberCard } from './NearbyBarberCard';
+import { Link } from 'react-router-dom';
+import { MapPin } from 'lucide-react';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -176,7 +179,7 @@ export function BarberMapDirectory() {
       });
       if (error) throw error;
       setBarbers((data as NearbyBarber[]) || []);
-      if (!data?.length) toast.info('No barbers found within 15 miles');
+      // Empty state is rendered inline below — no toast.
     } catch (err: any) {
       toast.error(err.message || 'Search failed');
     } finally {
@@ -202,16 +205,73 @@ export function BarberMapDirectory() {
       )}
 
       <div className="relative">
-        {barbers.length > 0 && (
+        {scoredBarbers.length > 0 && (
           <div className="absolute top-3 left-3 z-10 bg-card/90 backdrop-blur border border-primary/30 rounded-lg px-3 py-1.5 flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
             <span className="text-xs font-semibold text-foreground">
-              {barbers.length} barber{barbers.length !== 1 ? 's' : ''} nearby
+              {scoredBarbers.length} barber{scoredBarbers.length !== 1 ? 's' : ''} nearby
             </span>
           </div>
         )}
         <div ref={mapContainer} className="w-full rounded-xl border border-border overflow-hidden" style={{ height: '500px' }} />
       </div>
+
+      {/* Branded result rail */}
+      {scoredBarbers.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between px-1">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
+              Top Matches Near You
+            </h3>
+            <span className="text-[10px] text-muted-foreground">
+              Ranked by visibility score
+            </span>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-3 -mx-1 px-1 snap-x snap-mandatory">
+            {[...scoredBarbers].reverse().map((b) => (
+              <div key={b.barber_id} className="snap-start">
+                <NearbyBarberCard
+                  user_id={b.user_id}
+                  name={b.name}
+                  avatar_url={b.avatar_url}
+                  specialty={b.specialty}
+                  location={b.location}
+                  distance_miles={b.distance_miles}
+                  active_subscription_tier={b.active_subscription_tier}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty state — only after a search has been performed */}
+      {userCoords && !loading && scoredBarbers.length === 0 && (
+        <div
+          className="rounded-2xl p-5 text-center"
+          style={{
+            background: 'linear-gradient(155deg, hsl(240 10% 6% / 0.95) 0%, hsl(240 12% 9% / 0.9) 100%)',
+            border: '1px solid hsla(25,95%,53%,0.3)',
+            boxShadow: '0 4px 20px hsla(25,95%,53%,0.15)',
+          }}
+        >
+          <div className="mx-auto h-12 w-12 rounded-full flex items-center justify-center mb-3"
+            style={{ background: 'radial-gradient(circle, hsla(25,95%,53%,0.25) 0%, transparent 70%)' }}>
+            <MapPin className="h-6 w-6 text-primary" />
+          </div>
+          <h4 className="text-sm font-bold text-white">No barbers within 15 miles</h4>
+          <p className="text-[11px] text-muted-foreground mt-1 max-w-xs mx-auto">
+            Barbers near you may have GPS sharing turned off. If you're a barber, enable it from your profile.
+          </p>
+          <Link
+            to="/profile"
+            className="inline-flex items-center gap-1.5 mt-3 text-[11px] font-semibold text-primary hover:text-primary/80"
+          >
+            <MapPin className="h-3 w-3" />
+            Turn on my location
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
