@@ -233,7 +233,16 @@ export function BarberMapDirectory() {
             </span>
           </div>
         )}
-        <div ref={mapContainer} className="w-full rounded-xl border border-border overflow-hidden" style={{ height: '500px' }} />
+        {mapError ? (
+          <div className="w-full rounded-xl border border-border bg-muted/30 flex items-center justify-center p-6 text-center" style={{ height: '500px' }}>
+            <div className="space-y-2 max-w-sm">
+              <MapPin className="h-8 w-8 text-muted-foreground mx-auto" />
+              <p className="text-sm text-muted-foreground">{mapError}</p>
+            </div>
+          </div>
+        ) : (
+          <div ref={mapContainer} className="w-full rounded-xl border border-border overflow-hidden" style={{ height: '500px' }} />
+        )}
       </div>
 
       {/* Branded result rail */}
