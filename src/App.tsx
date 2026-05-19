@@ -1,4 +1,5 @@
 
+import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -31,7 +32,7 @@ import TournamentDetails from "@/pages/TournamentDetails";
 import NotFound from "./pages/NotFound";
 import WatchFeed from "./pages/WatchFeed";
 import BarberPublicProfile from "./pages/BarberPublicProfile";
-import BarbersDirectory from "./pages/BarbersDirectory";
+const BarbersDirectory = lazy(() => import("./pages/BarbersDirectory"));
 import BookBarberLanding from "./pages/seo/BookBarberLanding";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserManagement from "./pages/admin/UserManagement";
@@ -59,7 +60,7 @@ import Terms from "./pages/legal/Terms";
 import Privacy from "./pages/legal/Privacy";
 import AUP from "./pages/legal/AUP";
 import Cookies from "./pages/legal/Cookies";
-import { useEffect } from "react";
+
 
 const queryClient = new QueryClient();
 
@@ -151,7 +152,7 @@ const AppContent = () => {
           <Route path="/tournaments" element={<Tournaments />} />
           <Route path="/tournaments/:tournamentId" element={<TournamentDetails />} />
             <Route path="/barber/:userId" element={<BarberPublicProfile />} />
-            <Route path="/barbers" element={<BarbersDirectory />} />
+            <Route path="/barbers" element={<Suspense fallback={<div className="min-h-screen bg-background" />}><BarbersDirectory /></Suspense>} />
             <Route path="/book-barber-near-me" element={<BookBarberLanding />} />
             <Route path="/book-barber/:city" element={<BookBarberLanding />} />
             <Route path="/book-barber/:city/:service" element={<BookBarberLanding />} />
