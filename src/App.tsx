@@ -263,6 +263,17 @@ const AppContent = () => {
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/aup" element={<AUP />} />
             <Route path="/cookies" element={<Cookies />} />
+            <Route path="/dmca" element={<DMCA />} />
+            <Route
+              path="/admin/moderation"
+              element={
+                <AuthGuard>
+                  <SovereignGuard>
+                    <ModerationDashboard />
+                  </SovereignGuard>
+                </AuthGuard>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
     </>
