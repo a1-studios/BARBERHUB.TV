@@ -72,6 +72,7 @@ export function BarberMapDirectory() {
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [barbers, setBarbers] = useState<NearbyBarber[]>([]);
   const [loading, setLoading] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
   const { value: enforceTiersVal } = usePlatformState('enforce_tiers');
   const enforceTiers = enforceTiersVal === 'true';
   const { weights } = useMapVisibilityWeights();
@@ -82,17 +83,36 @@ export function BarberMapDirectory() {
     if (!mapboxgl.accessToken) {
       console.warn('VITE_MAPBOX_TOKEN is not set');
     }
-    const map = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/dark-v11',
-      center: [-98.5795, 39.8283],
-      zoom: 3,
-      attributionControl: false,
-    });
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
-    map.addControl(new mapboxgl.AttributionControl({ compact: true }));
-    mapRef.current = map;
-    return () => { map.remove(); mapRef.current = null; };
+    // Detect WebGL availability before instantiating (avoids hard crash on devices/browsers without GPU)
+    try {
+      const testCanvas = document.createElement('canvas');
+      const gl = testCanvas.getContext('webgl2') || testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
+      if (!gl) throw new Error('WebGL is not available in this browser');
+    } catch (e) {
+      console.warn('[BarberMapDirectory] WebGL unavailable:', e);
+      setMapError('Map view requires WebGL, which is unavailable in this browser. Please switch to the List view.');
+      return;
+    }
+    try {
+      const map = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/dark-v11',
+        center: [-98.5795, 39.8283],
+        zoom: 3,
+        attributionControl: false,
+      });
+      map.on('error', (ev) => {
+        // Don't kill the page on tile/style errors
+        console.warn('[Mapbox]', ev?.error?.message || ev);
+      });
+      map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
+      map.addControl(new mapboxgl.AttributionControl({ compact: true }));
+      mapRef.current = map;
+      return () => { map.remove(); mapRef.current = null; };
+    } catch (e: any) {
+      console.error('[BarberMapDirectory] Failed to initialize map:', e);
+      setMapError(e?.message || 'Failed to initialize map.');
+    }
   }, []);
 
   const drawRadiusCircle = useCallback((lng: number, lat: number) => {
