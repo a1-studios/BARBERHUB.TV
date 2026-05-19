@@ -57,6 +57,7 @@ const Footer = () => {
               <li><Link to="/privacy" className="hover:text-cyan-300 transition-colors">Privacy Policy</Link></li>
               <li><Link to="/aup" className="hover:text-cyan-300 transition-colors">Acceptable Use</Link></li>
               <li><Link to="/cookies" className="hover:text-cyan-300 transition-colors">Cookie Policy</Link></li>
+              <li><Link to="/dmca" className="hover:text-cyan-300 transition-colors">Copyright / DMCA</Link></li>
               <li>
                 <button
                   type="button"
