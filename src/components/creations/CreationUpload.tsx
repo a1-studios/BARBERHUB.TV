@@ -226,9 +226,11 @@ export function CreationUpload({ onCreationUploaded, barberProfileId }: Creation
             />
           </div>
 
+          <DmcaCertificationCheckbox checked={dmcaCertified} onCheckedChange={setDmcaCertified} />
+
           <Button 
             type="submit" 
-            disabled={loading || !imageFile} 
+            disabled={loading || !imageFile || !dmcaCertified} 
             className="w-full"
           >
             {uploading ? 'Uploading...' : 'Upload Creation'}
