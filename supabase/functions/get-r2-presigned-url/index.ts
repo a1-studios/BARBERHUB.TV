@@ -67,12 +67,12 @@ serve(async (req) => {
 
     const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
 
-    // Derive public URL from R2_PUBLIC_URL (custom domain or public bucket URL)
-    const r2PublicUrl = Deno.env.get("R2_PUBLIC_URL");
-    if (!r2PublicUrl) {
-      throw new Error("R2_PUBLIC_URL not configured");
+    // Reads go through CDN (MEDIA_CDN_DOMAIN), fallback to legacy R2_PUBLIC_URL
+    const cdn = (Deno.env.get("MEDIA_CDN_DOMAIN") || Deno.env.get("R2_PUBLIC_URL") || "").replace(/\/$/, "");
+    if (!cdn) {
+      throw new Error("MEDIA_CDN_DOMAIN not configured");
     }
-    const publicUrl = `${r2PublicUrl}/${key}`;
+    const publicUrl = `${cdn}/${key}`;
 
     return new Response(
       JSON.stringify({ success: true, uploadUrl, publicUrl, key }),

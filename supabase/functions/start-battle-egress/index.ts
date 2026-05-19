@@ -20,7 +20,8 @@ serve(async (req) => {
     const r2Endpoint = Deno.env.get("R2_ENDPOINT");
     const r2AccessKeyId = Deno.env.get("R2_ACCESS_KEY_ID");
     const r2SecretAccessKey = Deno.env.get("R2_SECRET_ACCESS_KEY");
-    const r2PublicUrl = Deno.env.get("R2_PUBLIC_URL");
+    // Reads go through CDN; fallback to legacy R2_PUBLIC_URL for safety
+    const r2PublicUrl = Deno.env.get("MEDIA_CDN_DOMAIN") || Deno.env.get("R2_PUBLIC_URL");
 
     if (!livekitUrl || !livekitApiKey || !livekitApiSecret) {
       return new Response(

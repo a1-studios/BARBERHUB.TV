@@ -84,7 +84,8 @@ serve(async (req) => {
   try {
     const livekitApiKey = Deno.env.get("LIVEKIT_API_KEY");
     const livekitApiSecret = Deno.env.get("LIVEKIT_API_SECRET");
-    const r2PublicUrl = Deno.env.get("R2_PUBLIC_URL");
+    // Reads go through CDN; fallback to legacy R2_PUBLIC_URL for safety
+    const r2PublicUrl = Deno.env.get("MEDIA_CDN_DOMAIN") || Deno.env.get("R2_PUBLIC_URL");
 
     if (!livekitApiKey || !livekitApiSecret) {
       console.error("LiveKit credentials not configured");
