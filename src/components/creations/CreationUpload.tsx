@@ -79,6 +79,10 @@ export function CreationUpload({ onCreationUploaded, barberProfileId }: Creation
       toast.error('Missing required information');
       return;
     }
+    if (!dmcaCertified) {
+      toast.error('Please certify your content rights before uploading');
+      return;
+    }
 
     setLoading(true);
     setUploading(true);
