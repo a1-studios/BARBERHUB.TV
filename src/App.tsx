@@ -53,6 +53,7 @@ import { AuthHashHandler } from "./components/auth/AuthHashHandler";
 import { ProfileCompletionGate } from "./components/auth/ProfileCompletionGate";
 import { CookieConsentBanner } from "./components/legal/CookieConsentBanner";
 import IOSInstallPrompt from "./components/pwa/IOSInstallPrompt";
+import { IncomingChallengeTakeover } from "./components/battles/IncomingChallengeTakeover";
 import { initPixelGate } from "./lib/metaPixelGate";
 import Terms from "./pages/legal/Terms";
 import Privacy from "./pages/legal/Privacy";
