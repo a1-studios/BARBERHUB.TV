@@ -36,6 +36,7 @@ import { PostAppointmentReviewModal } from '@/components/reviews/PostAppointment
 import { requireProfileComplete } from '@/components/auth/ProfileCompletionGate';
 import { AlertCircle } from 'lucide-react';
 import { DisplayNameEditor } from '@/components/profile/DisplayNameEditor';
+import { LocationQuickToggle } from '@/components/profiles/LocationQuickToggle';
 
 const ProfileCompletionBanner = ({ profile }: { profile: any }) => {
   if (!profile) return null;
@@ -394,6 +395,9 @@ const Profile = () => {
               </>
             )}
           </div>
+
+          {/* ===== QUICK LOCATION TOGGLE (Barbers only) ===== */}
+          {isBarber && <LocationQuickToggle />}
 
           {/* ===== iOS GROUPED LIST ===== */}
           <div className="flex-1 space-y-1">
