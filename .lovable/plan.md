@@ -1,72 +1,47 @@
-# Quick Location Toggle + Fix Barbers-Near-Me + Branded Result Cards
+## Goal
+Make sure existing media benefits from the new CDN (`https://media.barberhub.tv`) — not just new uploads — so playback is fast everywhere.
 
-## Root cause of "no barbers found"
+## Audit findings
+Scanned every URL column across `battle_submissions`, `battles`, `creations`, `creator_content`, `stream_sessions`. Only one table has legacy rows:
 
-Database check shows **0 of 8 barber profiles** have `location_sharing_enabled = true` and **0** have `latitude/longitude` saved. So the RPC is correct — there's literally nothing to return. Two real problems are causing this:
+- `creations.media_url` — 5 rows pointing at the old R2 public host `https://pub-a2131dfd73414e58b65fe559949bf93a.r2.dev/...`
+- All other media URL columns (`battles.barber_1/2_video_url`, `battle_submissions.media_url/thumbnail_url`, `creations.thumbnail_url`, `creator_content.*`, `stream_sessions.recording_url`) are empty — no rewrite needed.
+- Avatar URLs live on Supabase Storage, not R2 — out of scope.
 
-1. **The toggle is buried** inside `BarberSettings → Booking Economy section`. Most barbers never reach it.
-2. **Geolocation silently fails in the Lovable preview iframe** because the iframe is not loaded with `allow="geolocation"`. The browser denies the permission, the `onError` shows a toast, but barbers think they "turned it on" because the switch UI flips optimistically. Today the switch in `BarberSettings.tsx` does not revert when GPS denies.
+## Plan
+Single SQL migration that swaps the legacy R2 host for the CDN host on `creations.media_url`. Object keys (`portfolios/...`) stay identical, so the CDN resolves to the same R2 object via the existing bucket binding — no re-upload, no broken links.
 
-## What we'll build
+```sql
+UPDATE public.creations
+SET media_url = replace(
+  media_url,
+  'https://pub-a2131dfd73414e58b65fe559949bf93a.r2.dev',
+  'https://media.barberhub.tv'
+)
+WHERE media_url LIKE 'https://pub-a2131dfd73414e58b65fe559949bf93a.r2.dev/%';
+```
 
-### 1. Quick Location Toggle on the barber's own profile (Creator Hub / Profile header)
+A defensive pass for the other columns is included as no-ops (zero rows match today, but cheap insurance if rows appear before the migration runs):
 
-Add a compact `LocationQuickToggle` pill that lives next to the Settings button in `BarberProfileHeader` (only visible when `showActions=true` — i.e. own profile). One tap:
+```sql
+UPDATE public.battle_submissions SET media_url = replace(media_url, 'https://pub-a2131dfd73414e58b65fe559949bf93a.r2.dev', 'https://media.barberhub.tv') WHERE media_url LIKE 'https://pub-a2131dfd73414e58b65fe559949bf93a.r2.dev/%';
+UPDATE public.battle_submissions SET thumbnail_url = replace(thumbnail_url, 'https://pub-a2131dfd73414e58b65fe559949bf93a.r2.dev', 'https://media.barberhub.tv') WHERE thumbnail_url LIKE 'https://pub-a2131dfd73414e58b65fe559949bf93a.r2.dev/%';
+UPDATE public.battles SET barber_1_video_url = replace(barber_1_video_url, 'https://pub-a2131dfd73414e58b65fe559949bf93a.r2.dev', 'https://media.barberhub.tv') WHERE barber_1_video_url LIKE 'https://pub-a2131dfd73414e58b65fe559949bf93a.r2.dev/%';
+UPDATE public.battles SET barber_2_video_url = replace(barber_2_video_url, 'https://pub-a2131dfd73414e58b65fe559949bf93a.r2.dev', 'https://media.barberhub.tv') WHERE barber_2_video_url LIKE 'https://pub-a2131dfd73414e58b65fe559949bf93a.r2.dev/%';
+UPDATE public.creator_content SET media_url = replace(media_url, 'https://pub-a2131dfd73414e58b65fe559949bf93a.r2.dev', 'https://media.barberhub.tv') WHERE media_url LIKE 'https://pub-a2131dfd73414e58b65fe559949bf93a.r2.dev/%';
+UPDATE public.creator_content SET thumbnail_url = replace(thumbnail_url, 'https://pub-a2131dfd73414e58b65fe559949bf93a.r2.dev', 'https://media.barberhub.tv') WHERE thumbnail_url LIKE 'https://pub-a2131dfd73414e58b65fe559949bf93a.r2.dev/%';
+UPDATE public.stream_sessions SET recording_url = replace(recording_url, 'https://pub-a2131dfd73414e58b65fe559949bf93a.r2.dev', 'https://media.barberhub.tv') WHERE recording_url LIKE 'https://pub-a2131dfd73414e58b65fe559949bf93a.r2.dev/%';
+UPDATE public.creations SET thumbnail_url = replace(thumbnail_url, 'https://pub-a2131dfd73414e58b65fe559949bf93a.r2.dev', 'https://media.barberhub.tv') WHERE thumbnail_url LIKE 'https://pub-a2131dfd73414e58b65fe559949bf93a.r2.dev/%';
+```
 
-- **Off → On**: requests GPS, on success writes `{latitude, longitude, location_sharing_enabled: true}` to `barber_profiles`. If denied/iframe-blocked, shows clear toast "Open in full window to share location" with a deeplink to the published URL, and **reverts the switch**.
-- **On → Off**: flips `location_sharing_enabled = false` (keeps coords).
-- **Manual fallback**: small "Set by zip" link opens a tiny popover using the existing Google Geocoding flow (same code path as `BarberLocationSearch`) so barbers behind permission-blocked iframes can still pin themselves.
-
-Status dot: green pulse "Live on map" / grey "Hidden".
-
-Also keep the existing Settings toggle, but mirror the same revert-on-error fix.
-
-### 2. Fix the search reliability gap
-
-- `BarberSettings.tsx` + new `LocationQuickToggle`: on geolocation error or any update error, **revert the Switch state** so the UI never lies.
-- `BarberMapDirectory.tsx`: when 0 results, replace the generic toast with an inline empty-state card explaining the radius is 15 mi and offering to widen.
-- Add a console-visible warning + dev-only banner if `import.meta.env.VITE_MAPBOX_TOKEN` or `VITE_GOOGLE_MAPS_API_KEY` are missing.
-- Add a `MapPin` deeplink from the empty-state card straight to the barber's own toggle (for self-testing flow).
-
-No DB / RPC / schema changes needed — current `find_barbers_nearby_scored` works correctly; the data just isn't there yet.
-
-### 3. Branded nearby-barber result card
-
-Today nearby barbers are shown only as Mapbox pins with a tiny HTML popup. We'll add a **scrollable horizontal card rail under the map** rendering each scored barber as a premium card:
-
-- Avatar with TierRing (reuse `<TierRing>`)
-- Neon Orange (`hsl(25 95% 53%)`) accent border + Zion Blue (`hsl(187 80% 60%)`) distance pill
-- Name + country flag (reuse the `BarberProfileHeader` flag helper)
-- Specialty (truncated)
-- Distance (`X.X mi away`) with pulsing dot
-- M4M heartbeat badge if certified
-- Subscription tier chip (silver/gold/diamond glow matching `getTierStyle`)
-- "View Profile" CTA → `/barber/:user_id`
-- Card hover scales the matching map pin (shared scoring scale)
-
-Built as a new component `src/components/map/NearbyBarberCard.tsx`, used by `BarberMapDirectory.tsx` below the map.
-
-## Files
-
-- **New** `src/components/profiles/LocationQuickToggle.tsx`
-- **New** `src/components/map/NearbyBarberCard.tsx`
-- **Edit** `src/components/barber/BarberProfileHeader.tsx` — mount `LocationQuickToggle` when `showActions && isBarber`
-- **Edit** `src/components/profiles/BarberSettings.tsx` — revert switch on error
-- **Edit** `src/components/map/BarberMapDirectory.tsx` — render `NearbyBarberCard` rail + empty-state card + token warnings
-
-No DB migration. No backend changes.
+## Prerequisite (you, one-time in Cloudflare)
+For the rewritten URLs to resolve, the `media.barberhub.tv` custom domain must be bound to the same R2 bucket that holds the `portfolios/*` and future `recordings/*` keys (bucket `battles-submissions` per the edge functions). If that binding is already in place — which the new-upload flow proves — nothing else to do.
 
 ## Verification
+1. Run the migration.
+2. Re-query: zero rows should still match the old host.
+3. Open a barber profile that has a portfolio clip and confirm playback (DevTools Network → request goes to `media.barberhub.tv` and returns 200 with `cf-cache-status`).
+4. Spot-check a watch-feed clip.
 
-1. Toggle in profile → grant GPS → row in `barber_profiles` has `location_sharing_enabled=true` and coords (verify via SQL).
-2. Visit `/barbers`, "Use My Location" → barber appears as pin **and** as branded card.
-3. Deny GPS in iframe → switch flips back, toast suggests opening in new window.
-4. Empty state shows when no nearby matches with helpful messaging.
-
-## Tokens / API keys needed from you
-
-Everything required is already in place:
-- `VITE_MAPBOX_TOKEN` — already set
-- `VITE_GOOGLE_MAPS_API_KEY` — already used by `BarberLocationSearch`
-
-**Nothing new needed from you.** If your `VITE_GOOGLE_MAPS_API_KEY` is missing or restricted, the zip-code fallback won't geocode — let me know and I'll add a check. Otherwise approve and I'll build.
+## Out of scope
+Frontend code, edge function code, R2 upload path, Cloudflare Stream HLS URLs (those are `videodelivery.net` and unaffected), avatar/Supabase Storage URLs.
