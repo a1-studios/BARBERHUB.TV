@@ -170,7 +170,7 @@ export function SmartVideoPlayer({
           loop={loop}
           poster={poster ?? undefined}
           responsive
-          streamRef={(api) => { streamApiRef.current = api; }}
+          streamRef={streamApiRef}
           onLoadedData={() => setLoading(false)}
           onWaiting={() => setLoading(true)}
           onPlaying={() => setLoading(false)}
