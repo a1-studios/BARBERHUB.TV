@@ -107,17 +107,19 @@ export const useNotifications = () => {
 
           const reviewTypes = ['appointment_completed', 'review_prompt'];
 
-          // Type-aware action target — DO NOT auto-route challenge_received into the battle room
+          // challenge_received is handled by the full-screen IncomingChallengeTakeover —
+          // skip the corner toast so we don't double-notify.
+          if (newNotification.type === 'challenge_received') {
+            queryClient.invalidateQueries({ queryKey: ['notifications', user.id] });
+            return;
+          }
+
+          // Type-aware action target
           let actionTarget: string | null = null;
           let actionLabel = 'View';
           let onClickOverride: (() => void) | null = null;
 
-          if (newNotification.type === 'challenge_received') {
-            actionLabel = 'Respond';
-            onClickOverride = () => {
-              window.dispatchEvent(new CustomEvent('open-notifications'));
-            };
-          } else if (newNotification.type === 'challenge_accepted' && newNotification.data?.battle_id) {
+          if (newNotification.type === 'challenge_accepted' && newNotification.data?.battle_id) {
             actionTarget = `/battle/${newNotification.data.battle_id}/contender`;
           } else if (newNotification.data?.battle_id) {
             actionTarget = `/battles/${newNotification.data.battle_id}`;
