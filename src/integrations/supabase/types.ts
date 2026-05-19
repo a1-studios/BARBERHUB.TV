@@ -1862,6 +1862,9 @@ export type Database = {
           id: string
           reason: string
           reporter_id: string
+          resolution_action: string | null
+          resolved_at: string | null
+          resolved_by: string | null
           status: string
           target_id: string
           target_type: string
@@ -1872,6 +1875,9 @@ export type Database = {
           id?: string
           reason: string
           reporter_id: string
+          resolution_action?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           status?: string
           target_id: string
           target_type: string
@@ -1882,6 +1888,9 @@ export type Database = {
           id?: string
           reason?: string
           reporter_id?: string
+          resolution_action?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
           status?: string
           target_id?: string
           target_type?: string
@@ -2149,6 +2158,39 @@ export type Database = {
           created_at?: string
           creator_id?: string
           id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      dmca_certifications: {
+        Row: {
+          certified_at: string
+          content_id: string | null
+          content_type: string
+          content_url: string | null
+          id: string
+          ip_hash: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          certified_at?: string
+          content_id?: string | null
+          content_type: string
+          content_url?: string | null
+          id?: string
+          ip_hash?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          certified_at?: string
+          content_id?: string | null
+          content_type?: string
+          content_url?: string | null
+          id?: string
+          ip_hash?: string | null
+          user_agent?: string | null
           user_id?: string
         }
         Relationships: []
@@ -2965,6 +3007,123 @@ export type Database = {
           },
         ]
       }
+      moderation_actions: {
+        Row: {
+          action_type: string
+          admin_id: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          reason: string | null
+          target_content_id: string | null
+          target_content_type: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action_type: string
+          admin_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          reason?: string | null
+          target_content_id?: string | null
+          target_content_type?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          admin_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          reason?: string | null
+          target_content_id?: string | null
+          target_content_type?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
+      moderation_strikes: {
+        Row: {
+          content_id: string | null
+          content_type: string | null
+          created_at: string
+          id: string
+          issued_by: string | null
+          reason: string
+          report_id: string | null
+          user_id: string
+        }
+        Insert: {
+          content_id?: string | null
+          content_type?: string | null
+          created_at?: string
+          id?: string
+          issued_by?: string | null
+          reason: string
+          report_id?: string | null
+          user_id: string
+        }
+        Update: {
+          content_id?: string | null
+          content_type?: string | null
+          created_at?: string
+          id?: string
+          issued_by?: string | null
+          reason?: string
+          report_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      music_tracks: {
+        Row: {
+          artist: string | null
+          audio_url: string
+          bpm: number | null
+          created_at: string
+          duration_seconds: number | null
+          genre: string | null
+          id: string
+          is_active: boolean
+          license: string
+          mood: string | null
+          title: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          artist?: string | null
+          audio_url: string
+          bpm?: number | null
+          created_at?: string
+          duration_seconds?: number | null
+          genre?: string | null
+          id?: string
+          is_active?: boolean
+          license?: string
+          mood?: string | null
+          title: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          artist?: string | null
+          audio_url?: string
+          bpm?: number | null
+          created_at?: string
+          duration_seconds?: number | null
+          genre?: string | null
+          id?: string
+          is_active?: boolean
+          license?: string
+          mood?: string | null
+          title?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -3393,6 +3552,8 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          banned_at: string | null
+          banned_reason: string | null
           barber_bucks: number | null
           bio: string | null
           country_code: string | null
@@ -3402,6 +3563,7 @@ export type Database = {
           display_name_changed_at: string | null
           favorite_creator_id: string | null
           id: string
+          is_banned: boolean
           is_creator: boolean | null
           is_verified_by_competition: boolean | null
           profile_id: string | null
@@ -3417,6 +3579,8 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          banned_at?: string | null
+          banned_reason?: string | null
           barber_bucks?: number | null
           bio?: string | null
           country_code?: string | null
@@ -3426,6 +3590,7 @@ export type Database = {
           display_name_changed_at?: string | null
           favorite_creator_id?: string | null
           id?: string
+          is_banned?: boolean
           is_creator?: boolean | null
           is_verified_by_competition?: boolean | null
           profile_id?: string | null
@@ -3441,6 +3606,8 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          banned_at?: string | null
+          banned_reason?: string | null
           barber_bucks?: number | null
           bio?: string | null
           country_code?: string | null
@@ -3450,6 +3617,7 @@ export type Database = {
           display_name_changed_at?: string | null
           favorite_creator_id?: string | null
           id?: string
+          is_banned?: boolean
           is_creator?: boolean | null
           is_verified_by_competition?: boolean | null
           profile_id?: string | null
