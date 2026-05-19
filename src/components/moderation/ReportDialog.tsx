@@ -18,9 +18,10 @@ interface Props {
   targetId: string;
 }
 
-const REASONS: { id: 'harassment' | 'ip_violation' | 'fraud' | 'explicit_content'; label: string }[] = [
+const REASONS: { id: 'harassment' | 'copyright' | 'ip_violation' | 'fraud' | 'explicit_content'; label: string }[] = [
+  { id: 'copyright', label: 'Copyright / DMCA Infringement' },
   { id: 'harassment', label: 'Harassment' },
-  { id: 'ip_violation', label: 'IP Violation' },
+  { id: 'ip_violation', label: 'Other IP Violation' },
   { id: 'fraud', label: 'Fraud' },
   { id: 'explicit_content', label: 'Explicit Content' },
 ];

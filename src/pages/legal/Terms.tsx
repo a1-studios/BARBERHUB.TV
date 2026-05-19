@@ -218,8 +218,10 @@ const Terms = () => (
       <p>Violations may result in immediate account suspension, forfeiture of BB balances, and legal action.</p>
     </Section>
 
-    <Section n="11" title="Intellectual Property">
-      <p>All Barber-Hub branding, design, code, and proprietary content — including the Barber-Hub name, logo, and "Barber Bucks" — are owned by <strong>[COMPANY LEGAL NAME]</strong> and protected by intellectual property law. You may not use them without written permission.</p>
+    <Section n="11" title="Intellectual Property & DMCA Safe Harbor">
+      <p>All Barber-Hub branding, design, code, and proprietary content — including the Barber-Hub name, logo, and "Barber Bucks" — are owned by <strong>Barber Hub LLC</strong> and protected by intellectual property law. You may not use them without written permission.</p>
+      <p><strong>User-Generated Content.</strong> Barber-Hub operates as an interactive online platform under Section 512(c) of the Digital Millennium Copyright Act ("DMCA"). We do not pre-screen user uploads. By uploading content, you represent and warrant that you own or have all necessary rights to such content, or that your use qualifies as fair use.</p>
+      <p><strong>Notice and Takedown.</strong> We respond promptly to valid DMCA takedown notices. Repeat infringers will have their accounts terminated. Full procedure, designated agent contact, and counter-notice instructions are available in our <a href="/dmca">Copyright / DMCA Policy</a>.</p>
     </Section>
 
     <Section n="12" title="Disclaimers">

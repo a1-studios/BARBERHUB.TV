@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Upload, X } from 'lucide-react';
+import { DmcaCertificationCheckbox } from '@/components/legal/DmcaCertificationCheckbox';
 
 interface CreationUploadProps {
   onCreationUploaded?: () => void;
@@ -21,6 +22,7 @@ export function CreationUpload({ onCreationUploaded, barberProfileId }: Creation
   const [uploading, setUploading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [dmcaCertified, setDmcaCertified] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -77,6 +79,10 @@ export function CreationUpload({ onCreationUploaded, barberProfileId }: Creation
       toast.error('Missing required information');
       return;
     }
+    if (!dmcaCertified) {
+      toast.error('Please certify your content rights before uploading');
+      return;
+    }
 
     setLoading(true);
     setUploading(true);
@@ -86,7 +92,7 @@ export function CreationUpload({ onCreationUploaded, barberProfileId }: Creation
       const mediaUrl = await uploadImage(imageFile);
 
       // Create creation record
-      const { error } = await supabase
+      const { data: created, error } = await supabase
         .from('creations')
         .insert({
           barber_id: barberProfileId,
@@ -94,11 +100,23 @@ export function CreationUpload({ onCreationUploaded, barberProfileId }: Creation
           title: formData.title || null,
           description: formData.description || null,
           category: formData.category || null
-        });
+        })
+        .select('id')
+        .single();
 
       if (error) throw error;
 
+      // Log DMCA certification
+      await supabase.from('dmca_certifications').insert({
+        user_id: user.id,
+        content_type: 'creation',
+        content_id: created?.id,
+        content_url: mediaUrl,
+        user_agent: navigator.userAgent.slice(0, 500),
+      });
+
       toast.success('Creation uploaded successfully!');
+      
       
       // Reset form
       setFormData({ title: '', description: '', category: '' });
@@ -208,9 +226,11 @@ export function CreationUpload({ onCreationUploaded, barberProfileId }: Creation
             />
           </div>
 
+          <DmcaCertificationCheckbox checked={dmcaCertified} onCheckedChange={setDmcaCertified} />
+
           <Button 
             type="submit" 
-            disabled={loading || !imageFile} 
+            disabled={loading || !imageFile || !dmcaCertified} 
             className="w-full"
           >
             {uploading ? 'Uploading...' : 'Upload Creation'}

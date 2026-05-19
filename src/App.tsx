@@ -60,6 +60,8 @@ import Terms from "./pages/legal/Terms";
 import Privacy from "./pages/legal/Privacy";
 import AUP from "./pages/legal/AUP";
 import Cookies from "./pages/legal/Cookies";
+import DMCA from "./pages/legal/DMCA";
+import ModerationDashboard from "./pages/admin/ModerationDashboard";
 
 
 const queryClient = new QueryClient();
@@ -261,6 +263,17 @@ const AppContent = () => {
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/aup" element={<AUP />} />
             <Route path="/cookies" element={<Cookies />} />
+            <Route path="/dmca" element={<DMCA />} />
+            <Route
+              path="/admin/moderation"
+              element={
+                <AuthGuard>
+                  <SovereignGuard>
+                    <ModerationDashboard />
+                  </SovereignGuard>
+                </AuthGuard>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
     </>
