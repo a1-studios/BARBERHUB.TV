@@ -7,7 +7,9 @@ import Footer from '@/components/Footer';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { Search, Scissors, Crown, Sparkles, Star, Diamond, Map as MapIcon, List } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Search, Scissors, Crown, Sparkles, Star, Diamond, Map as MapIcon, List, SlidersHorizontal, ChevronDown, X } from 'lucide-react';
 import { BarberProfileCard } from '@/components/barber/BarberProfileCard';
 import { BackButton } from '@/components/ui/BackButton';
 import { QuickBookBanner } from '@/components/fan/QuickBookBanner';
@@ -237,147 +239,158 @@ export default function BarbersDirectory() {
               </CardContent>
             </Card>
 
-            {/* Filters */}
-            <Card className="mb-8">
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-                  {/* Search */}
-                  <div className="lg:col-span-2 relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search barbers..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
+            {/* Unified Filters Panel */}
+            {(() => {
+              const activeCount =
+                (searchTerm ? 1 : 0) +
+                (specialtyFilter !== 'all' ? 1 : 0) +
+                (tierFilter !== 'all' ? 1 : 0) +
+                (countryFilter !== 'all' ? 1 : 0) +
+                (liveFilter !== 'all' ? 1 : 0);
+              return (
+                <Collapsible className="mb-6">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="text-sm text-muted-foreground">
+                      {sortedBarbers?.length || 0} barbers found
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Select value={sortBy} onValueChange={setSortBy}>
+                        <SelectTrigger className="h-9 w-40 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {nearbyBarbers && (
+                            <SelectItem value="distance">Nearest First</SelectItem>
+                          )}
+                          <SelectItem value="tier">Tier (High → Low)</SelectItem>
+                          <SelectItem value="followers">Most Followers</SelectItem>
+                          <SelectItem value="recent">Most Recent</SelectItem>
+                          <SelectItem value="name">Name (A-Z)</SelectItem>
+                          <SelectItem value="experience">Experience</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9 gap-2 group">
+                          <SlidersHorizontal className="h-3.5 w-3.5" />
+                          <span className="text-xs font-semibold">Filters</span>
+                          {activeCount > 0 && (
+                            <Badge className="h-5 min-w-[20px] px-1.5 bg-primary text-primary-foreground text-[10px]">
+                              {activeCount}
+                            </Badge>
+                          )}
+                          <ChevronDown className="h-3.5 w-3.5 transition-transform group-data-[state=open]:rotate-180" />
+                        </Button>
+                      </CollapsibleTrigger>
+                    </div>
                   </div>
 
-                  {/* Tier Filter */}
-                  <Select value={tierFilter} onValueChange={setTierFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Tier" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Tiers</SelectItem>
-                      <SelectItem value="diamond">
-                        <div className="flex items-center gap-2">
-                          <Diamond className="w-4 h-4 text-cyan-400" />
-                          Diamond
+                  <CollapsibleContent className="data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
+                    <Card>
+                      <CardContent className="p-4 space-y-4">
+                        {/* Search */}
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            placeholder="Search by name or specialty..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10"
+                          />
                         </div>
-                      </SelectItem>
-                      <SelectItem value="gold">
-                        <div className="flex items-center gap-2">
-                          <Crown className="w-4 h-4 text-yellow-500" />
-                          Gold
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="silver">
-                        <div className="flex items-center gap-2">
-                          <Sparkles className="w-4 h-4 text-slate-400" />
-                          Silver
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="bronze">
-                        <div className="flex items-center gap-2">
-                          <Star className="w-4 h-4 text-orange-500" />
-                          Bronze
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="free">Free</SelectItem>
-                    </SelectContent>
-                  </Select>
 
-                  {/* Country Filter */}
-                  <Select value={countryFilter} onValueChange={setCountryFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Country" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Countries</SelectItem>
-                      {countries.map((country) => (
-                        <SelectItem key={country} value={country}>
-                          {country}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-
-                  {/* Live Status Filter */}
-                  <Select value={liveFilter} onValueChange={setLiveFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Live Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="live">🔴 Live Now</SelectItem>
-                      <SelectItem value="offline">Offline</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Sort and Results Count */}
-                <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                  <div className="text-sm text-muted-foreground">
-                    {sortedBarbers?.length || 0} barbers found
-                  </div>
-                  <Select value={sortBy} onValueChange={setSortBy}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {nearbyBarbers && (
-                        <SelectItem value="distance">
-                          <div className="flex items-center gap-2">
-                            <MapIcon className="w-4 h-4" />
-                            Nearest First
+                        {/* Specialty Pills */}
+                        <div>
+                          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Specialty</div>
+                          <div className="flex flex-nowrap overflow-x-auto gap-2 pb-1 -mx-1 px-1">
+                            <button
+                              onClick={() => setSpecialtyFilter('all')}
+                              className={cn(
+                                'shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all',
+                                specialtyFilter === 'all'
+                                  ? 'bg-primary/20 border-primary/50 text-primary'
+                                  : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted'
+                              )}
+                            >
+                              All
+                            </button>
+                            {SPECIALTY_TAGS.map((tag) => (
+                              <button
+                                key={tag.id}
+                                onClick={() => setSpecialtyFilter(specialtyFilter === tag.id ? 'all' : tag.id)}
+                                className={cn(
+                                  'shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all',
+                                  specialtyFilter === tag.id
+                                    ? 'bg-primary/20 border-primary/50 text-primary'
+                                    : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted'
+                                )}
+                              >
+                                <span>{tag.emoji}</span>
+                                <span>{tag.label}</span>
+                              </button>
+                            ))}
                           </div>
-                        </SelectItem>
-                      )}
-                      <SelectItem value="tier">
-                        <div className="flex items-center gap-2">
-                          <Crown className="w-4 h-4" />
-                          Tier (High to Low)
                         </div>
-                      </SelectItem>
-                      <SelectItem value="followers">Most Followers</SelectItem>
-                      <SelectItem value="recent">Most Recent</SelectItem>
-                      <SelectItem value="name">Name (A-Z)</SelectItem>
-                      <SelectItem value="experience">Experience</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
 
-            {/* Specialty Pill Filter */}
-            <div className="flex flex-wrap gap-2 mb-6">
-              <button
-                onClick={() => setSpecialtyFilter('all')}
-                className={cn(
-                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200',
-                  specialtyFilter === 'all'
-                    ? 'bg-primary/20 border-primary/50 text-primary shadow-sm'
-                    : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted hover:border-muted-foreground/30'
-                )}
-              >
-                All Specialties
-              </button>
-              {SPECIALTY_TAGS.map((tag) => (
-                <button
-                  key={tag.id}
-                  onClick={() => setSpecialtyFilter(specialtyFilter === tag.id ? 'all' : tag.id)}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200',
-                    specialtyFilter === tag.id
-                      ? 'bg-primary/20 border-primary/50 text-primary shadow-sm'
-                      : 'bg-muted/50 border-border text-muted-foreground hover:bg-muted hover:border-muted-foreground/30'
-                  )}
-                >
-                  <span>{tag.emoji}</span>
-                  <span>{tag.label}</span>
-                </button>
-              ))}
-            </div>
+                        {/* Dropdown filters */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <Select value={tierFilter} onValueChange={setTierFilter}>
+                            <SelectTrigger><SelectValue placeholder="Tier" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Tiers</SelectItem>
+                              <SelectItem value="diamond"><div className="flex items-center gap-2"><Diamond className="w-4 h-4 text-cyan-400" />Diamond</div></SelectItem>
+                              <SelectItem value="gold"><div className="flex items-center gap-2"><Crown className="w-4 h-4 text-yellow-500" />Gold</div></SelectItem>
+                              <SelectItem value="silver"><div className="flex items-center gap-2"><Sparkles className="w-4 h-4 text-slate-400" />Silver</div></SelectItem>
+                              <SelectItem value="bronze"><div className="flex items-center gap-2"><Star className="w-4 h-4 text-orange-500" />Bronze</div></SelectItem>
+                              <SelectItem value="free">Free</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          <Select value={countryFilter} onValueChange={setCountryFilter}>
+                            <SelectTrigger><SelectValue placeholder="Country" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Countries</SelectItem>
+                              {countries.map((country) => (
+                                <SelectItem key={country} value={country}>{country}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+
+                          <Select value={liveFilter} onValueChange={setLiveFilter}>
+                            <SelectTrigger><SelectValue placeholder="Live Status" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">All Status</SelectItem>
+                              <SelectItem value="live">🔴 Live Now</SelectItem>
+                              <SelectItem value="offline">Offline</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {activeCount > 0 && (
+                          <div className="flex justify-end pt-2 border-t">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 text-xs gap-1.5"
+                              onClick={() => {
+                                setSearchTerm('');
+                                setSpecialtyFilter('all');
+                                setTierFilter('all');
+                                setCountryFilter('all');
+                                setLiveFilter('all');
+                              }}
+                            >
+                              <X className="h-3 w-3" />
+                              Reset all
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </CollapsibleContent>
+                </Collapsible>
+              );
+            })()}
+
 
             {/* Results */}
             {isLoading || locationLoading ? (

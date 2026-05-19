@@ -11,6 +11,7 @@ import { BarberLocationSearch } from './BarberLocationSearch';
 import { NearbyBarberCard } from './NearbyBarberCard';
 import { Link } from 'react-router-dom';
 import { MapPin } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
 
@@ -35,7 +36,8 @@ interface ScoredBarber extends NearbyBarber {
   _scale: number;
 }
 
-const RADIUS_MILES = 15;
+const RADIUS_OPTIONS = [1, 5, 15, 25, 50] as const;
+type RadiusMiles = typeof RADIUS_OPTIONS[number];
 
 function createCircleGeoJSON(center: [number, number], radiusMiles: number, steps = 64): Feature<Polygon> {
   const km = radiusMiles * 1.60934;
@@ -54,13 +56,13 @@ function createCircleGeoJSON(center: [number, number], radiusMiles: number, step
 function getTierStyle(tier: string | null): string {
   switch (tier) {
     case 'diamond':
-      return 'box-shadow: 0 0 10px hsla(200,80%,75%,0.7); border-color: hsl(200,80%,75%);';
+      return 'box-shadow: 0 0 10px hsla(200,80%,55%,0.75); border-color: hsl(200,80%,45%);';
     case 'gold':
-      return 'box-shadow: 0 0 10px hsla(45,100%,55%,0.7); border-color: hsl(45,100%,55%);';
+      return 'box-shadow: 0 0 10px hsla(45,100%,45%,0.75); border-color: hsl(45,100%,40%);';
     case 'silver':
-      return 'box-shadow: 0 0 10px hsla(210,20%,80%,0.6); border-color: hsl(210,20%,80%);';
+      return 'box-shadow: 0 0 10px hsla(210,15%,55%,0.6); border-color: hsl(210,15%,45%);';
     default:
-      return 'box-shadow: 0 0 8px hsla(25,95%,53%,0.5); border-color: hsl(25,95%,70%);';
+      return 'box-shadow: 0 0 8px hsla(25,95%,45%,0.55); border-color: hsl(25,95%,35%);';
   }
 }
 
@@ -73,17 +75,17 @@ export function BarberMapDirectory() {
   const [barbers, setBarbers] = useState<NearbyBarber[]>([]);
   const [loading, setLoading] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
+  const [radiusMiles, setRadiusMiles] = useState<RadiusMiles>(15);
   const { value: enforceTiersVal } = usePlatformState('enforce_tiers');
   const enforceTiers = enforceTiersVal === 'true';
   const { weights } = useMapVisibilityWeights();
 
-  // Initialize Mapbox map
+  // Initialize Mapbox map (light theme)
   useEffect(() => {
     if (!mapContainer.current || mapRef.current) return;
     if (!mapboxgl.accessToken) {
       console.warn('VITE_MAPBOX_TOKEN is not set');
     }
-    // Detect WebGL availability before instantiating (avoids hard crash on devices/browsers without GPU)
     try {
       const testCanvas = document.createElement('canvas');
       const gl = testCanvas.getContext('webgl2') || testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl');
@@ -96,13 +98,12 @@ export function BarberMapDirectory() {
     try {
       const map = new mapboxgl.Map({
         container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/dark-v11',
+        style: 'mapbox://styles/mapbox/light-v11',
         center: [-98.5795, 39.8283],
         zoom: 3,
         attributionControl: false,
       });
       map.on('error', (ev) => {
-        // Don't kill the page on tile/style errors
         console.warn('[Mapbox]', ev?.error?.message || ev);
       });
       map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
@@ -115,17 +116,17 @@ export function BarberMapDirectory() {
     }
   }, []);
 
-  const drawRadiusCircle = useCallback((lng: number, lat: number) => {
+  const drawRadiusCircle = useCallback((lng: number, lat: number, radius: number) => {
     const map = mapRef.current;
     if (!map) return;
-    const circleData = createCircleGeoJSON([lng, lat], RADIUS_MILES);
+    const circleData = createCircleGeoJSON([lng, lat], radius);
     const apply = () => {
       if (map.getSource('radius-circle')) {
         (map.getSource('radius-circle') as mapboxgl.GeoJSONSource).setData(circleData);
       } else {
         map.addSource('radius-circle', { type: 'geojson', data: circleData });
-        map.addLayer({ id: 'radius-circle-fill', type: 'fill', source: 'radius-circle', paint: { 'fill-color': 'hsl(25, 95%, 53%)', 'fill-opacity': 0.08 } });
-        map.addLayer({ id: 'radius-circle-stroke', type: 'line', source: 'radius-circle', paint: { 'line-color': 'hsl(25, 95%, 53%)', 'line-opacity': 0.4, 'line-width': 1.5, 'line-dasharray': [4, 3] } });
+        map.addLayer({ id: 'radius-circle-fill', type: 'fill', source: 'radius-circle', paint: { 'fill-color': 'hsl(25, 95%, 53%)', 'fill-opacity': 0.10 } });
+        map.addLayer({ id: 'radius-circle-stroke', type: 'line', source: 'radius-circle', paint: { 'line-color': 'hsl(25, 95%, 45%)', 'line-opacity': 0.55, 'line-width': 1.5, 'line-dasharray': [4, 3] } });
       }
     };
     if (map.isStyleLoaded()) apply();
@@ -136,17 +137,15 @@ export function BarberMapDirectory() {
     if (!mapRef.current) return;
     userMarkerRef.current?.remove();
     const el = document.createElement('div');
-    el.style.cssText = `width:16px;height:16px;border-radius:50%;background:hsl(210,100%,60%);border:3px solid hsl(210,100%,80%);box-shadow:0 0 12px hsla(210,100%,60%,0.6);animation:pulse-pin 2s ease-in-out infinite;`;
+    el.style.cssText = `width:16px;height:16px;border-radius:50%;background:hsl(210,100%,50%);border:3px solid hsl(0,0%,100%);box-shadow:0 0 12px hsla(210,100%,50%,0.7);animation:pulse-pin 2s ease-in-out infinite;`;
     userMarkerRef.current = new mapboxgl.Marker({ element: el }).setLngLat([lng, lat]).addTo(mapRef.current);
   }, []);
 
-  // Apply visibility scoring + sort (high score rendered LAST so it stays on top)
   const scoredBarbers = useMemo<ScoredBarber[]>(() => {
     const scored = barbers.map(b => {
       const score = calculateVisibilityScore(b, weights);
       return { ...b, _score: score, _scale: scoreToScale(score) };
     });
-    // Ascending sort: low scores added first, high scores added last → higher z-index
     scored.sort((a, b) => a._score - b._score);
     return scored;
   }, [barbers, weights]);
@@ -158,20 +157,20 @@ export function BarberMapDirectory() {
     scoredBarbers.forEach((barber) => {
       const size = Math.round(32 * barber._scale);
       const el = document.createElement('div');
-      el.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;background:hsl(25,95%,53%);border:2.5px solid;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:${Math.round(14 * barber._scale)}px;line-height:1;animation:pulse-pin 2.5s ease-in-out infinite;transition:transform 0.2s;${getTierStyle(barber.active_subscription_tier)}`;
+      el.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;background:hsl(25,95%,53%);border:3px solid;cursor:pointer;display:flex;align-items:center;justify-content:center;color:white;font-size:${Math.round(14 * barber._scale)}px;line-height:1;animation:pulse-pin 2.5s ease-in-out infinite;transition:transform 0.2s;${getTierStyle(barber.active_subscription_tier)}`;
       el.innerHTML = '✂';
       el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.3)'; });
       el.addEventListener('mouseleave', () => { el.style.transform = 'scale(1)'; });
       const tierBadge = barber.active_subscription_tier
-        ? `<span style="background:hsla(25,95%,53%,0.2);color:hsl(25,95%,53%);padding:2px 6px;border-radius:4px;font-size:10px;text-transform:uppercase;">${barber.active_subscription_tier}</span>`
+        ? `<span style="background:hsla(25,95%,53%,0.15);color:hsl(25,95%,40%);padding:2px 6px;border-radius:4px;font-size:10px;text-transform:uppercase;font-weight:600;">${barber.active_subscription_tier}</span>`
         : '';
       const popup = new mapboxgl.Popup({ offset: 20, closeButton: false }).setHTML(`
-        <div style="background:#12121a;color:white;padding:12px;border-radius:8px;min-width:180px;font-family:system-ui;">
-          <div style="font-weight:600;font-size:14px;margin-bottom:4px;">${barber.name}</div>
-          ${barber.specialty ? `<div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:4px;">${barber.specialty}</div>` : ''}
-          ${barber.location ? `<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:6px;">📍 ${barber.location}</div>` : ''}
-          <div style="display:flex;align-items:center;justify-content:space-between;">${tierBadge}<span style="font-size:11px;color:hsl(187,80%,60%);">${barber.distance_miles.toFixed(1)} mi</span></div>
-          <a href="/barber/${barber.user_id}" style="display:block;margin-top:8px;text-align:center;background:hsl(25,95%,53%);color:white;padding:6px;border-radius:6px;font-size:12px;font-weight:600;text-decoration:none;">View Profile</a>
+        <div style="background:#ffffff;color:#0a0a0f;padding:12px;border-radius:10px;min-width:180px;font-family:system-ui;box-shadow:0 6px 20px rgba(0,0,0,0.12);border:1px solid rgba(0,0,0,0.06);">
+          <div style="font-weight:700;font-size:14px;margin-bottom:4px;">${barber.name}</div>
+          ${barber.specialty ? `<div style="font-size:11px;color:#555;margin-bottom:4px;">${barber.specialty}</div>` : ''}
+          ${barber.location ? `<div style="font-size:11px;color:#777;margin-bottom:6px;">📍 ${barber.location}</div>` : ''}
+          <div style="display:flex;align-items:center;justify-content:space-between;">${tierBadge}<span style="font-size:11px;color:hsl(187,80%,35%);font-weight:600;">${barber.distance_miles.toFixed(1)} mi</span></div>
+          <a href="/barber/${barber.user_id}" style="display:block;margin-top:10px;text-align:center;background:hsl(25,95%,53%);color:white;padding:7px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">View Profile</a>
         </div>
       `);
       const marker = new mapboxgl.Marker({ element: el }).setLngLat([barber.longitude, barber.latitude]).setPopup(popup).addTo(mapRef.current!);
@@ -187,31 +186,37 @@ export function BarberMapDirectory() {
 
   useEffect(() => {
     if (!userCoords) return;
-    drawRadiusCircle(userCoords.lng, userCoords.lat);
+    drawRadiusCircle(userCoords.lng, userCoords.lat, radiusMiles);
     placeUserMarker(userCoords.lng, userCoords.lat);
-  }, [userCoords, drawRadiusCircle, placeUserMarker]);
+  }, [userCoords, radiusMiles, drawRadiusCircle, placeUserMarker]);
 
-  const searchNearby = async (lat: number, lng: number) => {
+  const searchNearby = useCallback(async (lat: number, lng: number, radius: number) => {
     setLoading(true);
     try {
       const { data, error } = await supabase.rpc('find_barbers_nearby_scored', {
-        p_lat: lat, p_lng: lng, p_radius_miles: RADIUS_MILES, p_enforce_tiers: enforceTiers,
+        p_lat: lat, p_lng: lng, p_radius_miles: radius, p_enforce_tiers: enforceTiers,
       });
       if (error) throw error;
       setBarbers((data as NearbyBarber[]) || []);
-      // Empty state is rendered inline below — no toast.
     } catch (err: any) {
       toast.error(err.message || 'Search failed');
     } finally {
       setLoading(false);
     }
-  };
+  }, [enforceTiers]);
 
   const handleLocationFound = (lat: number, lng: number, _label: string) => {
     const coords = { lat, lng };
     setUserCoords(coords);
-    mapRef.current?.flyTo({ center: [lng, lat], zoom: 12 });
-    searchNearby(lat, lng);
+    mapRef.current?.flyTo({ center: [lng, lat], zoom: radiusMiles >= 25 ? 9 : radiusMiles >= 15 ? 10 : radiusMiles >= 5 ? 11 : 13 });
+    searchNearby(lat, lng, radiusMiles);
+  };
+
+  const handleRadiusChange = (r: RadiusMiles) => {
+    setRadiusMiles(r);
+    if (userCoords) {
+      searchNearby(userCoords.lat, userCoords.lng, r);
+    }
   };
 
   return (
@@ -225,14 +230,39 @@ export function BarberMapDirectory() {
       )}
 
       <div className="relative">
+        {/* Top-right count pill (clear of left-side overlays) */}
         {scoredBarbers.length > 0 && (
-          <div className="absolute top-3 left-3 z-10 bg-card/90 backdrop-blur border border-primary/30 rounded-lg px-3 py-1.5 flex items-center gap-2">
+          <div className="absolute top-3 right-14 z-10 bg-white/95 backdrop-blur border border-primary/40 rounded-full px-3 py-1.5 flex items-center gap-2 shadow-md">
             <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
             <span className="text-xs font-semibold text-foreground">
-              {scoredBarbers.length} barber{scoredBarbers.length !== 1 ? 's' : ''} nearby
+              {scoredBarbers.length} nearby
             </span>
           </div>
         )}
+
+        {/* Radius selector — top-left overlay */}
+        {!mapError && (
+          <div className="absolute top-3 left-3 z-10 bg-white/95 backdrop-blur border border-border rounded-xl px-2 py-1.5 shadow-md flex items-center gap-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground px-1.5">Radius</span>
+            {RADIUS_OPTIONS.map((r) => (
+              <button
+                key={r}
+                onClick={() => handleRadiusChange(r)}
+                className={cn(
+                  'h-7 min-w-[28px] px-2 rounded-md text-[11px] font-bold transition-all',
+                  radiusMiles === r
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'bg-transparent text-foreground/70 hover:bg-primary/10 hover:text-primary'
+                )}
+                disabled={loading}
+              >
+                {r}
+              </button>
+            ))}
+            <span className="text-[10px] font-bold uppercase text-muted-foreground px-1">mi</span>
+          </div>
+        )}
+
         {mapError ? (
           <div className="w-full rounded-xl border border-border bg-muted/30 flex items-center justify-center p-6 text-center" style={{ height: '500px' }}>
             <div className="space-y-2 max-w-sm">
@@ -253,12 +283,12 @@ export function BarberMapDirectory() {
               Top Matches Near You
             </h3>
             <span className="text-[10px] text-muted-foreground">
-              Ranked by visibility score
+              Within {radiusMiles} mi · Ranked by visibility
             </span>
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-3 -mx-1 px-1 snap-x snap-mandatory">
+          <div className="flex flex-nowrap gap-3 overflow-x-auto overflow-y-hidden pb-3 -mx-1 px-1 snap-x snap-mandatory scroll-pl-1">
             {[...scoredBarbers].reverse().map((b) => (
-              <div key={b.barber_id} className="snap-start">
+              <div key={b.barber_id} className="snap-start shrink-0 min-w-0">
                 <NearbyBarberCard
                   user_id={b.user_id}
                   name={b.name}
@@ -274,7 +304,7 @@ export function BarberMapDirectory() {
         </div>
       )}
 
-      {/* Empty state — only after a search has been performed */}
+      {/* Empty state */}
       {userCoords && !loading && scoredBarbers.length === 0 && (
         <div
           className="rounded-2xl p-5 text-center"
@@ -288,9 +318,9 @@ export function BarberMapDirectory() {
             style={{ background: 'radial-gradient(circle, hsla(25,95%,53%,0.25) 0%, transparent 70%)' }}>
             <MapPin className="h-6 w-6 text-primary" />
           </div>
-          <h4 className="text-sm font-bold text-white">No barbers within 15 miles</h4>
+          <h4 className="text-sm font-bold text-white">No barbers within {radiusMiles} miles</h4>
           <p className="text-[11px] text-muted-foreground mt-1 max-w-xs mx-auto">
-            Barbers near you may have GPS sharing turned off. If you're a barber, enable it from your profile.
+            Try expanding your radius above, or invite barbers in your area to enable location sharing.
           </p>
           <Link
             to="/profile"

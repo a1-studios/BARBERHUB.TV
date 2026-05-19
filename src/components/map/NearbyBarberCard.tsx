@@ -59,7 +59,7 @@ export function NearbyBarberCard({
       to={`/barber/${user_id}`}
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
-      className="group flex-shrink-0 w-[220px] rounded-2xl p-3 relative overflow-hidden transition-transform active:scale-[0.98] hover:-translate-y-1"
+      className="group flex-shrink-0 w-[78vw] max-w-[240px] rounded-2xl p-3 relative overflow-hidden transition-transform active:scale-[0.98] hover:-translate-y-1"
       style={{
         background:
           'linear-gradient(155deg, hsl(240 10% 5% / 0.95) 0%, hsl(240 12% 8% / 0.9) 100%)',
