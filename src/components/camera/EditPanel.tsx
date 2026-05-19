@@ -33,23 +33,32 @@ const TABS: { id: Tab; label: string; Icon: typeof Scissors }[] = [
 ];
 
 export function EditPanel({ open, onClose, videoUrl, duration, state, onCommit }: Props) {
-  const [draft, setDraft] = useState<EditState>(state);
+  const [draft, setDraftState] = useState<EditState>(state);
   const [tab, setTab] = useState<Tab>('text');
+
+  const setDraft = (updater: EditState | ((prev: EditState) => EditState)) => {
+    setDraftState((prev) => {
+      const next = typeof updater === 'function' ? (updater as (p: EditState) => EditState)(prev) : updater;
+      onCommit(next); // live propagate so Publish always sees latest edits
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (open) {
-      setDraft(state);
+      setDraftState(state);
       setTab('text');
     }
   }, [open, state]);
 
-  const done = () => {
+
+  const commitAndClose = () => {
     onCommit(draft);
     onClose();
   };
 
   return (
-    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
+    <Sheet open={open} onOpenChange={(v) => !v && commitAndClose()}>
       <SheetContent
         side="bottom"
         className="h-[100dvh] w-full max-w-none p-0 border-0 bg-black flex flex-col"
@@ -59,7 +68,7 @@ export function EditPanel({ open, onClose, videoUrl, duration, state, onCommit }
           <Button
             variant="ghost"
             size="icon"
-            onClick={onClose}
+            onClick={commitAndClose}
             className="text-white hover:bg-white/10 h-9 w-9"
           >
             <X className="h-5 w-5" />
@@ -67,7 +76,7 @@ export function EditPanel({ open, onClose, videoUrl, duration, state, onCommit }
           <span className="text-sm font-semibold text-white tracking-wide uppercase">Edit</span>
           <Button
             size="sm"
-            onClick={done}
+            onClick={commitAndClose}
             className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-full px-5"
           >
             <Check className="h-4 w-4 mr-1" /> Done
