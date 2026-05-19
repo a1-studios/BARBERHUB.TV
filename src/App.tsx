@@ -80,6 +80,7 @@ const AppContent = () => {
       <ProfileCompletionGate />
       <CookieConsentBanner />
       <IOSInstallPrompt />
+      <IncomingChallengeTakeover />
       <Routes>
             <Route path="/" element={IS_COMING_SOON ? <ComingSoon /> : <Index />} />
             <Route path="/coming-soon" element={<ComingSoon />} />
