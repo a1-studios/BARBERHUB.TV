@@ -759,19 +759,18 @@ export default function BarberPublicProfile() {
                           >
                             {isVid ? (
                               <>
-                                <video 
-                                  src={creation.media_url} 
-                                  className="w-full h-full object-cover"
+                                <SmartVideoPlayer
+                                  streamUid={(creation as any).cloudflare_stream_uid ?? null}
+                                  fallbackUrl={creation.media_url}
+                                  poster={creation.thumbnail_url ?? null}
+                                  autoPlayWhenVisible={false}
                                   muted
-                                  playsInline
-                                  preload="metadata"
+                                  controls
+                                  loop={false}
+                                  enableReplay
+                                  overlayPayload={(creation as any).overlay_payload ?? null}
+                                  className="w-full h-full"
                                 />
-                                {/* Play icon overlay */}
-                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                  <div className="w-10 h-10 rounded-full bg-black/60 flex items-center justify-center">
-                                    <Video className="w-5 h-5 text-white" />
-                                  </div>
-                                </div>
                                 <Badge className="absolute bottom-2 right-2 bg-black/80 text-white border-0 pointer-events-none z-10">
                                   <Video className="w-3 h-3 mr-1" />
                                   Video
