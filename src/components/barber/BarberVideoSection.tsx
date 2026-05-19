@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { multipartUploadToR2, uploadPortfolioMedia, type UploadProgress, type UploadController } from '@/lib/storage';
 import { ChunkedUploadProgress } from '@/components/battles/ChunkedUploadProgress';
+import { DmcaCertificationCheckbox } from '@/components/legal/DmcaCertificationCheckbox';
 
 interface BarberVideoSectionProps {
   videoId?: string | null;
