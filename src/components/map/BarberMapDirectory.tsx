@@ -179,7 +179,7 @@ export function BarberMapDirectory() {
       });
       if (error) throw error;
       setBarbers((data as NearbyBarber[]) || []);
-      if (!data?.length) toast.info('No barbers found within 15 miles');
+      // Empty state is rendered inline below — no toast.
     } catch (err: any) {
       toast.error(err.message || 'Search failed');
     } finally {
