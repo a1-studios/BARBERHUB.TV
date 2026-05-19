@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ArrowLeft, MapPin, Award, Upload, Image as ImageIcon, Video, Trash2, Calendar, Instagram, Twitter, Youtube, Facebook, Settings, Briefcase, Globe, DollarSign, Shield, Save, Navigation, Loader2, ChevronDown, Lock } from 'lucide-react';
 import { BarberVideoSection } from '@/components/barber/BarberVideoSection';
+import { SmartVideoPlayer } from '@/components/video/SmartVideoPlayer';
 import { BarberActionButtons } from '@/components/barber/BarberActionButtons';
 import { AvatarCrest } from '@/components/AvatarCrest';
 import { AvatarUpload } from '@/components/profiles/AvatarUpload';
@@ -759,19 +760,18 @@ export default function BarberPublicProfile() {
                           >
                             {isVid ? (
                               <>
-                                <video 
-                                  src={creation.media_url} 
-                                  className="w-full h-full object-cover"
+                                <SmartVideoPlayer
+                                  streamUid={(creation as any).cloudflare_stream_uid ?? null}
+                                  fallbackUrl={creation.media_url}
+                                  poster={creation.thumbnail_url ?? null}
+                                  autoPlayWhenVisible={false}
                                   muted
-                                  playsInline
-                                  preload="metadata"
+                                  controls
+                                  loop={false}
+                                  enableReplay
+                                  overlayPayload={(creation as any).overlay_payload ?? null}
+                                  className="w-full h-full"
                                 />
-                                {/* Play icon overlay */}
-                                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                  <div className="w-10 h-10 rounded-full bg-black/60 flex items-center justify-center">
-                                    <Video className="w-5 h-5 text-white" />
-                                  </div>
-                                </div>
                                 <Badge className="absolute bottom-2 right-2 bg-black/80 text-white border-0 pointer-events-none z-10">
                                   <Video className="w-3 h-3 mr-1" />
                                   Video

@@ -193,8 +193,10 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
                         poster={item.thumbnail_url ?? null}
                         autoPlayWhenVisible={false}
                         muted
-                        controls={false}
+                        controls={true}
                         loop={false}
+                        enableReplay
+                        overlayPayload={(item as any).overlay_payload ?? null}
                         className="w-full h-full"
                       />
                     ) : (

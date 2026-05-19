@@ -39,6 +39,7 @@ interface FeedItem {
   barber_user_id?: string;
   cloudflare_stream_uid?: string | null;
   content_id?: string;
+  overlay_payload?: any;
 }
 
 const PLATFORM_PROMOS: FeedItem[] = [
@@ -105,7 +106,7 @@ const WatchFeed = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("creator_content")
-        .select("id, title, description, media_url, thumbnail_url, content_type, creator_id, created_at, cloudflare_stream_uid")
+        .select("id, title, description, media_url, thumbnail_url, content_type, creator_id, created_at, cloudflare_stream_uid, overlay_payload")
         .eq("status", "published")
         .not("media_url", "is", null)
         .order("created_at", { ascending: false })
@@ -125,6 +126,7 @@ const WatchFeed = () => {
           specialty: null,
           barber_user_id: c.creator_id,
           cloudflare_stream_uid: c.cloudflare_stream_uid ?? null,
+          overlay_payload: c.overlay_payload ?? null,
         }));
     },
   });
@@ -135,7 +137,7 @@ const WatchFeed = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("creations")
-        .select("id, title, description, media_url, thumbnail_url, barber_id, created_at, cloudflare_stream_uid")
+        .select("id, title, description, media_url, thumbnail_url, barber_id, created_at, cloudflare_stream_uid, overlay_payload")
         .not("media_url", "is", null)
         .order("created_at", { ascending: false })
         .limit(30);
@@ -166,6 +168,7 @@ const WatchFeed = () => {
           specialty: barberMap[c.barber_id]?.specialty ?? null,
           barber_user_id: barberMap[c.barber_id]?.user_id,
           cloudflare_stream_uid: c.cloudflare_stream_uid ?? null,
+          overlay_payload: c.overlay_payload ?? null,
         }));
     },
   });
@@ -526,6 +529,7 @@ const WatchFeed = () => {
               controls={false}
               className="w-full h-full"
               onEnded={() => handleVideoEnded(idx)}
+              overlayPayload={item.overlay_payload}
             />
           </div>
         ) : (
