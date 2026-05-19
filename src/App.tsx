@@ -60,6 +60,8 @@ import Terms from "./pages/legal/Terms";
 import Privacy from "./pages/legal/Privacy";
 import AUP from "./pages/legal/AUP";
 import Cookies from "./pages/legal/Cookies";
+import DMCA from "./pages/legal/DMCA";
+import ModerationDashboard from "./pages/admin/ModerationDashboard";
 
 
 const queryClient = new QueryClient();
