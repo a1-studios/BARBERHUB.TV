@@ -97,6 +97,8 @@ export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
       return;
     }
     setIsIssuing(true);
+    let battleId: string | undefined;
+    let succeeded = false;
     try {
       const { data, error } = await supabase.functions.invoke('create-challenge-stake', {
         body: {
@@ -107,22 +109,27 @@ export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
         },
       });
       if (error) throw error;
-      const battleId = data?.battle_id || data?.challenge?.battle_id;
+      if (data?.error) throw new Error(data.error);
+      if (data?.success === false) throw new Error(data?.message || 'Failed to issue challenge');
+
+      battleId = data?.battle_id || data?.challenge?.battle_id;
+      succeeded = true;
       toast.success(
         effectiveStake > 0
           ? `Challenge issued to ${selectedBarber.display_name || selectedBarber.barber_name}! ${effectiveStake} BB staked.`
           : `Challenge issued to ${selectedBarber.display_name || selectedBarber.barber_name}! Viewers can donate to the pot.`
       );
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to issue challenge');
+    }
+    setIsIssuing(false);
+
+    if (succeeded) {
       setSelectedBarber(null);
       setSearchQuery('');
       onClose();
-      if (battleId) {
-        navigate(`/battle/${battleId}/contender`);
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to issue challenge');
+      if (battleId) navigate(`/battle/${battleId}/contender`);
     }
-    setIsIssuing(false);
   };
 
   if (!mounted) return null;
