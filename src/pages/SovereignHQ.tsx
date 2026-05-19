@@ -16,6 +16,7 @@ import VaultMetricsPanel from '@/components/sovereign/VaultMetricsPanel';
 import M4MFundPanel from '@/components/sovereign/M4MFundPanel';
 import AffiliateControlPanel from '@/components/sovereign/AffiliateControlPanel';
 import MediaPipelinePanel from '@/components/sovereign/MediaPipelinePanel';
+import MapVisibilityEnginePanel from '@/components/sovereign/MapVisibilityEnginePanel';
 
 const SovereignHQ = () => {
   const { user } = useAuth();
@@ -94,6 +95,7 @@ const SovereignHQ = () => {
 
         <SponsorControlPanel onRefresh={refresh} />
         <AffiliateControlPanel onRefresh={refresh} />
+        <MapVisibilityEnginePanel />
         <M4MFundPanel />
         <VaultMetricsPanel />
         <MediaPipelinePanel />
