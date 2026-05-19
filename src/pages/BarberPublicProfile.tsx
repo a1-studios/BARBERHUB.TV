@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ArrowLeft, MapPin, Award, Upload, Image as ImageIcon, Video, Trash2, Calendar, Instagram, Twitter, Youtube, Facebook, Settings, Briefcase, Globe, DollarSign, Shield, Save, Navigation, Loader2, ChevronDown, Lock } from 'lucide-react';
 import { BarberVideoSection } from '@/components/barber/BarberVideoSection';
+import { SmartVideoPlayer } from '@/components/video/SmartVideoPlayer';
 import { BarberActionButtons } from '@/components/barber/BarberActionButtons';
 import { AvatarCrest } from '@/components/AvatarCrest';
 import { AvatarUpload } from '@/components/profiles/AvatarUpload';
