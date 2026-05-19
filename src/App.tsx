@@ -1,4 +1,5 @@
 
+import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -59,7 +60,7 @@ import Terms from "./pages/legal/Terms";
 import Privacy from "./pages/legal/Privacy";
 import AUP from "./pages/legal/AUP";
 import Cookies from "./pages/legal/Cookies";
-import { useEffect, lazy, Suspense } from "react";
+
 
 const queryClient = new QueryClient();
 
