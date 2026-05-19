@@ -33,15 +33,24 @@ const TABS: { id: Tab; label: string; Icon: typeof Scissors }[] = [
 ];
 
 export function EditPanel({ open, onClose, videoUrl, duration, state, onCommit }: Props) {
-  const [draft, setDraft] = useState<EditState>(state);
+  const [draft, setDraftState] = useState<EditState>(state);
   const [tab, setTab] = useState<Tab>('text');
+
+  const setDraft = (updater: EditState | ((prev: EditState) => EditState)) => {
+    setDraftState((prev) => {
+      const next = typeof updater === 'function' ? (updater as (p: EditState) => EditState)(prev) : updater;
+      onCommit(next); // live propagate so Publish always sees latest edits
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (open) {
-      setDraft(state);
+      setDraftState(state);
       setTab('text');
     }
   }, [open, state]);
+
 
   const commitAndClose = () => {
     onCommit(draft);
