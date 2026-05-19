@@ -4923,6 +4923,29 @@ export type Database = {
           user_id: string
         }[]
       }
+      find_barbers_nearby_scored: {
+        Args: {
+          p_enforce_tiers?: boolean
+          p_lat: number
+          p_lng: number
+          p_radius_miles?: number
+        }
+        Returns: {
+          active_subscription_tier: string
+          avatar_url: string
+          barber_id: string
+          battles_participated: number
+          bb_purchased: number
+          contribution_score: number
+          distance_miles: number
+          latitude: number
+          location: string
+          longitude: number
+          name: string
+          specialty: string
+          user_id: string
+        }[]
+      }
       generate_elimination_bracket: {
         Args: { num_participants?: number; tournament_id_param: string }
         Returns: undefined
