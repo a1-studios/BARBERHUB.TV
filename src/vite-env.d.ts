@@ -12,6 +12,7 @@ interface ImportMetaEnv {
   readonly VITE_GOOGLE_ADS_ID?: string;
   readonly VITE_GOOGLE_ADS_LEAD_LABEL?: string;
   readonly VITE_GOOGLE_ADS_REGISTRATION_LABEL?: string;
+  readonly VITE_MAPBOX_TOKEN: string;
 }
 
 interface ImportMeta {
