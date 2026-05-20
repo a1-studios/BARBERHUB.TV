@@ -10,7 +10,7 @@ import { parseSpecialties, getSpecialtyDisplay } from "@/config/specialtyTags";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { DonationModal } from "@/components/DonationModal";
 import { useUserRole } from "@/hooks/useUserRole";
-import { CloudflareStreamPlayer } from "@/components/CloudflareStreamPlayer";
+
 import { SmartVideoPlayer } from "@/components/video/SmartVideoPlayer";
 import { cleanDisplayTitle } from "@/lib/utils";
 import { usePersistedMute } from "@/hooks/usePersistedMute";
