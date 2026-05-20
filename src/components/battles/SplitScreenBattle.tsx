@@ -103,12 +103,11 @@ const SplitScreenBattle = ({
       >
         <video
           ref={video2Ref}
-          src={barber2_video}
           className="h-full w-full object-cover"
-          autoPlay={isActive}
           loop
           muted
           playsInline
+          preload="none"
         />
         {splitPercent < 70 && (
           <div className="absolute bottom-24 right-4 text-right text-white z-30">
