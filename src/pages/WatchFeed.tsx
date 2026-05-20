@@ -522,10 +522,15 @@ const WatchFeed = () => {
           </div>
         ) : (
           // Lightweight poster while off-screen — saves bandwidth + CPU
+          // Lightweight poster while off-screen — saves bandwidth + CPU
           item.thumbnail_url ? (
-            <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url(${item.thumbnail_url})` }}
+            <img
+              src={item.thumbnail_url}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              fetchPriority="low"
+              className="absolute inset-0 w-full h-full object-cover"
             />
           ) : (
             <div className="absolute inset-0 bg-black" />
