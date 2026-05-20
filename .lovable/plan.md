@@ -1,72 +1,69 @@
-## Barber Discovery Map — Refresh Plan
+## Video Playback Audit — Root Causes
 
-Scope: visual + UX overhaul of `BarberMapDirectory` and the surrounding "Find barbers near you" experience on `/barbers`. Frontend-only; no schema, RPC, or BB logic changes.
+I traced every playback path (WatchFeed, battles, profiles, theater, academy) through `SmartVideoPlayer`, `CloudflareStreamPlayer`, `HLSVideoPlayer`, `BrandedVideoPlayer`, and the raw `<video>` in `VideoPlayer.tsx`. Five concrete issues are causing the lag and slow first-frame.
 
-### 1. Map Style — Light theme with signature orange
-- Switch `mapboxgl.Map` style from `mapbox/dark-v11` → `mapbox/light-v11` for the native deep-blue water tones with light land.
-- Keep all overlays in our brand orange `hsl(25 95% 53%)`:
-  - Radius circle fill (opacity ~0.10) and dashed stroke
-  - Barber pins (✂ markers) — slightly darker border for contrast on the light base
-  - User location pin stays Zion Blue for contrast
-- Update popup card to a light surface (white background, dark text) so it reads correctly over the light tiles, while keeping the orange "View Profile" CTA.
+### 1. R2 origin URLs are hitting the bucket directly (no CDN)
+- `creations.media_url`, `creator_content.media_url`, `battle_submissions.media_url`, `featured_video_id` are stored as raw `*.r2.cloudflarestorage.com` URLs and passed straight into `<video src>`.
+- The earlier instruction was: **GETs must route through `https://media.barberhub.tv`** (Cloudflare CDN in front of R2). That rewrite was never implemented — `rg "media.barberhub.tv"` returns zero hits in `src/`.
+- Result: every playback is a cold origin pull with no edge cache, no HTTP/2 multiplexing tuned for media, no Range optimization → multi-second TTFB and stalling on seek.
 
-### 2. Fix overlapping cards
-Root cause: the result rail uses fixed-width children inside `overflow-x-auto` with `snap-mandatory`; on a 390px viewport the flex children collide with the map container and adjacent absolute badges.
+### 2. Two parallel player stacks exist and fight each other
+- `SmartVideoPlayer` (new, has `activeVideoStore` single-decoder guard) is used in `WatchFeed`.
+- `CloudflareStreamPlayer`, `HLSVideoPlayer`, `BrandedVideoPlayer`, `VideoPlayer` are still used in `BattleTheater`, `BarberPublicProfile`, `PortfolioManager`, `CourseDetailDrawer`, `BarberVideoSection`, `SubmissionPreview`, `BattleResultsView`, `FullscreenBattleVideoModal`, `BattleVotingView`. None of them register with `activeVideoStore`, so when the user navigates between feed and a battle page, **multiple decoders stay alive** and continue to download.
+- `VideoPlayer.tsx` and `HLSVideoPlayer.tsx` native branches have no IntersectionObserver — they autoplay unconditionally with `controls` enabled and `preload="metadata"`, racking up parallel HLS/MP4 fetches.
 
-Fix:
-- Move the result rail below the map with a clear vertical gap and `min-w-0` wrapper.
-- Switch `NearbyBarberCard` width from inline `w-[220px]` to `w-[78vw] max-w-[260px]` so cards never exceed viewport.
-- Add `flex-nowrap`, proper `gap-3`, and `scroll-pl-4` for clean horizontal snapping.
-- Lift the floating "X barbers nearby" pill to top-right so it doesn't overlap the Mapbox nav control or the cards.
+### 3. WatchFeed mounts up to 3 SmartVideoPlayers (distance ≤ 2)
+- In `renderVideoItem`: `shouldMount = distance <= 2` → previous + current + next + next-next = up to 5 mounted `<video>` elements per scroll position (often 3 visible + 2 buffered). With Cloudflare Stream's `<Stream>` component each one constructs its own HLS player, even though only one is `forceActive`.
+- The "single-decoder guard" only suppresses **play()**, not **bandwidth**. The off-screen Stream iframes still negotiate the manifest + segment 0.
 
-### 3. Unified, collapsible filter container
-Replace the scattered "Search / Tier / Country / Live / Sort / Specialty pills" stacks with one `<Collapsible>` "Filters" panel directly under the location bar:
+### 4. Cloudflare Stream `<Stream>` is iframe-based and heavy
+- Every `streamUid` mount spins up a same-origin iframe with its own JS runtime. On mobile (390px viewport), 3 of those = significant memory + main-thread cost. We can use the lighter `hls.js` direct path against `https://customer-<code>.cloudflarestream.com/<uid>/manifest/video.m3u8` for VOD and reserve the iframe player for live.
 
-```
-[ 📍 Location bar — wired to map  ]   [ ⚙ Filters (3) ▾ ]
-   ▼ (opens)
-   ┌──────────────────────────────────────────┐
-   │ Search input                              │
-   │ Specialty pills (single row, scrollable)  │
-   │ Tier ▾   Country ▾   Live ▾   Sort ▾      │
-   │ [Reset]                          [Apply]  │
-   └──────────────────────────────────────────┘
-```
+### 5. `loading` state never resets between items + autoplay race
+- `SmartVideoPlayer` defaults `loading=true` and only clears on `onLoadedData`/`onPlaying`. On the iframe Stream path, when the player is mounted but not active (`shouldPlay=false`), `onLoadedData` may not fire → the spinner spins forever behind the active card, costing GPU.
+- `tryPlay` waits on `loadeddata` but never times out; on a slow R2 fetch (issue #1) it keeps a pending promise per scroll, compounding pressure.
 
-- Show an active-filter count badge on the trigger.
-- Closed by default on mobile, open on `md+`.
-- Reuses existing state in `BarbersDirectory.tsx` — no logic rewrite.
+---
 
-### 4. Wire "Find barbers near you" to the actual map with adjustable radius
-Currently the map's `RADIUS_MILES` is a hard-coded `15`. Make it dynamic and shared.
+## Fix Plan (frontend-only, no DB changes)
 
-- Add `radiusMiles` state inside `BarberMapDirectory` (default `15`), exposed via a compact radius selector overlaid on the map (top-left, below the count pill):
+### A. Add a CDN rewrite helper and apply it at read time
+- New `src/lib/mediaCdn.ts` exporting `toCdnUrl(url)` that rewrites any `*.r2.cloudflarestorage.com` (and the public `pub-*.r2.dev` form) host to `media.barberhub.tv`, preserving the path + query. Idempotent; leaves non-R2 URLs untouched.
+- Wrap `media_url`, `thumbnail_url`, and `featured_video_id` in **read paths only**:
+  - `src/pages/WatchFeed.tsx` (all 4 queries)
+  - `src/pages/BarberPublicProfile.tsx`, `src/components/barber/BarberVideoSection.tsx`, `src/components/profiles/PortfolioManager.tsx`, `src/components/battles/SubmissionPreview.tsx`, `src/components/battles/BattleResultsView.tsx`, `src/components/battles/FullscreenBattleVideoModal.tsx`, `src/components/battles/BattleVotingView.tsx`, `src/pages/BattleTheater.tsx`, `src/components/academy/CourseDetailDrawer.tsx`.
+- Upload paths (`CreationUpload`, multipart) keep hitting R2 directly — unchanged.
 
-  ```
-  Radius:  [ 1 ] [ 5 ] [ 15 ] [ 25 ] [ 50 ]  mi
-  ```
+### B. Make every player respect the single-decoder store
+- Refactor `BrandedVideoPlayer`, `HLSVideoPlayer`, and the inner `<video>` in `VideoPlayer.tsx` to delegate to `SmartVideoPlayer` (keep their props as a thin wrapper).
+- Replace direct uses of `CloudflareStreamPlayer` in non-live contexts with `SmartVideoPlayer`. Live (BattleTheater LiveKit / live HLS) keeps the iframe Stream since those need adaptive low-latency.
 
-  Pills styled in brand orange when active, muted otherwise.
-- On change:
-  - Re-call `find_barbers_nearby_scored` with new `p_radius_miles`
-  - Redraw the radius circle via `drawRadiusCircle(lng, lat, radiusMiles)` (function gains a param)
-  - `fitBounds` to the new circle
-- Empty-state copy becomes dynamic: "No barbers within {radius} miles".
-- The existing `BarberLocationSearch` already drives `handleLocationFound` — no API change needed; default behavior on mount: if `navigator.geolocation` permission is already granted, auto-center and search at 15 mi (silent fail otherwise so we don't prompt unexpectedly).
+### C. Reduce WatchFeed mount window + cheaper neighbors
+- Change `shouldMount = distance <= 2` → `distance <= 1` (current + next only). Previous item already played; remount on scroll-back is cheap and saves a decoder.
+- Render `thumbnail_url` (`<img loading="lazy" decoding="async">`) for non-active neighbors instead of `background-image` so the browser can drop them when off-screen.
 
-### 5. Files to touch (frontend only)
-- `src/components/map/BarberMapDirectory.tsx` — light style, radius state + selector UI, dynamic radius circle, light popup theme, count-pill repositioned.
-- `src/components/map/NearbyBarberCard.tsx` — responsive width, `min-w-0`, light/dark-safe contrast.
-- `src/pages/BarbersDirectory.tsx` — wrap existing filters into a single `<Collapsible>` panel with active-count badge; tighten layout spacing.
-- (Optional) add `src/components/map/RadiusSelector.tsx` as a small presentational component.
+### D. Prefer `hls.js` direct HLS for VOD instead of the Stream iframe
+- In `SmartVideoPlayer`, when `streamUid` is present and `forceActive`/visible, mount a single `<video>` + dynamically-imported `hls.js` pointed at `https://customer-<CF_STREAM_CUSTOMER>.cloudflarestream.com/${streamUid}/manifest/video.m3u8`. Fall back to the `<Stream>` iframe only when `hls.js` cannot run (Safari uses native HLS).
+- Adds `VITE_CF_STREAM_CUSTOMER_CODE` env var (read from `.env`).
 
-### Out of scope
-- Database/RPC changes (radius already a parameter to `find_barbers_nearby_scored`).
-- New filter dimensions beyond what `BarbersDirectory` already supports.
-- Auth, payments, BB economy, moderation.
+### E. Tighten the loading/play lifecycle
+- Reset `loading` to `true` only when `src`/`streamUid` changes, not on every render.
+- Add a 4s safety timeout in the `tryPlay` `loadeddata` await: if it doesn't fire, abort and surface a "Tap to play" affordance (avoids leaked pending promises).
+- Set `preload="none"` on non-active SmartVideoPlayer instances (currently `'metadata'`).
 
-### Technical notes
-- Mapbox light style still respects our `radius-circle-fill` and `radius-circle-stroke` paint props; no token swap needed.
-- Marker contrast: bump border from `2.5px` to `3px` solid `hsl(25 95% 35%)` on light tiles.
-- Popup background switches to `#ffffff` with `color:#0a0a0f`; CTA keeps `hsl(25 95% 53%)`.
-- Radius circle redraw uses the existing `radius-circle` source via `setData()` — no source/layer churn.
+### F. Quick wins
+- Add `<link rel="preconnect" href="https://media.barberhub.tv" crossorigin>` and `https://customer-<code>.cloudflarestream.com` to `index.html`.
+- Add `Cache-Control: public, max-age=31536000, immutable` expectations doc in `.lovable/plan.md` for the Cloudflare Worker fronting `media.barberhub.tv` (worker config itself is outside this repo).
+
+---
+
+## Out of Scope
+- Database/RPC changes, schema migrations, transcoding pipeline, LiveKit live-PK code, BB economy/auth/moderation.
+- Authoring/upload paths (still direct R2 multipart).
+- The actual Cloudflare Worker / DNS for `media.barberhub.tv` (handled on the Cloudflare side; we only consume it).
+
+---
+
+## Files Touched (estimate)
+- **New**: `src/lib/mediaCdn.ts`
+- **Edit**: `src/components/video/SmartVideoPlayer.tsx`, `src/components/BrandedVideoPlayer.tsx`, `src/components/VideoPlayer.tsx`, `src/components/battles/HLSVideoPlayer.tsx`, `src/components/CloudflareStreamPlayer.tsx`, `src/pages/WatchFeed.tsx`, `src/pages/BattleTheater.tsx`, `src/pages/BarberPublicProfile.tsx`, `src/components/barber/BarberVideoSection.tsx`, `src/components/profiles/PortfolioManager.tsx`, `src/components/battles/SubmissionPreview.tsx`, `src/components/battles/BattleResultsView.tsx`, `src/components/battles/FullscreenBattleVideoModal.tsx`, `src/components/battles/BattleVotingView.tsx`, `src/components/academy/CourseDetailDrawer.tsx`, `index.html`, `.env` (add `VITE_CF_STREAM_CUSTOMER_CODE`).
