@@ -235,7 +235,7 @@ export function SmartVideoPlayer({
         loop={loop}
         controls={controls}
         playsInline
-        preload={shouldPlay ? 'metadata' : preloadMode}
+        preload={shouldPlay ? 'auto' : preloadMode}
         className="w-full h-full object-cover"
         crossOrigin={vttUrl ? 'anonymous' : undefined}
         onLoadedData={() => setLoading(false)}
