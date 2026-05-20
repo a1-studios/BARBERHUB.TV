@@ -483,16 +483,27 @@ const WatchFeed = () => {
     );
   };
 
+  // Index of the next *playable* (video/educator/platform/battle) slot after
+  // activeIndex. Sponsor cards don't prefetch anything, so naive activeIndex+1
+  // wastes the warm slot. Scan forward up to 4 positions — feed is small.
+  const nextPlayableIdx = useMemo(() => {
+    for (let i = activeIndex + 1; i < Math.min(feed.length, activeIndex + 5); i++) {
+      const t = feed[i]?.type;
+      if (t === 'video' || t === 'educator' || t === 'platform' || t === 'battle') return i;
+    }
+    return -1;
+  }, [feed, activeIndex]);
+
   const renderVideoItem = (item: FeedItem, idx: number) => {
     // Don't render placeholder cards — only real playable media
     const hasPlayable = !!item.cloudflare_stream_uid || (item.media_url && /^https?:\/\//.test(item.media_url));
     if (!hasPlayable) return null;
 
-    // Virtualize: only mount current + next neighbour. Previous was already played;
-    // remount on scroll-back is cheap and saves a decoder + bandwidth.
-    const distance = Math.abs(idx - activeIndex);
-    const shouldMount = distance <= 1 && idx >= activeIndex;
+    // Mount the active player and the next playable slot (which may be > activeIndex+1
+    // because of sponsor cards). Previous items unmount to free decoders/bandwidth.
     const isActive = activeIndex === idx;
+    const isPrefetch = idx === nextPlayableIdx;
+    const shouldMount = isActive || isPrefetch;
     const cleanTitle = cleanDisplayTitle(item.title);
 
     return (
@@ -518,7 +529,7 @@ const WatchFeed = () => {
               className="w-full h-full"
               onEnded={() => handleVideoEnded(idx)}
               overlayPayload={item.overlay_payload}
-              preloadMode={isActive ? 'metadata' : idx === activeIndex + 1 ? 'auto' : 'none'}
+              preloadMode={isActive ? 'auto' : isPrefetch ? 'auto' : 'none'}
             />
           </div>
         ) : (
