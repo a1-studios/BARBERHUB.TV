@@ -317,18 +317,3 @@ export function SmartVideoPlayer({
     </div>
   );
 }
-
-      {enableReplay && ended && !loop && (
-        <button
-          onClick={handleReplay}
-          className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-10"
-          aria-label="Replay"
-        >
-          <span className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/40">
-            <RotateCcw className="h-4 w-4" /> Replay
-          </span>
-        </button>
-      )}
-    </div>
-  );
-}
