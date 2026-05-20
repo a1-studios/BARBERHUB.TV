@@ -219,7 +219,7 @@ export function SmartVideoPlayer({
         loop={loop}
         controls={controls}
         playsInline
-        preload={shouldPlay ? 'metadata' : 'none'}
+        preload={shouldPlay ? 'metadata' : preloadMode}
         className="w-full h-full object-cover"
         crossOrigin={vttUrl ? 'anonymous' : undefined}
         onLoadedData={() => setLoading(false)}
