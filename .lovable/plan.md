@@ -1,65 +1,90 @@
-## Goal
+# Why the Watch page buffers (other pages don't)
 
-Make the WatchFeed strictly bandwidth-disciplined: only the **active** video downloads/plays, the **next** video warms up in the background, and **every other** video stays at `preload="none"` with no decoder attached.
+Other pages use `SmartVideoPlayer` with a single, always-active video — no prefetch, no swapping, no mid-feed sponsor/battle slots. The Watch page is the only place that:
 
-Today the feed already virtualizes (only `activeIndex` and `activeIndex + 1` mount), but the "next" slot is treated identically to off-screen — it gets `preload="none"` and no src attachment until it becomes active. That's why the first frame after a swipe still takes ~1s. We need an explicit *prefetch* state between "idle" and "playing".
+1. Mounts an *active* player **and** a *prefetch* player at the same time,
+2. Flips a mounted player from prefetch → active mid-life, and
+3. Interleaves sponsor cards and split-screen battles into the vertical feed.
+
+Three real bugs fall out of that. None of them exist on the other pages, which is exactly why those load fine.
 
 ---
 
-## Changes
+## Bug 1 — Prefetched HLS instance is destroyed the moment it becomes active
 
-### 1. `src/components/video/SmartVideoPlayer.tsx`
-
-Add a new prop:
+`SmartVideoPlayer.tsx`, the source-attach effect:
 
 ```ts
-preloadMode?: 'none' | 'metadata' | 'auto';  // default 'none'
+useEffect(() => {
+  ...
+  return () => {
+    if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+    try { v.removeAttribute('src'); v.load(); } catch {}
+  };
+}, [src, isHls, shouldAttach, shouldPlay]);
 ```
 
-Behavior matrix (replaces the current binary `shouldPlay` gate):
+`shouldPlay` is in the deps. So when the user swipes and a prefetched player flips from `shouldPlay=false → true`, the cleanup runs first → `hls.destroy()` + `v.removeAttribute('src')` + `v.load()` → all the manifest + first-segment work we just paid for is thrown away. Then the effect re-runs and builds a brand new HLS from scratch. That's the ~800–1500 ms hitch users feel after every swipe.
 
-| State | src attached | hls.js attached | `<video preload>` | playing |
-|---|---|---|---|---|
-| Active (`shouldPlay`) | yes | yes | `metadata` | yes |
-| Preload next (`preloadMode !== 'none'` && !shouldPlay) | yes | yes, **but `autoStartLoad: false`** then `hls.startLoad(-1)` capped to lowest level | `auto` or `metadata` per prop | **no** (never call `v.play()`) |
-| Idle | no | no | `none` | no |
+**Fix:** split the effect.
+- Effect A (deps: `src, isHls, shouldAttach`) — owns lifecycle: creates HLS / attaches `src` when `shouldAttach` becomes true, tears it down only when `shouldAttach` becomes false. This effect must **not** depend on `shouldPlay`.
+- Effect B (deps: `shouldPlay`) — only reconfigures the existing instance: when going prefetch → active, raise hls.js buffer caps (`maxBufferLength: 30`, `maxMaxBufferLength: 60`, `backBufferLength: 10`) via `hls.config.* = …` and call `hls.startLoad()` if not already loading. No destroy.
 
-Implementation notes:
-- Split the current "attach source" effect so it triggers when `shouldPlay || preloadMode !== 'none'`.
-- When prefetching, instantiate hls with `autoStartLoad: false, startLevel: 0`, then call `hls.startLoad()` so it fetches the manifest + first segment only. Do **not** call `v.play()`.
-- When `shouldPlay` flips true on a prefetched player, the manifest + first segment are already cached → instant first frame.
-- When both `shouldPlay` and `preloadMode` are false, run the existing teardown (`pause`, `removeAttribute('src')`, `load()`, destroy hls).
-- The `<video preload>` attribute becomes: `shouldPlay ? 'metadata' : preloadMode`.
+Result: the prefetched manifest + segment 0 stays in the hls.js buffer; activation just unpauses the loader and calls `v.play()`.
 
-### 2. `src/pages/WatchFeed.tsx`
+## Bug 2 — Sponsor / battle slots eat the "preload next" budget
 
-In `renderVideoItem` (line 486):
+`WatchFeed.tsx` line 521:
 
-- Keep the virtualization window but widen by one: `shouldMount = idx === activeIndex || idx === activeIndex + 1` (already effectively the case — make it explicit and drop the `idx >= activeIndex` constraint so a quick scroll-back still has the previous frame warm; optional, can keep current rule).
-- Pass new prop to `SmartVideoPlayer`:
-  ```tsx
-  preloadMode={isActive ? 'metadata' : idx === activeIndex + 1 ? 'auto' : 'none'}
-  ```
-- Active stays `forceActive={isActive}` (drives playback). Next neighbour gets `forceActive={false}` + `preloadMode="auto"` → warms the pipe without playing.
+```tsx
+preloadMode={isActive ? 'metadata' : idx === activeIndex + 1 ? 'auto' : 'none'}
+```
 
-### 3. No other component changes
+The feed builder (lines 322, 335) injects a sponsor every 3 items and a battle every 6 items. So a meaningful fraction of the time `feed[activeIndex + 1]` is **a sponsor card or a SplitScreenBattle**, neither of which prefetches anything. The next real video is at `activeIndex + 2` or `+3` and gets `preloadMode='none'` — so the swipe lands on a cold player and stalls.
 
-`SplitScreenBattle`, `BrandedVideoPlayer`, `CloudflareStreamPlayer`, `VideoPlayer` are not part of the WatchFeed pipeline and stay as-is.
+**Fix:** in `renderVideoItem`, compute the prefetch target dynamically:
 
----
+- Find the index of the next item in `feed` after `activeIndex` whose `type` is `'video'` / `'educator'` / `'platform'` (i.e. anything routed through `SmartVideoPlayer`). Call it `nextVideoIdx`.
+- Memoize it once per `activeIndex` change (cheap O(n) scan over a small window — `feed` is < ~60 items).
+- Pass `preloadMode={isActive ? 'auto' : idx === nextVideoIdx ? 'auto' : 'none'}`.
+- Widen the mount window to `idx === activeIndex || idx === nextVideoIdx` (keep the existing `idx >= activeIndex` rule, since scroll-back currently remounts and that's intentional).
 
-## Expected impact
+Also: `SplitScreenBattle` should warm its two videos when it is the next slot. Add `isPreloading` prop (default false). When `isPreloading && !isActive`, set `src` on both videos with `preload="metadata"` (no `play()`). Existing `isActive` behaviour unchanged. WatchFeed sets `isPreloading={idx === nextVideoIdx}`.
 
-- Active video: identical to today (instant, lowest rendition first).
-- Next video: manifest + ~2-4s of segment 0 already in browser cache by the time the user swipes → first-frame on swipe drops from ~800-1200ms to ~100-200ms.
-- Off-screen videos: zero bytes, zero decoders (unchanged — already enforced by virtualization, now also explicit via `preload="none"`).
-- Peak concurrent decoders: still 1 (only the active player calls `play()`).
+## Bug 3 — Active player is bandwidth-starved
+
+Two settings work against the active player specifically:
+
+a) `<video preload={shouldPlay ? 'metadata' : preloadMode}>` — when active, the attribute is `'metadata'`. For MP4 fallbacks (R2 direct URLs that aren't Cloudflare Stream), this caps how much the browser will buffer ahead. Change active to `'auto'`.
+
+b) HLS active config caps buffer hard:
+
+```ts
+maxBufferLength: prefetchOnly ? 4 : 12,
+maxMaxBufferLength: prefetchOnly ? 6 : 24,
+backBufferLength: prefetchOnly ? 0 : 8,
+```
+
+12 s of forward buffer is tight for VOD on flaky mobile — default hls.js is 30/60. Raise active values to `maxBufferLength: 30, maxMaxBufferLength: 60, backBufferLength: 10`. Prefetch values stay tiny (4/6/0).
+
+Also drop `testBandwidth: !prefetchOnly` for the active path and keep `startLevel: 0` only for the very first segment, then let `capLevelToPlayerSize` + `capLevelOnFPSDrop` take over (they already are).
 
 ---
 
 ## Out of scope
 
-- No DB/RPC, no auth/economy changes.
-- No changes to LiveKit / live PK path.
-- No changes to BrandedVideoPlayer or the legacy `VideoPlayer`.
-- Cloudflare Page Rule / CORS already verified in prior turns.
+- No changes to the feed queries, DB, or `SmartVideoPlayer` public API beyond the new `preloadMode` behaviour and the split effects.
+- No changes to LiveKit, BrandedVideoPlayer, CloudflareStreamPlayer, or other pages.
+- No Cloudflare-side changes (Stream + R2 already verified).
+
+## Expected impact
+
+- Swipe → first-frame on the Watch page drops from ~800–1500 ms to ~100–250 ms (prefetched HLS survives activation, and the prefetch always points at the *actual next video*, not a sponsor card).
+- Mid-playback rebuffer events on weak mobile drop because the active forward buffer goes from 12 s to 30 s.
+- Off-screen players still hold zero decoders and zero bytes — peak concurrent decoders stays at 1.
+
+## Files to change
+
+- `src/components/video/SmartVideoPlayer.tsx` — split effects, raise active buffer caps, set active `<video preload>` to `'auto'`.
+- `src/pages/WatchFeed.tsx` — compute `nextVideoIdx`, use it for both mount window and `preloadMode`.
+- `src/components/battles/SplitScreenBattle.tsx` — add optional `isPreloading` prop, warm both `<video>` elements without playing when set.
