@@ -95,6 +95,7 @@ const SovereignHQ = () => {
         </div>
 
         <SponsorControlPanel onRefresh={refresh} />
+        <GearControlPanel />
         <AffiliateControlPanel onRefresh={refresh} />
         <MapVisibilityEnginePanel />
         <M4MFundPanel />
