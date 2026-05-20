@@ -89,7 +89,7 @@ const SplitScreenBattle = ({
           loop
           muted
           playsInline
-          preload="none"
+          preload={isActive ? 'auto' : isPreloading ? 'metadata' : 'none'}
         />
         {splitPercent > 30 && (
           <div className="absolute bottom-24 left-4 text-white z-30">
