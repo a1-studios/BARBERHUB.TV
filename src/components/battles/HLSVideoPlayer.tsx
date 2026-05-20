@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Play } from 'lucide-react';
 import { CloudflareStreamPlayer } from '@/components/CloudflareStreamPlayer';
+import { toCdnUrl } from '@/lib/mediaCdn';
 
 interface HLSVideoPlayerProps {
   src?: string | null;
@@ -17,8 +18,8 @@ interface HLSVideoPlayerProps {
 }
 
 export const HLSVideoPlayer = ({
-  src,
-  poster,
+  src: rawSrc,
+  poster: rawPoster,
   isLive = false,
   title,
   autoPlay = false,
@@ -27,6 +28,8 @@ export const HLSVideoPlayer = ({
   size = 'medium',
   streamUid,
 }: HLSVideoPlayerProps) => {
+  const src = toCdnUrl(rawSrc);
+  const poster = toCdnUrl(rawPoster);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {

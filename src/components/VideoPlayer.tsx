@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Maximize2 } from 'lucide-react';
+import { toCdnUrl } from '@/lib/mediaCdn';
 
 interface VideoPlayerProps {
   src?: string;
@@ -12,12 +13,14 @@ interface VideoPlayerProps {
 }
 
 export const VideoPlayer = ({ 
-  src, 
-  poster, 
+  src: rawSrc, 
+  poster: rawPoster, 
   className = '',
   isLive = false,
   autoPlay = false 
 }: VideoPlayerProps) => {
+  const src = toCdnUrl(rawSrc);
+  const poster = toCdnUrl(rawPoster);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
