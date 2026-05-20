@@ -18,6 +18,13 @@ interface SmartVideoPlayerProps {
   forceActive?: boolean;
   overlayPayload?: OverlayPayload | null;
   enableReplay?: boolean;
+  /**
+   * Smart preloading mode (applied only when this player is NOT the active one).
+   * - 'none'     : zero bytes, decoder released (default)
+   * - 'metadata' : fetch manifest + headers only
+   * - 'auto'     : warm the pipe — fetch manifest + first segment so swipe-to-active is instant
+   */
+  preloadMode?: 'none' | 'metadata' | 'auto';
 }
 
 const CF_STREAM_CUSTOMER =
