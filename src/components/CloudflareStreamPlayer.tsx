@@ -1,6 +1,7 @@
 import { Stream } from '@cloudflare/stream-react';
 import { motion } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
+import { toCdnUrl } from '@/lib/mediaCdn';
 
 interface CloudflareStreamPlayerProps {
   /** Cloudflare Stream video UID — renders adaptive HLS player when set */
@@ -30,8 +31,8 @@ interface CloudflareStreamPlayerProps {
  */
 export const CloudflareStreamPlayer = ({
   streamUid,
-  fallbackUrl,
-  poster,
+  fallbackUrl: rawFallbackUrl,
+  poster: rawPoster,
   autoPlay = true,
   muted = true,
   loop = false,
@@ -41,6 +42,8 @@ export const CloudflareStreamPlayer = ({
   onEnded,
   captionsVtt,
 }: CloudflareStreamPlayerProps) => {
+  const fallbackUrl = toCdnUrl(rawFallbackUrl);
+  const poster = toCdnUrl(rawPoster);
   // Sidecar VTT blob URL for the fallback player
   const vttUrl = (() => {
     if (!captionsVtt) return null;

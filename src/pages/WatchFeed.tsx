@@ -14,6 +14,7 @@ import { CloudflareStreamPlayer } from "@/components/CloudflareStreamPlayer";
 import { SmartVideoPlayer } from "@/components/video/SmartVideoPlayer";
 import { cleanDisplayTitle } from "@/lib/utils";
 import { usePersistedMute } from "@/hooks/usePersistedMute";
+import { toCdnUrl } from "@/lib/mediaCdn";
 
 interface FeedItem {
   type: "video" | "sponsor" | "educator" | "platform" | "battle";
@@ -90,7 +91,7 @@ const WatchFeed = () => {
       return filtered.map((b) => ({
         type: "video" as const,
         id: `profile-${b.barber_id}`,
-        media_url: b.featured_video_id!,
+        media_url: toCdnUrl(b.featured_video_id!),
         barber_name: b.display_name || b.barber_name || "Barber",
         creator_avatar: b.avatar_url,
         specialty: specMap[b.barber_id] ?? null,
@@ -118,10 +119,10 @@ const WatchFeed = () => {
           type: (c.content_type === "course_teaser" ? "educator" : "video") as "educator" | "video",
           id: `creator-${c.id}`,
           content_id: c.id,
-          media_url: c.media_url!,
+          media_url: toCdnUrl(c.media_url!),
           title: cleanDisplayTitle(c.title) ?? undefined,
           description: c.description,
-          thumbnail_url: c.thumbnail_url,
+          thumbnail_url: toCdnUrl(c.thumbnail_url),
           barber_name: "Creator",
           specialty: null,
           barber_user_id: c.creator_id,
@@ -160,10 +161,10 @@ const WatchFeed = () => {
         .map((c: any) => ({
           type: "video" as const,
           id: `creation-${c.id}`,
-          media_url: c.media_url,
+          media_url: toCdnUrl(c.media_url),
           title: cleanDisplayTitle(c.title) ?? undefined,
           description: c.description,
-          thumbnail_url: c.thumbnail_url,
+          thumbnail_url: toCdnUrl(c.thumbnail_url),
           barber_name: barberMap[c.barber_id]?.name || "Barber",
           specialty: barberMap[c.barber_id]?.specialty ?? null,
           barber_user_id: barberMap[c.barber_id]?.user_id,
@@ -189,10 +190,10 @@ const WatchFeed = () => {
         .map((s: any) => ({
           type: "video" as const,
           id: `submission-${s.id}`,
-          media_url: s.media_url,
+          media_url: toCdnUrl(s.media_url),
           title: cleanDisplayTitle(s.title) ?? undefined,
           description: s.description,
-          thumbnail_url: s.thumbnail_url,
+          thumbnail_url: toCdnUrl(s.thumbnail_url),
           barber_name: "Competitor",
           specialty: null,
           barber_user_id: s.user_id,
@@ -234,8 +235,8 @@ const WatchFeed = () => {
           id: `battle-${b.id}`,
           battle_id: b.id,
           title: b.title,
-          barber1_video: b.barber_1_video_url!,
-          barber2_video: b.barber_2_video_url!,
+          barber1_video: toCdnUrl(b.barber_1_video_url!),
+          barber2_video: toCdnUrl(b.barber_2_video_url!),
           barber1_name: profileMap[b.barber1_id!]?.name || "Barber 1",
           barber1_location: profileMap[b.barber1_id!]?.location || "",
           barber2_name: profileMap[b.barber2_id!]?.name || "Barber 2",
@@ -500,11 +501,11 @@ const WatchFeed = () => {
     const hasPlayable = !!item.cloudflare_stream_uid || (item.media_url && /^https?:\/\//.test(item.media_url));
     if (!hasPlayable) return null;
 
-    // Virtualize: only mount the player for items near the active index
+    // Virtualize: only mount current + next neighbour. Previous was already played;
+    // remount on scroll-back is cheap and saves a decoder + bandwidth.
     const distance = Math.abs(idx - activeIndex);
-    const shouldMount = distance <= 2;
+    const shouldMount = distance <= 1 && idx >= activeIndex;
     const isActive = activeIndex === idx;
-    const preload = isActive ? "auto" : distance === 1 ? "metadata" : "none";
     const cleanTitle = cleanDisplayTitle(item.title);
 
     return (

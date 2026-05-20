@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useId } from 'react';
-import { Stream, type StreamPlayerApi } from '@cloudflare/stream-react';
+import Hls from 'hls.js';
 import { Loader2, RotateCcw } from 'lucide-react';
 import { activeVideoStore, useActiveVideoId } from '@/stores/activeVideoStore';
 import { OverlayCanvas, type OverlayPayload } from './OverlayCanvas';
@@ -16,19 +16,25 @@ interface SmartVideoPlayerProps {
   className?: string;
   onEnded?: () => void;
   forceActive?: boolean;
-  /** Saved text overlays (from Camera Studio publish) */
   overlayPayload?: OverlayPayload | null;
-  /** Show a replay button + tap-to-restart when the video ends */
   enableReplay?: boolean;
 }
 
+const CF_STREAM_CUSTOMER =
+  (import.meta.env.VITE_CF_STREAM_CUSTOMER_CODE as string | undefined) ||
+  'q3djo7byzgo7v0c1';
+
+const streamHlsUrl = (uid: string) =>
+  `https://customer-${CF_STREAM_CUSTOMER}.cloudflarestream.com/${uid}/manifest/video.m3u8`;
+const streamPosterUrl = (uid: string) =>
+  `https://customer-${CF_STREAM_CUSTOMER}.cloudflarestream.com/${uid}/thumbnails/thumbnail.jpg`;
+
 /**
- * Robust mobile-first VOD player:
- *  - Single decoder via activeVideoStore + IntersectionObserver
- *  - Loading spinner driven by canplay
- *  - Coalesced play/pause (waits for readyState before calling .play)
- *  - Renders saved text overlays as an HTML layer
- *  - Optional replay UI when not auto-advancing
+ * Single-decoder, single-<video> player.
+ * - Cloudflare Stream UIDs play via hls.js (or native HLS on Safari) — no iframe.
+ * - R2/MP4 falls back to direct <video src>.
+ * - activeVideoStore guarantees only one instance plays at a time.
+ * - preload="none" when not active; metadata only when current.
  */
 export function SmartVideoPlayer({
   streamUid,
@@ -47,7 +53,7 @@ export function SmartVideoPlayer({
 }: SmartVideoPlayerProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const streamApiRef = useRef<StreamPlayerApi | null>(null);
+  const hlsRef = useRef<Hls | null>(null);
   const instanceId = useId();
   const activeId = useActiveVideoId();
   const [isVisible, setIsVisible] = useState(false);
@@ -59,7 +65,7 @@ export function SmartVideoPlayer({
 
   useEffect(() => () => { mountedRef.current = false; }, []);
 
-  // Sidecar VTT for native fallback
+  // Sidecar VTT
   useEffect(() => {
     if (!captionsVtt) { setVttUrl(null); return; }
     const url = URL.createObjectURL(new Blob([captionsVtt], { type: 'text/vtt' }));
@@ -67,7 +73,7 @@ export function SmartVideoPlayer({
     return () => URL.revokeObjectURL(url);
   }, [captionsVtt]);
 
-  // Visibility → "active" coordination
+  // Visibility coordination
   useEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
@@ -86,40 +92,76 @@ export function SmartVideoPlayer({
 
   const shouldPlay = forceActive || (isVisible && activeId === instanceId);
 
-  // Native fallback: coalesced play/pause
+  // Resolve the canonical src for this player
+  const src = streamUid ? streamHlsUrl(streamUid) : fallbackUrl || '';
+  const effectivePoster = poster || (streamUid ? streamPosterUrl(streamUid) : undefined);
+  const isHls = !!streamUid;
+
+  // Reset loading whenever the underlying source changes
+  useEffect(() => { setLoading(true); setEnded(false); }, [src]);
+
+  // Attach source: hls.js for non-native browsers, native for Safari/MP4
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || !src) return;
+
+    // Tear down any previous hls instance
+    if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+
+    if (isHls && !v.canPlayType('application/vnd.apple.mpegurl') && Hls.isSupported()) {
+      const hls = new Hls({
+        enableWorker: true,
+        lowLatencyMode: false,
+        maxBufferLength: 12,
+        maxMaxBufferLength: 24,
+        backBufferLength: 8,
+        startLevel: -1,
+        capLevelToPlayerSize: true,
+      });
+      hls.loadSource(src);
+      hls.attachMedia(v);
+      hls.on(Hls.Events.ERROR, (_e, data) => {
+        if (data.fatal) hls.recoverMediaError();
+      });
+      hlsRef.current = hls;
+    } else {
+      v.src = src;
+    }
+
+    return () => {
+      if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+      try { v.removeAttribute('src'); v.load(); } catch { /* ignore */ }
+    };
+  }, [src, isHls]);
+
+  // Play / pause coalesced
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
     let cancelled = false;
+    let timeoutId: number | undefined;
     const tryPlay = async () => {
       try {
         if (v.readyState < 2) {
-          await new Promise<void>((resolve) => {
-            const onReady = () => { v.removeEventListener('loadeddata', onReady); resolve(); };
+          await new Promise<void>((resolve, reject) => {
+            const onReady = () => { cleanup(); resolve(); };
+            const cleanup = () => {
+              v.removeEventListener('loadeddata', onReady);
+              v.removeEventListener('canplay', onReady);
+              if (timeoutId) window.clearTimeout(timeoutId);
+            };
             v.addEventListener('loadeddata', onReady);
+            v.addEventListener('canplay', onReady);
+            timeoutId = window.setTimeout(() => { cleanup(); reject(new Error('load-timeout')); }, 6000);
           });
         }
         if (cancelled || !mountedRef.current) return;
         await v.play();
-      } catch { /* autoplay block or pause raced — fine */ }
+      } catch { /* autoplay block, pause race, or timeout — leave paused */ }
     };
-    if (shouldPlay && !ended) {
-      tryPlay();
-    } else {
-      v.pause();
-    }
-    return () => { cancelled = true; };
-  }, [shouldPlay, ended]);
-
-  // Cloudflare Stream play/pause
-  useEffect(() => {
-    const api = streamApiRef.current;
-    if (!api) return;
-    if (shouldPlay && !ended) {
-      api.play?.()?.catch?.(() => {});
-    } else {
-      api.pause?.();
-    }
+    if (shouldPlay && !ended) tryPlay();
+    else v.pause();
+    return () => { cancelled = true; if (timeoutId) window.clearTimeout(timeoutId); };
   }, [shouldPlay, ended]);
 
   const handleReplay = () => {
@@ -127,8 +169,6 @@ export function SmartVideoPlayer({
     setCurrentTime(0);
     const v = videoRef.current;
     if (v) { v.currentTime = 0; v.play().catch(() => {}); }
-    const api = streamApiRef.current;
-    if (api) { try { api.currentTime = 0; api.play?.()?.catch?.(() => {}); } catch {} }
   };
 
   const handleEnded = () => {
@@ -136,14 +176,44 @@ export function SmartVideoPlayer({
     onEnded?.();
   };
 
-  const renderOverlays = () => (
-    <>
+  if (!src) {
+    return (
+      <div ref={wrapperRef} className={`w-full h-full bg-black flex items-center justify-center ${className}`}>
+        <p className="text-xs text-muted-foreground">No video</p>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={wrapperRef} className={`relative w-full h-full bg-black ${className}`}>
+      <video
+        ref={videoRef}
+        poster={effectivePoster ?? undefined}
+        muted={muted}
+        loop={loop}
+        controls={controls}
+        playsInline
+        preload={shouldPlay ? 'metadata' : 'none'}
+        className="w-full h-full object-cover"
+        crossOrigin={vttUrl ? 'anonymous' : undefined}
+        onLoadedData={() => setLoading(false)}
+        onWaiting={() => setLoading(true)}
+        onPlaying={() => setLoading(false)}
+        onCanPlay={() => setLoading(false)}
+        onTimeUpdate={(e) => setCurrentTime((e.target as HTMLVideoElement).currentTime)}
+        onEnded={handleEnded}
+      >
+        {vttUrl && <track kind="subtitles" srcLang="en" src={vttUrl} default />}
+      </video>
+
       {overlayPayload && <OverlayCanvas payload={overlayPayload} currentTime={currentTime} />}
-      {loading && (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/30">
+
+      {loading && shouldPlay && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20">
           <Loader2 className="h-8 w-8 text-white/80 animate-spin" />
         </div>
       )}
+
       {enableReplay && ended && !loop && (
         <button
           onClick={handleReplay}
@@ -155,69 +225,6 @@ export function SmartVideoPlayer({
           </span>
         </button>
       )}
-    </>
-  );
-
-  // Cloudflare Stream path
-  if (streamUid) {
-    return (
-      <div ref={wrapperRef} className={`relative w-full h-full bg-black ${className}`}>
-        <Stream
-          src={streamUid}
-          controls={controls}
-          autoplay={shouldPlay}
-          muted={muted}
-          loop={loop}
-          poster={poster ?? undefined}
-          responsive
-          streamRef={streamApiRef}
-          onLoadedData={() => setLoading(false)}
-          onWaiting={() => setLoading(true)}
-          onPlaying={() => setLoading(false)}
-          onTimeUpdate={() => {
-            const t = streamApiRef.current?.currentTime;
-            if (typeof t === 'number') setCurrentTime(t);
-          }}
-          onEnded={handleEnded}
-          className="w-full h-full"
-        />
-        {renderOverlays()}
-      </div>
-    );
-  }
-
-  // Native fallback
-  if (fallbackUrl) {
-    return (
-      <div ref={wrapperRef} className={`relative w-full h-full bg-black ${className}`}>
-        <video
-          ref={videoRef}
-          src={fallbackUrl}
-          poster={poster ?? undefined}
-          muted={muted}
-          loop={loop}
-          controls={controls}
-          playsInline
-          preload={shouldPlay ? 'auto' : 'metadata'}
-          className="w-full h-full object-cover"
-          crossOrigin={vttUrl ? 'anonymous' : undefined}
-          onLoadedData={() => setLoading(false)}
-          onWaiting={() => setLoading(true)}
-          onPlaying={() => setLoading(false)}
-          onCanPlay={() => setLoading(false)}
-          onTimeUpdate={(e) => setCurrentTime((e.target as HTMLVideoElement).currentTime)}
-          onEnded={handleEnded}
-        >
-          {vttUrl && <track kind="subtitles" srcLang="en" src={vttUrl} default />}
-        </video>
-        {renderOverlays()}
-      </div>
-    );
-  }
-
-  return (
-    <div ref={wrapperRef} className={`w-full h-full bg-muted flex items-center justify-center ${className}`}>
-      <p className="text-xs text-muted-foreground">No video</p>
     </div>
   );
 }
