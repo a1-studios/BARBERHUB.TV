@@ -15,6 +15,7 @@ import TournamentManagerPanel from '@/components/sovereign/TournamentManagerPane
 import VaultMetricsPanel from '@/components/sovereign/VaultMetricsPanel';
 import M4MFundPanel from '@/components/sovereign/M4MFundPanel';
 import AffiliateControlPanel from '@/components/sovereign/AffiliateControlPanel';
+import GearControlPanel from '@/components/sovereign/GearControlPanel';
 import MediaPipelinePanel from '@/components/sovereign/MediaPipelinePanel';
 import MapVisibilityEnginePanel from '@/components/sovereign/MapVisibilityEnginePanel';
 
@@ -94,6 +95,7 @@ const SovereignHQ = () => {
         </div>
 
         <SponsorControlPanel onRefresh={refresh} />
+        <GearControlPanel />
         <AffiliateControlPanel onRefresh={refresh} />
         <MapVisibilityEnginePanel />
         <M4MFundPanel />

@@ -157,7 +157,9 @@ serve(async (req) => {
         .eq('id', product_id);
     }
 
-    // Create order
+    // Create order. If gear ships via Shopify, leave shopify_order_id null
+    // and mark pending so Sovereign HQ can fulfill / push to Shopify later.
+    const orderStatus = product.requires_shipping ? 'pending' : 'fulfilled';
     const { data: order, error: orderError } = await supabase
       .from('product_orders')
       .insert({
@@ -167,7 +169,8 @@ serve(async (req) => {
         total_bb_cost: totalCost,
         discount_applied: discountAmount,
         shipping_address,
-        status: 'pending'
+        status: orderStatus,
+        shopify_order_id: null,
       })
       .select()
       .single();
@@ -176,6 +179,7 @@ serve(async (req) => {
       console.error('Order create error:', orderError);
       // Non-fatal, payment already processed
     }
+
 
     // Notify user
     await supabase
