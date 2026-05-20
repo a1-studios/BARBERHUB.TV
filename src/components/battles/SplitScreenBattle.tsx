@@ -10,6 +10,7 @@ interface SplitScreenBattleProps {
   barber2_name: string;
   barber2_location: string;
   isActive: boolean;
+  isPreloading?: boolean;
   battleId: string;
 }
 
@@ -21,6 +22,7 @@ const SplitScreenBattle = ({
   barber2_name,
   barber2_location,
   isActive,
+  isPreloading = false,
 }: SplitScreenBattleProps) => {
   const [splitPercent, setSplitPercent] = useState(50);
   const [isDragging, setIsDragging] = useState(false);
@@ -28,7 +30,10 @@ const SplitScreenBattle = ({
   const video1Ref = useRef<HTMLVideoElement>(null);
   const video2Ref = useRef<HTMLVideoElement>(null);
 
-  // Gate decoders on isActive — attach src only when active, release on deactivate
+  // Gate decoders on isActive / isPreloading.
+  // - active: attach src + play
+  // - preloading (next slot): attach src so the browser warms TCP + manifest, but DO NOT play
+  // - idle: release decoder
   useEffect(() => {
     const v1 = video1Ref.current;
     const v2 = video2Ref.current;
@@ -37,13 +42,17 @@ const SplitScreenBattle = ({
       if (v2 && v2.getAttribute('src') !== barber2_video) v2.src = barber2_video;
       v1?.play().catch(() => {});
       v2?.play().catch(() => {});
+    } else if (isPreloading) {
+      if (v1 && v1.getAttribute('src') !== barber1_video) v1.src = barber1_video;
+      if (v2 && v2.getAttribute('src') !== barber2_video) v2.src = barber2_video;
+      // explicitly do not call play()
     } else {
       [v1, v2].forEach((v) => {
         if (!v) return;
         try { v.pause(); v.removeAttribute('src'); v.load(); } catch { /* ignore */ }
       });
     }
-  }, [isActive, barber1_video, barber2_video]);
+  }, [isActive, isPreloading, barber1_video, barber2_video]);
 
   const handleDrag = (_event: any, info: any) => {
     if (!containerRef.current) return;
