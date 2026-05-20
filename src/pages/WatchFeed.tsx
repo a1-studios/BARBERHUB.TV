@@ -289,58 +289,60 @@ const WatchFeed = () => {
     return unique;
   }, [profileVideos, creatorVideos, creationVideos, submissionVideos, isFan]);
 
-  // Only build a feed from real, playable content — no empty-thumbnail placeholders.
-  const VIDEO_EXT = /\.(mp4|mov|webm|m4v|m3u8)(\?.*)?$/i;
-  const allContent: FeedItem[] = shuffledContent.filter((item) => {
-    if (item.cloudflare_stream_uid) return true;
-    if (!item.media_url) return false;
-    if (!/^https?:\/\//.test(item.media_url)) return false;
-    return VIDEO_EXT.test(item.media_url);
-  });
+  // Build the final feed (heavy work) — memoized so it doesn't rebuild on every render
+  const feed: FeedItem[] = useMemo(() => {
+    const VIDEO_EXT = /\.(mp4|mov|webm|m4v|m3u8)(\?.*)?$/i;
+    const allContent: FeedItem[] = shuffledContent.filter((item) => {
+      if (item.cloudflare_stream_uid) return true;
+      if (!item.media_url) return false;
+      if (!/^https?:\/\//.test(item.media_url)) return false;
+      return VIDEO_EXT.test(item.media_url);
+    });
 
-  const feed: FeedItem[] = [];
-  let sponsorIdx = 0;
-  let battleIdx = 0;
+    const out: FeedItem[] = [];
+    let sponsorIdx = 0;
+    let battleIdx = 0;
 
-  if (allContent.length > 0) {
-    let contentIdx = 0;
-    let loopPass = 0;
-    while (feed.length < Math.max(20, allContent.length + 10)) {
-      const item = allContent[contentIdx % allContent.length];
-      // Guard against the wrap-around producing back-to-back duplicate creator
-      const prev = feed[feed.length - 1];
-      const isDupe = prev && prev.type !== 'sponsor' && prev.type !== 'battle' &&
-        ((prev.barber_user_id && prev.barber_user_id === item.barber_user_id) ||
-         (prev.media_url && prev.media_url === item.media_url));
-      if (isDupe && allContent.length > 1) {
+    if (allContent.length > 0) {
+      let contentIdx = 0;
+      let loopPass = 0;
+      while (out.length < Math.max(20, allContent.length + 10)) {
+        const item = allContent[contentIdx % allContent.length];
+        const prev = out[out.length - 1];
+        const isDupe = prev && prev.type !== 'sponsor' && prev.type !== 'battle' &&
+          ((prev.barber_user_id && prev.barber_user_id === item.barber_user_id) ||
+           (prev.media_url && prev.media_url === item.media_url));
+        if (isDupe && allContent.length > 1) {
+          contentIdx++;
+          continue;
+        }
+        out.push({ ...item, id: loopPass > 0 ? `${item.id}-loop-${loopPass}` : item.id });
         contentIdx++;
-        continue;
-      }
-      feed.push({ ...item, id: loopPass > 0 ? `${item.id}-loop-${loopPass}` : item.id });
-      contentIdx++;
 
-      if (contentIdx % 3 === 0 && sponsors.length > 0) {
-        const sponsor = sponsors[sponsorIdx % sponsors.length];
-        feed.push({
-          type: "sponsor",
-          id: `sponsor-${sponsor.id}-${sponsorIdx}`,
-          name: sponsor.name,
-          message: sponsor.message,
-          logo_url: sponsor.logo_url,
-          link: sponsor.link,
-        });
-        sponsorIdx++;
-      }
+        if (contentIdx % 3 === 0 && sponsors.length > 0) {
+          const sponsor = sponsors[sponsorIdx % sponsors.length];
+          out.push({
+            type: "sponsor",
+            id: `sponsor-${sponsor.id}-${sponsorIdx}`,
+            name: sponsor.name,
+            message: sponsor.message,
+            logo_url: sponsor.logo_url,
+            link: sponsor.link,
+          });
+          sponsorIdx++;
+        }
 
-      if (contentIdx % 6 === 0 && battleItems.length > 0) {
-        feed.push({ ...battleItems[battleIdx % battleItems.length], id: `battle-feed-${battleIdx}` });
-        battleIdx++;
-      }
+        if (contentIdx % 6 === 0 && battleItems.length > 0) {
+          out.push({ ...battleItems[battleIdx % battleItems.length], id: `battle-feed-${battleIdx}` });
+          battleIdx++;
+        }
 
-      if (contentIdx % allContent.length === 0) loopPass++;
-      if (loopPass > 3) break;
+        if (contentIdx % allContent.length === 0) loopPass++;
+        if (loopPass > 3) break;
+      }
     }
-  }
+    return out;
+  }, [shuffledContent, sponsors, battleItems]);
 
   // If ?video= param is set, find the matching feed item and jump to it
   const [hasJumped, setHasJumped] = useState(false);
@@ -351,7 +353,6 @@ const WatchFeed = () => {
       if (idx >= 0) {
         setActiveIndex(idx);
         setHasJumped(true);
-        // Scroll to the item
         setTimeout(() => {
           const container = containerRef.current;
           if (container) {
@@ -361,7 +362,7 @@ const WatchFeed = () => {
         }, 100);
       }
     }
-  }, [targetVideoBarber, feed.length, hasJumped]);
+  }, [targetVideoBarber, feed, hasJumped]);
 
   // Snap scrolling observer + view tracking
   useEffect(() => {
@@ -374,7 +375,6 @@ const WatchFeed = () => {
             const idx = Number(entry.target.getAttribute("data-index"));
             if (!isNaN(idx)) {
               setActiveIndex(idx);
-              // Track view for creator content
               const item = feed[idx];
               if (item?.content_id && !viewedContentIds.current.has(item.content_id)) {
                 viewedContentIds.current.add(item.content_id);
@@ -388,20 +388,8 @@ const WatchFeed = () => {
     );
     container.querySelectorAll("[data-index]").forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [feed.length]);
+  }, [feed]);
 
-  // Auto-play/pause videos + sync muted state
-  useEffect(() => {
-    videoRefs.current.forEach((video, key) => {
-      const idx = feed.findIndex((f) => f.id === key);
-      video.muted = isMuted;
-      if (idx === activeIndex) {
-        video.play().catch(() => {});
-      } else {
-        video.pause();
-      }
-    });
-  }, [activeIndex, feed.length, isMuted]);
 
   const renderSpecialtyPills = (specialty: string | null | undefined) => {
     if (!specialty) return null;
