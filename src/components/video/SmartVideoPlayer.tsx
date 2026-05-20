@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, useId } from 'react';
+import { useEffect, useRef, useState, useId, useCallback } from 'react';
 import Hls from 'hls.js';
-import { Loader2, RotateCcw } from 'lucide-react';
+import { Loader2, RotateCcw, Play } from 'lucide-react';
 import { activeVideoStore, useActiveVideoId } from '@/stores/activeVideoStore';
 import { OverlayCanvas, type OverlayPayload } from './OverlayCanvas';
 
@@ -25,6 +25,8 @@ interface SmartVideoPlayerProps {
    * - 'auto'     : warm the pipe — fetch manifest + first segment so swipe-to-active is instant
    */
   preloadMode?: 'none' | 'metadata' | 'auto';
+  /** Show a large centered Play button when autoplay is blocked / video is paused. */
+  showCenterPlayButton?: boolean;
 }
 
 const CF_STREAM_CUSTOMER =
@@ -58,6 +60,7 @@ export function SmartVideoPlayer({
   overlayPayload,
   enableReplay = false,
   preloadMode = 'none',
+  showCenterPlayButton = false,
 }: SmartVideoPlayerProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
