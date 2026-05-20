@@ -1,90 +1,53 @@
-# Why the Watch page buffers (other pages don't)
+# Fix Watch feed playback + add center play/replay control
 
-Other pages use `SmartVideoPlayer` with a single, always-active video — no prefetch, no swapping, no mid-feed sponsor/battle slots. The Watch page is the only place that:
+## Goal
+Make videos on `/watch` actually start playing on mobile, and give users a clear centered control to start, resume, or replay the current item.
 
-1. Mounts an *active* player **and** a *prefetch* player at the same time,
-2. Flips a mounted player from prefetch → active mid-life, and
-3. Interleaves sponsor cards and split-screen battles into the vertical feed.
+## Root cause
+The active video is mounting with the right source, but it can stay paused because Watch feed restores a saved unmuted preference. On mobile, autoplay is blocked when a video starts unmuted. Right now `SmartVideoPlayer` catches that failure silently, so the feed looks stuck.
 
-Three real bugs fall out of that. None of them exist on the other pages, which is exactly why those load fine.
+## Plan
 
----
+### 1. Force safe autoplay on Watch feed
+Update `src/pages/WatchFeed.tsx` so Watch feed always **starts muted** instead of restoring the persisted mute preference on first load.
 
-## Bug 1 — Prefetched HLS instance is destroyed the moment it becomes active
+- Replace `usePersistedMute()` in Watch feed with local `useState(true)`.
+- Keep the existing mute/unmute button so users can turn sound on after playback begins.
+- Scope this change to `/watch` only; other pages can keep their current mute behavior.
 
-`SmartVideoPlayer.tsx`, the source-attach effect:
+### 2. Harden `SmartVideoPlayer` against blocked play()
+Update `src/components/video/SmartVideoPlayer.tsx` so a blocked autoplay does not fail silently.
 
-```ts
-useEffect(() => {
-  ...
-  return () => {
-    if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
-    try { v.removeAttribute('src'); v.load(); } catch {}
-  };
-}, [src, isHls, shouldAttach, shouldPlay]);
-```
+- When `video.play()` rejects, detect autoplay-style failures.
+- Retry once with `video.muted = true` before giving up.
+- Track a lightweight playback state such as `showPlayOverlay` / `playbackBlocked`.
+- Add wrapper click behavior so tapping the video surface attempts playback again.
 
-`shouldPlay` is in the deps. So when the user swipes and a prefetched player flips from `shouldPlay=false → true`, the cleanup runs first → `hls.destroy()` + `v.removeAttribute('src')` + `v.load()` → all the manifest + first-segment work we just paid for is thrown away. Then the effect re-runs and builds a brand new HLS from scratch. That's the ~800–1500 ms hitch users feel after every swipe.
+### 3. Add centered play/replay UI on the Watch feed videos
+Add a clear centered control overlay for the active player.
 
-**Fix:** split the effect.
-- Effect A (deps: `src, isHls, shouldAttach`) — owns lifecycle: creates HLS / attaches `src` when `shouldAttach` becomes true, tears it down only when `shouldAttach` becomes false. This effect must **not** depend on `shouldPlay`.
-- Effect B (deps: `shouldPlay`) — only reconfigures the existing instance: when going prefetch → active, raise hls.js buffer caps (`maxBufferLength: 30`, `maxMaxBufferLength: 60`, `backBufferLength: 10`) via `hls.config.* = …` and call `hls.startLoad()` if not already loading. No destroy.
+- **When autoplay is blocked or the video is paused:** show a centered Play button.
+- **When the video has ended:** show a centered Replay button using the existing replay logic.
+- Use Lucide icons already in the project (`Play`, `RotateCcw`).
+- Keep the styling minimal and mobile-first so it reads clearly over video without blocking the rest of the watch UI.
 
-Result: the prefetched manifest + segment 0 stays in the hls.js buffer; activation just unpauses the loader and calls `v.play()`.
+### 4. Make replay behavior match the new control
+Adjust Watch feed end-of-video behavior so replay is actually possible.
 
-## Bug 2 — Sponsor / battle slots eat the "preload next" budget
+- Do not immediately auto-scroll away from the current video on `ended`.
+- Let the centered Replay control handle replay for the current item.
+- Users can still swipe to the next item normally.
 
-`WatchFeed.tsx` line 521:
-
-```tsx
-preloadMode={isActive ? 'metadata' : idx === activeIndex + 1 ? 'auto' : 'none'}
-```
-
-The feed builder (lines 322, 335) injects a sponsor every 3 items and a battle every 6 items. So a meaningful fraction of the time `feed[activeIndex + 1]` is **a sponsor card or a SplitScreenBattle**, neither of which prefetches anything. The next real video is at `activeIndex + 2` or `+3` and gets `preloadMode='none'` — so the swipe lands on a cold player and stalls.
-
-**Fix:** in `renderVideoItem`, compute the prefetch target dynamically:
-
-- Find the index of the next item in `feed` after `activeIndex` whose `type` is `'video'` / `'educator'` / `'platform'` (i.e. anything routed through `SmartVideoPlayer`). Call it `nextVideoIdx`.
-- Memoize it once per `activeIndex` change (cheap O(n) scan over a small window — `feed` is < ~60 items).
-- Pass `preloadMode={isActive ? 'auto' : idx === nextVideoIdx ? 'auto' : 'none'}`.
-- Widen the mount window to `idx === activeIndex || idx === nextVideoIdx` (keep the existing `idx >= activeIndex` rule, since scroll-back currently remounts and that's intentional).
-
-Also: `SplitScreenBattle` should warm its two videos when it is the next slot. Add `isPreloading` prop (default false). When `isPreloading && !isActive`, set `src` on both videos with `preload="metadata"` (no `play()`). Existing `isActive` behaviour unchanged. WatchFeed sets `isPreloading={idx === nextVideoIdx}`.
-
-## Bug 3 — Active player is bandwidth-starved
-
-Two settings work against the active player specifically:
-
-a) `<video preload={shouldPlay ? 'metadata' : preloadMode}>` — when active, the attribute is `'metadata'`. For MP4 fallbacks (R2 direct URLs that aren't Cloudflare Stream), this caps how much the browser will buffer ahead. Change active to `'auto'`.
-
-b) HLS active config caps buffer hard:
-
-```ts
-maxBufferLength: prefetchOnly ? 4 : 12,
-maxMaxBufferLength: prefetchOnly ? 6 : 24,
-backBufferLength: prefetchOnly ? 0 : 8,
-```
-
-12 s of forward buffer is tight for VOD on flaky mobile — default hls.js is 30/60. Raise active values to `maxBufferLength: 30, maxMaxBufferLength: 60, backBufferLength: 10`. Prefetch values stay tiny (4/6/0).
-
-Also drop `testBandwidth: !prefetchOnly` for the active path and keep `startLevel: 0` only for the very first segment, then let `capLevelToPlayerSize` + `capLevelOnFPSDrop` take over (they already are).
-
----
+## Files to update
+- `src/pages/WatchFeed.tsx`
+- `src/components/video/SmartVideoPlayer.tsx`
 
 ## Out of scope
+- No DB, Supabase, or Cloudflare changes.
+- No redesign of the feed layout.
+- No changes to other pages unless they share the same reusable player behavior needed for the centered overlay.
 
-- No changes to the feed queries, DB, or `SmartVideoPlayer` public API beyond the new `preloadMode` behaviour and the split effects.
-- No changes to LiveKit, BrandedVideoPlayer, CloudflareStreamPlayer, or other pages.
-- No Cloudflare-side changes (Stream + R2 already verified).
-
-## Expected impact
-
-- Swipe → first-frame on the Watch page drops from ~800–1500 ms to ~100–250 ms (prefetched HLS survives activation, and the prefetch always points at the *actual next video*, not a sponsor card).
-- Mid-playback rebuffer events on weak mobile drop because the active forward buffer goes from 12 s to 30 s.
-- Off-screen players still hold zero decoders and zero bytes — peak concurrent decoders stays at 1.
-
-## Files to change
-
-- `src/components/video/SmartVideoPlayer.tsx` — split effects, raise active buffer caps, set active `<video preload>` to `'auto'`.
-- `src/pages/WatchFeed.tsx` — compute `nextVideoIdx`, use it for both mount window and `preloadMode`.
-- `src/components/battles/SplitScreenBattle.tsx` — add optional `isPreloading` prop, warm both `<video>` elements without playing when set.
+## Expected result
+- Watch feed videos start reliably on mobile.
+- If autoplay is blocked for any reason, users see an immediate centered Play control instead of a stuck video.
+- When a video ends, users can replay it from the center of the screen.

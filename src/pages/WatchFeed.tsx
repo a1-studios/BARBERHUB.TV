@@ -13,7 +13,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 
 import { SmartVideoPlayer } from "@/components/video/SmartVideoPlayer";
 import { cleanDisplayTitle } from "@/lib/utils";
-import { usePersistedMute } from "@/hooks/usePersistedMute";
+// Watch feed always starts muted to guarantee autoplay on mobile.
 import { toCdnUrl } from "@/lib/mediaCdn";
 
 interface FeedItem {
@@ -59,7 +59,7 @@ const WatchFeed = () => {
   const targetVideoBarber = searchParams.get('video');
   const { isFan } = useUserRole();
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isMuted, setIsMuted] = usePersistedMute();
+  const [isMuted, setIsMuted] = useState(true);
   const [donationTarget, setDonationTarget] = useState<{ userId: string; name: string } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const viewedContentIds = useRef<Set<string>>(new Set());
