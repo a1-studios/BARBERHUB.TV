@@ -413,14 +413,10 @@ const WatchFeed = () => {
     );
   };
 
-  const handleVideoEnded = useCallback((idx: number) => {
-    const next = idx + 1;
-    if (next < feed.length) {
-      const container = containerRef.current;
-      const target = container?.querySelector(`[data-index="${next}"]`);
-      target?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [feed.length]);
+  const handleVideoEnded = useCallback((_idx: number) => {
+    // Do not auto-scroll. The centered Replay control handles replay.
+    // Users can swipe to the next item normally.
+  }, []);
 
   const handleShare = async (item: FeedItem) => {
     const url = window.location.origin + "/watch";
@@ -530,6 +526,8 @@ const WatchFeed = () => {
               onEnded={() => handleVideoEnded(idx)}
               overlayPayload={item.overlay_payload}
               preloadMode={isActive ? 'auto' : isPrefetch ? 'auto' : 'none'}
+              enableReplay={isActive}
+              showCenterPlayButton={isActive}
             />
           </div>
         ) : (
