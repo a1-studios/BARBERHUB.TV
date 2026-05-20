@@ -522,7 +522,6 @@ const WatchFeed = () => {
           </div>
         ) : (
           // Lightweight poster while off-screen — saves bandwidth + CPU
-          // Lightweight poster while off-screen — saves bandwidth + CPU
           item.thumbnail_url ? (
             <img
               src={item.thumbnail_url}
