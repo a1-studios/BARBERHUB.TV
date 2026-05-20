@@ -70,6 +70,8 @@ export function SmartVideoPlayer({
   const [isVisible, setIsVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [ended, setEnded] = useState(false);
+  const [isPaused, setIsPaused] = useState(true);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [vttUrl, setVttUrl] = useState<string | null>(null);
   const mountedRef = useRef(true);
