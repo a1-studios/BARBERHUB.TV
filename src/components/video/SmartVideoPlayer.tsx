@@ -110,6 +110,10 @@ export function SmartVideoPlayer({
 
   // Attach source when active OR prefetching. Release decoder when fully idle.
   const shouldAttach = shouldPlay || preloadMode !== 'none';
+
+  // Effect A — lifecycle: create/destroy hls based on shouldAttach ONLY.
+  // Do NOT depend on shouldPlay here, otherwise the prefetched HLS gets
+  // destroyed the moment it becomes active (throwing away the warmed buffer).
   useEffect(() => {
     const v = videoRef.current;
     if (!v || !src) return;
@@ -120,27 +124,23 @@ export function SmartVideoPlayer({
       return;
     }
 
-    // Prefetch-only mode: warm pipe, never call play(). Limit segments fetched.
-    const prefetchOnly = !shouldPlay;
-
     if (isHls && !v.canPlayType('application/vnd.apple.mpegurl') && Hls.isSupported()) {
+      // Start with prefetch-friendly config; Effect B raises caps on activation.
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
-        // Prefetch: tiny buffer (just first segment). Active: normal buffer.
-        maxBufferLength: prefetchOnly ? 4 : 12,
-        maxMaxBufferLength: prefetchOnly ? 6 : 24,
-        backBufferLength: prefetchOnly ? 0 : 8,
+        maxBufferLength: 4,
+        maxMaxBufferLength: 6,
+        backBufferLength: 0,
         startLevel: 0,           // lowest rendition first → instant first frame on mobile
-        testBandwidth: !prefetchOnly,
+        testBandwidth: false,
         capLevelToPlayerSize: true,
         capLevelOnFPSDrop: true,
-        autoStartLoad: false,    // we trigger loading manually so prefetch is bounded
+        autoStartLoad: false,    // we trigger loading manually
       });
       hls.loadSource(src);
       hls.attachMedia(v);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        // Prefetch fetches manifest + ~first segment via the maxBufferLength cap above.
         hls.startLoad();
       });
       hls.on(Hls.Events.ERROR, (_e, data) => {
@@ -150,7 +150,6 @@ export function SmartVideoPlayer({
     } else {
       // Native (Safari HLS or MP4): the <video preload> attribute does the work.
       v.src = src;
-      // Hint the browser depending on mode
       try { v.load(); } catch { /* ignore */ }
     }
 
@@ -158,7 +157,24 @@ export function SmartVideoPlayer({
       if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
       try { v.removeAttribute('src'); v.load(); } catch { /* ignore */ }
     };
-  }, [src, isHls, shouldAttach, shouldPlay]);
+  }, [src, isHls, shouldAttach]);
+
+  // Effect B — reconfigure the existing hls instance when active state flips.
+  // No destroy; just raise buffer caps so the warmed prefetch survives.
+  useEffect(() => {
+    const hls = hlsRef.current;
+    if (!hls) return;
+    if (shouldPlay) {
+      hls.config.maxBufferLength = 30;
+      hls.config.maxMaxBufferLength = 60;
+      hls.config.backBufferLength = 10;
+      try { hls.startLoad(); } catch { /* already loading */ }
+    } else {
+      hls.config.maxBufferLength = 4;
+      hls.config.maxMaxBufferLength = 6;
+      hls.config.backBufferLength = 0;
+    }
+  }, [shouldPlay]);
 
   // Play / pause coalesced
   useEffect(() => {
@@ -219,7 +235,7 @@ export function SmartVideoPlayer({
         loop={loop}
         controls={controls}
         playsInline
-        preload={shouldPlay ? 'metadata' : preloadMode}
+        preload={shouldPlay ? 'auto' : preloadMode}
         className="w-full h-full object-cover"
         crossOrigin={vttUrl ? 'anonymous' : undefined}
         onLoadedData={() => setLoading(false)}
