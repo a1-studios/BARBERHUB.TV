@@ -518,6 +518,7 @@ const WatchFeed = () => {
               className="w-full h-full"
               onEnded={() => handleVideoEnded(idx)}
               overlayPayload={item.overlay_payload}
+              preloadMode={isActive ? 'metadata' : idx === activeIndex + 1 ? 'auto' : 'none'}
             />
           </div>
         ) : (

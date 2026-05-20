@@ -1,100 +1,65 @@
-## WatchFeed performance audit — what's blocking smooth playback
+## Goal
 
-After tracing the full pipeline (WatchFeed → SmartVideoPlayer → activeVideoStore → SplitScreenBattle → hls.js), here are the concrete bottlenecks and the surgical fixes for each. Mobile-first, no behaviour changes.
+Make the WatchFeed strictly bandwidth-disciplined: only the **active** video downloads/plays, the **next** video warms up in the background, and **every other** video stays at `preload="none"` with no decoder attached.
 
----
-
-### 1. `feed` is rebuilt every render (biggest CPU hit)
-
-`src/pages/WatchFeed.tsx` lines 293–344 build `allContent` + the entire `feed` array (filter + while-loop + dedupe checks) on **every render** — including every `activeIndex` change, every mute toggle, every scroll observer fire. With ~30 items × 4 sources that's hundreds of ops per scroll.
-
-**Fix:** wrap `allContent` and `feed` (and the sponsor/battle interleave loop) in a single `useMemo` keyed on `[shuffledContent, sponsors, battleItems]`.
+Today the feed already virtualizes (only `activeIndex` and `activeIndex + 1` mount), but the "next" slot is treated identically to off-screen — it gets `preload="none"` and no src attachment until it becomes active. That's why the first frame after a swipe still takes ~1s. We need an explicit *prefetch* state between "idle" and "playing".
 
 ---
 
-### 2. Dead `videoRefs` effect runs on every state change
+## Changes
 
-Lines 394–405 iterate `videoRefs.current` and call `feed.findIndex` for each — but **nothing populates `videoRefs`** anymore (SmartVideoPlayer owns its own `<video>`). The effect is dead code that still triggers an O(N²) scan on every mute/active change.
+### 1. `src/components/video/SmartVideoPlayer.tsx`
 
-**Fix:** delete `videoRefs`, delete the entire `useEffect` at 394–405. Mute is already wired via the `muted` prop into SmartVideoPlayer.
+Add a new prop:
 
----
-
-### 3. Off-screen `<video>` still preloads on the fallback (MP4) path
-
-In `SmartVideoPlayer.tsx` line 128, when the source isn't HLS we set `v.src = src` inside the mount effect — **before** `shouldPlay` is true. The browser begins buffering the neighbour video immediately, doubling network + decoder pressure on mobile.
-
-**Fix:** only assign `v.src` (or attach hls) when `shouldPlay` is true. When it flips false, detach and clear src so the decoder releases.
-
----
-
-### 4. HLS starts at highest renditon → first-frame lag on mobile
-
-`startLevel: -1` (line 118) lets ABR auto-pick — on a fast LAN that's 1080p, which delays first frame by 1–2s on a phone.
-
-**Fix:** `startLevel: 0` + `testBandwidth: true`. Cap with `capLevelOnFPSDrop: true`. Result: instant low-rez first frame, ABR upshifts after.
-
----
-
-### 5. `SplitScreenBattle` bypasses the single-decoder guard
-
-`src/components/battles/SplitScreenBattle.tsx` uses raw `<video src>` × 2 with no `activeVideoStore` registration. When a battle item lands in the feed, you have **2 always-playing decoders** in addition to the active SmartVideoPlayer = 3 decoders. On mobile that's the cliff.
-
-**Fix:** the component already receives `isActive`. Add `preload="none"` when inactive, gate `src` assignment behind `isActive`, and on unmount/inactive call `pause(); removeAttribute('src'); load();` to release the decoder.
-
----
-
-### 6. Thumbnails for off-screen items are unbounded
-
-Line 540 uses inline `style={{ backgroundImage: url(...) }}` — no `loading="lazy"`, no decoding hint, and CSS `background-image` never lazy-loads natively.
-
-**Fix:** swap to `<img loading="lazy" decoding="async" fetchPriority="low" className="absolute inset-0 w-full h-full object-cover" />`. Browser will defer offscreen decode and free memory.
-
----
-
-### 7. IntersectionObserver thrash on scroll
-
-The WatchFeed observer at line 371 is recreated whenever `feed.length` changes, and inside the callback calls `supabase.rpc('increment_content_views')` synchronously per intersection — fine, but the observer threshold is `0.6` while SmartVideoPlayer's internal one is also `0.6`. Two observers per item.
-
-**Fix:** keep WatchFeed's observer (it drives `activeIndex`), but in SmartVideoPlayer skip the internal IO when `forceActive` is passed (already the WatchFeed path). One observer per row instead of two.
-
----
-
-### 8. Lingering noise
-
-- `CloudflareStreamPlayer` import in WatchFeed (line 13) is unused → remove.
-- The `RESET_BLANK_CHECK` console warning is from Lovable's dev shim, not the app — ignore.
-- `index.html` preconnect to `media.barberhub.tv` + Cloudflare Stream origin is already in place ✅.
-- Page Rule cache + R2 CDN binding confirmed ✅.
-
----
-
-### Files to change
-
-```text
-src/pages/WatchFeed.tsx
-  - useMemo for allContent + feed
-  - delete videoRefs + dead effect
-  - swap thumbnail div → <img loading="lazy">
-  - remove unused CloudflareStreamPlayer import
-
-src/components/video/SmartVideoPlayer.tsx
-  - gate src/hls attach on shouldPlay
-  - tear down + release decoder when shouldPlay flips false
-  - HLS startLevel: 0, testBandwidth: true, capLevelOnFPSDrop: true
-  - skip internal IntersectionObserver when forceActive prop is provided
-
-src/components/battles/SplitScreenBattle.tsx
-  - preload="none" + gated src assignment on isActive
-  - release decoder when isActive flips false
+```ts
+preloadMode?: 'none' | 'metadata' | 'auto';  // default 'none'
 ```
 
-### Out of scope (intentionally)
+Behavior matrix (replaces the current binary `shouldPlay` gate):
 
-- No DB/RPC changes, no schema migrations
-- No new player abstraction or refactor
-- No changes to LiveKit live-PK path
-- No changes to BB economy / auth / moderation
-- Cloudflare Page Rule TTL bump (you already have that pending in the CF dashboard)
+| State | src attached | hls.js attached | `<video preload>` | playing |
+|---|---|---|---|---|
+| Active (`shouldPlay`) | yes | yes | `metadata` | yes |
+| Preload next (`preloadMode !== 'none'` && !shouldPlay) | yes | yes, **but `autoStartLoad: false`** then `hls.startLoad(-1)` capped to lowest level | `auto` or `metadata` per prop | **no** (never call `v.play()`) |
+| Idle | no | no | `none` | no |
 
-Expected impact on mobile: ~50% fewer active video decoders during normal scroll, first-frame time on HLS drops from ~1.5s → ~400ms, idle CPU between scrolls drops because the dead effects + per-render feed rebuild are gone.
+Implementation notes:
+- Split the current "attach source" effect so it triggers when `shouldPlay || preloadMode !== 'none'`.
+- When prefetching, instantiate hls with `autoStartLoad: false, startLevel: 0`, then call `hls.startLoad()` so it fetches the manifest + first segment only. Do **not** call `v.play()`.
+- When `shouldPlay` flips true on a prefetched player, the manifest + first segment are already cached → instant first frame.
+- When both `shouldPlay` and `preloadMode` are false, run the existing teardown (`pause`, `removeAttribute('src')`, `load()`, destroy hls).
+- The `<video preload>` attribute becomes: `shouldPlay ? 'metadata' : preloadMode`.
+
+### 2. `src/pages/WatchFeed.tsx`
+
+In `renderVideoItem` (line 486):
+
+- Keep the virtualization window but widen by one: `shouldMount = idx === activeIndex || idx === activeIndex + 1` (already effectively the case — make it explicit and drop the `idx >= activeIndex` constraint so a quick scroll-back still has the previous frame warm; optional, can keep current rule).
+- Pass new prop to `SmartVideoPlayer`:
+  ```tsx
+  preloadMode={isActive ? 'metadata' : idx === activeIndex + 1 ? 'auto' : 'none'}
+  ```
+- Active stays `forceActive={isActive}` (drives playback). Next neighbour gets `forceActive={false}` + `preloadMode="auto"` → warms the pipe without playing.
+
+### 3. No other component changes
+
+`SplitScreenBattle`, `BrandedVideoPlayer`, `CloudflareStreamPlayer`, `VideoPlayer` are not part of the WatchFeed pipeline and stay as-is.
+
+---
+
+## Expected impact
+
+- Active video: identical to today (instant, lowest rendition first).
+- Next video: manifest + ~2-4s of segment 0 already in browser cache by the time the user swipes → first-frame on swipe drops from ~800-1200ms to ~100-200ms.
+- Off-screen videos: zero bytes, zero decoders (unchanged — already enforced by virtualization, now also explicit via `preload="none"`).
+- Peak concurrent decoders: still 1 (only the active player calls `play()`).
+
+---
+
+## Out of scope
+
+- No DB/RPC, no auth/economy changes.
+- No changes to LiveKit / live PK path.
+- No changes to BrandedVideoPlayer or the legacy `VideoPlayer`.
+- Cloudflare Page Rule / CORS already verified in prior turns.
