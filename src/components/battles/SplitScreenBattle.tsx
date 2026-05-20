@@ -28,15 +28,22 @@ const SplitScreenBattle = ({
   const video1Ref = useRef<HTMLVideoElement>(null);
   const video2Ref = useRef<HTMLVideoElement>(null);
 
+  // Gate decoders on isActive — attach src only when active, release on deactivate
   useEffect(() => {
+    const v1 = video1Ref.current;
+    const v2 = video2Ref.current;
     if (isActive) {
-      video1Ref.current?.play().catch(() => {});
-      video2Ref.current?.play().catch(() => {});
+      if (v1 && v1.getAttribute('src') !== barber1_video) v1.src = barber1_video;
+      if (v2 && v2.getAttribute('src') !== barber2_video) v2.src = barber2_video;
+      v1?.play().catch(() => {});
+      v2?.play().catch(() => {});
     } else {
-      video1Ref.current?.pause();
-      video2Ref.current?.pause();
+      [v1, v2].forEach((v) => {
+        if (!v) return;
+        try { v.pause(); v.removeAttribute('src'); v.load(); } catch { /* ignore */ }
+      });
     }
-  }, [isActive]);
+  }, [isActive, barber1_video, barber2_video]);
 
   const handleDrag = (_event: any, info: any) => {
     if (!containerRef.current) return;
@@ -69,12 +76,11 @@ const SplitScreenBattle = ({
       >
         <video
           ref={video1Ref}
-          src={barber1_video}
           className="h-full w-full object-cover"
-          autoPlay={isActive}
           loop
           muted
           playsInline
+          preload="none"
         />
         {splitPercent > 30 && (
           <div className="absolute bottom-24 left-4 text-white z-30">
@@ -97,12 +103,11 @@ const SplitScreenBattle = ({
       >
         <video
           ref={video2Ref}
-          src={barber2_video}
           className="h-full w-full object-cover"
-          autoPlay={isActive}
           loop
           muted
           playsInline
+          preload="none"
         />
         {splitPercent < 70 && (
           <div className="absolute bottom-24 right-4 text-right text-white z-30">

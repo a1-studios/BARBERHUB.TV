@@ -73,10 +73,10 @@ export function SmartVideoPlayer({
     return () => URL.revokeObjectURL(url);
   }, [captionsVtt]);
 
-  // Visibility coordination
+  // Visibility coordination — skip when forceActive is driven externally (e.g. WatchFeed)
   useEffect(() => {
     const el = wrapperRef.current;
-    if (!el) return;
+    if (!el || forceActive) return;
     const io = new IntersectionObserver(
       ([entry]) => {
         const visible = entry.isIntersecting && entry.intersectionRatio >= 0.6;
@@ -88,7 +88,7 @@ export function SmartVideoPlayer({
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [instanceId, autoPlayWhenVisible]);
+  }, [instanceId, autoPlayWhenVisible, forceActive]);
 
   const shouldPlay = forceActive || (isVisible && activeId === instanceId);
 
@@ -100,13 +100,16 @@ export function SmartVideoPlayer({
   // Reset loading whenever the underlying source changes
   useEffect(() => { setLoading(true); setEnded(false); }, [src]);
 
-  // Attach source: hls.js for non-native browsers, native for Safari/MP4
+  // Attach source ONLY when this player should play. Release decoder when inactive.
   useEffect(() => {
     const v = videoRef.current;
     if (!v || !src) return;
 
-    // Tear down any previous hls instance
-    if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+    if (!shouldPlay) {
+      if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+      try { v.pause(); v.removeAttribute('src'); v.load(); } catch { /* ignore */ }
+      return;
+    }
 
     if (isHls && !v.canPlayType('application/vnd.apple.mpegurl') && Hls.isSupported()) {
       const hls = new Hls({
@@ -115,8 +118,10 @@ export function SmartVideoPlayer({
         maxBufferLength: 12,
         maxMaxBufferLength: 24,
         backBufferLength: 8,
-        startLevel: -1,
+        startLevel: 0,           // lowest rendition first → instant first frame on mobile
+        testBandwidth: true,     // probe before upshifting
         capLevelToPlayerSize: true,
+        capLevelOnFPSDrop: true, // downshift if mobile GPU struggles
       });
       hls.loadSource(src);
       hls.attachMedia(v);
@@ -132,7 +137,7 @@ export function SmartVideoPlayer({
       if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
       try { v.removeAttribute('src'); v.load(); } catch { /* ignore */ }
     };
-  }, [src, isHls]);
+  }, [src, isHls, shouldPlay]);
 
   // Play / pause coalesced
   useEffect(() => {

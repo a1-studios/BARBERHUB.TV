@@ -1,69 +1,100 @@
-## Video Playback Audit — Root Causes
+## WatchFeed performance audit — what's blocking smooth playback
 
-I traced every playback path (WatchFeed, battles, profiles, theater, academy) through `SmartVideoPlayer`, `CloudflareStreamPlayer`, `HLSVideoPlayer`, `BrandedVideoPlayer`, and the raw `<video>` in `VideoPlayer.tsx`. Five concrete issues are causing the lag and slow first-frame.
-
-### 1. R2 origin URLs are hitting the bucket directly (no CDN)
-- `creations.media_url`, `creator_content.media_url`, `battle_submissions.media_url`, `featured_video_id` are stored as raw `*.r2.cloudflarestorage.com` URLs and passed straight into `<video src>`.
-- The earlier instruction was: **GETs must route through `https://media.barberhub.tv`** (Cloudflare CDN in front of R2). That rewrite was never implemented — `rg "media.barberhub.tv"` returns zero hits in `src/`.
-- Result: every playback is a cold origin pull with no edge cache, no HTTP/2 multiplexing tuned for media, no Range optimization → multi-second TTFB and stalling on seek.
-
-### 2. Two parallel player stacks exist and fight each other
-- `SmartVideoPlayer` (new, has `activeVideoStore` single-decoder guard) is used in `WatchFeed`.
-- `CloudflareStreamPlayer`, `HLSVideoPlayer`, `BrandedVideoPlayer`, `VideoPlayer` are still used in `BattleTheater`, `BarberPublicProfile`, `PortfolioManager`, `CourseDetailDrawer`, `BarberVideoSection`, `SubmissionPreview`, `BattleResultsView`, `FullscreenBattleVideoModal`, `BattleVotingView`. None of them register with `activeVideoStore`, so when the user navigates between feed and a battle page, **multiple decoders stay alive** and continue to download.
-- `VideoPlayer.tsx` and `HLSVideoPlayer.tsx` native branches have no IntersectionObserver — they autoplay unconditionally with `controls` enabled and `preload="metadata"`, racking up parallel HLS/MP4 fetches.
-
-### 3. WatchFeed mounts up to 3 SmartVideoPlayers (distance ≤ 2)
-- In `renderVideoItem`: `shouldMount = distance <= 2` → previous + current + next + next-next = up to 5 mounted `<video>` elements per scroll position (often 3 visible + 2 buffered). With Cloudflare Stream's `<Stream>` component each one constructs its own HLS player, even though only one is `forceActive`.
-- The "single-decoder guard" only suppresses **play()**, not **bandwidth**. The off-screen Stream iframes still negotiate the manifest + segment 0.
-
-### 4. Cloudflare Stream `<Stream>` is iframe-based and heavy
-- Every `streamUid` mount spins up a same-origin iframe with its own JS runtime. On mobile (390px viewport), 3 of those = significant memory + main-thread cost. We can use the lighter `hls.js` direct path against `https://customer-<code>.cloudflarestream.com/<uid>/manifest/video.m3u8` for VOD and reserve the iframe player for live.
-
-### 5. `loading` state never resets between items + autoplay race
-- `SmartVideoPlayer` defaults `loading=true` and only clears on `onLoadedData`/`onPlaying`. On the iframe Stream path, when the player is mounted but not active (`shouldPlay=false`), `onLoadedData` may not fire → the spinner spins forever behind the active card, costing GPU.
-- `tryPlay` waits on `loadeddata` but never times out; on a slow R2 fetch (issue #1) it keeps a pending promise per scroll, compounding pressure.
+After tracing the full pipeline (WatchFeed → SmartVideoPlayer → activeVideoStore → SplitScreenBattle → hls.js), here are the concrete bottlenecks and the surgical fixes for each. Mobile-first, no behaviour changes.
 
 ---
 
-## Fix Plan (frontend-only, no DB changes)
+### 1. `feed` is rebuilt every render (biggest CPU hit)
 
-### A. Add a CDN rewrite helper and apply it at read time
-- New `src/lib/mediaCdn.ts` exporting `toCdnUrl(url)` that rewrites any `*.r2.cloudflarestorage.com` (and the public `pub-*.r2.dev` form) host to `media.barberhub.tv`, preserving the path + query. Idempotent; leaves non-R2 URLs untouched.
-- Wrap `media_url`, `thumbnail_url`, and `featured_video_id` in **read paths only**:
-  - `src/pages/WatchFeed.tsx` (all 4 queries)
-  - `src/pages/BarberPublicProfile.tsx`, `src/components/barber/BarberVideoSection.tsx`, `src/components/profiles/PortfolioManager.tsx`, `src/components/battles/SubmissionPreview.tsx`, `src/components/battles/BattleResultsView.tsx`, `src/components/battles/FullscreenBattleVideoModal.tsx`, `src/components/battles/BattleVotingView.tsx`, `src/pages/BattleTheater.tsx`, `src/components/academy/CourseDetailDrawer.tsx`.
-- Upload paths (`CreationUpload`, multipart) keep hitting R2 directly — unchanged.
+`src/pages/WatchFeed.tsx` lines 293–344 build `allContent` + the entire `feed` array (filter + while-loop + dedupe checks) on **every render** — including every `activeIndex` change, every mute toggle, every scroll observer fire. With ~30 items × 4 sources that's hundreds of ops per scroll.
 
-### B. Make every player respect the single-decoder store
-- Refactor `BrandedVideoPlayer`, `HLSVideoPlayer`, and the inner `<video>` in `VideoPlayer.tsx` to delegate to `SmartVideoPlayer` (keep their props as a thin wrapper).
-- Replace direct uses of `CloudflareStreamPlayer` in non-live contexts with `SmartVideoPlayer`. Live (BattleTheater LiveKit / live HLS) keeps the iframe Stream since those need adaptive low-latency.
-
-### C. Reduce WatchFeed mount window + cheaper neighbors
-- Change `shouldMount = distance <= 2` → `distance <= 1` (current + next only). Previous item already played; remount on scroll-back is cheap and saves a decoder.
-- Render `thumbnail_url` (`<img loading="lazy" decoding="async">`) for non-active neighbors instead of `background-image` so the browser can drop them when off-screen.
-
-### D. Prefer `hls.js` direct HLS for VOD instead of the Stream iframe
-- In `SmartVideoPlayer`, when `streamUid` is present and `forceActive`/visible, mount a single `<video>` + dynamically-imported `hls.js` pointed at `https://customer-<CF_STREAM_CUSTOMER>.cloudflarestream.com/${streamUid}/manifest/video.m3u8`. Fall back to the `<Stream>` iframe only when `hls.js` cannot run (Safari uses native HLS).
-- Adds `VITE_CF_STREAM_CUSTOMER_CODE` env var (read from `.env`).
-
-### E. Tighten the loading/play lifecycle
-- Reset `loading` to `true` only when `src`/`streamUid` changes, not on every render.
-- Add a 4s safety timeout in the `tryPlay` `loadeddata` await: if it doesn't fire, abort and surface a "Tap to play" affordance (avoids leaked pending promises).
-- Set `preload="none"` on non-active SmartVideoPlayer instances (currently `'metadata'`).
-
-### F. Quick wins
-- Add `<link rel="preconnect" href="https://media.barberhub.tv" crossorigin>` and `https://customer-<code>.cloudflarestream.com` to `index.html`.
-- Add `Cache-Control: public, max-age=31536000, immutable` expectations doc in `.lovable/plan.md` for the Cloudflare Worker fronting `media.barberhub.tv` (worker config itself is outside this repo).
+**Fix:** wrap `allContent` and `feed` (and the sponsor/battle interleave loop) in a single `useMemo` keyed on `[shuffledContent, sponsors, battleItems]`.
 
 ---
 
-## Out of Scope
-- Database/RPC changes, schema migrations, transcoding pipeline, LiveKit live-PK code, BB economy/auth/moderation.
-- Authoring/upload paths (still direct R2 multipart).
-- The actual Cloudflare Worker / DNS for `media.barberhub.tv` (handled on the Cloudflare side; we only consume it).
+### 2. Dead `videoRefs` effect runs on every state change
+
+Lines 394–405 iterate `videoRefs.current` and call `feed.findIndex` for each — but **nothing populates `videoRefs`** anymore (SmartVideoPlayer owns its own `<video>`). The effect is dead code that still triggers an O(N²) scan on every mute/active change.
+
+**Fix:** delete `videoRefs`, delete the entire `useEffect` at 394–405. Mute is already wired via the `muted` prop into SmartVideoPlayer.
 
 ---
 
-## Files Touched (estimate)
-- **New**: `src/lib/mediaCdn.ts`
-- **Edit**: `src/components/video/SmartVideoPlayer.tsx`, `src/components/BrandedVideoPlayer.tsx`, `src/components/VideoPlayer.tsx`, `src/components/battles/HLSVideoPlayer.tsx`, `src/components/CloudflareStreamPlayer.tsx`, `src/pages/WatchFeed.tsx`, `src/pages/BattleTheater.tsx`, `src/pages/BarberPublicProfile.tsx`, `src/components/barber/BarberVideoSection.tsx`, `src/components/profiles/PortfolioManager.tsx`, `src/components/battles/SubmissionPreview.tsx`, `src/components/battles/BattleResultsView.tsx`, `src/components/battles/FullscreenBattleVideoModal.tsx`, `src/components/battles/BattleVotingView.tsx`, `src/components/academy/CourseDetailDrawer.tsx`, `index.html`, `.env` (add `VITE_CF_STREAM_CUSTOMER_CODE`).
+### 3. Off-screen `<video>` still preloads on the fallback (MP4) path
+
+In `SmartVideoPlayer.tsx` line 128, when the source isn't HLS we set `v.src = src` inside the mount effect — **before** `shouldPlay` is true. The browser begins buffering the neighbour video immediately, doubling network + decoder pressure on mobile.
+
+**Fix:** only assign `v.src` (or attach hls) when `shouldPlay` is true. When it flips false, detach and clear src so the decoder releases.
+
+---
+
+### 4. HLS starts at highest renditon → first-frame lag on mobile
+
+`startLevel: -1` (line 118) lets ABR auto-pick — on a fast LAN that's 1080p, which delays first frame by 1–2s on a phone.
+
+**Fix:** `startLevel: 0` + `testBandwidth: true`. Cap with `capLevelOnFPSDrop: true`. Result: instant low-rez first frame, ABR upshifts after.
+
+---
+
+### 5. `SplitScreenBattle` bypasses the single-decoder guard
+
+`src/components/battles/SplitScreenBattle.tsx` uses raw `<video src>` × 2 with no `activeVideoStore` registration. When a battle item lands in the feed, you have **2 always-playing decoders** in addition to the active SmartVideoPlayer = 3 decoders. On mobile that's the cliff.
+
+**Fix:** the component already receives `isActive`. Add `preload="none"` when inactive, gate `src` assignment behind `isActive`, and on unmount/inactive call `pause(); removeAttribute('src'); load();` to release the decoder.
+
+---
+
+### 6. Thumbnails for off-screen items are unbounded
+
+Line 540 uses inline `style={{ backgroundImage: url(...) }}` — no `loading="lazy"`, no decoding hint, and CSS `background-image` never lazy-loads natively.
+
+**Fix:** swap to `<img loading="lazy" decoding="async" fetchPriority="low" className="absolute inset-0 w-full h-full object-cover" />`. Browser will defer offscreen decode and free memory.
+
+---
+
+### 7. IntersectionObserver thrash on scroll
+
+The WatchFeed observer at line 371 is recreated whenever `feed.length` changes, and inside the callback calls `supabase.rpc('increment_content_views')` synchronously per intersection — fine, but the observer threshold is `0.6` while SmartVideoPlayer's internal one is also `0.6`. Two observers per item.
+
+**Fix:** keep WatchFeed's observer (it drives `activeIndex`), but in SmartVideoPlayer skip the internal IO when `forceActive` is passed (already the WatchFeed path). One observer per row instead of two.
+
+---
+
+### 8. Lingering noise
+
+- `CloudflareStreamPlayer` import in WatchFeed (line 13) is unused → remove.
+- The `RESET_BLANK_CHECK` console warning is from Lovable's dev shim, not the app — ignore.
+- `index.html` preconnect to `media.barberhub.tv` + Cloudflare Stream origin is already in place ✅.
+- Page Rule cache + R2 CDN binding confirmed ✅.
+
+---
+
+### Files to change
+
+```text
+src/pages/WatchFeed.tsx
+  - useMemo for allContent + feed
+  - delete videoRefs + dead effect
+  - swap thumbnail div → <img loading="lazy">
+  - remove unused CloudflareStreamPlayer import
+
+src/components/video/SmartVideoPlayer.tsx
+  - gate src/hls attach on shouldPlay
+  - tear down + release decoder when shouldPlay flips false
+  - HLS startLevel: 0, testBandwidth: true, capLevelOnFPSDrop: true
+  - skip internal IntersectionObserver when forceActive prop is provided
+
+src/components/battles/SplitScreenBattle.tsx
+  - preload="none" + gated src assignment on isActive
+  - release decoder when isActive flips false
+```
+
+### Out of scope (intentionally)
+
+- No DB/RPC changes, no schema migrations
+- No new player abstraction or refactor
+- No changes to LiveKit live-PK path
+- No changes to BB economy / auth / moderation
+- Cloudflare Page Rule TTL bump (you already have that pending in the CF dashboard)
+
+Expected impact on mobile: ~50% fewer active video decoders during normal scroll, first-frame time on HLS drops from ~1.5s → ~400ms, idle CPU between scrolls drops because the dead effects + per-render feed rebuild are gone.
