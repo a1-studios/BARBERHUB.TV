@@ -3456,6 +3456,7 @@ export type Database = {
           product_id: string
           quantity: number
           shipping_address: Json | null
+          shopify_order_id: string | null
           status: string
           stripe_payment_id: string | null
           total_bb_cost: number
@@ -3469,6 +3470,7 @@ export type Database = {
           product_id: string
           quantity?: number
           shipping_address?: Json | null
+          shopify_order_id?: string | null
           status?: string
           stripe_payment_id?: string | null
           total_bb_cost: number
@@ -3482,6 +3484,7 @@ export type Database = {
           product_id?: string
           quantity?: number
           shipping_address?: Json | null
+          shopify_order_id?: string | null
           status?: string
           stripe_payment_id?: string | null
           total_bb_cost?: number
@@ -3504,6 +3507,7 @@ export type Database = {
           category: string
           created_at: string
           description: string | null
+          display_order: number
           id: string
           image_url: string | null
           is_active: boolean
@@ -3511,6 +3515,9 @@ export type Database = {
           name: string
           price_bb: number
           price_usd_cents: number | null
+          requires_shipping: boolean
+          shopify_product_id: string | null
+          shopify_variant_id: string | null
           stock_quantity: number | null
           tier_required: string | null
           updated_at: string
@@ -3520,6 +3527,7 @@ export type Database = {
           category: string
           created_at?: string
           description?: string | null
+          display_order?: number
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -3527,6 +3535,9 @@ export type Database = {
           name: string
           price_bb: number
           price_usd_cents?: number | null
+          requires_shipping?: boolean
+          shopify_product_id?: string | null
+          shopify_variant_id?: string | null
           stock_quantity?: number | null
           tier_required?: string | null
           updated_at?: string
@@ -3536,6 +3547,7 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string | null
+          display_order?: number
           id?: string
           image_url?: string | null
           is_active?: boolean
@@ -3543,6 +3555,9 @@ export type Database = {
           name?: string
           price_bb?: number
           price_usd_cents?: number | null
+          requires_shipping?: boolean
+          shopify_product_id?: string | null
+          shopify_variant_id?: string | null
           stock_quantity?: number | null
           tier_required?: string | null
           updated_at?: string
