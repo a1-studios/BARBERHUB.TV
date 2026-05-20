@@ -3,6 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Play, Pause, Maximize2, Users, Volume2, VolumeX } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toCdnUrl } from '@/lib/mediaCdn';
 
 interface BrandedVideoPlayerProps {
   src?: string | null;
@@ -20,8 +21,8 @@ interface BrandedVideoPlayerProps {
 }
 
 export const BrandedVideoPlayer = ({
-  src,
-  poster,
+  src: rawSrc,
+  poster: rawPoster,
   isLive = false,
   title,
   autoPlay = false,
@@ -33,6 +34,8 @@ export const BrandedVideoPlayer = ({
   onEnded,
   videoRef: externalRef,
 }: BrandedVideoPlayerProps) => {
+  const src = toCdnUrl(rawSrc);
+  const poster = toCdnUrl(rawPoster);
   const internalRef = useRef<HTMLVideoElement>(null);
   const videoElement = externalRef || internalRef;
   const [isPlaying, setIsPlaying] = useState(false);
