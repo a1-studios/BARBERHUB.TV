@@ -272,8 +272,10 @@ export function SmartVideoPlayer({
         crossOrigin={vttUrl ? 'anonymous' : undefined}
         onLoadedData={() => setLoading(false)}
         onWaiting={() => setLoading(true)}
-        onPlaying={() => setLoading(false)}
+        onPlaying={() => { setLoading(false); setIsPaused(false); setAutoplayBlocked(false); }}
         onCanPlay={() => setLoading(false)}
+        onPause={() => setIsPaused(true)}
+        onPlay={() => setIsPaused(false)}
         onTimeUpdate={(e) => setCurrentTime((e.target as HTMLVideoElement).currentTime)}
         onEnded={handleEnded}
       >
@@ -282,11 +284,39 @@ export function SmartVideoPlayer({
 
       {overlayPayload && <OverlayCanvas payload={overlayPayload} currentTime={currentTime} />}
 
-      {loading && shouldPlay && (
+      {loading && shouldPlay && !autoplayBlocked && !ended && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20">
           <Loader2 className="h-8 w-8 text-white/80 animate-spin" />
         </div>
       )}
+
+      {/* Centered play button — shown when autoplay is blocked, or when paused on Watch feed. */}
+      {showCenterPlayButton && !ended && (autoplayBlocked || (shouldPlay && isPaused && !loading)) && (
+        <button
+          onClick={handleManualPlay}
+          className="absolute inset-0 flex items-center justify-center bg-black/30 z-10"
+          aria-label="Play"
+        >
+          <span className="flex items-center justify-center h-20 w-20 rounded-full bg-primary/90 text-primary-foreground shadow-2xl shadow-primary/40 active:scale-95 transition-transform">
+            <Play className="h-9 w-9 ml-1" fill="currentColor" />
+          </span>
+        </button>
+      )}
+
+      {enableReplay && ended && !loop && (
+        <button
+          onClick={handleReplay}
+          className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-10"
+          aria-label="Replay"
+        >
+          <span className="flex items-center justify-center h-20 w-20 rounded-full bg-primary/90 text-primary-foreground shadow-2xl shadow-primary/40 active:scale-95 transition-transform">
+            <RotateCcw className="h-9 w-9" />
+          </span>
+        </button>
+      )}
+    </div>
+  );
+}
 
       {enableReplay && ended && !loop && (
         <button
