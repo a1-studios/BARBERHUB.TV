@@ -108,44 +108,57 @@ export function SmartVideoPlayer({
   // Reset loading whenever the underlying source changes
   useEffect(() => { setLoading(true); setEnded(false); }, [src]);
 
-  // Attach source ONLY when this player should play. Release decoder when inactive.
+  // Attach source when active OR prefetching. Release decoder when fully idle.
+  const shouldAttach = shouldPlay || preloadMode !== 'none';
   useEffect(() => {
     const v = videoRef.current;
     if (!v || !src) return;
 
-    if (!shouldPlay) {
+    if (!shouldAttach) {
       if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
       try { v.pause(); v.removeAttribute('src'); v.load(); } catch { /* ignore */ }
       return;
     }
 
+    // Prefetch-only mode: warm pipe, never call play(). Limit segments fetched.
+    const prefetchOnly = !shouldPlay;
+
     if (isHls && !v.canPlayType('application/vnd.apple.mpegurl') && Hls.isSupported()) {
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
-        maxBufferLength: 12,
-        maxMaxBufferLength: 24,
-        backBufferLength: 8,
+        // Prefetch: tiny buffer (just first segment). Active: normal buffer.
+        maxBufferLength: prefetchOnly ? 4 : 12,
+        maxMaxBufferLength: prefetchOnly ? 6 : 24,
+        backBufferLength: prefetchOnly ? 0 : 8,
         startLevel: 0,           // lowest rendition first → instant first frame on mobile
-        testBandwidth: true,     // probe before upshifting
+        testBandwidth: !prefetchOnly,
         capLevelToPlayerSize: true,
-        capLevelOnFPSDrop: true, // downshift if mobile GPU struggles
+        capLevelOnFPSDrop: true,
+        autoStartLoad: false,    // we trigger loading manually so prefetch is bounded
       });
       hls.loadSource(src);
       hls.attachMedia(v);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        // Prefetch fetches manifest + ~first segment via the maxBufferLength cap above.
+        hls.startLoad();
+      });
       hls.on(Hls.Events.ERROR, (_e, data) => {
         if (data.fatal) hls.recoverMediaError();
       });
       hlsRef.current = hls;
     } else {
+      // Native (Safari HLS or MP4): the <video preload> attribute does the work.
       v.src = src;
+      // Hint the browser depending on mode
+      try { v.load(); } catch { /* ignore */ }
     }
 
     return () => {
       if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
       try { v.removeAttribute('src'); v.load(); } catch { /* ignore */ }
     };
-  }, [src, isHls, shouldPlay]);
+  }, [src, isHls, shouldAttach, shouldPlay]);
 
   // Play / pause coalesced
   useEffect(() => {
