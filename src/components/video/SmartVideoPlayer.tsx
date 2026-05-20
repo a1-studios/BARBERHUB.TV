@@ -181,12 +181,30 @@ export function SmartVideoPlayer({
     }
   }, [shouldPlay]);
 
-  // Play / pause coalesced
+  // Play / pause coalesced — with muted-retry fallback for blocked autoplay.
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
     let cancelled = false;
     let timeoutId: number | undefined;
+    const attemptPlay = async () => {
+      try {
+        await v.play();
+        if (!cancelled) setAutoplayBlocked(false);
+      } catch (err: any) {
+        if (cancelled || !mountedRef.current) return;
+        // Browser blocked unmuted autoplay — retry muted, then surface the play button.
+        if (err?.name === 'NotAllowedError' && !v.muted) {
+          try {
+            v.muted = true;
+            await v.play();
+            if (!cancelled) setAutoplayBlocked(false);
+            return;
+          } catch { /* fall through */ }
+        }
+        if (!cancelled) setAutoplayBlocked(true);
+      }
+    };
     const tryPlay = async () => {
       try {
         if (v.readyState < 2) {
@@ -203,20 +221,29 @@ export function SmartVideoPlayer({
           });
         }
         if (cancelled || !mountedRef.current) return;
-        await v.play();
-      } catch { /* autoplay block, pause race, or timeout — leave paused */ }
+        await attemptPlay();
+      } catch { if (!cancelled) setAutoplayBlocked(true); }
     };
     if (shouldPlay && !ended) tryPlay();
     else v.pause();
     return () => { cancelled = true; if (timeoutId) window.clearTimeout(timeoutId); };
   }, [shouldPlay, ended]);
 
-  const handleReplay = () => {
+  const handleReplay = useCallback(() => {
     setEnded(false);
     setCurrentTime(0);
     const v = videoRef.current;
-    if (v) { v.currentTime = 0; v.play().catch(() => {}); }
-  };
+    if (v) { v.currentTime = 0; v.play().then(() => setAutoplayBlocked(false)).catch(() => setAutoplayBlocked(true)); }
+  }, []);
+
+  const handleManualPlay = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.play().then(() => setAutoplayBlocked(false)).catch(() => {
+      // Last-resort: force mute and retry.
+      try { v.muted = true; v.play().then(() => setAutoplayBlocked(false)).catch(() => {}); } catch { /* ignore */ }
+    });
+  }, []);
 
   const handleEnded = () => {
     setEnded(true);
