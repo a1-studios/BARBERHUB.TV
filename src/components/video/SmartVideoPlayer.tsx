@@ -57,6 +57,7 @@ export function SmartVideoPlayer({
   forceActive = false,
   overlayPayload,
   enableReplay = false,
+  preloadMode = 'none',
 }: SmartVideoPlayerProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
