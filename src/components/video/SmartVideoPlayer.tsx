@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, useId } from 'react';
+import { useEffect, useRef, useState, useId, useCallback } from 'react';
 import Hls from 'hls.js';
-import { Loader2, RotateCcw } from 'lucide-react';
+import { Loader2, RotateCcw, Play } from 'lucide-react';
 import { activeVideoStore, useActiveVideoId } from '@/stores/activeVideoStore';
 import { OverlayCanvas, type OverlayPayload } from './OverlayCanvas';
 
@@ -25,6 +25,8 @@ interface SmartVideoPlayerProps {
    * - 'auto'     : warm the pipe — fetch manifest + first segment so swipe-to-active is instant
    */
   preloadMode?: 'none' | 'metadata' | 'auto';
+  /** Show a large centered Play button when autoplay is blocked / video is paused. */
+  showCenterPlayButton?: boolean;
 }
 
 const CF_STREAM_CUSTOMER =
@@ -58,6 +60,7 @@ export function SmartVideoPlayer({
   overlayPayload,
   enableReplay = false,
   preloadMode = 'none',
+  showCenterPlayButton = false,
 }: SmartVideoPlayerProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -67,6 +70,8 @@ export function SmartVideoPlayer({
   const [isVisible, setIsVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [ended, setEnded] = useState(false);
+  const [isPaused, setIsPaused] = useState(true);
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [vttUrl, setVttUrl] = useState<string | null>(null);
   const mountedRef = useRef(true);
@@ -176,12 +181,30 @@ export function SmartVideoPlayer({
     }
   }, [shouldPlay]);
 
-  // Play / pause coalesced
+  // Play / pause coalesced — with muted-retry fallback for blocked autoplay.
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
     let cancelled = false;
     let timeoutId: number | undefined;
+    const attemptPlay = async () => {
+      try {
+        await v.play();
+        if (!cancelled) setAutoplayBlocked(false);
+      } catch (err: any) {
+        if (cancelled || !mountedRef.current) return;
+        // Browser blocked unmuted autoplay — retry muted, then surface the play button.
+        if (err?.name === 'NotAllowedError' && !v.muted) {
+          try {
+            v.muted = true;
+            await v.play();
+            if (!cancelled) setAutoplayBlocked(false);
+            return;
+          } catch { /* fall through */ }
+        }
+        if (!cancelled) setAutoplayBlocked(true);
+      }
+    };
     const tryPlay = async () => {
       try {
         if (v.readyState < 2) {
@@ -198,20 +221,29 @@ export function SmartVideoPlayer({
           });
         }
         if (cancelled || !mountedRef.current) return;
-        await v.play();
-      } catch { /* autoplay block, pause race, or timeout — leave paused */ }
+        await attemptPlay();
+      } catch { if (!cancelled) setAutoplayBlocked(true); }
     };
     if (shouldPlay && !ended) tryPlay();
     else v.pause();
     return () => { cancelled = true; if (timeoutId) window.clearTimeout(timeoutId); };
   }, [shouldPlay, ended]);
 
-  const handleReplay = () => {
+  const handleReplay = useCallback(() => {
     setEnded(false);
     setCurrentTime(0);
     const v = videoRef.current;
-    if (v) { v.currentTime = 0; v.play().catch(() => {}); }
-  };
+    if (v) { v.currentTime = 0; v.play().then(() => setAutoplayBlocked(false)).catch(() => setAutoplayBlocked(true)); }
+  }, []);
+
+  const handleManualPlay = useCallback(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.play().then(() => setAutoplayBlocked(false)).catch(() => {
+      // Last-resort: force mute and retry.
+      try { v.muted = true; v.play().then(() => setAutoplayBlocked(false)).catch(() => {}); } catch { /* ignore */ }
+    });
+  }, []);
 
   const handleEnded = () => {
     setEnded(true);
@@ -240,8 +272,10 @@ export function SmartVideoPlayer({
         crossOrigin={vttUrl ? 'anonymous' : undefined}
         onLoadedData={() => setLoading(false)}
         onWaiting={() => setLoading(true)}
-        onPlaying={() => setLoading(false)}
+        onPlaying={() => { setLoading(false); setIsPaused(false); setAutoplayBlocked(false); }}
         onCanPlay={() => setLoading(false)}
+        onPause={() => setIsPaused(true)}
+        onPlay={() => setIsPaused(false)}
         onTimeUpdate={(e) => setCurrentTime((e.target as HTMLVideoElement).currentTime)}
         onEnded={handleEnded}
       >
@@ -250,10 +284,23 @@ export function SmartVideoPlayer({
 
       {overlayPayload && <OverlayCanvas payload={overlayPayload} currentTime={currentTime} />}
 
-      {loading && shouldPlay && (
+      {loading && shouldPlay && !autoplayBlocked && !ended && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20">
           <Loader2 className="h-8 w-8 text-white/80 animate-spin" />
         </div>
+      )}
+
+      {/* Centered play button — shown when autoplay is blocked, or when paused on Watch feed. */}
+      {showCenterPlayButton && !ended && (autoplayBlocked || (shouldPlay && isPaused && !loading)) && (
+        <button
+          onClick={handleManualPlay}
+          className="absolute inset-0 flex items-center justify-center bg-black/30 z-10"
+          aria-label="Play"
+        >
+          <span className="flex items-center justify-center h-20 w-20 rounded-full bg-primary/90 text-primary-foreground shadow-2xl shadow-primary/40 active:scale-95 transition-transform">
+            <Play className="h-9 w-9 ml-1" fill="currentColor" />
+          </span>
+        </button>
       )}
 
       {enableReplay && ended && !loop && (
@@ -262,8 +309,8 @@ export function SmartVideoPlayer({
           className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-10"
           aria-label="Replay"
         >
-          <span className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground font-semibold text-sm shadow-lg shadow-primary/40">
-            <RotateCcw className="h-4 w-4" /> Replay
+          <span className="flex items-center justify-center h-20 w-20 rounded-full bg-primary/90 text-primary-foreground shadow-2xl shadow-primary/40 active:scale-95 transition-transform">
+            <RotateCcw className="h-9 w-9" />
           </span>
         </button>
       )}

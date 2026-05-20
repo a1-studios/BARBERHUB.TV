@@ -13,7 +13,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 
 import { SmartVideoPlayer } from "@/components/video/SmartVideoPlayer";
 import { cleanDisplayTitle } from "@/lib/utils";
-import { usePersistedMute } from "@/hooks/usePersistedMute";
+// Watch feed always starts muted to guarantee autoplay on mobile.
 import { toCdnUrl } from "@/lib/mediaCdn";
 
 interface FeedItem {
@@ -59,7 +59,7 @@ const WatchFeed = () => {
   const targetVideoBarber = searchParams.get('video');
   const { isFan } = useUserRole();
   const [activeIndex, setActiveIndex] = useState(0);
-  const [isMuted, setIsMuted] = usePersistedMute();
+  const [isMuted, setIsMuted] = useState(true);
   const [donationTarget, setDonationTarget] = useState<{ userId: string; name: string } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const viewedContentIds = useRef<Set<string>>(new Set());
@@ -413,14 +413,10 @@ const WatchFeed = () => {
     );
   };
 
-  const handleVideoEnded = useCallback((idx: number) => {
-    const next = idx + 1;
-    if (next < feed.length) {
-      const container = containerRef.current;
-      const target = container?.querySelector(`[data-index="${next}"]`);
-      target?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [feed.length]);
+  const handleVideoEnded = useCallback((_idx: number) => {
+    // Do not auto-scroll. The centered Replay control handles replay.
+    // Users can swipe to the next item normally.
+  }, []);
 
   const handleShare = async (item: FeedItem) => {
     const url = window.location.origin + "/watch";
@@ -530,6 +526,8 @@ const WatchFeed = () => {
               onEnded={() => handleVideoEnded(idx)}
               overlayPayload={item.overlay_payload}
               preloadMode={isActive ? 'auto' : isPrefetch ? 'auto' : 'none'}
+              enableReplay={isActive}
+              showCenterPlayButton={isActive}
             />
           </div>
         ) : (
