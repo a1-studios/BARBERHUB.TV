@@ -611,6 +611,7 @@ const WatchFeed = () => {
                 barber2_name={item.barber2_name!}
                 barber2_location={item.barber2_location!}
                 isActive={activeIndex === idx}
+                isPreloading={idx === nextPlayableIdx && activeIndex !== idx}
                 battleId={item.battle_id!}
               />
             ) : item.type === "sponsor" ? (
