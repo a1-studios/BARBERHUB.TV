@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { z } from 'zod';
-import { ArrowRight, Mail, AlertCircle, Loader2 } from 'lucide-react';
+import { ArrowRight, Mail, AlertCircle, Loader2, Check, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { SwipeableStep } from './SwipeableStep';
 import { useStepDirection } from './LaunchWizard';
 import { getDeviceFingerprint } from '@/utils/deviceFingerprint';
 import { authCallbackRedirect } from '@/lib/authRedirects';
+import type { LaunchRole, BarberStatus } from './LaunchWizard';
 
 const schema = z.object({
   email: z.string().trim().toLowerCase().max(255).email('Enter a valid email'),
@@ -14,38 +15,51 @@ const schema = z.object({
 
 interface Props {
   initialEmail: string;
+  role: LaunchRole;
+  barberStatus: BarberStatus | null;
+  country: string | null;
+  phone: string;
   onContinue: (email: string) => void;
+  onBack: () => void;
 }
 
 const haptic = () => { try { navigator.vibrate?.(10); } catch { /* */ } };
 
-const oauth = async (provider: 'google' | 'apple' | 'facebook') => {
-  haptic();
-  await supabase.auth.signInWithOAuth({
-    provider,
-    options: {
-      redirectTo: authCallbackRedirect(),
-      queryParams: { prompt: 'select_account' },
-    },
-  });
+const persistPending = (data: {
+  role: LaunchRole; barberStatus: BarberStatus | null; country: string | null; phone: string; email: string;
+}) => {
+  try { sessionStorage.setItem('bh_pending_role', JSON.stringify(data)); } catch { /* */ }
 };
 
-export const StepIdentityHook = ({ initialEmail, onContinue }: Props) => {
+export const StepAuth = ({ initialEmail, role, barberStatus, country, phone, onContinue, onBack }: Props) => {
   const direction = useStepDirection();
   const [email, setEmail] = useState(initialEmail);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showEmail, setShowEmail] = useState(!!initialEmail);
+  const [emailSent, setEmailSent] = useState(false);
   const ref = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (showEmail) {
+    if (showEmail && !emailSent) {
       const t = setTimeout(() => ref.current?.focus(), 320);
       return () => clearTimeout(t);
     }
-  }, [showEmail]);
+  }, [showEmail, emailSent]);
 
-  const submit = async () => {
+  const oauth = async (provider: 'google' | 'apple' | 'facebook') => {
+    haptic();
+    persistPending({ role, barberStatus, country, phone, email });
+    await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: authCallbackRedirect(),
+        queryParams: { prompt: 'select_account' },
+      },
+    });
+  };
+
+  const sendEmail = async () => {
     const parsed = schema.safeParse({ email });
     if (!parsed.success) {
       setError(parsed.error.errors[0].message);
@@ -54,24 +68,55 @@ export const StepIdentityHook = ({ initialEmail, onContinue }: Props) => {
     setSubmitting(true);
     setError(null);
     haptic();
+    const lower = parsed.data.email;
+    persistPending({ role, barberStatus, country, phone, email: lower });
+
     try {
-      const { data, error: fnErr } = await supabase.functions.invoke('register-lead', {
+      // Register lead (idempotent — soft 200 on duplicates)
+      await supabase.functions.invoke('register-lead', {
         body: {
-          email: parsed.data.email,
+          email: lower,
           fingerprint: getDeviceFingerprint(),
           source_url: typeof window !== 'undefined' ? window.location.href : undefined,
+          country_code: country,
+          phone_number: phone || null,
         },
       });
-      if (fnErr || (data as { error?: string } | null)?.error) {
-        const msg = (data as { message?: string; error?: string } | null)?.message
-          ?? (data as { error?: string } | null)?.error
-          ?? fnErr?.message
-          ?? 'Could not register your email.';
-        setError(msg);
+
+      // Persist role server-side so claim-raffle-ticket gates open
+      await supabase.functions.invoke('submit-role-details', {
+        body: {
+          email: lower,
+          role,
+          country_code: country,
+          phone_number: phone || null,
+          ...(role === 'barber' ? { barber_status: barberStatus ?? 'beginner' } : {}),
+        },
+      });
+
+      // Magic link — bundles role into user_metadata so handle_new_user picks it up
+      const { error: otpErr } = await supabase.auth.signInWithOtp({
+        email: lower,
+        options: {
+          emailRedirectTo: authCallbackRedirect(),
+          data: {
+            user_type: role,
+            display_name: lower.split('@')[0],
+            country_code: country,
+            barber_status: role === 'barber' ? (barberStatus ?? 'beginner') : null,
+            phone_number: phone || null,
+            tos_accepted_at: new Date().toISOString(),
+          },
+        },
+      });
+      if (otpErr) {
+        setError(otpErr.message);
         setSubmitting(false);
         return;
       }
-      onContinue(parsed.data.email);
+      setEmailSent(true);
+      setSubmitting(false);
+      onContinue(lower);
     } catch (err) {
       setError(String(err));
       setSubmitting(false);
@@ -79,9 +124,17 @@ export const StepIdentityHook = ({ initialEmail, onContinue }: Props) => {
   };
 
   return (
-    <SwipeableStep direction={direction} canAdvance={!!email && !submitting} onSwipeNext={submit}>
-      <div className="space-y-6">
-        {/* Mystery hook */}
+    <SwipeableStep direction={direction} canAdvance={!!email && !submitting} onSwipeNext={sendEmail} onSwipeBack={onBack}>
+      <div className="space-y-5">
+        <div className="flex items-center justify-between -mt-1 min-h-[20px]">
+          <button type="button" onClick={() => { haptic(); onBack(); }} className="flex items-center gap-1.5 text-sm text-white/60 hover:text-orange-400">
+            <ArrowLeft className="w-4 h-4" /> Back
+          </button>
+          <span className="text-[10px] uppercase tracking-wider text-white/40 font-bold">
+            Step 2 · {role === 'barber' ? 'Barber' : 'Fan'} sign-in
+          </span>
+        </div>
+
         <div className="text-center space-y-2">
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
@@ -92,15 +145,14 @@ export const StepIdentityHook = ({ initialEmail, onContinue }: Props) => {
             🍀
           </motion.div>
           <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight bg-gradient-to-r from-amber-300 via-orange-500 to-orange-600 bg-clip-text text-transparent">
-            Your Sunday<br/>could change.
+            Save your seat
           </h2>
           <p className="text-sm text-white/70 px-4">
-            Be one of the lucky winners. <br/>
-            <span className="text-orange-300/90 font-semibold">Tune in this Sunday to find out.</span>
+            One tap and you're in.<br/>
+            <span className="text-orange-300/90 font-semibold">15 Barber Bucks waiting on the other side.</span>
           </p>
         </div>
 
-        {/* 1-CLICK socials — top, primary path */}
         <div className="space-y-3">
           <div className="flex items-center justify-center gap-4">
             <SocialCircle provider="google" onClick={() => oauth('google')} label="Google" />
@@ -112,14 +164,23 @@ export const StepIdentityHook = ({ initialEmail, onContinue }: Props) => {
           </p>
         </div>
 
-        {/* divider */}
         <div className="flex items-center gap-2">
           <div className="flex-1 h-px bg-white/10" />
           <span className="text-[10px] uppercase tracking-wider text-white/40 font-bold">or use email</span>
           <div className="flex-1 h-px bg-white/10" />
         </div>
 
-        {!showEmail ? (
+        {emailSent ? (
+          <div className="space-y-3 text-center">
+            <div className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+              style={{ color: '#00F0FF', background: 'rgba(0,240,255,0.08)', border: '1px solid rgba(0,240,255,0.3)' }}>
+              <Check className="w-3.5 h-3.5" /> Magic link sent
+            </div>
+            <p className="text-xs text-white/65">
+              Open <span className="font-mono font-bold text-orange-400">{email}</span> and tap the link to unlock your bonus.
+            </p>
+          </div>
+        ) : !showEmail ? (
           <button
             type="button"
             onClick={() => { haptic(); setShowEmail(true); }}
@@ -129,7 +190,7 @@ export const StepIdentityHook = ({ initialEmail, onContinue }: Props) => {
             <Mail className="w-3.5 h-3.5" /> Enter email instead
           </button>
         ) : (
-          <form onSubmit={(e) => { e.preventDefault(); submit(); }} className="space-y-3">
+          <form onSubmit={(e) => { e.preventDefault(); sendEmail(); }} className="space-y-3">
             <div className="relative">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-400/70 pointer-events-none z-10" />
               <input
@@ -164,13 +225,13 @@ export const StepIdentityHook = ({ initialEmail, onContinue }: Props) => {
                 boxShadow: '0 8px 24px rgba(255,95,31,0.45), inset 0 1px 0 rgba(255,255,255,0.45)',
               }}
             >
-              {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Reserving...</> : <>Get my ticket <ArrowRight className="w-4 h-4" /></>}
+              {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</> : <>Send magic link <ArrowRight className="w-4 h-4" /></>}
             </button>
           </form>
         )}
 
         <p className="text-[10px] text-center text-white/40 px-2">
-          One ticket per email. Sunday reveals everything.
+          By continuing you accept our Terms, Privacy Policy & AUP.
         </p>
       </div>
     </SwipeableStep>
@@ -213,3 +274,6 @@ const SocialCircle = ({
     )}
   </motion.button>
 );
+
+// Back-compat default export so any old imports still resolve
+export const StepIdentityHook = StepAuth;
