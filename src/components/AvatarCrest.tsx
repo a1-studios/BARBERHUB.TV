@@ -355,7 +355,7 @@ export const AvatarCrest = ({
   }
 
   const cx = config.svgSize / 2;
-  const cy = config.svgSize / 2 - (showM4M ? 6 * config.wingScale : 0);
+  const cy = config.svgSize / 2;
   const starCount = validTier === 'diamond' ? 6 : validTier === 'gold' ? 5 : validTier === 'silver' ? 4 : validTier === 'bronze' ? 3 : 0;
   const tierColors = TIER_COLORS[validTier];
 
@@ -390,7 +390,7 @@ export const AvatarCrest = ({
   };
 
   const svgW = config.svgSize + 40 * config.wingScale;
-  const svgH = config.svgSize + (showM4M ? 24 * config.wingScale : 8 * config.wingScale);
+  const svgH = config.svgSize + 8 * config.wingScale;
   const nextTierColors = getNextTierColor(validTier);
 
   return (
