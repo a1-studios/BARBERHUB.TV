@@ -1,49 +1,52 @@
-## Goal
-Give Sovereign HQ full control to add, edit, and remove Official Gear items (with media), keep Sovereign HQ as the source of truth, and tie purchases to Barber Bucks. Shopify is used for fulfillment of physical orders only.
+# Plan
 
-## Approach
-Reuse the existing `public.products` table (already has `category='gear'`, `price_bb`, `image_url`, `is_active`, `stock_quantity`) — no new product schema needed. Add a new admin panel mirroring the look of `AffiliateControlPanel`, with image upload to Supabase Storage + paste-URL fallback. Add Shopify SKU/variant linkage so when a fan pays in BB, an order row is created and (optionally) pushed to Shopify for fulfillment.
+## What I’ll build
 
-## Changes
+1. Fix the Official Gear save flow so Sovereign HQ can successfully save gear after uploading a picture.
+2. Build the missing affiliate-link management structure in Sovereign HQ so you can properly add, edit, activate/deactivate, and remove affiliate items.
 
-### 1. Database migration
-- Create new public storage bucket `gear-media` (public read, admin-only write via RLS on `storage.objects`).
-- Add columns to `public.products`:
-  - `shopify_product_id text`
-  - `shopify_variant_id text`
-  - `requires_shipping boolean default false`
-  - `display_order integer default 0`
-- Create `public.gear_orders` table: `id`, `user_id`, `product_id`, `quantity`, `bb_spent`, `status` (`pending|fulfilled|cancelled`), `shopify_order_id`, `shipping_address jsonb`, timestamps. RLS: user reads own; admins read all; inserts only via edge function.
-- Add admin RLS policies on `products` so Sovereign (via `has_role admin` or SOVEREIGN_EMAIL check) can insert/update/delete gear rows. Public read stays as-is.
+## Implementation steps
 
-### 2. New Sovereign HQ panel
-`src/components/sovereign/GearControlPanel.tsx` — Robinhood-style, matching `AffiliateControlPanel`:
-- List existing gear (image, name, BB price, stock, active toggle, drag-order or numeric `display_order`).
-- "Add Gear" form: name, description, price_bb, stock_quantity, requires_shipping, optional Shopify product/variant IDs.
-- Image input: tab/toggle between **Upload from device** (drops file into `gear-media` bucket, stores returned public URL) and **Paste URL**.
-- Row actions: edit (inline modal), toggle active, delete.
+### 1) Repair gear updates with uploaded images
+- Update the `admin-upsert-gear` access logic so Sovereign users are treated the same as admins for gear writes.
+- Update the `products` table access rules so Sovereign HQ can create and edit official gear records, not just users with the `admin` role.
+- Verify the save path for uploaded `gear-media` URLs so image upload + product save works end-to-end.
+- Improve the frontend error messaging in the gear panel so function failures show the actual reason instead of a generic toast.
 
-Register the panel in `src/pages/SovereignHQ.tsx` next to `AffiliateControlPanel`.
+### 2) Add a real affiliate management structure
+- Extend the affiliate data model so each affiliate item can store the fields needed to manage links cleanly from Sovereign HQ, such as:
+  - description
+  - destination link
+  - optional merchant/source label
+  - active state
+  - display order
+  - image/media reference
+- Keep access locked to Sovereign HQ for create/edit/remove actions, while active affiliate items stay publicly readable where needed.
+- If needed, add storage support for affiliate media so you can upload images instead of relying only on pasted URLs.
 
-### 3. Edge function updates
-- New `supabase/functions/admin-upsert-gear` — validates caller is admin (SOVEREIGN_EMAIL), upserts/deletes product rows. Avoids granting broad direct table writes from the client.
-- Update existing `purchase-product-bb` to:
-  - On success, also insert a `gear_orders` row (status `pending` if `requires_shipping`, else `fulfilled`).
-  - If `shopify_variant_id` is present and `requires_shipping`, call new helper `shopify-create-order` (stubbed for now; emits log + leaves order `pending` if Shopify not yet connected).
+### 3) Upgrade the Sovereign HQ affiliate panel
+- Replace the current barebones affiliate form with a proper CRUD panel similar to the gear workflow.
+- Add:
+  - create
+  - edit
+  - delete
+  - active toggle
+  - image upload or URL entry
+  - order control
+  - clear validation for missing/invalid fields
+- Route privileged affiliate writes through a protected admin path instead of relying on fragile direct table mutations from the browser.
 
-### 4. Shopify integration (lightweight)
-- No catalog sync — admins enter Shopify product/variant IDs manually per gear item (since Sovereign HQ is source of truth).
-- A follow-up `shopify-create-order` edge function will POST to Shopify Admin API when the Shopify integration is enabled. For this iteration we scaffold the function and gate it behind a `SHOPIFY_ACCESS_TOKEN` env check; if missing, orders stay `pending` for manual fulfillment.
+### 4) Validate the admin flows
+- Test gear image upload + save for existing items.
+- Test affiliate add/edit/delete/toggle using the new structure.
+- Check that public reads still only show active items.
 
-## Out of scope
-- Two-way Shopify catalog sync.
-- Customer-facing checkout/address collection UI (will be added when first shippable item ships — current `GearPurchaseModal` keeps working for digital/no-ship items).
-- Refunds / cancellation flow.
+## Technical details
+- **Database:** add/adjust RLS so `sovereign` can manage `products` and affiliate records safely.
+- **Edge functions:** likely add an `admin-upsert-affiliate` function and update `admin-upsert-gear` authorization.
+- **Frontend:** update `GearControlPanel` and `AffiliateControlPanel` to use the protected admin flows and better validation/errors.
+- **Storage:** reuse or add a public media bucket with Sovereign-only write permissions for affiliate images if upload support is included.
 
-## Files touched
-- migration (new tables + bucket + columns + RLS)
-- `src/components/sovereign/GearControlPanel.tsx` (new)
-- `src/pages/SovereignHQ.tsx` (mount panel)
-- `supabase/functions/admin-upsert-gear/index.ts` (new)
-- `supabase/functions/purchase-product-bb/index.ts` (extend)
-- `supabase/functions/shopify-create-order/index.ts` (new, scaffold)
+## Expected outcome
+- Uploading a gear picture will no longer block saving the gear item.
+- Sovereign HQ will have a complete affiliate-link management setup instead of the current minimal form.
