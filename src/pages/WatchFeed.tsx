@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSponsorAds } from "@/hooks/useSponsorAds";
-import { ArrowLeft, Play, GraduationCap, Flame, Volume2, VolumeX, Heart, Share2, User } from "lucide-react";
+import { ArrowLeft, Play, GraduationCap, Flame, Volume2, VolumeX, Heart, Share2, User, MessageCircle } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
@@ -62,6 +62,7 @@ const WatchFeed = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
   const [donationTarget, setDonationTarget] = useState<{ userId: string; name: string } | null>(null);
+  const [commentFocusTrigger, setCommentFocusTrigger] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const viewedContentIds = useRef<Set<string>>(new Set());
 
@@ -461,6 +462,14 @@ const WatchFeed = () => {
           <Heart className="w-7 h-7" />
         </button>
 
+        {/* Comment — opens/focuses the comment input bar */}
+        <button
+          onClick={() => setCommentFocusTrigger((n) => n + 1)}
+          className="text-white drop-shadow-lg active:scale-90 transition-transform"
+        >
+          <MessageCircle className="w-7 h-7" />
+        </button>
+
         {/* Share */}
         <button
           onClick={() => handleShare(item)}
@@ -507,7 +516,7 @@ const WatchFeed = () => {
     return (
       <div className="relative w-full h-full bg-black">
         {/* Floating Danmaku comments — FIRST child, active video only */}
-        {videoUuid && <VideoCommentsLayer videoId={videoUuid} />}
+        {videoUuid && <VideoCommentsLayer videoId={videoUuid} focusTrigger={commentFocusTrigger} />}
 
         {/* Small pill watermark at bottom-third center */}
         <div className="absolute bottom-[18%] left-1/2 -translate-x-1/2 z-20 pointer-events-none select-none px-3 py-1 rounded-full border border-white/30 bg-black/20 backdrop-blur-sm">
