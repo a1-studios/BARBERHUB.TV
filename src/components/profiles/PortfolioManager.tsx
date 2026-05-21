@@ -6,8 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Upload, Trash2, Image as ImageIcon, Video, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { uploadPortfolioMedia } from '@/lib/storage';
 import { SmartVideoPlayer } from '@/components/video/SmartVideoPlayer';
+import { uploadFileMultipart } from '@/lib/multipartUpload';
+import { captureVideoThumbnail } from '@/lib/videoThumbnail';
+import { pollStreamReady } from '@/lib/streamReadiness';
 import { toast } from 'sonner';
 
 interface PortfolioManagerProps {
@@ -65,28 +67,58 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
       }
 
       try {
-        const publicUrl = await uploadPortfolioMedia(file, user.id);
-        const category = file.type.startsWith('video/') ? 'video' : 'haircut';
+        const isVid = file.type.startsWith('video/');
+        const filename = `${Date.now()}_${file.name.replace(/[^a-z0-9._-]/gi, '_')}`;
+
+        // Capture poster from videos in parallel with the upload
+        const thumbPromise = isVid
+          ? captureVideoThumbnail(file).then(async (b) => {
+              if (!b) return null;
+              const thumbKey = `thumbnails/${Date.now()}_${file.name}.jpg`;
+              const { data } = await supabase.functions.invoke('get-r2-presigned-url', {
+                body: { key: thumbKey, contentType: 'image/jpeg' },
+              });
+              if (!data?.uploadUrl) return null;
+              const put = await fetch(data.uploadUrl, {
+                method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: b,
+              });
+              return put.ok ? (data.publicUrl as string) : null;
+            }).catch(() => null)
+          : Promise.resolve<string | null>(null);
+
+        const { publicUrl } = await uploadFileMultipart(file, filename, file.type, {
+          category: isVid ? 'portfolios' : 'portfolios',
+          onProgress: () => { /* could surface per-file progress here */ },
+        });
+
+        const thumbnailUrl = await thumbPromise;
+        const category = isVid ? 'video' : 'haircut';
 
         const { data: newCreation, error: insertErr } = await supabase.from('creations').insert({
           barber_id: barberId,
           media_url: publicUrl,
+          thumbnail_url: thumbnailUrl,
           category,
           title: file.name.split('.')[0],
         }).select('id').single();
 
         if (insertErr) throw insertErr;
 
-        // Auto-ingest videos into Cloudflare Stream for adaptive playback
-        if (file.type.startsWith('video/') && newCreation?.id) {
-          toast.info('Optimizing video for playback...');
-          supabase.functions.invoke('upload-to-cloudflare-stream', {
-            body: {
-              sourceUrl: publicUrl,
-              table: 'creations',
-              recordId: newCreation.id,
-            },
-          }).catch((err: any) => console.error('Cloudflare Stream ingest queued but failed:', err));
+        if (isVid && newCreation?.id) {
+          toast.info('Optimizing video for smooth playback…');
+          const { data: ingest } = await supabase.functions.invoke('upload-to-cloudflare-stream', {
+            body: { sourceUrl: publicUrl, table: 'creations', recordId: newCreation.id },
+          });
+          if (ingest?.uid) {
+            pollStreamReady('creations', newCreation.id, ingest.uid, {
+              onStatus: (s) => {
+                if (s === 'ready') {
+                  toast.success('Video ready');
+                  queryClient.invalidateQueries({ queryKey: ['barber-portfolio', barberId] });
+                }
+              },
+            }).catch(() => {});
+          }
         }
 
         uploaded++;

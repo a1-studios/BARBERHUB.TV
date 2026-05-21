@@ -1172,8 +1172,12 @@ export type Database = {
           is_live_stream: boolean | null
           media_url: string
           status: string
+          stream_duration_seconds: number | null
           stream_ended_at: string | null
+          stream_ready_at: string | null
           stream_started_at: string | null
+          stream_status: string
+          stream_thumbnail_url: string | null
           thumbnail_url: string | null
           title: string | null
           user_id: string
@@ -1189,8 +1193,12 @@ export type Database = {
           is_live_stream?: boolean | null
           media_url: string
           status?: string
+          stream_duration_seconds?: number | null
           stream_ended_at?: string | null
+          stream_ready_at?: string | null
           stream_started_at?: string | null
+          stream_status?: string
+          stream_thumbnail_url?: string | null
           thumbnail_url?: string | null
           title?: string | null
           user_id: string
@@ -1206,8 +1214,12 @@ export type Database = {
           is_live_stream?: boolean | null
           media_url?: string
           status?: string
+          stream_duration_seconds?: number | null
           stream_ended_at?: string | null
+          stream_ready_at?: string | null
           stream_started_at?: string | null
+          stream_status?: string
+          stream_thumbnail_url?: string | null
           thumbnail_url?: string | null
           title?: string | null
           user_id?: string
@@ -1995,6 +2007,10 @@ export type Database = {
           is_published: boolean
           media_url: string
           overlay_payload: Json | null
+          stream_duration_seconds: number | null
+          stream_ready_at: string | null
+          stream_status: string
+          stream_thumbnail_url: string | null
           thumbnail_url: string | null
           title: string | null
           updated_at: string
@@ -2010,6 +2026,10 @@ export type Database = {
           is_published?: boolean
           media_url: string
           overlay_payload?: Json | null
+          stream_duration_seconds?: number | null
+          stream_ready_at?: string | null
+          stream_status?: string
+          stream_thumbnail_url?: string | null
           thumbnail_url?: string | null
           title?: string | null
           updated_at?: string
@@ -2025,6 +2045,10 @@ export type Database = {
           is_published?: boolean
           media_url?: string
           overlay_payload?: Json | null
+          stream_duration_seconds?: number | null
+          stream_ready_at?: string | null
+          stream_status?: string
+          stream_thumbnail_url?: string | null
           thumbnail_url?: string | null
           title?: string | null
           updated_at?: string
@@ -2073,6 +2097,10 @@ export type Database = {
           promote_to_feed: boolean | null
           shares: number | null
           status: string | null
+          stream_duration_seconds: number | null
+          stream_ready_at: string | null
+          stream_status: string
+          stream_thumbnail_url: string | null
           thumbnail_url: string | null
           title: string
           updated_at: string
@@ -2097,6 +2125,10 @@ export type Database = {
           promote_to_feed?: boolean | null
           shares?: number | null
           status?: string | null
+          stream_duration_seconds?: number | null
+          stream_ready_at?: string | null
+          stream_status?: string
+          stream_thumbnail_url?: string | null
           thumbnail_url?: string | null
           title: string
           updated_at?: string
@@ -2121,6 +2153,10 @@ export type Database = {
           promote_to_feed?: boolean | null
           shares?: number | null
           status?: string | null
+          stream_duration_seconds?: number | null
+          stream_ready_at?: string | null
+          stream_status?: string
+          stream_thumbnail_url?: string | null
           thumbnail_url?: string | null
           title?: string
           updated_at?: string

@@ -108,8 +108,9 @@ const WatchFeed = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("creator_content")
-        .select("id, title, description, media_url, thumbnail_url, content_type, creator_id, created_at, cloudflare_stream_uid, overlay_payload")
+        .select("id, title, description, media_url, thumbnail_url, content_type, creator_id, created_at, cloudflare_stream_uid, overlay_payload, stream_status, stream_thumbnail_url")
         .eq("status", "published")
+        .eq("stream_status", "ready")
         .not("media_url", "is", null)
         .order("created_at", { ascending: false })
         .limit(30);
@@ -123,7 +124,7 @@ const WatchFeed = () => {
           media_url: toCdnUrl(c.media_url!),
           title: cleanDisplayTitle(c.title) ?? undefined,
           description: c.description,
-          thumbnail_url: toCdnUrl(c.thumbnail_url),
+          thumbnail_url: toCdnUrl(c.stream_thumbnail_url ?? c.thumbnail_url),
           barber_name: "Creator",
           specialty: null,
           barber_user_id: c.creator_id,
@@ -139,7 +140,8 @@ const WatchFeed = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("creations")
-        .select("id, title, description, media_url, thumbnail_url, barber_id, created_at, cloudflare_stream_uid, overlay_payload")
+        .select("id, title, description, media_url, thumbnail_url, barber_id, created_at, cloudflare_stream_uid, overlay_payload, stream_status, stream_thumbnail_url")
+        .eq("stream_status", "ready")
         .not("media_url", "is", null)
         .order("created_at", { ascending: false })
         .limit(30);
@@ -165,7 +167,7 @@ const WatchFeed = () => {
           media_url: toCdnUrl(c.media_url),
           title: cleanDisplayTitle(c.title) ?? undefined,
           description: c.description,
-          thumbnail_url: toCdnUrl(c.thumbnail_url),
+          thumbnail_url: toCdnUrl(c.stream_thumbnail_url ?? c.thumbnail_url),
           barber_name: barberMap[c.barber_id]?.name || "Barber",
           specialty: barberMap[c.barber_id]?.specialty ?? null,
           barber_user_id: barberMap[c.barber_id]?.user_id,
@@ -181,7 +183,8 @@ const WatchFeed = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("battle_submissions")
-        .select("id, title, description, media_url, thumbnail_url, user_id, created_at, cloudflare_stream_uid")
+        .select("id, title, description, media_url, thumbnail_url, user_id, created_at, cloudflare_stream_uid, stream_status, stream_thumbnail_url")
+        .eq("stream_status", "ready")
         .not("media_url", "is", null)
         .order("created_at", { ascending: false })
         .limit(30);
@@ -194,7 +197,7 @@ const WatchFeed = () => {
           media_url: toCdnUrl(s.media_url),
           title: cleanDisplayTitle(s.title) ?? undefined,
           description: s.description,
-          thumbnail_url: toCdnUrl(s.thumbnail_url),
+          thumbnail_url: toCdnUrl(s.stream_thumbnail_url ?? s.thumbnail_url),
           barber_name: "Competitor",
           specialty: null,
           barber_user_id: s.user_id,
