@@ -1,69 +1,54 @@
 ## Goal
+Make the profile header feel cohesive by orbiting the social media icons in a ring around the avatar. Connected accounts glow in their brand color; unconnected accounts appear as faint ghost icons (still visible, but muted) so users can see what they can still link.
 
-Replace the current M4M heart-shield icon (rendered as a separate element under the profile picture) with the uploaded 3D orange/teal handshake-heart, and move it INSIDE the profile avatar as an overlay. Add a soft beating + fade in/out pulse every 6 seconds for certified barbers, and a faded "ghost" overlay for non-certified barbers. It must appear everywhere the barber's profile avatar is shown.
+## What changes
 
-## Asset
+### 1. New component: `src/components/profiles/SocialOrbit.tsx`
+A circular "orbit" overlay that wraps the avatar.
 
-- Copy `user-uploads://Gemini_Generated_Image_jgy9myjgy9myjgy9.png` -> `src/assets/m4m-handshake-heart.png`
-- Import as ES6 module wherever rendered.
+- Props: `children` (the avatar), `socials` (array of `{ key, url, Icon, brandColor }`), `size` (avatar diameter), `radius?` (defaults to ~58% of size).
+- Layout: a `relative` container sized to `size + 2*iconRadius`. The avatar sits centered. Each social icon is absolutely positioned on a circle using trig:
+  - 4 icons (Instagram, Facebook, Twitter/X, YouTube) evenly distributed: angles at top, right, bottom, left (−90°, 0°, 90°, 180°) — clean compass layout.
+  - Each icon: 28px circular chip with `bg-background/70 backdrop-blur border border-border/40`.
+- Connected state (`url` present):
+  - Full brand color icon (Instagram pink/gradient, Facebook blue, Twitter sky, YouTube red).
+  - Subtle brand-color glow via `drop-shadow`.
+  - Soft 3s pulse animation (opacity 0.85 → 1 → 0.85).
+  - Wrapped in `<a target="_blank">`.
+- Ghost state (no `url`):
+  - `text-muted-foreground/35`, no glow, no animation.
+  - On own profile: clickable → opens settings to add the link. On others: non-interactive, `cursor-default`.
+- Mobile-safe: on viewports < 380px, slightly tighten radius so icons don't clip the card edge.
 
-## New component
+### 2. `BarberProfileHeader.tsx`
+- Remove the existing `activeSocials` row (lines ~150–180) — the inline icon row under the name.
+- Wrap the avatar block (currently `TierRing` + `M4MAvatarBadge` in a `relative` div) inside `<SocialOrbit socials={...} size={80 md:128}>`. M4M badge stays as-is (bottom-right overlay on the avatar itself, inside the orbit).
+- Add extra padding to the parent flex container so the orbit's icon halo doesn't get clipped by `CardContent`.
+- Pass `isOwnProfile` through so ghost icons can deep-link to settings when viewing own profile.
 
-Create `src/components/m4m/M4MAvatarBadge.tsx`:
-- Props: `certified: boolean`, `paid: boolean`, `livesTouched`, `barberName`, `barberUserId`, `isOwnProfile`, `size` (`xs | sm | md | lg`).
-- Renders an absolutely positioned overlay (bottom-right of the avatar container, ~28–34% of avatar size) containing the handshake-heart PNG.
-- States:
-  - **Not certified** -> ghost: render with `opacity-15`, grayscale, no animation. Still clickable, still opens the same modals as today.
-  - **Certified (with or without paid)** -> full color, drop-shadow halo (orange/teal glow), wrapped in a `motion.div` that runs a 6s loop: scale 1 -> 1.12 -> 1 (two quick beats over 0.9s) and opacity 0 -> 1 -> 1 -> 0 fade over the same 6s cycle.
-- Reuses the three existing modals (`M4MVerificationModal`, `M4MCertificationModal`, `M4MQRCodeModal`) and their open/close logic, preserving today's click behavior (own-profile uncertified -> certification; own-profile certified -> QR; other -> verification).
+### 3. `Profile.tsx` (lines ~255 and ~351)
+- Remove the standalone social icons row under the avatar.
+- Apply the same `<SocialOrbit>` wrapper around the avatar shown on the fan/barber profile page.
 
-## Animation
-
-Add a keyframe utility in `src/index.css` (HSL tokens / no raw color):
-```
-@keyframes m4m-pulse {
-  0%   { transform: scale(1);    opacity: 0; }
-  10%  { transform: scale(1.12); opacity: 1; }
-  18%  { transform: scale(1);    opacity: 1; }
-  26%  { transform: scale(1.08); opacity: 1; }
-  34%  { transform: scale(1);    opacity: 1; }
-  90%  { opacity: 1; }
-  100% { transform: scale(1);    opacity: 0; }
-}
-.animate-m4m-pulse { animation: m4m-pulse 6s ease-in-out infinite; }
-```
-(Framer-motion option is fine too; CSS keeps it cheap on cards/lists.)
-
-## Integration points (remove the old external heart, mount inside avatar)
-
-1. `src/components/AvatarCrest.tsx`
-   - Accept new optional props `m4m_certified`, `m4m_paid`, `m4m_lives_touched`, `barberName`, `barberUserId`, `isOwnProfile`.
-   - Render `<M4MAvatarBadge />` absolutely positioned inside the crest container (bottom-right, above the rings, under the live indicator if any) so it follows the avatar everywhere it renders.
-
-2. `src/components/barber/BarberProfileHeader.tsx`
-   - Wrap the `<Avatar>` in a `relative` container and render `<M4MAvatarBadge size="lg" .../>` as an overlay on the avatar.
-   - **Delete** the existing `<M4MHeartbeat ... />` block currently sitting under the avatar (lines ~122–130) and the surrounding `flex flex-col items-center gap-1` wrapper collapse.
-
-3. `src/components/barber/BarberProfileCard.tsx`
-   - Same swap: remove the standalone `<M4MHeartbeat />` (line ~197) and instead render `<M4MAvatarBadge size="sm" />` overlaid on the card's avatar.
-
-4. Anywhere else `AvatarCrest` is used for a barber (Watch feed action stack, Map pins popovers, Battle theater, etc.) automatically inherits the badge because it lives inside the crest. No further edits needed.
-
-## Deprecation
-
-- Keep `src/components/m4m/M4MHeartbeat.tsx` in place but stop importing it from header/card. (Safe deletion can follow once we confirm no other route imports it — grep shows only the two above.)
+### 4. `BarberPublicProfile.tsx` (line ~521)
+- Remove the inline social row; rely on `BarberProfileHeader` now orbiting the icons.
 
 ## Visual spec
-
-- Badge sits at bottom-right, ~30% of avatar diameter, with a 2px transparent inset so it overlaps the avatar edge slightly.
-- Certified halo: `drop-shadow(0 0 6px hsl(var(--primary)/0.6)) drop-shadow(0 0 12px hsl(var(--accent)/0.4))`.
-- Ghost: `grayscale opacity-15` with no halo.
-- Cursor pointer always; tap targets unchanged.
+- Icon chip: 28×28 rounded-full, 1px border, blurred dark glass background.
+- Connected glow colors (HSL): Instagram `from-pink-500 to-orange-400` gradient text, Facebook `#1877F2`, Twitter `#1DA1F2`, YouTube `#FF0000`.
+- Ghost opacity: 35%.
+- Pulse: `animation: socialPulse 3s ease-in-out infinite`.
+- Tap target: 36×36 hit area (chip + invisible padding).
 
 ## Acceptance
+- Avatar on profile page, barber public profile, and barber profile header shows 4 icons evenly around it (N/E/S/W).
+- Instagram lit up brand-pink for the test account (has `instagram_handle`); the other three are faint ghosts.
+- M4M handshake badge still beats inside the avatar — orbit doesn't cover it.
+- No second row of social icons remains anywhere on the profile.
+- Mobile (390px) layout has no horizontal overflow.
 
-- Profile page, barber cards, watch feed, and any map/battle avatars all show the handshake-heart inside the avatar.
-- No heart is rendered below the avatar anywhere.
-- Certified barbers' badge beats and softly fades on a calm 6-second cycle.
-- Non-certified barbers show a faint ghost overlay only.
-- Tapping the badge still opens the existing verification / certification / QR modals as today.
+## Technical notes
+- Pure CSS positioning with inline `style={{ transform: ... }}` per icon — no extra libs.
+- New keyframe `social-pulse` added to `src/index.css`.
+- Uses existing `lucide-react` icons (`Instagram`, `Facebook`, `Twitter`, `Youtube`).
+- All colors via semantic tokens or brand-specific HSL values defined in `index.css`.
