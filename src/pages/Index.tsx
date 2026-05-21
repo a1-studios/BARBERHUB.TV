@@ -41,7 +41,9 @@ const Index = () => {
   // Promotion gate visibility — only ever shown to first-time guest visitors.
   // The server-side eligibility check below makes the actual decision; the
   // localStorage flag here just suppresses a one-frame flash for repeat visitors.
-  const [showSpinWheel, setShowSpinWheel] = useState(false);
+  const [showSpinWheel, setShowSpinWheel] = useState(() => {
+    try { return !!sessionStorage.getItem('bh_pending_role'); } catch { return false; }
+  });
 
   // Server-backed eligibility check — only show the gate when:
   //  1) Auth has finished loading
@@ -50,9 +52,12 @@ const Index = () => {
   useEffect(() => {
     if (loading) return;
 
-    // Signed-in users never see the gate.
+    // If the user is signed-in but mid-onboarding (pending role in session),
+    // keep the wizard open so the reward + spin + reveal steps can run.
     if (user) {
-      setShowSpinWheel(false);
+      try {
+        if (!sessionStorage.getItem('bh_pending_role')) setShowSpinWheel(false);
+      } catch { setShowSpinWheel(false); }
       return;
     }
 
