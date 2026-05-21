@@ -283,14 +283,14 @@ const Profile = () => {
 
       <Header />
 
-      <main className="relative z-10 flex-1 px-4 pt-14 pb-20 sm:pt-16">
+      <main className="relative z-10 flex-1 px-4 pt-12 pb-20 sm:pt-16">
         <div className="max-w-md mx-auto min-h-[calc(100dvh-4rem-5rem)] flex flex-col">
           <ProfileCompletionBanner profile={profile} />
 
           {/* ===== HERO: centered orbit with side rails ===== */}
-          <div className="relative -mt-5 min-h-[172px] pb-0.5">
-            <div className="absolute inset-x-0 top-0 z-10 flex justify-center">
-              <div className="origin-top scale-[0.88] sm:scale-100">
+          <div className="relative -mt-6 min-h-[164px] pb-0">
+            <div className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1">
+              <div className="origin-top scale-[0.9] sm:scale-100">
                 <SocialOrbit radius={71} iconSize={28} links={socialLinksObj} className="mx-auto">
                   {isBarber ? (
                     <AvatarCrest
@@ -324,7 +324,7 @@ const Profile = () => {
               </div>
             </div>
 
-            <div className="flex items-start justify-between gap-2 pt-9">
+            <div className="flex items-start justify-between gap-2 pt-7">
               <div className="flex max-w-[92px] min-w-0 flex-col items-start gap-1 pt-2 pr-1">
                 {specialty ? parseSpecialties(specialty).map(id => {
                   const tag = getSpecialtyDisplay(id);
@@ -371,7 +371,7 @@ const Profile = () => {
             </div>
           </div>
 
-          <div className="flex flex-col items-center text-center -mt-5">
+          <div className="flex flex-col items-center text-center -mt-6">
 
             <h1 className="text-lg font-bold text-foreground flex items-center justify-center gap-1">
               {displayName}
