@@ -237,7 +237,18 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
               const status = (item as any).stream_status as string | undefined;
               const processing = isVid && status && status !== 'ready';
               return (
-                <div key={item.id} className="relative group aspect-square rounded-md overflow-hidden bg-muted">
+                <div
+                  key={item.id}
+                  onClick={() => {
+                    if (!isVid || processing) return;
+                    setPlayingVideo({
+                      uid: (item as any).cloudflare_stream_uid || null,
+                      url: mediaUrl,
+                      poster,
+                    });
+                  }}
+                  className={`relative group aspect-square rounded-md overflow-hidden bg-muted ${isVid && !processing ? 'cursor-pointer' : ''}`}
+                >
                   {isVid ? (
                     poster ? (
                       <img src={poster} alt={item.title || 'Video'} className="w-full h-full object-cover" loading="lazy" />
