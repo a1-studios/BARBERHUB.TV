@@ -197,7 +197,7 @@ const WatchFeed = () => {
           media_url: toCdnUrl(s.media_url),
           title: cleanDisplayTitle(s.title) ?? undefined,
           description: s.description,
-          thumbnail_url: toCdnUrl(s.thumbnail_url),
+          thumbnail_url: toCdnUrl(s.stream_thumbnail_url ?? s.thumbnail_url),
           barber_name: "Competitor",
           specialty: null,
           barber_user_id: s.user_id,
