@@ -266,6 +266,79 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
             />
           </div>
 
+          {/* Shop address — drives distance to fans */}
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-3">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-primary" />
+              <Label className="text-sm font-semibold m-0">Shop Address</Label>
+              {formData.latitude && formData.longitude ? (
+                <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-400">
+                  Located
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-400">
+                  Not located
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground -mt-1">
+              Fans see your distance from them. Exact address only shown if you allow it below.
+            </p>
+
+            <Input
+              placeholder="Street address"
+              value={formData.shop_address}
+              onChange={(e) => setFormData({ ...formData, shop_address: e.target.value })}
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                placeholder="City"
+                value={formData.shop_city}
+                onChange={(e) => setFormData({ ...formData, shop_city: e.target.value })}
+              />
+              <Input
+                placeholder="State / Region"
+                value={formData.shop_state}
+                onChange={(e) => setFormData({ ...formData, shop_state: e.target.value })}
+              />
+            </div>
+            <Input
+              placeholder="Postal code"
+              value={formData.shop_postal_code}
+              onChange={(e) => setFormData({ ...formData, shop_postal_code: e.target.value })}
+            />
+
+            <div className="flex items-center justify-between gap-2">
+              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.address_visibility === 'exact'}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      address_visibility: e.target.checked ? 'exact' : 'approximate',
+                    })
+                  }
+                />
+                Show exact street address publicly
+              </label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleGeocodeAddress}
+                disabled={geocoding}
+              >
+                {geocoding ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1.5" />
+                ) : (
+                  <MapPin className="h-3 w-3 mr-1.5" />
+                )}
+                Locate
+              </Button>
+            </div>
+          </div>
+
           <div>
             <Label htmlFor="years_experience">Years of Experience</Label>
             <Input
