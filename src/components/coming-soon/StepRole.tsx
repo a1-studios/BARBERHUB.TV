@@ -39,19 +39,22 @@ export const StepRole = ({ email, initialRole, initialCountry, initialPhone, onC
 
   const submit = async () => {
     if (!role || !ready) return;
-    setSubmitting(true);
     setError(null);
     haptic();
-    const body: Record<string, unknown> = { email, role };
-    if (country) body.country_code = country;
-    if (phone.trim()) body.phone_number = phone.trim();
-    if (role === 'barber' && barberStatus) body.barber_status = barberStatus;
-
-    const { data, error: fnErr } = await supabase.functions.invoke('submit-role-details', { body });
-    if (fnErr || (data as { error?: unknown } | null)?.error) {
-      setError(fnErr?.message ?? 'Could not save. Try again.');
+    // If we already have an email (resumed flow), upsert lead now; otherwise
+    // defer to the auth step which always calls submit-role-details before signin.
+    if (email) {
+      setSubmitting(true);
+      const body: Record<string, unknown> = { email, role };
+      if (country) body.country_code = country;
+      if (phone.trim()) body.phone_number = phone.trim();
+      if (role === 'barber' && barberStatus) body.barber_status = barberStatus;
+      const { error: fnErr } = await supabase.functions.invoke('submit-role-details', { body });
       setSubmitting(false);
-      return;
+      if (fnErr) {
+        setError(fnErr.message ?? 'Could not save. Try again.');
+        return;
+      }
     }
     onContinue({ role, barberStatus, country, phone: phone.trim() });
   };
