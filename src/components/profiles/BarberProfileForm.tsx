@@ -29,7 +29,7 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
     years_experience: existingProfile?.years_experience || '',
     location: existingProfile?.location || '',
     portfolio_url: existingProfile?.portfolio_url || '',
-    phone_number: existingProfile?.phone_number || '',
+    phone_number: '',
     country_code: existingProfile?.country_code || '',
     shop_address: existingProfile?.shop_address || '',
     shop_city: existingProfile?.shop_city || '',
@@ -40,6 +40,22 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
     longitude: existingProfile?.longitude ?? null as number | null,
   });
   const [geocoding, setGeocoding] = useState(false);
+
+  // Load own phone from private contacts table
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('user_private_contacts')
+      .select('phone_number')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.phone_number) {
+          setFormData((p) => ({ ...p, phone_number: data.phone_number || '' }));
+        }
+      });
+  }, [user]);
+
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -76,6 +92,7 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
     setLoading(true);
     try {
       const profileData = {
+
         user_id: user.id,
         name: formData.name.trim(),
         specialty: formData.specialty || null,
@@ -83,7 +100,6 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
         location: formData.location || null,
         years_experience: formData.years_experience ? parseInt(formData.years_experience) : null,
         portfolio_url: formData.portfolio_url || null,
-        phone_number: formData.phone_number.trim(),
         country_code: formData.country_code,
         shop_address: formData.shop_address || null,
         shop_city: formData.shop_city || null,
@@ -100,11 +116,21 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
 
       if (error) throw error;
 
+      // Save phone number to private contacts (owner-only RLS)
+      await supabase
+        .from('user_private_contacts')
+        .upsert(
+          { user_id: user.id, phone_number: formData.phone_number.trim(), updated_at: new Date().toISOString() },
+          { onConflict: 'user_id' }
+        );
+
       // Also update country_code in profiles table
       await supabase
         .from('profiles')
         .update({ country_code: formData.country_code })
         .eq('user_id', user.id);
+
+
       
       toast.success(existingProfile ? 'Profile updated successfully!' : 'Barber profile created successfully!');
       onProfileCreated?.();

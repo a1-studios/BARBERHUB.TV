@@ -47,16 +47,17 @@ serve(async (req) => {
     const barberIds = [barber1_user_id, barber2_user_id].filter(Boolean);
 
     for (const barberId of barberIds) {
-      const { data: barber } = await supabase
-        .from('barber_profiles')
-        .select('phone_number, name')
+      const { data: contact } = await supabase
+        .from('user_private_contacts')
+        .select('phone_number')
         .eq('user_id', barberId)
-        .single();
+        .maybeSingle();
 
-      if (barber?.phone_number) {
-        phoneNumbers.push(barber.phone_number);
+      if (contact?.phone_number) {
+        phoneNumbers.push(contact.phone_number);
       }
     }
+
 
     if (phoneNumbers.length === 0) {
       console.log('[SEND-MATCH-SMS] No phone numbers found for barbers');

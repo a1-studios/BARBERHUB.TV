@@ -575,7 +575,6 @@ export type Database = {
           m4m_paid: boolean
           name: string
           nickname: string | null
-          phone_number: string | null
           portfolio_url: string | null
           rating: number | null
           require_deposit: boolean
@@ -623,7 +622,6 @@ export type Database = {
           m4m_paid?: boolean
           name: string
           nickname?: string | null
-          phone_number?: string | null
           portfolio_url?: string | null
           rating?: number | null
           require_deposit?: boolean
@@ -671,7 +669,6 @@ export type Database = {
           m4m_paid?: boolean
           name?: string
           nickname?: string | null
-          phone_number?: string | null
           portfolio_url?: string | null
           rating?: number | null
           require_deposit?: boolean
@@ -3674,7 +3671,6 @@ export type Database = {
           is_banned: boolean
           is_creator: boolean | null
           is_verified_by_competition: boolean | null
-          phone_number: string | null
           profile_id: string | null
           referral_code: string | null
           referred_by: string | null
@@ -3703,7 +3699,6 @@ export type Database = {
           is_banned?: boolean
           is_creator?: boolean | null
           is_verified_by_competition?: boolean | null
-          phone_number?: string | null
           profile_id?: string | null
           referral_code?: string | null
           referred_by?: string | null
@@ -3732,7 +3727,6 @@ export type Database = {
           is_banned?: boolean
           is_creator?: boolean | null
           is_verified_by_competition?: boolean | null
-          phone_number?: string | null
           profile_id?: string | null
           referral_code?: string | null
           referred_by?: string | null
@@ -4745,6 +4739,27 @@ export type Database = {
           total_registered?: number | null
           updated_at?: string | null
           youtube_stream_url?: string | null
+        }
+        Relationships: []
+      }
+      user_private_contacts: {
+        Row: {
+          created_at: string
+          phone_number: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          phone_number?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          phone_number?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

@@ -911,8 +911,9 @@ export default function BarberPublicProfile() {
                   </div>
                   <div>
                     <Label className="text-xs text-muted-foreground">Phone</Label>
-                    <p className="text-sm text-muted-foreground">{barberProfile?.phone_number || '—'}</p>
+                    <p className="text-sm text-muted-foreground">Private — visible only to you in account settings.</p>
                   </div>
+
                   <p className="text-[10px] text-muted-foreground/60 pt-1">Contact support to update locked fields.</p>
                 </CardContent>
               </Card>
