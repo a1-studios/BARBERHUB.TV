@@ -487,7 +487,7 @@ const Profile = () => {
               {isBarber ? (
                 <button
                   onClick={() => navigate(`/barber/${user?.id}?edit=true`)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
+                  className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-muted/30 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <Settings className="h-4 w-4 text-primary" />
@@ -498,7 +498,7 @@ const Profile = () => {
               ) : (
                 <button
                   onClick={() => setShowEditDrawer(true)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
+                  className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-muted/30 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <Edit3 className="h-4 w-4 text-primary" />
@@ -512,7 +512,7 @@ const Profile = () => {
               {isBarber && (
                 <Link
                   to={`/barber/${user?.id}`}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
+                  className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-muted/30 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <ExternalLink className="h-4 w-4 text-primary" />
@@ -526,7 +526,7 @@ const Profile = () => {
               {!isBarber && (profile as any)?.sub_category !== 'official_sponsor' && (
                 <button
                   onClick={() => setShowSponsorModal(true)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
+                  className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-muted/30 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <Award className="h-4 w-4 text-amber-400" />
@@ -539,7 +539,7 @@ const Profile = () => {
               {/* Sign Out */}
               <button
                 onClick={async () => { await signOut(); navigate('/'); }}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors"
+                className="w-full flex items-center gap-3 px-3.5 py-2 hover:bg-muted/30 transition-colors"
               >
                 <LogOut className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Sign Out</span>
@@ -548,7 +548,7 @@ const Profile = () => {
               {/* Delete Account */}
               <button
                 onClick={() => { setDeleteStep(1); setShowDeleteConfirm(true); }}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-destructive/10 transition-colors"
+                className="w-full flex items-center gap-3 px-3.5 py-2 hover:bg-destructive/10 transition-colors"
               >
                 <Trash2 className="h-4 w-4 text-destructive/70" />
                 <span className="text-sm text-destructive/70">Delete Account</span>
