@@ -183,7 +183,8 @@ const WatchFeed = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("battle_submissions")
-        .select("id, title, description, media_url, thumbnail_url, user_id, created_at, cloudflare_stream_uid")
+        .select("id, title, description, media_url, thumbnail_url, user_id, created_at, cloudflare_stream_uid, stream_status, stream_thumbnail_url")
+        .eq("stream_status", "ready")
         .not("media_url", "is", null)
         .order("created_at", { ascending: false })
         .limit(30);
