@@ -283,21 +283,20 @@ const Profile = () => {
 
       <Header />
 
-      <main className="relative z-10 flex-1 pt-16 pb-20 px-4">
+      <main className="relative z-10 flex-1 px-4 pt-12 pb-20 sm:pt-16">
         <div className="max-w-md mx-auto min-h-[calc(100dvh-4rem-5rem)] flex flex-col">
           <ProfileCompletionBanner profile={profile} />
 
-          {/* ===== HERO: 3-col grid — specialties | avatar | stats ===== */}
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 -mt-2 pt-0 pb-0">
-
-            {/* LEFT — Specialties stacked */}
-            <div className="flex flex-col items-start gap-1 min-w-0">
+          {/* ===== HERO: 3-column grid (specialties | avatar+orbit | stats) ===== */}
+          <div className="grid grid-cols-[minmax(80px,1fr)_auto_minmax(80px,1fr)] items-center gap-2 -mt-2">
+            {/* LEFT RAIL — specialties */}
+            <div className="flex flex-col items-start gap-1 self-center min-w-0">
               {specialty ? parseSpecialties(specialty).map(id => {
                 const tag = getSpecialtyDisplay(id);
                 return tag ? (
                   <span
                     key={id}
-                    className="text-[11px] leading-tight text-muted-foreground"
+                    className="text-[11px] leading-tight text-muted-foreground truncate max-w-full"
                   >
                     {tag.emoji} {tag.label}
                   </span>
@@ -305,8 +304,8 @@ const Profile = () => {
               }) : null}
             </div>
 
-            {/* CENTER — Avatar + orbit (always centered, +15% size, mobile-first) */}
-            <div className="flex items-center justify-center mx-auto">
+            {/* CENTER — avatar + orbit + heart */}
+            <div className="self-center">
               <SocialOrbit radius={71} iconSize={28} links={socialLinksObj}>
                 {isBarber ? (
                   <AvatarCrest
@@ -339,9 +338,8 @@ const Profile = () => {
               </SocialOrbit>
             </div>
 
-
-            {/* RIGHT — Stats stacked */}
-            <div className="flex flex-col items-end gap-1.5 text-right">
+            {/* RIGHT RAIL — stats */}
+            <div className="flex flex-col items-end gap-2 self-center text-right">
               {isBarber && barberStats ? (
                 <>
                   <div>
@@ -372,8 +370,7 @@ const Profile = () => {
             </div>
           </div>
 
-          <div className="flex flex-col items-center text-center -mt-3">
-
+          <div className="flex flex-col items-center text-center mt-1">
             <h1 className="text-lg font-bold text-foreground flex items-center justify-center gap-1">
               {displayName}
               <DisplayNameEditor
@@ -394,10 +391,9 @@ const Profile = () => {
             {profile?.bio && <p className="text-[11px] text-muted-foreground line-clamp-1 max-w-[260px] mt-0.5">{profile.bio}</p>}
           </div>
 
-
-
           {/* ===== QUICK LOCATION TOGGLE (Barbers only) ===== */}
-          {isBarber && <LocationQuickToggle />}
+          {isBarber && <div className="mt-2"><LocationQuickToggle /></div>}
+
           {/* ===== iOS GROUPED LIST ===== */}
           <div className="flex-1 space-y-1">
             {/* TOOLS section */}
