@@ -1,19 +1,37 @@
-## Fix portfolio video player: mobile dimensions + auto-replay
+## Manual play button + bottom-left replay icon
 
-The Dialog I just added uses `aspect-video` (16:9 landscape) and no replay. Portfolio clips are mobile-shot 9:16 verticals and need to loop like the Watch feed.
+### 1. `SmartVideoPlayer.tsx` — add `manualPlayback` prop
 
-### Changes
+When `manualPlayback={true}`:
+- Skip the auto play-attempt effect entirely (no `tryPlay()` on mount).
+- Always render the centered Play button while the video is paused and not ended (independent of `autoplayBlocked` / `loading`).
+- Tapping the Play button or the surface starts the video; tapping again pauses.
+- Replay behavior unchanged.
 
-**1. `src/pages/BarberPublicProfile.tsx` — portfolio video Dialog**
-- Swap `DialogContent` sizing: use a mobile-shaped container (`max-w-[420px] w-full aspect-[9/16]`) on a black background, no padding.
-- Pass `loop={true}` to `SmartVideoPlayer` so the clip auto-restarts when it ends (matching Watch feed's continuous playback behavior).
-- Keep `controls`, `tapToToggle`, `showCenterPlayButton`, `forceActive`, `autoPlayWhenVisible`, `muted={false}`.
+This is the missing "true manual" mode — current `showCenterPlayButton` still forces a play attempt first via `shouldPlay`, which is why portfolio videos appear stuck.
 
-**2. `src/components/profiles/PortfolioManager.tsx` — same Dialog**
-- Identical fix: `max-w-[420px] aspect-[9/16]` container + `loop={true}`.
+### 2. Portfolio video modals — use manual mode
 
-### Why loop instead of replay button
-`SmartVideoPlayer`'s `enableReplay` only renders a manual replay button after `ended`. Watch feed pairs it with `handleVideoEnded` that advances the feed, so the user never sits on a stalled frame. In the portfolio modal there's no next item — the cleanest match to "videos that don't replay" is `loop={true}` so the same clip plays continuously until the user closes the dialog.
+Files: `src/pages/BarberPublicProfile.tsx`, `src/components/profiles/PortfolioManager.tsx`
+
+In the `<Dialog>` `SmartVideoPlayer`:
+- Remove `autoPlayWhenVisible`, `loop`, `forceActive`.
+- Add `manualPlayback`.
+- Keep `controls`, `tapToToggle`, `showCenterPlayButton`, `muted={false}`, `className="w-full h-full"`, `aspect-[9/16]` container.
+
+Result: opening the dialog shows a poster + centered orange Play button. One tap plays. One tap pauses. Video ends → poster returns with Play (no auto-loop).
+
+### 3. Watch feed — small replay icon at bottom-left
+
+File: `src/pages/WatchFeed.tsx`
+
+- Track per-item ended state via existing `handleVideoEnded(idx)`. Add `endedIndex` state (or reuse an existing one) and set it when the active card ends; clear on swipe.
+- Pass `enableReplay={false}` to the active `SmartVideoPlayer` so the big centered replay overlay no longer renders.
+- Render a small icon button (`RotateCcw` from lucide-react, ~h-9 w-9 rounded-full bg-black/50 backdrop-blur, primary text) at `absolute bottom-20 left-3 z-20` on the active card whenever `endedIndex === idx`. Click → calls a new replay handler that finds the video element and replays it.
+- Simplest replay trigger: clear `endedIndex` and use a `replayNonce` state that bumps; pass it into a small wrapper effect — or expose imperative replay through a ref on `SmartVideoPlayer` via a new optional `replayTrigger?: number` prop that, when changed, resets ended + plays from 0.
+
+Cleanest implementation: add `replayTrigger?: number` prop to `SmartVideoPlayer` that runs the existing `handleReplay` logic whenever it changes. Then WatchFeed bumps it on icon click.
 
 ### Out of scope
-No changes to `SmartVideoPlayer` itself, no changes to Watch feed, no changes to thumbnail tile grid.
+- `.mov` deep-link codec support (browser-level limitation; separate problem).
+- Hero → Watch routing already prepends the synthetic pinned item; no changes needed here.

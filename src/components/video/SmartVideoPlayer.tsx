@@ -29,6 +29,10 @@ interface SmartVideoPlayerProps {
   showCenterPlayButton?: boolean;
   /** Tap on the video surface toggles play/pause (single click play, single click pause). */
   tapToToggle?: boolean;
+  /** True manual mode: never auto-attempt playback. Always show centered Play when paused. */
+  manualPlayback?: boolean;
+  /** Imperative replay trigger: bumping this number resets to 0 and plays. */
+  replayTrigger?: number;
 }
 
 const CF_STREAM_CUSTOMER =
