@@ -129,8 +129,3 @@ export function SocialOrbit({
     </div>
   );
 }
-        );
-      })}
-    </div>
-  );
-}
