@@ -70,20 +70,33 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
         const isVid = file.type.startsWith('video/');
         const filename = `${Date.now()}_${file.name.replace(/[^a-z0-9._-]/gi, '_')}`;
 
-        // Capture poster from videos in parallel with the upload
+        // Capture poster from videos in parallel with the upload — await before insert
+        // so thumbnail_url is persisted with the row.
         const thumbPromise = isVid
           ? captureVideoThumbnail(file).then(async (b) => {
               if (!b) return null;
-              const thumbKey = `thumbnails/${Date.now()}_${file.name}.jpg`;
-              const { data } = await supabase.functions.invoke('get-r2-presigned-url', {
-                body: { key: thumbKey, contentType: 'image/jpeg' },
-              });
-              if (!data?.uploadUrl) return null;
-              const put = await fetch(data.uploadUrl, {
-                method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: b,
-              });
-              return put.ok ? (data.publicUrl as string) : null;
-            }).catch(() => null)
+              try {
+                const thumbKey = `thumbnails/${Date.now()}_${file.name.replace(/[^a-z0-9._-]/gi, '_')}.jpg`;
+                const { data, error } = await supabase.functions.invoke('get-r2-presigned-url', {
+                  body: { key: thumbKey, contentType: 'image/jpeg' },
+                });
+                if (error || !data?.uploadUrl) {
+                  console.warn('[thumb] presign failed', error);
+                  return null;
+                }
+                const put = await fetch(data.uploadUrl, {
+                  method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: b,
+                });
+                if (!put.ok) {
+                  console.warn('[thumb] PUT failed', put.status);
+                  return null;
+                }
+                return data.publicUrl as string;
+              } catch (e) {
+                console.warn('[thumb] upload error', e);
+                return null;
+              }
+            }).catch((e) => { console.warn('[thumb] capture error', e); return null; })
           : Promise.resolve<string | null>(null);
 
         const { publicUrl } = await uploadFileMultipart(file, filename, file.type, {
@@ -106,10 +119,13 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
 
         if (isVid && newCreation?.id) {
           toast.info('Optimizing video for smooth playback…');
-          const { data: ingest } = await supabase.functions.invoke('upload-to-cloudflare-stream', {
+          const { data: ingest, error: ingestErr } = await supabase.functions.invoke('upload-to-cloudflare-stream', {
             body: { sourceUrl: publicUrl, table: 'creations', recordId: newCreation.id },
           });
-          if (ingest?.uid) {
+          if (ingestErr || !ingest?.uid) {
+            console.error('[ingest] failed', ingestErr, ingest);
+            toast.warning('Video uploaded — optimization will retry shortly');
+          } else {
             pollStreamReady('creations', newCreation.id, ingest.uid, {
               onStatus: (s) => {
                 if (s === 'ready') {
@@ -211,62 +227,59 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
             {portfolio.map((item) => {
               const mediaUrl = item.media_url || '';
               const isVid = isVideo(mediaUrl);
+              const poster = (item as any).stream_thumbnail_url || item.thumbnail_url || null;
+              const status = (item as any).stream_status as string | undefined;
+              const processing = isVid && status && status !== 'ready';
               return (
-                <div key={item.id} className="relative group">
-                  <div className="aspect-square rounded-lg overflow-hidden bg-muted">
-                    {isVid ? (
-                      <SmartVideoPlayer
-                        streamUid={(item as any).cloudflare_stream_uid ?? null}
-                        fallbackUrl={mediaUrl}
-                        poster={item.thumbnail_url ?? null}
-                        autoPlayWhenVisible={false}
-                        muted
-                        controls={true}
-                        loop={false}
-                        enableReplay
-                        overlayPayload={(item as any).overlay_payload ?? null}
-                        className="w-full h-full"
-                      />
+                <div key={item.id} className="relative group aspect-square rounded-md overflow-hidden bg-muted">
+                  {isVid ? (
+                    poster ? (
+                      <img src={poster} alt={item.title || 'Video'} className="w-full h-full object-cover" loading="lazy" />
                     ) : (
-                      <img
-                        src={item.thumbnail_url || mediaUrl}
-                        alt={item.title || 'Portfolio'}
-                        className="w-full h-full object-cover"
+                      // First-frame fallback: most browsers paint the first frame at #t=0.1
+                      <video
+                        src={`${mediaUrl}#t=0.1`}
+                        preload="metadata"
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover pointer-events-none"
                       />
-                    )}
+                    )
+                  ) : (
+                    <img
+                      src={item.thumbnail_url || mediaUrl}
+                      alt={item.title || 'Portfolio'}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  )}
 
-                    {isVid && (
-                      <Badge className="absolute top-2 right-2 bg-black/80 text-white border-0 pointer-events-none">
-                        <Video className="w-3 h-3 mr-1" />
-                        Video
-                      </Badge>
-                    )}
+                  {isVid && (
+                    <div className="absolute bottom-1 right-1 bg-black/70 rounded-full p-1 pointer-events-none">
+                      <Video className="w-3 h-3 text-white" />
+                    </div>
+                  )}
 
-                    {/* Delete — always visible on mobile */}
-                    {!readonly && (
-                      <Button
-                        size="icon"
-                        variant="destructive"
-                        className="absolute top-2 left-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity h-8 w-8"
-                        onClick={() => handleDelete(item.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
+                  {processing && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[10px] font-medium text-white text-center px-1">
+                      Optimizing…
+                    </div>
+                  )}
 
-                  <div className="mt-2">
-                    <p className="text-sm font-medium truncate">{item.title}</p>
-                    {item.category && (
-                      <Badge variant="secondary" className="text-xs mt-1">
-                        {item.category}
-                      </Badge>
-                    )}
-                  </div>
+                  {!readonly && (
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      className="absolute top-1 left-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity h-7 w-7"
+                      onClick={() => handleDelete(item.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </div>
               );
             })}
