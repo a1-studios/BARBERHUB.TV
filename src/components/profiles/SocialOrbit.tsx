@@ -48,6 +48,7 @@ export function SocialOrbit({
   iconSize = 28,
   links,
   className,
+  onAddClick,
 }: SocialOrbitProps) {
   // Compass positions: top, right, bottom, left
   const positions = [-90, 0, 90, 180];
