@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,6 +38,7 @@ import { requireProfileComplete } from '@/components/auth/ProfileCompletionGate'
 import { AlertCircle } from 'lucide-react';
 import { DisplayNameEditor } from '@/components/profile/DisplayNameEditor';
 import { LocationQuickToggle } from '@/components/profiles/LocationQuickToggle';
+import { SocialLinksDialog } from '@/components/profiles/SocialLinksDialog';
 
 const ProfileCompletionBanner = ({ profile }: { profile: any }) => {
   if (!profile) return null;
@@ -88,6 +89,10 @@ const Profile = () => {
   const [reviewAppointmentId, setReviewAppointmentId] = useState('');
   const [revieweeId, setRevieweeId] = useState('');
   const [isBarberReviewing, setIsBarberReviewing] = useState(false);
+  const [socialDialogOpen, setSocialDialogOpen] = useState(false);
+  const [socialFocus, setSocialFocus] = useState<'instagram' | 'facebook' | 'twitter' | 'youtube' | undefined>();
+  const avatarFileRef = useRef<HTMLInputElement>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
 
@@ -283,14 +288,20 @@ const Profile = () => {
 
       <Header />
 
-      <main className="relative z-10 flex-1 px-4 pt-8 pb-20 sm:pt-16">
-        <div className="max-w-md mx-auto min-h-[calc(100dvh-4rem-5rem)] flex flex-col">
+      <main className="relative z-10 flex-1 px-4 pt-20 pb-20 sm:pt-24">
+        <div className="max-w-md mx-auto flex flex-col">
           <ProfileCompletionBanner profile={profile} />
 
           {/* ===== HERO: centered avatar first, details arranged below for mobile ===== */}
-          <div className="-mt-3 flex w-full flex-col items-center">
+          <div className="mt-2 flex w-full flex-col items-center">
             <div className="flex w-full justify-center">
-              <SocialOrbit radius={71} iconSize={28} links={socialLinksObj} className="mx-auto">
+              <SocialOrbit
+                radius={71}
+                iconSize={28}
+                links={socialLinksObj}
+                onAddClick={(key) => { setSocialFocus(key as any); setSocialDialogOpen(true); }}
+                className="mx-auto"
+              >
                   {isBarber ? (
                     <AvatarCrest
                       tier={subscriptionTier}
@@ -312,12 +323,22 @@ const Profile = () => {
                       </Avatar>
                     </AvatarCrest>
                   ) : (
-                    <Avatar className="h-[101px] w-[101px] border-2 border-background shadow-lg">
-                      <AvatarImage src={profile?.avatar_url || undefined} />
-                      <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
-                        {displayName.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <button
+                      type="button"
+                      onClick={() => avatarFileRef.current?.click()}
+                      className="relative rounded-full focus:outline-none focus:ring-2 focus:ring-primary/60"
+                      aria-label="Change profile picture"
+                    >
+                      <Avatar className="h-[101px] w-[101px] border-2 border-background shadow-lg">
+                        <AvatarImage src={profile?.avatar_url || undefined} />
+                        <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
+                          {displayName.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="absolute bottom-0 right-0 h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow ring-2 ring-background">
+                        {avatarUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Edit3 className="h-3.5 w-3.5" />}
+                      </span>
+                    </button>
                   )}
                 </SocialOrbit>
             </div>
@@ -646,6 +667,50 @@ const Profile = () => {
         appointmentId={reviewAppointmentId}
         revieweeId={revieweeId}
         isBarberReviewing={isBarberReviewing}
+      />
+
+      {/* Hidden avatar file input (fans) */}
+      <input
+        ref={avatarFileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          e.target.value = '';
+          if (!file || !user) return;
+          if (!file.type.startsWith('image/')) { toast.error('Please select an image'); return; }
+          if (file.size > 5 * 1024 * 1024) { toast.error('Image must be under 5MB'); return; }
+          setAvatarUploading(true);
+          try {
+            const ext = file.name.split('.').pop();
+            const path = `${user.id}/${Date.now()}.${ext}`;
+            const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { contentType: file.type, upsert: false });
+            if (upErr) throw upErr;
+            const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
+            const { error: pErr } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('user_id', user.id);
+            if (pErr) throw pErr;
+            if (clientProfile) {
+              await supabase.from('client_profiles').update({ avatar_url: publicUrl }).eq('user_id', user.id);
+            }
+            toast.success('Profile picture updated');
+            refreshProfiles();
+          } catch (err: any) {
+            console.error('[Profile] avatar upload', err);
+            toast.error(err.message || 'Upload failed');
+          } finally {
+            setAvatarUploading(false);
+          }
+        }}
+      />
+
+      <SocialLinksDialog
+        open={socialDialogOpen}
+        onOpenChange={setSocialDialogOpen}
+        role={isBarber ? 'barber' : 'fan'}
+        initialFocus={socialFocus}
+        initialValues={socialLinksObj}
+        onSaved={refreshProfiles}
       />
 
       <BottomNavBar />

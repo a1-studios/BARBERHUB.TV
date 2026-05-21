@@ -8,7 +8,6 @@ export interface SocialLinks {
   twitter?: string | null;
   youtube?: string | null;
 }
-
 interface SocialOrbitProps {
   children: ReactNode;
   /** Distance (px) from container center to icon center */
@@ -16,6 +15,8 @@ interface SocialOrbitProps {
   iconSize?: number;
   links?: SocialLinks;
   className?: string;
+  /** When set, unmapped icons render as add-buttons that invoke this with the key. */
+  onAddClick?: (key: keyof SocialLinks) => void;
 }
 
 type SocialKey = keyof SocialLinks;
@@ -47,6 +48,7 @@ export function SocialOrbit({
   iconSize = 28,
   links,
   className,
+  onAddClick,
 }: SocialOrbitProps) {
   // Compass positions: top, right, bottom, left
   const positions = [-90, 0, 90, 180];
@@ -109,6 +111,15 @@ export function SocialOrbit({
               >
                 {chip}
               </a>
+            ) : onAddClick ? (
+              <button
+                type="button"
+                onClick={() => onAddClick(social.key)}
+                title={`Add ${social.label}`}
+                className="block"
+              >
+                {chip}
+              </button>
             ) : (
               <div title={`${social.label} (not connected)`}>{chip}</div>
             )}

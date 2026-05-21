@@ -139,29 +139,27 @@ export function ClientProfileForm({ onProfileCreated, existingProfile }: ClientP
           </div>
 
           <div>
+
             <Label className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
               Country *
             </Label>
-            <CountrySelector
-              value={formData.country_code}
-              onChange={(code) => setFormData({ ...formData, country_code: code || '' })}
-              placeholder="Select your country"
-            />
+            {existingProfile?.country_code || (existingProfile as any)?.country_locked_at ? (
+              <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2 text-sm">
+                <span>{formData.country_code || existingProfile?.country_code}</span>
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Locked at signup</span>
+              </div>
+            ) : (
+              <CountrySelector
+                value={formData.country_code}
+                onChange={(code) => setFormData({ ...formData, country_code: code || '' })}
+                placeholder="Select your country"
+              />
+            )}
             {errors.country_code && <p className="text-xs text-destructive mt-1">{errors.country_code}</p>}
-            <p className="text-xs text-muted-foreground mt-1">Represent your nation in battles and tournaments</p>
+            <p className="text-[11px] text-muted-foreground mt-1">Your nationality is permanent once set — contact support to change it.</p>
           </div>
 
-          <div>
-            <Label htmlFor="avatar_url">Avatar URL (optional)</Label>
-            <Input
-              id="avatar_url"
-              value={formData.avatar_url}
-              onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
-              placeholder="https://your-avatar-image.com"
-              type="url"
-            />
-          </div>
 
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? 'Saving...' : (existingProfile ? 'Update Profile' : 'Create Profile')}

@@ -117,6 +117,7 @@ export const GoogleOneTap = () => {
           }
 
           // If a raffle ticket was claimed earlier in this session, link it.
+          // Otherwise, claim one server-side so One Tap users reach raffle parity with email signups.
           try {
             const raw = localStorage.getItem('raffle_pending_claim');
             if (raw) {
@@ -127,6 +128,23 @@ export const GoogleOneTap = () => {
                 });
               }
               localStorage.removeItem('raffle_pending_claim');
+            } else if (email) {
+              const { data: claimRes } = await supabase.functions.invoke('claim-raffle-ticket', {
+                body: { email, fingerprint: getDeviceFingerprint() },
+              });
+              const ticketCode = (claimRes as any)?.ticket_code;
+              if (ticketCode) {
+                await supabase.functions.invoke('link-raffle-to-user', {
+                  body: { ticket_code: ticketCode, user_id: data.session.user.id },
+                });
+                // Surface a celebration so One Tap users see their ticket like email users do.
+                try {
+                  sessionStorage.setItem('one_tap_raffle_reveal', JSON.stringify({
+                    ticketCode,
+                    tierColor: (claimRes as any)?.tier_color ?? 'white',
+                  }));
+                } catch { /* ignore */ }
+              }
             }
           } catch { /* ignore */ }
         },
