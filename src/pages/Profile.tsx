@@ -327,15 +327,14 @@ const Profile = () => {
                       {displayName.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                </AvatarCrest>
+              ) : (
                 <Avatar className="h-[88px] w-[88px] border-2 border-background shadow-lg">
-
-                <Avatar className="h-20 w-20 border-2 border-background shadow-lg">
                   <AvatarImage src={profile?.avatar_url || undefined} />
                   <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
                     {displayName.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
+
               )}
             </SocialOrbit>
 
