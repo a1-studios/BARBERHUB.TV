@@ -352,12 +352,98 @@ const WatchFeed = () => {
     return out;
   }, [shuffledContent, sponsors, battleItems]);
 
-  // Deep-link: pin the targeted video at index 0 so the user never lands on a random clip.
-  // Uses either ?video=<id-or-url> or ?src=<media-url>. Builds a synthetic item if the
-  // target isn't in the loaded feed yet.
+  // Deep-link: try to hydrate the targeted clip from the DB so we recover the
+  // Cloudflare Stream UID + thumbnail + creator info instead of falling back to
+  // the raw R2 MP4 (which on mobile is slow and sometimes won't start).
+  const targetSrcDecoded = useMemo(() => {
+    const key = targetVideoBarber ? decodeURIComponent(targetVideoBarber) : null;
+    const src = targetSrcParam ? decodeURIComponent(targetSrcParam) : key;
+    return src && /^https?:\/\//.test(src) ? src : null;
+  }, [targetVideoBarber, targetSrcParam]);
+
+  const { data: deepLinkItem } = useQuery({
+    queryKey: ['watch-feed-deeplink', targetSrcDecoded],
+    enabled: !!targetSrcDecoded,
+    queryFn: async (): Promise<FeedItem | null> => {
+      if (!targetSrcDecoded) return null;
+      // Try creations first (portfolio uploads — most common deep-link source)
+      const { data: cr } = await supabase
+        .from('creations')
+        .select('id, title, media_url, thumbnail_url, barber_id, cloudflare_stream_uid, stream_thumbnail_url, overlay_payload')
+        .eq('media_url', targetSrcDecoded)
+        .maybeSingle();
+      if (cr) {
+        let barberName = 'Barber';
+        let userId: string | undefined;
+        let specialty: string | null = null;
+        if (cr.barber_id) {
+          const { data: bp } = await supabase
+            .from('barber_profiles')
+            .select('name, specialty, user_id')
+            .eq('id', cr.barber_id)
+            .maybeSingle();
+          if (bp) { barberName = bp.name || barberName; specialty = bp.specialty; userId = bp.user_id; }
+        }
+        return {
+          type: 'video',
+          id: `pinned-creation-${cr.id}`,
+          media_url: toCdnUrl(cr.media_url || targetSrcDecoded),
+          title: cleanDisplayTitle(cr.title) ?? undefined,
+          thumbnail_url: toCdnUrl((cr as any).stream_thumbnail_url ?? cr.thumbnail_url),
+          barber_name: barberName,
+          specialty,
+          barber_user_id: userId,
+          cloudflare_stream_uid: cr.cloudflare_stream_uid ?? null,
+          overlay_payload: (cr as any).overlay_payload ?? null,
+        };
+      }
+      // Then creator_content
+      const { data: cc } = await supabase
+        .from('creator_content')
+        .select('id, title, media_url, thumbnail_url, creator_id, cloudflare_stream_uid, stream_thumbnail_url, overlay_payload')
+        .eq('media_url', targetSrcDecoded)
+        .maybeSingle();
+      if (cc) {
+        return {
+          type: 'video',
+          id: `pinned-creator-${cc.id}`,
+          content_id: cc.id,
+          media_url: toCdnUrl(cc.media_url || targetSrcDecoded),
+          title: cleanDisplayTitle(cc.title) ?? undefined,
+          thumbnail_url: toCdnUrl((cc as any).stream_thumbnail_url ?? cc.thumbnail_url),
+          barber_name: 'Creator',
+          specialty: null,
+          barber_user_id: cc.creator_id,
+          cloudflare_stream_uid: cc.cloudflare_stream_uid ?? null,
+          overlay_payload: (cc as any).overlay_payload ?? null,
+        };
+      }
+      // Lastly battle_submissions
+      const { data: bs } = await supabase
+        .from('battle_submissions')
+        .select('id, title, media_url, thumbnail_url, user_id, cloudflare_stream_uid, stream_thumbnail_url')
+        .eq('media_url', targetSrcDecoded)
+        .maybeSingle();
+      if (bs) {
+        return {
+          type: 'video',
+          id: `pinned-submission-${bs.id}`,
+          media_url: toCdnUrl(bs.media_url || targetSrcDecoded),
+          title: cleanDisplayTitle(bs.title) ?? undefined,
+          thumbnail_url: toCdnUrl((bs as any).stream_thumbnail_url ?? bs.thumbnail_url),
+          barber_name: 'Competitor',
+          specialty: null,
+          barber_user_id: bs.user_id,
+          cloudflare_stream_uid: bs.cloudflare_stream_uid ?? null,
+        };
+      }
+      return null;
+    },
+  });
+
   const pinnedFeed: FeedItem[] = useMemo(() => {
     const targetKey = targetVideoBarber ? decodeURIComponent(targetVideoBarber) : null;
-    const targetSrc = targetSrcParam ? decodeURIComponent(targetSrcParam) : targetKey;
+    const targetSrc = targetSrcDecoded;
     if (!targetKey && !targetSrc) return feed;
 
     const matchIdx = feed.findIndex(
@@ -369,8 +455,10 @@ const WatchFeed = () => {
       const pinned = feed[matchIdx];
       return [pinned, ...feed.slice(0, matchIdx), ...feed.slice(matchIdx + 1)];
     }
-    // Not found — build a synthetic item so the user still sees the exact clip they tapped.
-    if (!targetSrc || !/^https?:\/\//.test(targetSrc)) return feed;
+    // Prefer the DB-hydrated item (has stream UID, thumbnail, creator) over a raw URL fallback.
+    if (deepLinkItem) return [deepLinkItem, ...feed];
+    // Last resort — build a synthetic item so the user still sees the clip they tapped.
+    if (!targetSrc) return feed;
     const synthetic: FeedItem = {
       type: "video",
       id: `pinned-${targetSrc}`,
@@ -380,7 +468,7 @@ const WatchFeed = () => {
       cloudflare_stream_uid: null,
     };
     return [synthetic, ...feed];
-  }, [feed, targetVideoBarber, targetSrcParam]);
+  }, [feed, targetVideoBarber, targetSrcDecoded, deepLinkItem]);
 
   // Ensure the page starts at index 0 (the pinned video) when a deep link is used.
   const [hasJumped, setHasJumped] = useState(false);

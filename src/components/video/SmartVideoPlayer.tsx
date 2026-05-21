@@ -143,8 +143,9 @@ export function SmartVideoPlayer({
   // Reset loading whenever the underlying source changes
   useEffect(() => { setLoading(true); setEnded(false); }, [src]);
 
-  // Attach source when active OR prefetching. Release decoder when fully idle.
-  const shouldAttach = shouldPlay || preloadMode !== 'none';
+  // Attach source when active OR prefetching OR in manual mode (so the user's first tap on
+  // the centered Play button has something to actually play). Release decoder when fully idle.
+  const shouldAttach = shouldPlay || preloadMode !== 'none' || manualPlayback;
 
   // Effect A — lifecycle: create/destroy hls based on shouldAttach ONLY.
   // Do NOT depend on shouldPlay here, otherwise the prefetched HLS gets
