@@ -1210,9 +1210,9 @@ export default function BarberPublicProfile() {
       />
 
       <Dialog open={!!playingVideo} onOpenChange={(o) => !o && setPlayingVideo(null)}>
-        <DialogContent className="max-w-3xl p-0 bg-black border-0 overflow-hidden">
+        <DialogContent className="max-w-[420px] w-full p-0 bg-black border-0 overflow-hidden">
           {playingVideo && (
-            <div className="w-full aspect-video bg-black">
+            <div className="w-full aspect-[9/16] bg-black">
               <SmartVideoPlayer
                 streamUid={playingVideo.uid}
                 fallbackUrl={playingVideo.url}
@@ -1220,6 +1220,7 @@ export default function BarberPublicProfile() {
                 autoPlayWhenVisible
                 forceActive
                 controls
+                loop
                 muted={false}
                 showCenterPlayButton
                 tapToToggle
