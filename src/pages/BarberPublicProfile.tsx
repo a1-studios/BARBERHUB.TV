@@ -731,24 +731,34 @@ export default function BarberPublicProfile() {
                             className="aspect-square rounded-lg overflow-hidden border border-primary/20 hover:border-primary/50 transition-all hover:shadow-lg relative group"
                           >
                             {isVid ? (
-                              <>
-                                <SmartVideoPlayer
-                                  streamUid={(creation as any).cloudflare_stream_uid ?? null}
-                                  fallbackUrl={creation.media_url}
-                                  poster={creation.thumbnail_url ?? null}
-                                  autoPlayWhenVisible={false}
-                                  muted
-                                  controls
-                                  loop={false}
-                                  enableReplay
-                                  overlayPayload={(creation as any).overlay_payload ?? null}
-                                  className="w-full h-full"
-                                />
-                                <Badge className="absolute bottom-2 right-2 bg-black/80 text-white border-0 pointer-events-none z-10">
-                                  <Video className="w-3 h-3 mr-1" />
-                                  Video
-                                </Badge>
-                              </>
+                              (() => {
+                                const poster = (creation as any).stream_thumbnail_url || creation.thumbnail_url || null;
+                                const status = (creation as any).stream_status as string | undefined;
+                                const processing = status && status !== 'ready';
+                                return (
+                                  <>
+                                    {poster ? (
+                                      <img src={poster} alt={creation.title || 'Video'} className="w-full h-full object-cover" loading="lazy" />
+                                    ) : (
+                                      <video
+                                        src={`${creation.media_url}#t=0.1`}
+                                        preload="metadata"
+                                        muted
+                                        playsInline
+                                        className="w-full h-full object-cover pointer-events-none"
+                                      />
+                                    )}
+                                    <div className="absolute bottom-1 right-1 bg-black/70 rounded-full p-1 pointer-events-none z-10">
+                                      <Video className="w-3 h-3 text-white" />
+                                    </div>
+                                    {processing && (
+                                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[10px] font-medium text-white text-center px-1 z-10">
+                                        Optimizing…
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              })()
                             ) : (
                               <img 
                                 src={creation.thumbnail_url || creation.media_url} 
