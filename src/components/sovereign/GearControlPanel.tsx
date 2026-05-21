@@ -14,6 +14,7 @@ interface GearItem {
   price_bb: number;
   stock_quantity: number | null;
   image_url: string | null;
+  image_urls: string[] | null;
   is_active: boolean;
   requires_shipping: boolean;
   shopify_product_id: string | null;
@@ -21,12 +22,14 @@ interface GearItem {
   display_order: number;
 }
 
+const MAX_IMAGES = 5;
+
 const emptyForm = {
   name: '',
   description: '',
   price_bb: 0,
   stock_quantity: '' as number | '',
-  image_url: '',
+  image_urls: [] as string[],
   requires_shipping: false,
   shopify_product_id: '',
   shopify_variant_id: '',
@@ -41,6 +44,7 @@ const GearControlPanel = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
   const [imageMode, setImageMode] = useState<'upload' | 'url'>('url');
+  const [urlInput, setUrlInput] = useState('');
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -49,7 +53,7 @@ const GearControlPanel = () => {
     setLoading(true);
     const { data, error } = await supabase
       .from('products')
-      .select('id, name, description, price_bb, stock_quantity, image_url, is_active, requires_shipping, shopify_product_id, shopify_variant_id, display_order')
+      .select('id, name, description, price_bb, stock_quantity, image_url, image_urls, is_active, requires_shipping, shopify_product_id, shopify_variant_id, display_order')
       .eq('category', 'gear')
       .order('display_order', { ascending: true })
       .order('created_at', { ascending: false });
@@ -65,16 +69,20 @@ const GearControlPanel = () => {
     setEditingId(null);
     setShowForm(false);
     setImageMode('url');
+    setUrlInput('');
   };
 
   const startEdit = (item: GearItem) => {
     setEditingId(item.id);
+    const imgs = (item.image_urls && item.image_urls.length > 0)
+      ? item.image_urls
+      : (item.image_url ? [item.image_url] : []);
     setForm({
       name: item.name,
       description: item.description || '',
       price_bb: item.price_bb,
       stock_quantity: item.stock_quantity ?? '',
-      image_url: item.image_url || '',
+      image_urls: imgs.slice(0, MAX_IMAGES),
       requires_shipping: item.requires_shipping,
       shopify_product_id: item.shopify_product_id || '',
       shopify_variant_id: item.shopify_variant_id || '',
@@ -82,13 +90,32 @@ const GearControlPanel = () => {
       is_active: item.is_active,
     });
     setImageMode('url');
+    setUrlInput('');
     setShowForm(true);
+  };
+
+  const addImageUrl = (url: string) => {
+    const trimmed = url.trim();
+    if (!trimmed) return;
+    setForm((f) => {
+      if (f.image_urls.length >= MAX_IMAGES) {
+        toast.error(`Max ${MAX_IMAGES} images`);
+        return f;
+      }
+      if (f.image_urls.includes(trimmed)) return f;
+      return { ...f, image_urls: [...f.image_urls, trimmed] };
+    });
+  };
+
+  const removeImage = (idx: number) => {
+    setForm((f) => ({ ...f, image_urls: f.image_urls.filter((_, i) => i !== idx) }));
   };
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) { toast.error('Max 5MB'); return; }
+    if (form.image_urls.length >= MAX_IMAGES) { toast.error(`Max ${MAX_IMAGES} images`); return; }
     setUploading(true);
     try {
       const ext = file.name.split('.').pop() || 'jpg';
@@ -99,7 +126,7 @@ const GearControlPanel = () => {
       });
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from('gear-media').getPublicUrl(path);
-      setForm((f) => ({ ...f, image_url: pub.publicUrl }));
+      addImageUrl(pub.publicUrl);
       toast.success('Image uploaded');
     } catch (err: any) {
       toast.error(err.message || 'Upload failed');
@@ -122,7 +149,8 @@ const GearControlPanel = () => {
           description: form.description.trim() || null,
           price_bb: Number(form.price_bb),
           stock_quantity: form.stock_quantity === '' ? null : Number(form.stock_quantity),
-          image_url: form.image_url.trim() || null,
+          image_url: form.image_urls[0] || null,
+          image_urls: form.image_urls,
           requires_shipping: form.requires_shipping,
           shopify_product_id: form.shopify_product_id.trim() || null,
           shopify_variant_id: form.shopify_variant_id.trim() || null,
@@ -185,25 +213,35 @@ const GearControlPanel = () => {
             <Input type="number" placeholder="Display order" value={form.display_order} onChange={(e) => setForm({ ...form, display_order: parseInt(e.target.value) || 0 })} className={inputClass} />
           </div>
 
-          {/* Image input */}
+          {/* Image input (up to MAX_IMAGES, rotated 5s on display) */}
           <div>
-            <div className="flex gap-1 mb-1.5">
-              <button type="button" onClick={() => setImageMode('upload')} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] ${imageMode === 'upload' ? 'bg-orange-500 text-white' : 'bg-white/5 text-white/50'}`}>
-                <Upload className="h-3 w-3" />Upload
-              </button>
-              <button type="button" onClick={() => setImageMode('url')} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] ${imageMode === 'url' ? 'bg-orange-500 text-white' : 'bg-white/5 text-white/50'}`}>
-                <LinkIcon className="h-3 w-3" />URL
-              </button>
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex gap-1">
+                <button type="button" onClick={() => setImageMode('upload')} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] ${imageMode === 'upload' ? 'bg-orange-500 text-white' : 'bg-white/5 text-white/50'}`}>
+                  <Upload className="h-3 w-3" />Upload
+                </button>
+                <button type="button" onClick={() => setImageMode('url')} className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] ${imageMode === 'url' ? 'bg-orange-500 text-white' : 'bg-white/5 text-white/50'}`}>
+                  <LinkIcon className="h-3 w-3" />URL
+                </button>
+              </div>
+              <span className="text-[10px] text-white/40">{form.image_urls.length}/{MAX_IMAGES}</span>
             </div>
             {imageMode === 'upload' ? (
-              <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} disabled={uploading} className="text-xs text-white/70 file:mr-2 file:rounded file:border-0 file:bg-orange-500 file:text-white file:px-2 file:py-1 file:text-[10px]" />
+              <input ref={fileRef} type="file" accept="image/*" onChange={handleFile} disabled={uploading || form.image_urls.length >= MAX_IMAGES} className="text-xs text-white/70 file:mr-2 file:rounded file:border-0 file:bg-orange-500 file:text-white file:px-2 file:py-1 file:text-[10px]" />
             ) : (
-              <Input placeholder="https://image.url/photo.jpg" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} className={inputClass} />
+              <div className="flex gap-1">
+                <Input placeholder="https://image.url/photo.jpg" value={urlInput} onChange={(e) => setUrlInput(e.target.value)} className={inputClass} />
+                <Button type="button" size="sm" onClick={() => { addImageUrl(urlInput); setUrlInput(''); }} disabled={!urlInput.trim() || form.image_urls.length >= MAX_IMAGES} className="h-8 bg-orange-500 hover:bg-orange-600 text-white text-xs px-2">Add</Button>
+              </div>
             )}
-            {form.image_url && (
-              <div className="mt-1.5 flex items-center gap-2">
-                <img src={form.image_url} alt="preview" className="h-12 w-12 rounded object-cover border border-white/10" />
-                <button type="button" onClick={() => setForm({ ...form, image_url: '' })} className="text-[10px] text-white/40 hover:text-red-400">Clear</button>
+            {form.image_urls.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {form.image_urls.map((url, i) => (
+                  <div key={url + i} className="relative">
+                    <img src={url} alt={`#${i + 1}`} className="h-12 w-12 rounded object-cover border border-white/10" />
+                    <button type="button" onClick={() => removeImage(i)} className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-black/80 text-white text-[10px] leading-none flex items-center justify-center border border-white/10 hover:bg-red-500">×</button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -233,16 +271,20 @@ const GearControlPanel = () => {
       <div className="space-y-1.5 max-h-80 overflow-y-auto">
         {loading ? <p className="text-xs text-white/30">Loading…</p>
         : items.length === 0 ? <p className="text-xs text-white/30">No gear yet. Click "Add Gear" to start.</p>
-        : items.map((item) => (
+        : items.map((item) => {
+          const previewUrl = (item.image_urls && item.image_urls[0]) || item.image_url;
+          const count = (item.image_urls?.length || (item.image_url ? 1 : 0));
+          return (
           <div key={item.id} className="flex items-center justify-between bg-[#0a0a0f] rounded-lg px-3 py-2 border border-white/[0.06]">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <div className="h-9 w-9 rounded bg-white/5 overflow-hidden shrink-0">
-                {item.image_url && <img src={item.image_url} alt={item.name} className="h-full w-full object-cover" />}
+                {previewUrl && <img src={previewUrl} alt={item.name} className="h-full w-full object-cover" />}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-white truncate">{item.name}</p>
                 <div className="flex items-center gap-2 text-[10px] text-white/40">
                   <span className="text-orange-500 font-semibold">{item.price_bb} BB</span>
+                  {count > 0 && <span>· {count} img</span>}
                   {item.stock_quantity !== null && <span>· Stock {item.stock_quantity}</span>}
                   {item.requires_shipping && <span>· Ships</span>}
                   {item.shopify_variant_id && <span>· Shopify</span>}
@@ -259,7 +301,8 @@ const GearControlPanel = () => {
               </Button>
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
