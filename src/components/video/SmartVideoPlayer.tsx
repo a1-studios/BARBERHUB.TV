@@ -283,6 +283,14 @@ export function SmartVideoPlayer({
     if (v) { v.currentTime = 0; v.play().then(() => setAutoplayBlocked(false)).catch(() => setAutoplayBlocked(true)); }
   }, []);
 
+  // Imperative replay via prop nonce change
+  useEffect(() => {
+    if (replayTrigger === undefined) return;
+    handleReplay();
+  }, [replayTrigger, handleReplay]);
+
+
+
   const handleManualPlay = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
