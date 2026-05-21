@@ -111,10 +111,24 @@ export function SocialOrbit({
               >
                 {chip}
               </a>
+            ) : onAddClick ? (
+              <button
+                type="button"
+                onClick={() => onAddClick(social.key)}
+                title={`Add ${social.label}`}
+                className="block"
+              >
+                {chip}
+              </button>
             ) : (
               <div title={`${social.label} (not connected)`}>{chip}</div>
             )}
           </div>
+        );
+      })}
+    </div>
+  );
+}
         );
       })}
     </div>
