@@ -66,7 +66,19 @@ function getTierStyle(tier: string | null): string {
   }
 }
 
-export function BarberMapDirectory() {
+interface BarberMapDirectoryProps {
+  variant?: 'hero' | 'page';
+  externalLocation?: { lat: number; lng: number; label: string } | null;
+  autoLocate?: boolean;
+  heightClass?: string;
+}
+
+export function BarberMapDirectory({
+  variant = 'page',
+  externalLocation = null,
+  autoLocate = false,
+  heightClass,
+}: BarberMapDirectoryProps = {}) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
@@ -79,6 +91,7 @@ export function BarberMapDirectory() {
   const { value: enforceTiersVal } = usePlatformState('enforce_tiers');
   const enforceTiers = enforceTiersVal === 'true';
   const { weights } = useMapVisibilityWeights();
+  const isHero = variant === 'hero';
 
   // Initialize Mapbox map (light theme)
   useEffect(() => {
@@ -219,9 +232,28 @@ export function BarberMapDirectory() {
     }
   };
 
+  // External location (parent-controlled) — used by home hero
+  useEffect(() => {
+    if (!externalLocation) return;
+    handleLocationFound(externalLocation.lat, externalLocation.lng, externalLocation.label);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalLocation?.lat, externalLocation?.lng]);
+
+  // Auto-locate on mount (hero variant)
+  useEffect(() => {
+    if (!autoLocate || userCoords || externalLocation) return;
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => handleLocationFound(pos.coords.latitude, pos.coords.longitude, 'My Location'),
+      () => { /* silent fallback */ },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60_000 }
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoLocate]);
+
   return (
     <div className="space-y-4">
-      <BarberLocationSearch onLocationFound={handleLocationFound} loading={loading} />
+      {!isHero && <BarberLocationSearch onLocationFound={handleLocationFound} loading={loading} />}
 
       {enforceTiersVal === 'false' && (
         <div className="text-[10px] text-orange-500 bg-orange-500/10 border border-orange-500/20 px-3 py-1.5 rounded-md inline-block">
@@ -264,14 +296,21 @@ export function BarberMapDirectory() {
         )}
 
         {mapError ? (
-          <div className="w-full rounded-xl border border-border bg-muted/30 flex items-center justify-center p-6 text-center" style={{ height: '500px' }}>
+          <div
+            className={cn('w-full rounded-xl border border-border bg-muted/30 flex items-center justify-center p-6 text-center', heightClass)}
+            style={heightClass ? undefined : { height: '500px' }}
+          >
             <div className="space-y-2 max-w-sm">
               <MapPin className="h-8 w-8 text-muted-foreground mx-auto" />
               <p className="text-sm text-muted-foreground">{mapError}</p>
             </div>
           </div>
         ) : (
-          <div ref={mapContainer} className="w-full rounded-xl border border-border overflow-hidden" style={{ height: '500px' }} />
+          <div
+            ref={mapContainer}
+            className={cn('w-full rounded-xl border border-border overflow-hidden', heightClass)}
+            style={heightClass ? undefined : { height: '500px' }}
+          />
         )}
       </div>
 
