@@ -113,22 +113,7 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
         .update({ country_code: formData.country_code })
         .eq('user_id', user.id);
 
-        address_visibility: formData.address_visibility,
-        latitude: formData.latitude,
-        longitude: formData.longitude,
-      };
 
-      const { error } = await supabase
-        .from('barber_profiles')
-        .upsert(profileData, { onConflict: 'user_id' });
-
-      if (error) throw error;
-
-      // Also update country_code in profiles table
-      await supabase
-        .from('profiles')
-        .update({ country_code: formData.country_code })
-        .eq('user_id', user.id);
       
       toast.success(existingProfile ? 'Profile updated successfully!' : 'Barber profile created successfully!');
       onProfileCreated?.();
