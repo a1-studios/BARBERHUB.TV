@@ -15,6 +15,7 @@ interface UpsertBody {
     price_bb: number;
     stock_quantity?: number | null;
     image_url?: string | null;
+    image_urls?: string[] | null;
     requires_shipping?: boolean;
     shopify_product_id?: string | null;
     shopify_variant_id?: string | null;
@@ -38,7 +39,6 @@ serve(async (req) => {
     const { data: { user }, error: userErr } = await supabase.auth.getUser(token);
     if (userErr || !user) throw new Error('Unauthorized');
 
-    // Admin gate: SOVEREIGN_EMAIL OR has_role admin
     const sovereignEmail = Deno.env.get('SOVEREIGN_EMAIL');
     const isSovereign = sovereignEmail && user.email?.toLowerCase() === sovereignEmail.toLowerCase();
     let isAdmin = isSovereign;
@@ -85,13 +85,18 @@ serve(async (req) => {
       if (!p || !p.name || !Number.isFinite(p.price_bb) || p.price_bb < 0) {
         throw new Error('Invalid payload');
       }
+      const imageUrls = Array.isArray(p.image_urls)
+        ? p.image_urls.filter((u) => typeof u === 'string' && u.trim()).slice(0, 5)
+        : [];
+      const primary = p.image_url ?? imageUrls[0] ?? null;
       const row: Record<string, unknown> = {
         name: p.name,
         description: p.description ?? null,
         price_bb: Math.floor(p.price_bb),
         category: 'gear',
         stock_quantity: p.stock_quantity ?? null,
-        image_url: p.image_url ?? null,
+        image_url: primary,
+        image_urls: imageUrls,
         requires_shipping: !!p.requires_shipping,
         shopify_product_id: p.shopify_product_id ?? null,
         shopify_variant_id: p.shopify_variant_id ?? null,
