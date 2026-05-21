@@ -707,3 +707,15 @@
     animation: mechSnap 0.18s ease-out;
   }
 }
+@layer utilities {
+  @keyframes danmaku-scroll {
+    from { transform: translate3d(100vw, 0, 0); }
+    to   { transform: translate3d(-100%, 0, 0); }
+  }
+  .danmaku-track {
+    animation-name: danmaku-scroll;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+    will-change: transform;
+  }
+}
