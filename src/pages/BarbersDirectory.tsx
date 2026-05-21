@@ -231,16 +231,11 @@ export default function BarbersDirectory() {
       <div className="container mx-auto px-4 py-6 pt-[calc(env(safe-area-inset-top)+72px)]">
         <BackButton className="mb-4" />
 
-        {/* Page title + view toggle */}
+        {/* View toggle + description */}
         <div className="flex items-end justify-between gap-3 mb-4">
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-white leading-tight">
-              <span className="text-primary">Barber</span> Directory
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Discover talented barbers from around the world
-            </p>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Discover talented barbers from around the world
+          </p>
           <div className="flex gap-1 bg-muted rounded-lg p-1 shrink-0">
             <Button
               variant={viewMode === 'list' ? 'default' : 'ghost'}
