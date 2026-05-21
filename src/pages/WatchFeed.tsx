@@ -523,12 +523,12 @@ const WatchFeed = () => {
   // activeIndex. Sponsor cards don't prefetch anything, so naive activeIndex+1
   // wastes the warm slot. Scan forward up to 4 positions — feed is small.
   const nextPlayableIdx = useMemo(() => {
-    for (let i = activeIndex + 1; i < Math.min(feed.length, activeIndex + 5); i++) {
-      const t = feed[i]?.type;
+    for (let i = activeIndex + 1; i < Math.min(pinnedFeed.length, activeIndex + 5); i++) {
+      const t = pinnedFeed[i]?.type;
       if (t === 'video' || t === 'educator' || t === 'platform' || t === 'battle') return i;
     }
     return -1;
-  }, [feed, activeIndex]);
+  }, [pinnedFeed, activeIndex]);
 
   const renderVideoItem = (item: FeedItem, idx: number) => {
     // Don't render placeholder cards — only real playable media
