@@ -1,58 +1,91 @@
-# Profile Hero Layout Fix
 
-## Problem
-Current hero uses an absolute-positioned avatar inside a 164px container with side rails. This causes:
-- Specialties (left rail) and Votes/Power (right rail) get clipped/misaligned because the orbit's padding overlaps them
-- Name/bio row sits under a `-mt-6` and collides with the avatar bottom (name "disappears")
-- No breathing space between avatar block and the Share Location toggle
-- Votes/Power labels render at top, not vertically centered with the avatar
+# Profile + Onboarding Audit — Phased Plan
 
-## Goal
-Keep the avatar + orbit + M4M heart visually intact (same size, same position relative to header), but give specialties, name, and votes/power their own clean rows.
+Scope: profile hero layout, fan profile editing, social-link prompts, phone capture, nationality lock, empty-space cleanup, and One Tap raffle parity.
 
-## New Structure
+---
 
-```
-┌─────────────────────────────────────────┐
-│  Header (existing)                       │
-├─────────────────────────────────────────┤
-│ [Specialty]           [Votes]            │  ← Row 1: rails flank avatar
-│ [Specialty]   AVATAR  [Power]            │     (true 3-col grid, not absolute)
-│ [Specialty]  +ORBIT   [Likes]            │
-│ [Specialty]   +HEART                     │
-│                                          │
-│            Display Name ✎                │  ← Row 2: name (small gap)
-│         @username 🇺🇸 [Fan]               │
-│              short bio                   │
-│                                          │
-│      [ Share My Location toggle ]        │  ← Row 3
-│      ... rest of page ...                │
-└─────────────────────────────────────────┘
-```
+## Phase 1 — Fan profile hero parity (visual only)
 
-## Changes (src/pages/Profile.tsx, lines ~290-394)
+**Files:** `src/pages/Profile.tsx`
 
-1. **Replace absolute-positioned hero with a real 3-column grid**
-   - `grid grid-cols-[minmax(80px,1fr)_auto_minmax(80px,1fr)] items-center gap-2`
-   - Center column = SocialOrbit (unchanged size: radius 71, iconSize 28, AvatarCrest size lg, 101px avatar)
-   - Left column = specialties stacked vertically, `items-start`, vertically centered against avatar (`self-center`)
-   - Right column = Votes/Power (or Foll/Likes/Don for barbers) stacked vertically, `items-end`, `self-center`
-   - Remove `absolute`, `min-h-[164px]`, `-translate`, and the mobile `scale-[0.9]` (the orbit's own padding already handles spacing)
+- Bring the fan avatar+SocialOrbit block **down** below the header so it visually matches the barber view (remove `-mt-3`, switch `pt-8` to `pt-12`, add `mt-2` on the orbit row).
+- Keep the orbit/avatar size unchanged (radius 71, 101px avatar).
+- Re-verify centering at 390px (current viewport) — orbit container `mx-auto` + parent `justify-center`.
 
-2. **Fix name row spacing**
-   - Remove `-mt-6` on the name container — replace with `mt-1` so the name sits cleanly below the orbit instead of overlapping it
+Acceptance: fan hero sits the same vertical distance from the BARBER-HUB header as the barber hero; avatar perfectly centered on mobile.
 
-3. **Add gap before Share Location**
-   - Add `mt-2` to the LocationQuickToggle wrapper so it doesn't hug the name/bio
+---
 
-4. **Tighten rail typography for the 390px viewport**
-   - Specialties: keep `text-[11px]`, ensure `leading-tight` and `truncate` to prevent wrap-breaking the grid
-   - Votes/Power numbers: keep `text-base` but reduce vertical gap from `gap-1.5` → `gap-2` so the 2 (fan) or 3 (barber) items distribute evenly alongside the avatar height
+## Phase 2 — Fan profile editing: avatar + social channels
 
-5. **Remove now-unused container styles**
-   - Drop `min-h-[164px] pb-0` and the wrapper `-mt-6` on the hero (the grid will size itself naturally — ~145px tall)
+**Files:**
+- `src/pages/Profile.tsx` (wire actions)
+- `src/components/profiles/SocialOrbit.tsx` (own-profile "add" affordance)
+- new: `src/components/profiles/SocialLinksDialog.tsx` (single dialog: IG / FB / X / YT inputs)
+- new: `src/components/profiles/FanAvatarEditButton.tsx` (reuses existing `AvatarUpload` storage logic)
+- DB: extend `client_profiles` with `instagram_handle`, `facebook_handle`, `twitter_handle`, `youtube_handle` if missing (barber_profiles already has them).
+
+Behavior (applies to **both fans and barbers** for unmapped slots):
+- Tapping a **lit** social icon → opens the link (current behavior).
+- Tapping a **greyed/unmapped** icon **on own profile** → opens `SocialLinksDialog` pre-focused on that network.
+- Fan avatar: tap own avatar → opens upload picker (same flow as `AvatarUpload`).
+
+Acceptance: fan can upload an avatar and connect/disconnect IG/FB/X/YT from the profile screen; orbit icons light up after save.
+
+---
+
+## Phase 3 — Phone number capture + persistence audit
+
+**Files:**
+- `src/components/coming-soon/StepFanDetails.tsx`, `StepBarberDetails.tsx` — confirm phone is collected and passed.
+- `supabase/functions/submit-role-details/index.ts` — ensure `phone_number` is written to `profiles` (and `barber_profiles` for barbers).
+- `src/components/profiles/ClientProfileForm.tsx` + new fan settings panel — expose phone editor for fans.
+- DB migration: add `phone_number TEXT` + `phone_country_code TEXT` to `profiles` if not present; backfill from `barber_profiles` where applicable.
+
+Acceptance: phone entered at signup or profile edit is queryable in `profiles.phone_number`; no silent drops.
+
+---
+
+## Phase 4 — Nationality lock after signup
+
+**Files:**
+- DB: add `country_locked_at TIMESTAMPTZ` to `profiles`; trigger sets it on first non-null `country_code`.
+- RLS / update policy: block client updates to `country_code` when `country_locked_at IS NOT NULL` (only service-role/admin can override via `sovereign-user-control`).
+- `src/components/profiles/ClientProfileForm.tsx`, `BarberSettings.tsx`, fan settings — render country field as **read-only** with a small "Locked at signup — contact support" hint when locked.
+- `submit-role-details` — set country once, then ignore subsequent country changes.
+
+Acceptance: once country is set, user cannot change it from the UI or API; admin override path remains.
+
+---
+
+## Phase 5 — Layout polish + One Tap raffle parity
+
+**5a. Empty-space / landing-position cleanup**
+- Audit pages: `Profile`, `WatchFeed`, `Rankings`, `Portal`, `BarbersDirectory`, `CreatorHub`, `Tournaments`, `BattlesPage`.
+- Standardize main wrapper: `pt-[calc(env(safe-area-inset-top)+56px)]` (header height) and remove negative margins.
+- Remove trailing empty scroll regions (collapse `min-h-[calc(...)]` flex spacers that produce blank scroll below content on short pages).
+- Ensure every route lands with the BARBER-HUB header at top and first content card immediately under it (no >24px gap, no scroll-past-end overshoot).
+
+**5b. Google One Tap raffle parity** (`src/components/auth/GoogleOneTap.tsx`)
+- Today: One Tap users only get a ticket *if one was claimed pre-signin*. Email users get the spin in `StepRaffleSpin` before account creation.
+- New: after successful `signInWithIdToken`, if `localStorage` has no `raffle_pending_claim`, call `claim-raffle-ticket` server-side using the Google email + device fingerprint, then call `link-raffle-to-user` with the returned `ticket_code`.
+- UX: surface a lightweight post-One-Tap modal (`PostSignupRaffleReveal`) that runs the same `ScrollMorphHero` spin animation and shows the awarded ticket — so One Tap users see the same celebration as email users.
+- Guardrails: skip if `claim-raffle-ticket` returns "already claimed" for this email/fingerprint; respect dedupe rules already in the edge function.
+
+Acceptance: a fresh Google One Tap signup ends with a spinning wheel and a raffle ticket on their account, identical to the email path.
+
+---
+
+## Technical notes
+
+- All DB changes via `supabase--migration`; no edits to `auth.*` schema.
+- Country lock enforced both client-side (read-only UI) and server-side (RLS + edge function guard) — defense in depth.
+- Social links live on existing `*_profiles` tables; orbit reads from whichever role table applies (already wired).
+- `SocialLinksDialog` will use a shared `useSocialLinks(role)` hook to read/write the correct table.
+- Raffle reveal modal mounts only when One Tap completes with a *new* ticket, never on repeat sessions.
 
 ## Out of scope
-- No changes to SocialOrbit, AvatarCrest, M4MAvatarBadge components
-- No changes to lower sections (Tools, Notifications, Account, Install App)
-- No data/business logic changes
+- Redesign of `SocialOrbit` visuals, AvatarCrest, or header.
+- Booking/economy/business logic.
+- Migrating barber social fields to a unified table.
