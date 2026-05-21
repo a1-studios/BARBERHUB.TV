@@ -266,10 +266,15 @@ export function SmartVideoPlayer({
         setAutoplayBlocked(true);
       }
     };
+    if (manualPlayback) {
+      // Don't auto-play; user must tap the Play button. Still honor pause when shouldPlay flips off.
+      if (!shouldPlay) v.pause();
+      return () => { cancelled = true; if (timeoutId) window.clearTimeout(timeoutId); };
+    }
     if (shouldPlay && !ended) tryPlay();
     else v.pause();
     return () => { cancelled = true; if (timeoutId) window.clearTimeout(timeoutId); };
-  }, [shouldPlay, ended, isHls, canFallbackToDirect, activateDirectFallback]);
+  }, [shouldPlay, ended, isHls, canFallbackToDirect, activateDirectFallback, manualPlayback]);
 
   const handleReplay = useCallback(() => {
     setEnded(false);
