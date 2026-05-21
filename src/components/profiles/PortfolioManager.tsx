@@ -11,6 +11,7 @@ import { uploadFileMultipart } from '@/lib/multipartUpload';
 import { captureVideoThumbnail } from '@/lib/videoThumbnail';
 import { pollStreamReady } from '@/lib/streamReadiness';
 import { toast } from 'sonner';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 interface PortfolioManagerProps {
   barberId?: string;
@@ -21,6 +22,7 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
+  const [playingVideo, setPlayingVideo] = useState<{ uid: string | null; url: string | null; poster: string | null } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch from creations table — same source as BarberPublicProfile
@@ -235,7 +237,18 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
               const status = (item as any).stream_status as string | undefined;
               const processing = isVid && status && status !== 'ready';
               return (
-                <div key={item.id} className="relative group aspect-square rounded-md overflow-hidden bg-muted">
+                <div
+                  key={item.id}
+                  onClick={() => {
+                    if (!isVid || processing) return;
+                    setPlayingVideo({
+                      uid: (item as any).cloudflare_stream_uid || null,
+                      url: mediaUrl,
+                      poster,
+                    });
+                  }}
+                  className={`relative group aspect-square rounded-md overflow-hidden bg-muted ${isVid && !processing ? 'cursor-pointer' : ''}`}
+                >
                   {isVid ? (
                     poster ? (
                       <img src={poster} alt={item.title || 'Video'} className="w-full h-full object-cover" loading="lazy" />
@@ -297,6 +310,27 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
           className="hidden"
         />
       </CardContent>
+
+      <Dialog open={!!playingVideo} onOpenChange={(o) => !o && setPlayingVideo(null)}>
+        <DialogContent className="max-w-3xl p-0 bg-black border-0 overflow-hidden">
+          {playingVideo && (
+            <div className="w-full aspect-video bg-black">
+              <SmartVideoPlayer
+                streamUid={playingVideo.uid}
+                fallbackUrl={playingVideo.url}
+                poster={playingVideo.poster}
+                autoPlayWhenVisible
+                forceActive
+                controls
+                muted={false}
+                showCenterPlayButton
+                tapToToggle
+                className="w-full h-full"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

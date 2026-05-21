@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ArrowLeft, MapPin, Award, Upload, Image as ImageIcon, Video, Trash2, Calendar, Instagram, Twitter, Youtube, Facebook, Settings, Briefcase, Globe, DollarSign, Shield, Save, Navigation, Loader2, ChevronDown, Lock, Play } from 'lucide-react';
 import { BarberVideoSection } from '@/components/barber/BarberVideoSection';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { SmartVideoPlayer } from '@/components/video/SmartVideoPlayer';
 import { BarberActionButtons } from '@/components/barber/BarberActionButtons';
 import { AvatarCrest } from '@/components/AvatarCrest';
@@ -48,6 +49,7 @@ export default function BarberPublicProfile() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [uploadKey, setUploadKey] = useState(0);
+  const [playingVideo, setPlayingVideo] = useState<{ uid: string | null; url: string | null; poster: string | null } | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   
@@ -728,7 +730,17 @@ export default function BarberPublicProfile() {
                         return (
                           <div 
                             key={creation.id}
-                            className="aspect-square rounded-lg overflow-hidden border border-primary/20 hover:border-primary/50 transition-all hover:shadow-lg relative group"
+                            onClick={() => {
+                              if (!isVid) return;
+                              const status = (creation as any).stream_status as string | undefined;
+                              if (status && status !== 'ready') return;
+                              setPlayingVideo({
+                                uid: (creation as any).cloudflare_stream_uid || null,
+                                url: creation.media_url || null,
+                                poster: (creation as any).stream_thumbnail_url || creation.thumbnail_url || null,
+                              });
+                            }}
+                            className={`aspect-square rounded-lg overflow-hidden border border-primary/20 hover:border-primary/50 transition-all hover:shadow-lg relative group ${isVid ? 'cursor-pointer' : ''}`}
                           >
                             {isVid ? (
                               (() => {
@@ -1196,6 +1208,27 @@ export default function BarberPublicProfile() {
         barberAvatar={barberData.avatar_url || undefined}
         barberTier={subscriptionData?.active_subscription_tier}
       />
+
+      <Dialog open={!!playingVideo} onOpenChange={(o) => !o && setPlayingVideo(null)}>
+        <DialogContent className="max-w-3xl p-0 bg-black border-0 overflow-hidden">
+          {playingVideo && (
+            <div className="w-full aspect-video bg-black">
+              <SmartVideoPlayer
+                streamUid={playingVideo.uid}
+                fallbackUrl={playingVideo.url}
+                poster={playingVideo.poster}
+                autoPlayWhenVisible
+                forceActive
+                controls
+                muted={false}
+                showCenterPlayButton
+                tapToToggle
+                className="w-full h-full"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
