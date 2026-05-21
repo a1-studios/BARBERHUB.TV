@@ -294,8 +294,8 @@ const Index = () => {
       <Footer />
       {user && <BottomNavBar />}
 
-      {/* Unified gamified onboarding gate — only ever rendered for guests. */}
-      {!user && showSpinWheel && (
+      {/* Unified gamified onboarding gate — stays open through post-auth steps. */}
+      {showSpinWheel && (
         <LaunchWizard onClose={handleSpinClose} />
       )}
     </div>
