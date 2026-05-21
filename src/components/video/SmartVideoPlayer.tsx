@@ -27,6 +27,8 @@ interface SmartVideoPlayerProps {
   preloadMode?: 'none' | 'metadata' | 'auto';
   /** Show a large centered Play button when autoplay is blocked / video is paused. */
   showCenterPlayButton?: boolean;
+  /** Tap on the video surface toggles play/pause (single click play, single click pause). */
+  tapToToggle?: boolean;
 }
 
 const CF_STREAM_CUSTOMER =
