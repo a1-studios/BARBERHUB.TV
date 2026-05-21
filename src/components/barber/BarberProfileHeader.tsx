@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import { ExternalLink, Settings, Plus, ArrowDownToLine, Instagram, Twitter, Youtube, Facebook, LogOut, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { M4MAvatarBadge } from '@/components/m4m/M4MAvatarBadge';
+import { SocialOrbit } from '@/components/profiles/SocialOrbit';
 
 interface BarberProfileHeaderProps {
   avatar_url?: string | null;
@@ -110,27 +111,28 @@ export function BarberProfileHeader({
       
       <CardContent className="relative p-4 md:p-8 z-10">
         <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start">
-          <div className="relative">
-            <TierRing tier={subscription_tier} size="lg" interactive={showActions}>
-              <Avatar className="w-20 h-20 md:w-32 md:h-32">
-                <AvatarImage src={avatar_url || undefined} />
-                <AvatarFallback className="bg-primary/20 text-primary text-3xl md:text-4xl font-bold">
-                  {(display_name || 'B').charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            </TierRing>
-            <M4MAvatarBadge
-              certified={m4m_certified}
-              paid={m4m_paid}
-              livesTouched={m4m_lives_touched}
-              barberName={display_name}
-              barberUserId={barber_user_id || ''}
-              isOwnProfile={showActions}
-              size={38}
-              position="bottom-right"
-              className="md:!w-[52px] md:!h-[52px]"
-            />
-          </div>
+          <SocialOrbit size={128} links={socialLinks ?? undefined} gap={14} iconSize={28}>
+            <div className="relative w-full h-full">
+              <TierRing tier={subscription_tier} size="lg" interactive={showActions}>
+                <Avatar className="w-32 h-32">
+                  <AvatarImage src={avatar_url || undefined} />
+                  <AvatarFallback className="bg-primary/20 text-primary text-4xl font-bold">
+                    {(display_name || 'B').charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </TierRing>
+              <M4MAvatarBadge
+                certified={m4m_certified}
+                paid={m4m_paid}
+                livesTouched={m4m_lives_touched}
+                barberName={display_name}
+                barberUserId={barber_user_id || ''}
+                isOwnProfile={showActions}
+                size={44}
+                position="bottom-right"
+              />
+            </div>
+          </SocialOrbit>
 
           <div className="flex-1 space-y-3 w-full">
             <div>
