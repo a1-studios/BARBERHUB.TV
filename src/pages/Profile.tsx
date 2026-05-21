@@ -28,6 +28,7 @@ import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
 import { SubCategoryBadge } from '@/components/SubCategoryBadge';
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from '@/components/ui/drawer';
 import { Link } from 'react-router-dom';
+import { SocialOrbit } from '@/components/profiles/SocialOrbit';
 import { toast } from 'sonner';
 import { BottomNavBar } from '@/components/BottomNavBar';
 import { cn } from '@/lib/utils';
@@ -252,12 +253,17 @@ const Profile = () => {
   const m4mPaid = (barberProfile as any)?.m4m_paid || false;
   const m4mLivesTouched = (barberProfile as any)?.m4m_lives_touched || 0;
 
-  const socialLinks = isBarber ? [
-    { key: 'instagram', url: (barberProfile as any)?.instagram_handle, icon: Instagram, hoverClass: 'hover:text-pink-500' },
-    { key: 'twitter', url: (barberProfile as any)?.twitter_handle, icon: Twitter, hoverClass: 'hover:text-blue-400' },
-    { key: 'youtube', url: (barberProfile as any)?.youtube_handle, icon: Youtube, hoverClass: 'hover:text-red-500' },
-    { key: 'facebook', url: (barberProfile as any)?.facebook_handle, icon: Facebook, hoverClass: 'hover:text-blue-500' },
-  ].filter(s => s.url).slice(0, 3) : [];
+  const socialLinksObj = isBarber ? {
+    instagram: (barberProfile as any)?.instagram_handle,
+    twitter: (barberProfile as any)?.twitter_handle,
+    youtube: (barberProfile as any)?.youtube_handle,
+    facebook: (barberProfile as any)?.facebook_handle,
+  } : {
+    instagram: (clientProfile as any)?.instagram_handle,
+    twitter: (clientProfile as any)?.twitter_handle,
+    youtube: (clientProfile as any)?.youtube_handle,
+    facebook: (clientProfile as any)?.facebook_handle,
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -284,34 +290,36 @@ const Profile = () => {
           {/* ===== HERO: Avatar ===== */}
           <div className="relative flex flex-col items-center pt-8 pb-2">
 
-            {isBarber ? (
-              <AvatarCrest
-                tier={subscriptionTier}
-                size="lg"
-                interactive
-                showM4M
-                m4mCertified={m4mCertified}
-                m4mPaid={m4mPaid}
-                m4mLivesTouched={m4mLivesTouched}
-                barberName={displayName}
-                barberUserId={user?.id || ''}
-                isOwnProfile={true}
-              >
-                <Avatar className="w-full h-full">
+            <SocialOrbit size={112} links={socialLinksObj} gap={14} iconSize={26}>
+              {isBarber ? (
+                <AvatarCrest
+                  tier={subscriptionTier}
+                  size="lg"
+                  interactive
+                  showM4M
+                  m4mCertified={m4mCertified}
+                  m4mPaid={m4mPaid}
+                  m4mLivesTouched={m4mLivesTouched}
+                  barberName={displayName}
+                  barberUserId={user?.id || ''}
+                  isOwnProfile={true}
+                >
+                  <Avatar className="w-full h-full">
+                    <AvatarImage src={profile?.avatar_url || undefined} />
+                    <AvatarFallback className="bg-primary/20 text-primary text-3xl font-bold">
+                      {displayName.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </AvatarCrest>
+              ) : (
+                <Avatar className="h-28 w-28 border-4 border-background shadow-lg">
                   <AvatarImage src={profile?.avatar_url || undefined} />
                   <AvatarFallback className="bg-primary/20 text-primary text-3xl font-bold">
                     {displayName.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-              </AvatarCrest>
-            ) : (
-              <Avatar className="h-28 w-28 border-4 border-background shadow-lg">
-                <AvatarImage src={profile?.avatar_url || undefined} />
-                <AvatarFallback className="bg-primary/20 text-primary text-3xl font-bold">
-                  {displayName.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            )}
+              )}
+            </SocialOrbit>
 
             {/* Name + meta */}
             <h1 className="text-xl font-bold text-foreground mt-2 text-center flex items-center justify-center gap-1">
@@ -347,22 +355,7 @@ const Profile = () => {
             )}
             {profile?.bio && <p className="text-xs text-muted-foreground text-center mt-0.5 max-w-[260px]">{profile.bio}</p>}
 
-            {/* Social icons */}
-            {socialLinks.length > 0 && (
-              <div className="flex items-center gap-3 mt-1.5">
-                {socialLinks.map(({ key, url, icon: Icon, hoverClass }) => (
-                  <a
-                    key={key}
-                    href={url!.startsWith('http') ? url! : `https://${url}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`text-muted-foreground ${hoverClass} transition-colors`}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </a>
-                ))}
-              </div>
-            )}
+            {/* Social icons now orbit the avatar */}
           </div>
 
           {/* ===== STATS ROW ===== */}
