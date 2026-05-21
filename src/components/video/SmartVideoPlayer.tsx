@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useId, useCallback } from 'react';
+import { useEffect, useRef, useState, useId, useCallback, useMemo } from 'react';
 import Hls from 'hls.js';
 import { Loader2, RotateCcw, Play } from 'lucide-react';
 import { activeVideoStore, useActiveVideoId } from '@/stores/activeVideoStore';
@@ -35,14 +35,27 @@ interface SmartVideoPlayerProps {
   replayTrigger?: number;
 }
 
-const CF_STREAM_CUSTOMER =
-  (import.meta.env.VITE_CF_STREAM_CUSTOMER_CODE as string | undefined) ||
-  'q3djo7byzgo7v0c1';
+const DEFAULT_CF_STREAM_HOST = (() => {
+  const configuredCode = import.meta.env.VITE_CF_STREAM_CUSTOMER_CODE as string | undefined;
+  return configuredCode
+    ? `customer-${configuredCode}.cloudflarestream.com`
+    : 'customer-cs2s49fryqztoav6.cloudflarestream.com';
+})();
 
-const streamHlsUrl = (uid: string) =>
-  `https://customer-${CF_STREAM_CUSTOMER}.cloudflarestream.com/${uid}/manifest/video.m3u8`;
-const streamPosterUrl = (uid: string) =>
-  `https://customer-${CF_STREAM_CUSTOMER}.cloudflarestream.com/${uid}/thumbnails/thumbnail.jpg`;
+const parseCloudflareStreamHost = (value?: string | null) => {
+  if (!value || !/^https?:\/\//i.test(value)) return null;
+  try {
+    const hostname = new URL(value).hostname;
+    return /^customer-[^.]+\.cloudflarestream\.com$/i.test(hostname) ? hostname : null;
+  } catch {
+    return null;
+  }
+};
+
+const streamHlsUrl = (uid: string, host: string) =>
+  `https://${host}/${uid}/manifest/video.m3u8`;
+const streamPosterUrl = (uid: string, host: string) =>
+  `https://${host}/${uid}/thumbnails/thumbnail.jpg`;
 
 /**
  * Single-decoder, single-<video> player.
@@ -115,7 +128,12 @@ export function SmartVideoPlayer({
 
   const shouldPlay = forceActive || (isVisible && activeId === instanceId);
 
-  const streamSrc = streamUid ? streamHlsUrl(streamUid) : '';
+  const streamHost = useMemo(
+    () => parseCloudflareStreamHost(poster) ?? DEFAULT_CF_STREAM_HOST,
+    [poster]
+  );
+
+  const streamSrc = streamUid ? streamHlsUrl(streamUid, streamHost) : '';
   const directSrc = fallbackUrl || '';
   // Never fall back from Cloudflare HLS to the raw R2 mp4 — that bypasses optimization and lags
   // on mobile. Only allow fallback when there's no streamUid in the first place (legacy items).
@@ -137,7 +155,7 @@ export function SmartVideoPlayer({
 
   // Resolve the canonical src for this player
   const src = !preferFallback && streamSrc ? streamSrc : directSrc || streamSrc;
-  const effectivePoster = poster || (streamUid ? streamPosterUrl(streamUid) : undefined);
+  const effectivePoster = poster || (streamUid ? streamPosterUrl(streamUid, streamHost) : undefined);
   const isHls = !!streamSrc && !preferFallback;
 
   // Reset loading whenever the underlying source changes
