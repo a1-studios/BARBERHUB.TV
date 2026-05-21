@@ -38,6 +38,7 @@ import { requireProfileComplete } from '@/components/auth/ProfileCompletionGate'
 import { AlertCircle } from 'lucide-react';
 import { DisplayNameEditor } from '@/components/profile/DisplayNameEditor';
 import { LocationQuickToggle } from '@/components/profiles/LocationQuickToggle';
+import { SocialLinksDialog } from '@/components/profiles/SocialLinksDialog';
 
 const ProfileCompletionBanner = ({ profile }: { profile: any }) => {
   if (!profile) return null;
