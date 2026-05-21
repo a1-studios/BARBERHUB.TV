@@ -1217,10 +1217,8 @@ export default function BarberPublicProfile() {
                 streamUid={playingVideo.uid}
                 fallbackUrl={playingVideo.url}
                 poster={playingVideo.poster}
-                autoPlayWhenVisible
-                forceActive
+                manualPlayback
                 controls
-                loop
                 muted={false}
                 showCenterPlayButton
                 tapToToggle
