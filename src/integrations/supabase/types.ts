@@ -5098,6 +5098,7 @@ export type Database = {
         Args: { p_barber_profile_id: string; p_battle_id: string }
         Returns: boolean
       }
+      award_signup_bonus: { Args: { _user_id: string }; Returns: Json }
       award_tournament_points: {
         Args: {
           p_is_draw?: boolean

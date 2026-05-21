@@ -35,19 +35,14 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Refuse if this email already has a raffle ticket
+    // Note: we deliberately allow re-registration. If a raffle ticket already
+    // exists for this email, claim-raffle-ticket will return the existing one.
+    // This keeps the pre-auth funnel friction-free even on retries.
     const { data: existing } = await supabase
       .from('raffle_entries')
-      .select('id')
+      .select('ticket_code')
       .ilike('email', email)
       .maybeSingle();
-
-    if (existing) {
-      return new Response(
-        JSON.stringify({ error: 'already_entered', message: 'This email already has a raffle ticket.' }),
-        { status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     const upsert: Record<string, unknown> = {
       email,
@@ -63,7 +58,7 @@ Deno.serve(async (req) => {
     await supabase.from('marketing_leads').upsert(upsert, { onConflict: 'email' });
 
     return new Response(
-      JSON.stringify({ ok: true, lead_token: btoa(`${email}|${Date.now()}`) }),
+      JSON.stringify({ ok: true, already: !!existing, lead_token: btoa(`${email}|${Date.now()}`) }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err) {
