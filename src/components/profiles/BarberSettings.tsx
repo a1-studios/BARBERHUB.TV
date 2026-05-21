@@ -123,8 +123,16 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
     require_deposit: true,
     default_no_show_fee_bb: 50,
     booking_message: '',
-    slot_duration_minutes: '30'
+    slot_duration_minutes: '30',
+    shop_address: '',
+    shop_city: '',
+    shop_state: '',
+    shop_postal_code: '',
+    address_visibility: 'approximate' as 'approximate' | 'exact',
+    latitude: null as number | null,
+    longitude: null as number | null,
   });
+  const [geocoding, setGeocoding] = useState(false);
 
   // Update forms when data loads
   useEffect(() => {
