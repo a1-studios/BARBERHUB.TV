@@ -13,14 +13,16 @@ interface SocialOrbitProps {
   children: ReactNode;
   /** Distance (px) from container center to icon center */
   radius?: number;
+interface SocialOrbitProps {
+  children: ReactNode;
+  /** Distance (px) from container center to icon center */
+  radius?: number;
   iconSize?: number;
   links?: SocialLinks;
   className?: string;
+  /** When set, unmapped icons render as add-buttons that invoke this with the key. */
+  onAddClick?: (key: keyof SocialLinks) => void;
 }
-
-type SocialKey = keyof SocialLinks;
-interface SocialDef {
-  key: SocialKey;
   Icon: LucideIcon;
   litClass: string;
   glow: string;
