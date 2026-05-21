@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSponsorAds } from "@/hooks/useSponsorAds";
-import { ArrowLeft, Play, GraduationCap, Flame, Volume2, VolumeX, Heart, Share2, User, MessageCircle } from "lucide-react";
+import { ArrowLeft, Play, GraduationCap, Flame, Volume2, VolumeX, Heart, Share2, User, MessageCircle, RotateCcw } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
