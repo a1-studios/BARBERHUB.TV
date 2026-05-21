@@ -4,6 +4,7 @@ import { useVideoComments } from '@/hooks/useVideoComments';
 
 interface VideoCommentsLayerProps {
   videoId: string;
+  focusTrigger?: number; // increments to request input focus
 }
 
 /**
@@ -11,7 +12,7 @@ interface VideoCommentsLayerProps {
  * Rendered ONLY for the currently active video to keep the realtime
  * subscription and animation cost scoped to one item at a time.
  */
-export function VideoCommentsLayer({ videoId }: VideoCommentsLayerProps) {
+export function VideoCommentsLayer({ videoId, focusTrigger }: VideoCommentsLayerProps) {
   const { comments, submitComment, searchUsers, submitting } =
     useVideoComments(videoId);
 
@@ -22,6 +23,7 @@ export function VideoCommentsLayer({ videoId }: VideoCommentsLayerProps) {
         onSubmit={submitComment}
         searchUsers={searchUsers}
         submitting={submitting}
+        focusTrigger={focusTrigger}
       />
     </>
   );
