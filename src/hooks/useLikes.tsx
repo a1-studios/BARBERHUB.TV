@@ -72,12 +72,10 @@ export const useLikes = () => {
         if (error) throw error;
       }
     },
-    onSuccess: (_, { creatorId, isLiked }) => {
+    onSuccess: (_, { creatorId }) => {
       // Invalidate and refetch related queries
       queryClient.invalidateQueries({ queryKey: ['creator_likes', creatorId] });
       queryClient.invalidateQueries({ queryKey: ['user_like', creatorId, user?.id] });
-      
-      toast.success(isLiked ? "Like removed" : "Liked!");
     },
     onError: (error) => {
       toast.error("Failed to update like");
