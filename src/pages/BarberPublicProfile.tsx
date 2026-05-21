@@ -21,6 +21,7 @@ import { BarberVideoSection } from '@/components/barber/BarberVideoSection';
 import { SmartVideoPlayer } from '@/components/video/SmartVideoPlayer';
 import { BarberActionButtons } from '@/components/barber/BarberActionButtons';
 import { AvatarCrest } from '@/components/AvatarCrest';
+import { SocialOrbit } from '@/components/profiles/SocialOrbit';
 import { AvatarUpload } from '@/components/profiles/AvatarUpload';
 import { SpecialtyPillSelector } from '@/components/profiles/SpecialtyPillSelector';
 import { ServicesManager } from '@/components/profiles/ServicesManager';
