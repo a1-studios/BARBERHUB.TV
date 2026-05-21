@@ -19,7 +19,6 @@ import { NotificationPanel } from './NotificationPanel';
 import { AcceptChallengeModal } from './battles/AcceptChallengeModal';
 import { LiveActivityPill } from './battles/LiveActivityPill';
 import { DynamicHeaderTitle } from './header/DynamicHeaderTitle';
-import { HeaderPageContext } from './header/HeaderPageContext';
 
 interface QuickAction {
   id: string;
@@ -337,8 +336,7 @@ const Header = () => {
             </div>
           </div>
         </div>
-        {/* Sub-header page context strip */}
-        <HeaderPageContext />
+        {/* Sub-header removed — title alone keeps the chrome clean */}
       </div>
 
 
