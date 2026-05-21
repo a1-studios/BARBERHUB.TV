@@ -319,6 +319,7 @@ export function SmartVideoPlayer({
         preload={shouldPlay ? 'auto' : preloadMode}
         className="w-full h-full object-cover"
         crossOrigin={vttUrl ? 'anonymous' : undefined}
+        onClick={tapToToggle ? handleSurfaceTap : undefined}
         onLoadedData={() => setLoading(false)}
         onWaiting={() => setLoading(true)}
         onPlaying={() => { setLoading(false); setIsPaused(false); setAutoplayBlocked(false); }}
