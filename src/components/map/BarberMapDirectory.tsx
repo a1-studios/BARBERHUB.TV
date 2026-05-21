@@ -232,9 +232,28 @@ export function BarberMapDirectory({
     }
   };
 
+  // External location (parent-controlled) — used by home hero
+  useEffect(() => {
+    if (!externalLocation) return;
+    handleLocationFound(externalLocation.lat, externalLocation.lng, externalLocation.label);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalLocation?.lat, externalLocation?.lng]);
+
+  // Auto-locate on mount (hero variant)
+  useEffect(() => {
+    if (!autoLocate || userCoords || externalLocation) return;
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => handleLocationFound(pos.coords.latitude, pos.coords.longitude, 'My Location'),
+      () => { /* silent fallback */ },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60_000 }
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoLocate]);
+
   return (
     <div className="space-y-4">
-      <BarberLocationSearch onLocationFound={handleLocationFound} loading={loading} />
+      {!isHero && <BarberLocationSearch onLocationFound={handleLocationFound} loading={loading} />}
 
       {enforceTiersVal === 'false' && (
         <div className="text-[10px] text-orange-500 bg-orange-500/10 border border-orange-500/20 px-3 py-1.5 rounded-md inline-block">
