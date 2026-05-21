@@ -669,6 +669,50 @@ const Profile = () => {
         isBarberReviewing={isBarberReviewing}
       />
 
+      {/* Hidden avatar file input (fans) */}
+      <input
+        ref={avatarFileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          e.target.value = '';
+          if (!file || !user) return;
+          if (!file.type.startsWith('image/')) { toast.error('Please select an image'); return; }
+          if (file.size > 5 * 1024 * 1024) { toast.error('Image must be under 5MB'); return; }
+          setAvatarUploading(true);
+          try {
+            const ext = file.name.split('.').pop();
+            const path = `${user.id}/${Date.now()}.${ext}`;
+            const { error: upErr } = await supabase.storage.from('avatars').upload(path, file, { contentType: file.type, upsert: false });
+            if (upErr) throw upErr;
+            const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
+            const { error: pErr } = await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('user_id', user.id);
+            if (pErr) throw pErr;
+            if (clientProfile) {
+              await supabase.from('client_profiles').update({ avatar_url: publicUrl }).eq('user_id', user.id);
+            }
+            toast.success('Profile picture updated');
+            refreshProfiles();
+          } catch (err: any) {
+            console.error('[Profile] avatar upload', err);
+            toast.error(err.message || 'Upload failed');
+          } finally {
+            setAvatarUploading(false);
+          }
+        }}
+      />
+
+      <SocialLinksDialog
+        open={socialDialogOpen}
+        onOpenChange={setSocialDialogOpen}
+        role={isBarber ? 'barber' : 'fan'}
+        initialFocus={socialFocus}
+        initialValues={socialLinksObj}
+        onSaved={refreshProfiles}
+      />
+
       <BottomNavBar />
     </div>
   );
