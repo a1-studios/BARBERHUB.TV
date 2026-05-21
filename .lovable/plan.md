@@ -1,81 +1,53 @@
-# Dynamic Morphing Header
+## Goal
 
-Replace the static "BARBER-HUB" brand text in `src/components/Header.tsx` with a smart morphing title that reflects the current page, surfaces transient notifications inline, and shows a small page-context icon below the bar. Keep header height, padding, logo, and the BB coin dropdown exactly as they are today.
+On the Barbers Directory map view: (1) promote **Top Matches Near You** above the Mapbox map, (2) give every nearby card the same fixed size, and (3) bring back the old floating-profile **sphere** as a hero element fed by the same nearby-barbers query that powers the map.
 
-## 1. Page title registry
+## Changes
 
-New file `src/config/pageTitles.ts` exporting a route → `{ first, second, icon }` map (icon = lucide component).
+### 1. `src/components/map/BarberMapDirectory.tsx` — reorder + sphere + uniform cards
 
-Examples:
-- `/` → `BARBER` / `HUB` (Scissors)
-- `/barbers` → `BARBER` / `DIRECTORY` (MapPin)
-- `/creator-hub` → `CREATOR` / `HUB` (Crown)
-- `/portal` → `BATTLE` / `PORTAL` (Zap)
-- `/watch` → `WATCH` / `FEED` (Play)
-- `/tournaments` → `TOURNAMENT` / `ARENA` (Trophy)
-- `/profile` → `MY` / `PROFILE` (User)
-- `/rankings` → `GLOBAL` / `RANKINGS` (BarChart)
-- `/vault` → `VAULT` / `OF HONOR` (Shield)
-- `/studio` → `CAMERA` / `STUDIO` (Camera)
-- `/admin*` → `ADMIN` / `CONTROL` (Shield)
-- `/sovereign-hq` → `SOVEREIGN` / `HQ` (Crown)
-- Dynamic patterns (`/barber/:userId`, `/battles/:id`, `/battle/:id/theater`, `/tournaments/:id`) resolved via small `matchTitle(pathname)` helper with regex fallbacks.
-- Unknown route → `BARBER` / `HUB` default.
+- **Move the "Top Matches Near You" rail** (currently lines ~317-344, rendered *after* the map block) so it renders *before* the map container. Keep its data source (`scoredBarbers`) unchanged — it already comes from the live RPC `find_barbers_nearby`.
+- **Drop the `.reverse()`** so order matches visibility ranking (best first).
+- **Stop the horizontal snap rail on desktop** and switch the card row to a uniform layout:
+  - Mobile (<sm): horizontal snap scroll, every card the **same fixed width** (`w-[260px]` instead of `w-[78vw] max-w-[240px]`).
+  - ≥sm: 2-up grid; ≥lg: 3-up grid. All cards equal height (`h-full` + `grid` parent).
+- **Insert the sphere block above the rail** when `scoredBarbers.length >= 4` (fall back to rail-only otherwise). The sphere is the visual "hero" of the section; the rail sits directly under it as a tap-friendly list.
 
-First word always white, second always Signature Orange (`text-primary`). Two-color rule lives in the renderer, not in the registry.
+### 2. `src/components/map/NearbyBarberCard.tsx` — fixed dimensions
 
-## 2. Header announcement bus
+- Replace `w-[78vw] max-w-[240px]` with `w-full` and let the parent control width.
+- Add `h-full flex flex-col` so cards in a grid stretch to equal height; push the `View Profile` button to the bottom with `mt-auto`.
 
-New file `src/lib/headerAnnouncements.ts`:
+### 3. New file `src/components/map/NearbySphere.tsx` — wraps `SphereImageGrid`
 
-```ts
-type Announcement = { first: string; second: string; durationMs?: number };
-export function announce(a: Announcement): void;        // dispatch CustomEvent('header:announce')
-export function useHeaderAnnouncement(): Announcement | null; // hook with internal timer (default 3500ms)
+- Accepts `barbers: ScoredBarber[]` (the same shape already built in `BarberMapDirectory`).
+- Maps each barber to the `ImageData` shape expected by `SphereImageGrid`:
+  ```ts
+  { id, src: avatar_url ?? fallback, alt: name, title: name,
+    description: specialty ?? location, rank: index+1,
+    isChampion: index === 0, location, rating: score }
+  ```
+- Renders `<SphereHolographicWrapper><SphereImageGrid images={...} autoRotate showChampionCrown /></SphereHolographicWrapper>` with a responsive `containerSize` (≈320 on mobile, 480 on desktop).
+- Clicking an avatar navigates to `/barber/:user_id` (wire through `SphereImageGrid`'s existing `selectedImage` state via a small `onSelect` prop — add the prop if missing, otherwise use the existing modal then a "View Profile" link).
+- Empty/loading states: skeleton sphere placeholder while `loading` is true.
+
+### 4. `src/pages/BarbersDirectory.tsx` — no structural change required
+
+- The page-level `TopBarbersNearbyRail` (used only in list view) stays as-is.
+- All work above happens inside `BarberMapDirectory`, which is already mounted by the page when `viewMode === 'map'`.
+
+## Section order after the change (map view)
+
 ```
-
-Single active announcement at a time; new announcements replace the current one and reset the timer. When the timer elapses, hook returns `null` and the title morphs back to the page title.
-
-## 3. Header renderer changes (`src/components/Header.tsx`)
-
-- Replace the centered brand `<button>` with a new `<DynamicHeaderTitle />` component (in the same file or `src/components/header/DynamicHeaderTitle.tsx`).
-- `DynamicHeaderTitle` reads `useLocation().pathname`, resolves via `matchTitle`, and overlays `useHeaderAnnouncement()` when active.
-- Uses `framer-motion` `AnimatePresence` with `mode="wait"`, key = `announcement ?? pathname`, fade + subtle y-translate (200ms). No layout shift.
-- Auto-fit font size: container has fixed height matching current brand (`text-xl sm:text-2xl`). Use a `useFitText` ref hook that measures `scrollWidth` vs `clientWidth` and scales `font-size` down (CSS `transform: scale()` on the inner span) until it fits, clamped to a min of 12px. Re-run on resize and content change.
-- Clicking the title still navigates to `/` (preserve current behavior).
-
-Sub-header icon row:
-- Render a tiny strip directly under the header `<header>` element (inside the same fixed wrapper) showing the page icon + lowercase page slug (e.g. `· barber directory`). Height ~20px, `text-[10px] text-muted-foreground`, centered, fades in/out with the title. Hidden when an announcement is active so it doesn't compete.
-- Pure visual; does not affect the existing `top-[88px] sm:top-[104px]` offset used by `QuickSocialSignIn` — keep that offset unchanged. The icon row sits inside the header pill so total visual height grows by ~20px but the social strip's fixed offset stays as-is (verify visually; if it clips, bump the offset by the same delta in one place).
-
-## 4. Wiring announcements (replace noisy toasts)
-
-Welcome-back announcement:
-- In `src/hooks/useAuth.tsx` (or wherever the current "Welcome back" toast fires), replace the `toast(...)` call with `announce({ first: 'WELCOME BACK', second: displayName?.toUpperCase() ?? 'FRIEND' })`. Remove the toast.
-
-Remove redundant action-confirmation toasts (the user already saw the action succeed):
-- `src/hooks/useLikes.tsx` — drop the `toast.success("Liked!" / "Like removed")` in `toggleLike.onSuccess`. Keep the error toast.
-- Follow toast: search for `toast.success('Followed'` / `'Following'` / `'Unfollowed'` in `src/hooks/` and `src/components/` and remove those success calls; keep error toasts.
-- Leave informational/critical toasts (payments, errors, challenge received, BB awarded, etc.) alone.
-
-Notification system (`useNotifications`) is unchanged — incoming `challenge_received`, payouts, etc. still toast as today. Only the chatty success confirmations and the welcome toast move into the header.
-
-## 5. Files touched
-
-Created:
-- `src/config/pageTitles.ts`
-- `src/lib/headerAnnouncements.ts`
-- `src/components/header/DynamicHeaderTitle.tsx`
-- `src/hooks/useFitText.ts`
-
-Edited:
-- `src/components/Header.tsx` (swap brand text, mount title + sub-icon row)
-- `src/hooks/useAuth.tsx` (welcome toast → announce)
-- `src/hooks/useLikes.tsx` (drop success toasts)
-- 1–2 follow hooks/components (drop follow success toasts)
+[ Location search + radius chips ]
+[ 🌐 NearbySphere — floating avatars of top nearby barbers ]
+[ Top Matches Near You — uniform card grid/rail ]
+[ Mapbox map with pins ]
+[ Empty state (if no barbers in radius) ]
+```
 
 ## Out of scope
 
-- No changes to logo, BB coin, notification panel, or QuickSocialSignIn strip.
-- No new routes, DB, or edge functions.
-- No changes to the existing real `notifications` table flow.
+- No DB / RPC / Edge Function changes — the sphere reuses the existing `find_barbers_nearby` results.
+- No changes to list view, header, or other pages.
+- No new sphere physics — reuse `SphereImageGrid` + `SphereHolographicWrapper` as-is.

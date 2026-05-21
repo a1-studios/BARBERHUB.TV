@@ -9,6 +9,7 @@ import { calculateVisibilityScore, scoreToScale } from '@/lib/visibilityScore';
 import { toast } from 'sonner';
 import { BarberLocationSearch } from './BarberLocationSearch';
 import { NearbyBarberCard } from './NearbyBarberCard';
+import { NearbySphere } from './NearbySphere';
 import { Link } from 'react-router-dom';
 import { MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -261,6 +262,61 @@ export function BarberMapDirectory({
         </div>
       )}
 
+      {/* Sphere + Top Matches — promoted ABOVE the map */}
+      {(loading || scoredBarbers.length > 0) && (
+        <div className="space-y-3">
+          {scoredBarbers.length >= 4 && (
+            <NearbySphere barbers={scoredBarbers.slice(0, 24)} loading={loading} />
+          )}
+
+          {scoredBarbers.length > 0 && (
+            <>
+              <div className="flex items-center justify-between px-1">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
+                  Top Matches Near You
+                </h3>
+                <span className="text-[10px] text-muted-foreground">
+                  Within {radiusMiles} mi · Ranked by visibility
+                </span>
+              </div>
+
+              {/* Mobile: uniform-width snap rail. sm+: 2-col grid. lg+: 3-col grid. */}
+              <div className="sm:hidden flex flex-nowrap gap-3 overflow-x-auto overflow-y-hidden pb-3 -mx-1 px-1 snap-x snap-mandatory scroll-pl-1">
+                {scoredBarbers.map((b) => (
+                  <div key={b.barber_id} className="snap-start shrink-0 w-[260px]">
+                    <NearbyBarberCard
+                      user_id={b.user_id}
+                      name={b.name}
+                      avatar_url={b.avatar_url}
+                      specialty={b.specialty}
+                      location={b.location}
+                      distance_miles={b.distance_miles}
+                      active_subscription_tier={b.active_subscription_tier}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-3 gap-3 auto-rows-fr">
+                {scoredBarbers.map((b) => (
+                  <NearbyBarberCard
+                    key={b.barber_id}
+                    user_id={b.user_id}
+                    name={b.name}
+                    avatar_url={b.avatar_url}
+                    specialty={b.specialty}
+                    location={b.location}
+                    distance_miles={b.distance_miles}
+                    active_subscription_tier={b.active_subscription_tier}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+
+
       <div className="relative">
         {/* Top-right count pill (clear of left-side overlays) */}
         {scoredBarbers.length > 0 && (
@@ -314,34 +370,8 @@ export function BarberMapDirectory({
         )}
       </div>
 
-      {/* Branded result rail */}
-      {scoredBarbers.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
-              Top Matches Near You
-            </h3>
-            <span className="text-[10px] text-muted-foreground">
-              Within {radiusMiles} mi · Ranked by visibility
-            </span>
-          </div>
-          <div className="flex flex-nowrap gap-3 overflow-x-auto overflow-y-hidden pb-3 -mx-1 px-1 snap-x snap-mandatory scroll-pl-1">
-            {[...scoredBarbers].reverse().map((b) => (
-              <div key={b.barber_id} className="snap-start shrink-0 min-w-0">
-                <NearbyBarberCard
-                  user_id={b.user_id}
-                  name={b.name}
-                  avatar_url={b.avatar_url}
-                  specialty={b.specialty}
-                  location={b.location}
-                  distance_miles={b.distance_miles}
-                  active_subscription_tier={b.active_subscription_tier}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+
+
 
       {/* Empty state */}
       {userCoords && !loading && scoredBarbers.length === 0 && (
