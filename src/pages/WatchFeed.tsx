@@ -576,10 +576,20 @@ const WatchFeed = () => {
               onEnded={() => handleVideoEnded(idx)}
               overlayPayload={item.overlay_payload}
               preloadMode={isActive ? 'auto' : isPrefetch ? 'auto' : 'none'}
-              enableReplay={isActive}
+              enableReplay={false}
               showCenterPlayButton={isActive}
               tapToToggle={isActive}
+              replayTrigger={isActive ? replayNonce : undefined}
             />
+            {isActive && endedIndex === idx && (
+              <button
+                onClick={handleReplayActive}
+                aria-label="Replay"
+                className="absolute bottom-20 left-3 z-20 h-9 w-9 rounded-full bg-black/55 backdrop-blur-sm border border-white/20 flex items-center justify-center text-primary shadow-lg active:scale-95 transition-transform"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </button>
+            )}
           </div>
         ) : (
           // Lightweight poster while off-screen — saves bandwidth + CPU
