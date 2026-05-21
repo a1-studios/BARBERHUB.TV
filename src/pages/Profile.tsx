@@ -477,11 +477,6 @@ const Profile = () => {
             {/* ACCOUNT section */}
             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-2 pb-1">Account</p>
 
-            <NotificationToggle />
-            <InstallAppButton />
-
-            {/* ACCOUNT section */}
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-4 pb-1">Account</p>
             <div className="bg-card/80 backdrop-blur-sm rounded-xl border border-border/30 overflow-hidden divide-y divide-border/20">
               {/* Edit Profile / Settings — unified for barbers */}
               {isBarber ? (
