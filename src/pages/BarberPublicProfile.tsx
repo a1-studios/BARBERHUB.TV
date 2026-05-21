@@ -730,7 +730,17 @@ export default function BarberPublicProfile() {
                         return (
                           <div 
                             key={creation.id}
-                            className="aspect-square rounded-lg overflow-hidden border border-primary/20 hover:border-primary/50 transition-all hover:shadow-lg relative group"
+                            onClick={() => {
+                              if (!isVid) return;
+                              const status = (creation as any).stream_status as string | undefined;
+                              if (status && status !== 'ready') return;
+                              setPlayingVideo({
+                                uid: (creation as any).cloudflare_stream_uid || null,
+                                url: creation.media_url || null,
+                                poster: (creation as any).stream_thumbnail_url || creation.thumbnail_url || null,
+                              });
+                            }}
+                            className={`aspect-square rounded-lg overflow-hidden border border-primary/20 hover:border-primary/50 transition-all hover:shadow-lg relative group ${isVid ? 'cursor-pointer' : ''}`}
                           >
                             {isVid ? (
                               (() => {
