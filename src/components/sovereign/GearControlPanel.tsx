@@ -11,9 +11,14 @@ interface GearItem {
   id: string;
   name: string;
   description: string | null;
+interface GearItem {
+  id: string;
+  name: string;
+  description: string | null;
   price_bb: number;
   stock_quantity: number | null;
   image_url: string | null;
+  image_urls: string[] | null;
   is_active: boolean;
   requires_shipping: boolean;
   shopify_product_id: string | null;
@@ -21,22 +26,20 @@ interface GearItem {
   display_order: number;
 }
 
+const MAX_IMAGES = 5;
+
 const emptyForm = {
   name: '',
   description: '',
   price_bb: 0,
   stock_quantity: '' as number | '',
-  image_url: '',
+  image_urls: [] as string[],
   requires_shipping: false,
   shopify_product_id: '',
   shopify_variant_id: '',
   display_order: 0,
   is_active: true,
 };
-
-const GearControlPanel = () => {
-  const [items, setItems] = useState<GearItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({ ...emptyForm });
