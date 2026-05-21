@@ -290,7 +290,7 @@ const Profile = () => {
           {/* ===== HERO: Avatar ===== */}
           <div className="relative flex flex-col items-center pt-8 pb-2">
 
-            <SocialOrbit size={112} links={socialLinksObj} gap={14} iconSize={26}>
+            <SocialOrbit radius={70} iconSize={26} links={socialLinksObj}>
               {isBarber ? (
                 <AvatarCrest
                   tier={subscriptionTier}

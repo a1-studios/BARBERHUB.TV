@@ -468,8 +468,8 @@ export default function BarberPublicProfile() {
           <CardContent className="relative p-8 z-10">
             <div className="flex flex-col md:flex-row gap-6 items-center">
               <SocialOrbit
-                size={128}
-                gap={14}
+                radius={78}
+                
                 iconSize={28}
                 links={{
                   instagram: (barberData as any).instagram_handle,

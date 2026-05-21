@@ -111,7 +111,7 @@ export function BarberProfileHeader({
       
       <CardContent className="relative p-4 md:p-8 z-10">
         <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start">
-          <SocialOrbit size={128} links={socialLinks ?? undefined} gap={14} iconSize={28}>
+          <SocialOrbit radius={78} iconSize={28} links={socialLinks ?? undefined}>
             <div className="relative w-full h-full">
               <TierRing tier={subscription_tier} size="lg" interactive={showActions}>
                 <Avatar className="w-32 h-32">
