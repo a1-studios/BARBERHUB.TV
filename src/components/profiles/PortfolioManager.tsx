@@ -310,6 +310,27 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
           className="hidden"
         />
       </CardContent>
+
+      <Dialog open={!!playingVideo} onOpenChange={(o) => !o && setPlayingVideo(null)}>
+        <DialogContent className="max-w-3xl p-0 bg-black border-0 overflow-hidden">
+          {playingVideo && (
+            <div className="w-full aspect-video bg-black">
+              <SmartVideoPlayer
+                streamUid={playingVideo.uid}
+                fallbackUrl={playingVideo.url}
+                poster={playingVideo.poster}
+                autoPlayWhenVisible
+                forceActive
+                controls
+                muted={false}
+                showCenterPlayButton
+                tapToToggle
+                className="w-full h-full"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
