@@ -110,7 +110,7 @@ const WatchFeed = () => {
         .from("creator_content")
         .select("id, title, description, media_url, thumbnail_url, content_type, creator_id, created_at, cloudflare_stream_uid, overlay_payload, stream_status, stream_thumbnail_url")
         .eq("status", "published")
-        .eq("stream_status", "ready")
+        .or("stream_status.eq.ready,cloudflare_stream_uid.is.null")
         .not("media_url", "is", null)
         .order("created_at", { ascending: false })
         .limit(30);
@@ -141,7 +141,7 @@ const WatchFeed = () => {
       const { data, error } = await supabase
         .from("creations")
         .select("id, title, description, media_url, thumbnail_url, barber_id, created_at, cloudflare_stream_uid, overlay_payload, stream_status, stream_thumbnail_url")
-        .eq("stream_status", "ready")
+        .or("stream_status.eq.ready,cloudflare_stream_uid.is.null")
         .not("media_url", "is", null)
         .order("created_at", { ascending: false })
         .limit(30);
@@ -184,7 +184,7 @@ const WatchFeed = () => {
       const { data, error } = await supabase
         .from("battle_submissions")
         .select("id, title, description, media_url, thumbnail_url, user_id, created_at, cloudflare_stream_uid, stream_status, stream_thumbnail_url")
-        .eq("stream_status", "ready")
+        .or("stream_status.eq.ready,cloudflare_stream_uid.is.null")
         .not("media_url", "is", null)
         .order("created_at", { ascending: false })
         .limit(30);
