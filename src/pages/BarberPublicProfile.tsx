@@ -16,7 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import { parseSpecialties, getSpecialtyDisplay } from '@/config/specialtyTags';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ArrowLeft, MapPin, Award, Upload, Image as ImageIcon, Video, Trash2, Calendar, Instagram, Twitter, Youtube, Facebook, Settings, Briefcase, Globe, DollarSign, Shield, Save, Navigation, Loader2, ChevronDown, Lock } from 'lucide-react';
+import { ArrowLeft, MapPin, Award, Upload, Image as ImageIcon, Video, Trash2, Calendar, Instagram, Twitter, Youtube, Facebook, Settings, Briefcase, Globe, DollarSign, Shield, Save, Navigation, Loader2, ChevronDown, Lock, Play } from 'lucide-react';
 import { BarberVideoSection } from '@/components/barber/BarberVideoSection';
 import { SmartVideoPlayer } from '@/components/video/SmartVideoPlayer';
 import { BarberActionButtons } from '@/components/barber/BarberActionButtons';
@@ -748,9 +748,13 @@ export default function BarberPublicProfile() {
                                         className="w-full h-full object-cover pointer-events-none"
                                       />
                                     )}
-                                    <div className="absolute bottom-1 right-1 bg-black/70 rounded-full p-1 pointer-events-none z-10">
-                                      <Video className="w-3 h-3 text-white" />
-                                    </div>
+                                    {!processing && (
+                                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                                        <span className="flex items-center justify-center h-9 w-9 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 shadow-lg">
+                                          <Play className="w-4 h-4 text-white ml-0.5" fill="currentColor" />
+                                        </span>
+                                      </div>
+                                    )}
                                     {processing && (
                                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center text-[10px] font-medium text-white text-center px-1 z-10">
                                         Optimizing…
