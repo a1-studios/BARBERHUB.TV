@@ -110,7 +110,7 @@ export function BarberProfileHeader({
       
       <CardContent className="relative p-4 md:p-8 z-10">
         <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start">
-          <div className="flex flex-col items-center gap-1">
+          <div className="relative">
             <TierRing tier={subscription_tier} size="lg" interactive={showActions}>
               <Avatar className="w-20 h-20 md:w-32 md:h-32">
                 <AvatarImage src={avatar_url || undefined} />
@@ -119,14 +119,16 @@ export function BarberProfileHeader({
                 </AvatarFallback>
               </Avatar>
             </TierRing>
-            <M4MHeartbeat
+            <M4MAvatarBadge
               certified={m4m_certified}
               paid={m4m_paid}
               livesTouched={m4m_lives_touched}
               barberName={display_name}
               barberUserId={barber_user_id || ''}
-              size="md"
               isOwnProfile={showActions}
+              size={38}
+              position="bottom-right"
+              className="md:!w-[52px] md:!h-[52px]"
             />
           </div>
 
