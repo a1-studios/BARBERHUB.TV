@@ -6,8 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Upload, Trash2, Image as ImageIcon, Video, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { uploadPortfolioMedia } from '@/lib/storage';
 import { SmartVideoPlayer } from '@/components/video/SmartVideoPlayer';
+import { uploadFileMultipart } from '@/lib/multipartUpload';
+import { captureVideoThumbnail } from '@/lib/videoThumbnail';
+import { pollStreamReady } from '@/lib/streamReadiness';
 import { toast } from 'sonner';
 
 interface PortfolioManagerProps {
