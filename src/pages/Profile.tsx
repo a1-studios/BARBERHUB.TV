@@ -283,94 +283,48 @@ const Profile = () => {
 
       <Header />
 
-      <main className="relative z-10 flex-1 px-4 pt-12 pb-20 sm:pt-16">
+      <main className="relative z-10 flex-1 px-4 pt-10 pb-20 sm:pt-16">
         <div className="max-w-md mx-auto min-h-[calc(100dvh-4rem-5rem)] flex flex-col">
           <ProfileCompletionBanner profile={profile} />
 
-          {/* ===== HERO: 3-column grid (specialties | avatar+orbit | stats) ===== */}
-          <div className="grid grid-cols-[minmax(80px,1fr)_auto_minmax(80px,1fr)] items-center gap-2 -mt-2">
-            {/* LEFT RAIL — specialties */}
-            <div className="flex flex-col items-start gap-1 self-center min-w-0">
-              {specialty ? parseSpecialties(specialty).map(id => {
-                const tag = getSpecialtyDisplay(id);
-                return tag ? (
-                  <span
-                    key={id}
-                    className="text-[11px] leading-tight text-muted-foreground truncate max-w-full"
-                  >
-                    {tag.emoji} {tag.label}
-                  </span>
-                ) : null;
-              }) : null}
-            </div>
-
-            {/* CENTER — avatar + orbit + heart */}
-            <div className="self-center">
-              <SocialOrbit radius={71} iconSize={28} links={socialLinksObj}>
-                {isBarber ? (
-                  <AvatarCrest
-                    tier={subscriptionTier}
-                    size="lg"
-                    interactive
-                    showM4M
-                    m4mCertified={m4mCertified}
-                    m4mPaid={m4mPaid}
-                    m4mLivesTouched={m4mLivesTouched}
-                    barberName={displayName}
-                    barberUserId={user?.id || ''}
-                    isOwnProfile={true}
-                  >
-                    <Avatar className="w-full h-full">
+          {/* ===== HERO: centered avatar first, details arranged below for mobile ===== */}
+          <div className="-mt-1 flex flex-col items-center">
+            <div className="flex w-full justify-center">
+              <div className="w-fit">
+                <SocialOrbit radius={71} iconSize={28} links={socialLinksObj}>
+                  {isBarber ? (
+                    <AvatarCrest
+                      tier={subscriptionTier}
+                      size="lg"
+                      interactive
+                      showM4M
+                      m4mCertified={m4mCertified}
+                      m4mPaid={m4mPaid}
+                      m4mLivesTouched={m4mLivesTouched}
+                      barberName={displayName}
+                      barberUserId={user?.id || ''}
+                      isOwnProfile={true}
+                    >
+                      <Avatar className="w-full h-full">
+                        <AvatarImage src={profile?.avatar_url || undefined} />
+                        <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
+                          {displayName.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </AvatarCrest>
+                  ) : (
+                    <Avatar className="h-[101px] w-[101px] border-2 border-background shadow-lg">
                       <AvatarImage src={profile?.avatar_url || undefined} />
                       <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
                         {displayName.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                  </AvatarCrest>
-                ) : (
-                  <Avatar className="h-[101px] w-[101px] border-2 border-background shadow-lg">
-                    <AvatarImage src={profile?.avatar_url || undefined} />
-                    <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
-                      {displayName.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-              </SocialOrbit>
+                  )}
+                </SocialOrbit>
+              </div>
             </div>
 
-            {/* RIGHT RAIL — stats */}
-            <div className="flex flex-col items-end gap-2 self-center text-right">
-              {isBarber && barberStats ? (
-                <>
-                  <div>
-                    <div className="text-base font-bold leading-none text-foreground">{barberStats.follower_count || 0}</div>
-                    <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Foll</div>
-                  </div>
-                  <div>
-                    <div className="text-base font-bold leading-none text-foreground">{barberStats.like_count || 0}</div>
-                    <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Likes</div>
-                  </div>
-                  <div>
-                    <div className="text-base font-bold leading-none text-primary">${((barberStats.total_donations_cents || 0) / 100).toFixed(0)}</div>
-                    <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Don</div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <div className="text-base font-bold leading-none text-foreground">{clientProfile?.total_votes_cast || 0}</div>
-                    <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Votes</div>
-                  </div>
-                  <div>
-                    <div className="text-base font-bold leading-none text-primary">{clientProfile?.voting_power || 1}x</div>
-                    <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Power</div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center text-center mt-1">
+            <div className="flex flex-col items-center text-center mt-2">
             <h1 className="text-lg font-bold text-foreground flex items-center justify-center gap-1">
               {displayName}
               <DisplayNameEditor
@@ -389,10 +343,57 @@ const Profile = () => {
               )}
             </div>
             {profile?.bio && <p className="text-[11px] text-muted-foreground line-clamp-1 max-w-[260px] mt-0.5">{profile.bio}</p>}
+            </div>
+
+            <div className="mt-3 grid w-full max-w-[330px] grid-cols-[minmax(0,1fr)_88px] items-start gap-3">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-left">
+                {specialty ? parseSpecialties(specialty).map(id => {
+                  const tag = getSpecialtyDisplay(id);
+                  return tag ? (
+                    <span
+                      key={id}
+                      className="text-[11px] leading-tight text-muted-foreground"
+                    >
+                      {tag.emoji} {tag.label}
+                    </span>
+                  ) : null;
+                }) : null}
+              </div>
+
+              <div className="flex flex-col items-end gap-2 text-right">
+                {isBarber && barberStats ? (
+                  <>
+                    <div>
+                      <div className="text-base font-bold leading-none text-foreground">{barberStats.follower_count || 0}</div>
+                      <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Foll</div>
+                    </div>
+                    <div>
+                      <div className="text-base font-bold leading-none text-foreground">{barberStats.like_count || 0}</div>
+                      <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Likes</div>
+                    </div>
+                    <div>
+                      <div className="text-base font-bold leading-none text-primary">${((barberStats.total_donations_cents || 0) / 100).toFixed(0)}</div>
+                      <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Don</div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <div className="text-base font-bold leading-none text-foreground">{clientProfile?.total_votes_cast || 0}</div>
+                      <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Votes</div>
+                    </div>
+                    <div>
+                      <div className="text-base font-bold leading-none text-primary">{clientProfile?.voting_power || 1}x</div>
+                      <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Power</div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* ===== QUICK LOCATION TOGGLE (Barbers only) ===== */}
-          {isBarber && <div className="mt-2"><LocationQuickToggle /></div>}
+          {isBarber && <div className="mt-3"><LocationQuickToggle /></div>}
 
           {/* ===== iOS GROUPED LIST ===== */}
           <div className="flex-1 space-y-1">
