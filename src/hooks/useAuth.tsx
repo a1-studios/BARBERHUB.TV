@@ -102,7 +102,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success('Welcome back!');
+      const name = (email.split('@')[0] || 'friend').toUpperCase();
+      announce({ first: 'WELCOME BACK', second: name });
     }
 
     return { error };

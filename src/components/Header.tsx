@@ -337,8 +337,10 @@ const Header = () => {
             </div>
           </div>
         </div>
-
+        {/* Sub-header page context strip */}
+        <HeaderPageContext />
       </div>
+
 
       {/* Add Funds Modal */}
       <AddFundsModal 
