@@ -49,7 +49,6 @@ export const ProductShelf = () => {
         <div className="grid grid-cols-3 gap-1.5">
           {products.map((product) => (
             <button
-            <button
               key={product.id}
               onClick={() => handleTap(product)}
               className="relative aspect-square overflow-hidden rounded-lg bg-muted border border-border transition-transform hover:scale-[1.02] text-left"
@@ -75,6 +74,7 @@ export const ProductShelf = () => {
                 </div>
               </div>
             </button>
+          ))}
 
         </div>
         <div className="flex items-center justify-center gap-1.5 mt-1">
