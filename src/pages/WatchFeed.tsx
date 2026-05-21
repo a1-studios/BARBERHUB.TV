@@ -502,9 +502,14 @@ const WatchFeed = () => {
     const isPrefetch = idx === nextPlayableIdx;
     const shouldMount = isActive || isPrefetch;
     const cleanTitle = cleanDisplayTitle(item.title);
+    const cleanTitle = cleanDisplayTitle(item.title);
+    const videoUuid = isActive ? extractVideoUuid(item.id, item.content_id) : null;
 
     return (
       <div className="relative w-full h-full bg-black">
+        {/* Floating Danmaku comments — FIRST child, active video only */}
+        {videoUuid && <VideoCommentsLayer videoId={videoUuid} />}
+
         {/* Small pill watermark at bottom-third center */}
         <div className="absolute bottom-[18%] left-1/2 -translate-x-1/2 z-20 pointer-events-none select-none px-3 py-1 rounded-full border border-white/30 bg-black/20 backdrop-blur-sm">
           <span className="text-[10px] font-black tracking-[0.2em] uppercase">
