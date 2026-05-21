@@ -1,91 +1,86 @@
 
-# Profile + Onboarding Audit — Phased Plan
+# Barber Directory v2 — Distance-First Discovery
 
-Scope: profile hero layout, fan profile editing, social-link prompts, phone capture, nationality lock, empty-space cleanup, and One Tap raffle parity.
+Reorganize `/barbers` around the question "who's near me, ranked by tier/score?" and make sure every barber has a usable address so distance is real.
 
----
+## 1. Address capture for barbers
 
-## Phase 1 — Fan profile hero parity (visual only)
+Goal: every barber profile carries a geocoded address so distance-to-fan can be computed.
 
-**Files:** `src/pages/Profile.tsx`
+- Add an **Address** block to the barber profile editor (in `BarberProfileForm` / settings):
+  - Street, City, State, Postal Code, Country (country stays locked post-signup).
+  - On save, call Google Maps Geocoding via the existing connector gateway in a small edge function `geocode-barber-address` → writes `latitude`, `longitude`, `shop_address`, `shop_city`, `shop_state` to `barber_profiles`.
+  - Toggle: "Show exact address" vs "Show approximate area only" (default approx — store exact lat/lng, render rounded to ~0.5mi for privacy on public profile).
+- Onboarding nudge: if a barber has no lat/lng, show a yellow banner on their own profile + Creator Hub: "Add your address so fans can find you."
+- Backfill: existing barbers with `location` text but no lat/lng → one-time admin job to geocode.
 
-- Bring the fan avatar+SocialOrbit block **down** below the header so it visually matches the barber view (remove `-mt-3`, switch `pt-8` to `pt-12`, add `mt-2` on the orbit row).
-- Keep the orbit/avatar size unchanged (radius 71, 101px avatar).
-- Re-verify centering at 390px (current viewport) — orbit container `mx-auto` + parent `justify-center`.
+## 2. New page layout (top → bottom)
 
-Acceptance: fan hero sits the same vertical distance from the BARBER-HUB header as the barber hero; avatar perfectly centered on mobile.
+```text
+┌──────────────────────────────────────────────┐
+│  BARBER-HUB header (existing)                │
+├──────────────────────────────────────────────┤
+│  ← Back                                       │
+│  Barber Directory  ·  [List | Map] toggle    │
+├──────────────────────────────────────────────┤
+│  🔍  Search barbers, specialties...          │  ← Sticky search bar
+├──────────────────────────────────────────────┤
+│  [✂️ Fades][💈 Classic][🧔 Beard][🎨 Color]…│  ← Horizontal scrolling specialty pills
+├──────────────────────────────────────────────┤
+│  📍 Near: My Location  ·  Radius: [25 mi ▾] │  ← Location chip + radius toggle
+│      5 · 10 · 25 · 50 · 100 mi               │
+├──────────────────────────────────────────────┤
+│  ⭐ Top Barbers Nearby (ranked)              │
+│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐            │  ← Horizontal rail, ranked by
+│  │ #1  │ │ #2  │ │ #3  │ │ #4  │  →         │     visibility score (tier + BB +
+│  └─────┘ └─────┘ └─────┘ └─────┘            │     battles + contribution)
+├──────────────────────────────────────────────┤
+│  All barbers in 25 mi  ·  Sort ▾ · Filters ▾│
+│  [BarberProfileCard grid]                    │
+└──────────────────────────────────────────────┘
+```
 
----
+Key behavior:
+- **Search bar moves to top** (above pills), sticky on scroll.
+- **Specialty pills** become the primary quick-filter — single-tap toggles `specialtyFilter`. Horizontal scroll, snap, no wrap.
+- **Radius toggle** replaces hardcoded 15 mi: chips for 5 / 10 / 25 / 50 / 100 mi. Default 25 mi. Persists in localStorage.
+- **Top Barbers Nearby rail** = first 8 barbers from the nearby RPC, sorted by `calculateVisibilityScore` (already in `src/lib/visibilityScore.ts`). Replaces the current generic `QuickBookBanner` "Top Barbers — Book Now" (which ignores distance).
+- **Main grid** shows remaining barbers within radius, with existing sort + filters collapsed under the Filters button.
+- Empty state when no barbers in radius: "No barbers within X mi — try expanding to 50 mi" with a one-tap upgrade.
 
-## Phase 2 — Fan profile editing: avatar + social channels
+## 3. Distance everywhere
 
-**Files:**
-- `src/pages/Profile.tsx` (wire actions)
-- `src/components/profiles/SocialOrbit.tsx` (own-profile "add" affordance)
-- new: `src/components/profiles/SocialLinksDialog.tsx` (single dialog: IG / FB / X / YT inputs)
-- new: `src/components/profiles/FanAvatarEditButton.tsx` (reuses existing `AvatarUpload` storage logic)
-- DB: extend `client_profiles` with `instagram_handle`, `facebook_handle`, `twitter_handle`, `youtube_handle` if missing (barber_profiles already has them).
+- Each `BarberProfileCard` in distance mode shows a small `📍 3.2 mi` chip near the name (uses `distance_miles` from the RPC).
+- `find_barbers_nearby` RPC: extend signature to accept `p_radius_miles` from the toggle (already supports it) and return at least the top 100 within radius.
+- Default location source:
+  1. Saved fan location (profile) →
+  2. Browser geolocation prompt →
+  3. Manual zip / city search (existing `BarberLocationSearch`).
 
-Behavior (applies to **both fans and barbers** for unmapped slots):
-- Tapping a **lit** social icon → opens the link (current behavior).
-- Tapping a **greyed/unmapped** icon **on own profile** → opens `SocialLinksDialog` pre-focused on that network.
-- Fan avatar: tap own avatar → opens upload picker (same flow as `AvatarUpload`).
+## 4. Out of scope
 
-Acceptance: fan can upload an avatar and connect/disconnect IG/FB/X/YT from the profile screen; orbit icons light up after save.
+- No changes to booking flow, BB economy, map view internals, or barber card design.
+- No new ranking algorithm — reuse existing `visibilityScore`.
 
----
+## Technical details
 
-## Phase 3 — Phone number capture + persistence audit
+**Files touched**
+- `src/pages/BarbersDirectory.tsx` — full layout reorder; new `RadiusToggle`, `TopBarbersNearbyRail` components.
+- `src/components/barber/BarberProfileForm.tsx` (or equivalent settings form) — address fields + geocode call.
+- `src/components/barber/BarberProfileCard.tsx` — accept optional `distanceMiles` prop, render chip.
+- `src/components/map/BarberLocationSearch.tsx` — keep, but render inside the new location chip row.
+- New: `src/components/barber/RadiusToggle.tsx`, `src/components/barber/TopBarbersNearbyRail.tsx`.
+- New edge function: `supabase/functions/geocode-barber-address/index.ts` (uses Google Maps connector gateway).
 
-**Files:**
-- `src/components/coming-soon/StepFanDetails.tsx`, `StepBarberDetails.tsx` — confirm phone is collected and passed.
-- `supabase/functions/submit-role-details/index.ts` — ensure `phone_number` is written to `profiles` (and `barber_profiles` for barbers).
-- `src/components/profiles/ClientProfileForm.tsx` + new fan settings panel — expose phone editor for fans.
-- DB migration: add `phone_number TEXT` + `phone_country_code TEXT` to `profiles` if not present; backfill from `barber_profiles` where applicable.
+**DB migration**
+- Ensure `barber_profiles` has `latitude numeric`, `longitude numeric`, `shop_address text`, `shop_city text`, `shop_state text`, `shop_postal_code text`, `address_visibility text default 'approximate'`. Add only missing columns.
+- Index: `CREATE INDEX IF NOT EXISTS idx_barber_profiles_geo ON barber_profiles (latitude, longitude) WHERE latitude IS NOT NULL;`
+- RPC `find_barbers_nearby` — confirm it orders by Haversine distance and accepts `p_radius_miles` up to 100.
 
-Acceptance: phone entered at signup or profile edit is queryable in `profiles.phone_number`; no silent drops.
+**State / persistence**
+- `radiusMiles` in localStorage key `barbers:radiusMiles` (default 25).
+- `lastLocation` cached in localStorage for instant render on return.
 
----
-
-## Phase 4 — Nationality lock after signup
-
-**Files:**
-- DB: add `country_locked_at TIMESTAMPTZ` to `profiles`; trigger sets it on first non-null `country_code`.
-- RLS / update policy: block client updates to `country_code` when `country_locked_at IS NOT NULL` (only service-role/admin can override via `sovereign-user-control`).
-- `src/components/profiles/ClientProfileForm.tsx`, `BarberSettings.tsx`, fan settings — render country field as **read-only** with a small "Locked at signup — contact support" hint when locked.
-- `submit-role-details` — set country once, then ignore subsequent country changes.
-
-Acceptance: once country is set, user cannot change it from the UI or API; admin override path remains.
-
----
-
-## Phase 5 — Layout polish + One Tap raffle parity
-
-**5a. Empty-space / landing-position cleanup**
-- Audit pages: `Profile`, `WatchFeed`, `Rankings`, `Portal`, `BarbersDirectory`, `CreatorHub`, `Tournaments`, `BattlesPage`.
-- Standardize main wrapper: `pt-[calc(env(safe-area-inset-top)+56px)]` (header height) and remove negative margins.
-- Remove trailing empty scroll regions (collapse `min-h-[calc(...)]` flex spacers that produce blank scroll below content on short pages).
-- Ensure every route lands with the BARBER-HUB header at top and first content card immediately under it (no >24px gap, no scroll-past-end overshoot).
-
-**5b. Google One Tap raffle parity** (`src/components/auth/GoogleOneTap.tsx`)
-- Today: One Tap users only get a ticket *if one was claimed pre-signin*. Email users get the spin in `StepRaffleSpin` before account creation.
-- New: after successful `signInWithIdToken`, if `localStorage` has no `raffle_pending_claim`, call `claim-raffle-ticket` server-side using the Google email + device fingerprint, then call `link-raffle-to-user` with the returned `ticket_code`.
-- UX: surface a lightweight post-One-Tap modal (`PostSignupRaffleReveal`) that runs the same `ScrollMorphHero` spin animation and shows the awarded ticket — so One Tap users see the same celebration as email users.
-- Guardrails: skip if `claim-raffle-ticket` returns "already claimed" for this email/fingerprint; respect dedupe rules already in the edge function.
-
-Acceptance: a fresh Google One Tap signup ends with a spinning wheel and a raffle ticket on their account, identical to the email path.
-
----
-
-## Technical notes
-
-- All DB changes via `supabase--migration`; no edits to `auth.*` schema.
-- Country lock enforced both client-side (read-only UI) and server-side (RLS + edge function guard) — defense in depth.
-- Social links live on existing `*_profiles` tables; orbit reads from whichever role table applies (already wired).
-- `SocialLinksDialog` will use a shared `useSocialLinks(role)` hook to read/write the correct table.
-- Raffle reveal modal mounts only when One Tap completes with a *new* ticket, never on repeat sessions.
-
-## Out of scope
-- Redesign of `SocialOrbit` visuals, AvatarCrest, or header.
-- Booking/economy/business logic.
-- Migrating barber social fields to a unified table.
+**Verification**
+- Manual: load `/barbers` on mobile viewport → search at top, pills scroll horizontally, radius toggle changes results, Top Nearby rail re-sorts, each card shows mileage.
+- Barber-side: edit profile → enter address → reload directory as a fan in same city → that barber appears with correct distance.
