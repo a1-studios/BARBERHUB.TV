@@ -59,19 +59,21 @@
               </table>
             </td>
           </tr>
-          <!-- OTP fallback (in case OTP flow is enabled) -->
+          <!-- OTP fallback -->
           <tr>
             <td style="padding:0 36px 8px 36px;">
               <p style="margin:0 0 10px 0;font-size:11px;font-weight:700;letter-spacing:0.3em;color:#666666;text-transform:uppercase;">
-                Or use this code
+                Or enter this code at <a href="https://barberhub.tv/auth/callback" style="color:#FF5F1F;text-decoration:underline;">barberhub.tv/auth/callback</a>
               </p>
             </td>
           </tr>
           <tr>
             <td align="center" style="padding:0 36px 32px 36px;">
-              <div style="display:inline-block;padding:16px 28px;background-color:#141414;border:1px solid #FF5F1F;border-radius:4px;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:26px;font-weight:800;letter-spacing:0.5em;color:#ffffff;">
-                {{ .Token }}
-              </div>
+              <a href="https://barberhub.tv/auth/callback" target="_blank" style="text-decoration:none;">
+                <div style="display:inline-block;padding:16px 28px;background-color:#141414;border:1px solid #FF5F1F;border-radius:4px;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:26px;font-weight:800;letter-spacing:0.5em;color:#ffffff;">
+                  {{ .Token }}
+                </div>
+              </a>
             </td>
           </tr>
           <!-- Divider -->
