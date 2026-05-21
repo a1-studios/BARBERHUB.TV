@@ -223,6 +223,11 @@ export const BarberProfileCard = ({
                     🔴 LIVE
                   </Badge>
                 )}
+                {typeof distanceMiles === 'number' && (
+                  <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0 border-primary/40 text-primary">
+                    📍 {distanceMiles.toFixed(1)} mi
+                  </Badge>
+                )}
               </div>
               {barberProfile.specialty && (
                 <div className="flex flex-wrap gap-1 mt-1">
