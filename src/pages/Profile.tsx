@@ -291,17 +291,17 @@ const Profile = () => {
           <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 pt-2 pb-0">
 
             {/* LEFT — Specialties stacked */}
-            <div className="flex flex-col items-start gap-1.5 min-w-0">
+            {/* LEFT — Specialties stacked */}
+            <div className="flex flex-col items-start gap-1 min-w-0">
               {specialty ? parseSpecialties(specialty).map(id => {
                 const tag = getSpecialtyDisplay(id);
                 return tag ? (
-                  <Badge
+                  <span
                     key={id}
-                    variant="secondary"
-                    className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary border-primary/20 max-w-full truncate"
+                    className="text-[11px] leading-tight text-muted-foreground"
                   >
                     {tag.emoji} {tag.label}
-                  </Badge>
+                  </span>
                 ) : null;
               }) : null}
             </div>
