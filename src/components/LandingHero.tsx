@@ -48,7 +48,7 @@ const LandingHero = ({ onStartSignup, onOpenArenaGate }: LandingHeroProps) => {
       <div className="relative z-10 pt-2">
         <div className="container mx-auto px-4 py-2">
           <div className="max-w-6xl mx-auto space-y-6">
-            <div className="w-full max-w-md mx-auto">
+            <div className="w-full max-w-md mx-auto mt-12">
               <Card
                 className="p-6 border border-border/50 shadow-lg backdrop-blur-sm bg-card/50 transition-all duration-300 hover:shadow-[0_0_30px_hsl(var(--primary)/0.5),inset_0_0_20px_hsl(var(--primary)/0.15)] hover:border-primary/30"
                 style={{ borderRadius: "1.5rem" }}
