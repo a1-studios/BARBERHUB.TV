@@ -30,8 +30,16 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
     location: existingProfile?.location || '',
     portfolio_url: existingProfile?.portfolio_url || '',
     phone_number: existingProfile?.phone_number || '',
-    country_code: existingProfile?.country_code || ''
+    country_code: existingProfile?.country_code || '',
+    shop_address: existingProfile?.shop_address || '',
+    shop_city: existingProfile?.shop_city || '',
+    shop_state: existingProfile?.shop_state || '',
+    shop_postal_code: existingProfile?.shop_postal_code || '',
+    address_visibility: existingProfile?.address_visibility || 'approximate',
+    latitude: existingProfile?.latitude ?? null as number | null,
+    longitude: existingProfile?.longitude ?? null as number | null,
   });
+  const [geocoding, setGeocoding] = useState(false);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
