@@ -49,31 +49,33 @@ export const ProductShelf = () => {
         <div className="grid grid-cols-3 gap-1.5">
           {products.map((product) => (
             <button
+            <button
               key={product.id}
               onClick={() => handleTap(product)}
-              className="flex flex-col items-center gap-1 rounded-lg bg-card border border-border p-2 transition-colors hover:bg-accent text-left"
+              className="relative aspect-square overflow-hidden rounded-lg bg-muted border border-border transition-transform hover:scale-[1.02] text-left"
             >
-              <div className="w-10 h-10 rounded-md overflow-hidden bg-muted shrink-0">
-                {product.image_url && (
-                  <img
-                    src={product.image_url}
-                    alt={product.name}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
-                )}
-              </div>
-              <p className="text-[10px] font-semibold text-foreground truncate w-full text-center leading-tight">
-                {product.name}
-              </p>
-              <div className="flex items-center gap-0.5">
-                <RotatingBBCoin size="xs" />
-                <p className="text-[10px] text-orange-500 font-bold leading-none">
-                  {product.price_bb} BB
+              {product.image_url && (
+                <img
+                  src={product.image_url}
+                  alt={product.name}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  loading="lazy"
+                />
+              )}
+              <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 via-black/60 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-1.5 z-10">
+                <p className="text-[10px] font-semibold text-white truncate leading-tight drop-shadow">
+                  {product.name}
                 </p>
+                <div className="flex items-center gap-0.5 mt-0.5">
+                  <RotatingBBCoin size="xs" />
+                  <p className="text-[10px] text-orange-500 font-bold leading-none drop-shadow">
+                    {product.price_bb} BB
+                  </p>
+                </div>
               </div>
             </button>
-          ))}
+
         </div>
         <div className="flex items-center justify-center gap-1.5 mt-1">
           <ShoppingBag className="h-3 w-3 text-orange-500" />
