@@ -1784,38 +1784,50 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          facebook_handle: string | null
           id: string
+          instagram_handle: string | null
           no_show_count: number
           total_appointments: number
           total_votes_cast: number | null
+          twitter_handle: string | null
           updated_at: string
           user_id: string
           username: string
           voting_power: number | null
+          youtube_handle: string | null
         }
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          facebook_handle?: string | null
           id?: string
+          instagram_handle?: string | null
           no_show_count?: number
           total_appointments?: number
           total_votes_cast?: number | null
+          twitter_handle?: string | null
           updated_at?: string
           user_id: string
           username: string
           voting_power?: number | null
+          youtube_handle?: string | null
         }
         Update: {
           avatar_url?: string | null
           created_at?: string
+          facebook_handle?: string | null
           id?: string
+          instagram_handle?: string | null
           no_show_count?: number
           total_appointments?: number
           total_votes_cast?: number | null
+          twitter_handle?: string | null
           updated_at?: string
           user_id?: string
           username?: string
           voting_power?: number | null
+          youtube_handle?: string | null
         }
         Relationships: [
           {
@@ -3637,6 +3649,7 @@ export type Database = {
           barber_bucks: number | null
           bio: string | null
           country_code: string | null
+          country_locked_at: string | null
           created_at: string
           creator_level: string | null
           display_name: string | null
@@ -3646,6 +3659,7 @@ export type Database = {
           is_banned: boolean
           is_creator: boolean | null
           is_verified_by_competition: boolean | null
+          phone_number: string | null
           profile_id: string | null
           referral_code: string | null
           referred_by: string | null
@@ -3664,6 +3678,7 @@ export type Database = {
           barber_bucks?: number | null
           bio?: string | null
           country_code?: string | null
+          country_locked_at?: string | null
           created_at?: string
           creator_level?: string | null
           display_name?: string | null
@@ -3673,6 +3688,7 @@ export type Database = {
           is_banned?: boolean
           is_creator?: boolean | null
           is_verified_by_competition?: boolean | null
+          phone_number?: string | null
           profile_id?: string | null
           referral_code?: string | null
           referred_by?: string | null
@@ -3691,6 +3707,7 @@ export type Database = {
           barber_bucks?: number | null
           bio?: string | null
           country_code?: string | null
+          country_locked_at?: string | null
           created_at?: string
           creator_level?: string | null
           display_name?: string | null
@@ -3700,6 +3717,7 @@ export type Database = {
           is_banned?: boolean
           is_creator?: boolean | null
           is_verified_by_competition?: boolean | null
+          phone_number?: string | null
           profile_id?: string | null
           referral_code?: string | null
           referred_by?: string | null
