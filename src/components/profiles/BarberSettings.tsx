@@ -301,6 +301,26 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
     );
   };
 
+  const handleGeocodeAddress = async () => {
+    const parts = [barberForm.shop_address, barberForm.shop_city, barberForm.shop_state, barberForm.shop_postal_code, barberForm.country_code]
+      .filter(Boolean).join(', ');
+    if (!parts.trim()) { toast.error('Enter at least a city before locating'); return; }
+    setGeocoding(true);
+    try {
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) { toast.error('Google Maps API key not configured'); return; }
+      const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(parts)}&key=${apiKey}`);
+      const data = await res.json();
+      if (data.status === 'OK' && data.results?.length > 0) {
+        const r = data.results[0];
+        setBarberForm(prev => ({ ...prev, latitude: r.geometry.location.lat, longitude: r.geometry.location.lng, location: prev.location || r.formatted_address }));
+        toast.success('Address located — fans will now see your distance.');
+      } else { toast.error('Could not locate that address'); }
+    } catch { toast.error('Geocoding failed'); }
+    finally { setGeocoding(false); }
+  };
+
+
   if (profileLoading || barberLoading) {
     return (
       <div className="flex items-center justify-center py-12">
