@@ -355,22 +355,7 @@ const Profile = () => {
             )}
             {profile?.bio && <p className="text-xs text-muted-foreground text-center mt-0.5 max-w-[260px]">{profile.bio}</p>}
 
-            {/* Social icons */}
-            {socialLinks.length > 0 && (
-              <div className="flex items-center gap-3 mt-1.5">
-                {socialLinks.map(({ key, url, icon: Icon, hoverClass }) => (
-                  <a
-                    key={key}
-                    href={url!.startsWith('http') ? url! : `https://${url}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`text-muted-foreground ${hoverClass} transition-colors`}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </a>
-                ))}
-              </div>
-            )}
+            {/* Social icons now orbit the avatar */}
           </div>
 
           {/* ===== STATS ROW ===== */}
