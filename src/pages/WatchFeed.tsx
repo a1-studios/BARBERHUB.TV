@@ -632,12 +632,12 @@ const WatchFeed = () => {
       </button>
 
       <div ref={containerRef} className="flex-1 overflow-y-scroll snap-y snap-mandatory scrollbar-hide">
-        {feed.length === 0 && (
+        {pinnedFeed.length === 0 && (
           <div className="flex items-center justify-center" style={{ height: '100dvh' }}>
             <p className="text-muted-foreground text-sm">No content yet — check back soon!</p>
           </div>
         )}
-        {feed.map((item, idx) => (
+        {pinnedFeed.map((item, idx) => (
           <div
             key={item.id}
             data-index={idx}
