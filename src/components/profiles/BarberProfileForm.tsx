@@ -75,7 +75,24 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
     if (!formData.country_code) {
       newErrors.country_code = 'Country/nationality is required for tournament matching';
     }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    if (!validate()) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    setLoading(true);
+    try {
       const profileData = {
+
         user_id: user.id,
         name: formData.name.trim(),
         specialty: formData.specialty || null,
