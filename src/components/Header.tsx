@@ -18,6 +18,8 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { NotificationPanel } from './NotificationPanel';
 import { AcceptChallengeModal } from './battles/AcceptChallengeModal';
 import { LiveActivityPill } from './battles/LiveActivityPill';
+import { DynamicHeaderTitle } from './header/DynamicHeaderTitle';
+import { HeaderPageContext } from './header/HeaderPageContext';
 
 interface QuickAction {
   id: string;
@@ -230,16 +232,8 @@ const Header = () => {
             )}
           </div>
 
-          {/* Centered Brand */}
-          <button
-            onClick={handleBrandClick}
-            className="absolute left-1/2 transform -translate-x-1/2 flex items-center gap-2 hover:opacity-80 transition-opacity"
-          >
-            <span className="text-xl sm:text-2xl font-bold">
-              <span className="text-white">BARBER</span>
-              <span className="text-primary">-HUB</span>
-            </span>
-          </button>
+          {/* Centered dynamic morphing title */}
+          <DynamicHeaderTitle />
 
           {/* Right Side - Profile Coin with notification badge */}
           <div className="flex items-center gap-2">
