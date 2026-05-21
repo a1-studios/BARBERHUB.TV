@@ -3,6 +3,7 @@ import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { authCallbackRedirect } from '@/lib/authRedirects';
 import { toast } from 'sonner';
+import { announce } from '@/lib/headerAnnouncements';
 
 interface AuthContextType {
   user: User | null;
@@ -102,7 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success('Welcome back!');
+      const name = (email.split('@')[0] || 'friend').toUpperCase();
+      announce({ first: 'WELCOME BACK', second: name });
     }
 
     return { error };

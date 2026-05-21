@@ -1,59 +1,81 @@
-# Wire the home "map" to real map data
+# Dynamic Morphing Header
 
-## What's wrong today
+Replace the static "BARBER-HUB" brand text in `src/components/Header.tsx` with a smart morphing title that reflects the current page, surfaces transient notifications inline, and shows a small page-context icon below the bar. Keep header height, padding, logo, and the BB coin dropdown exactly as they are today.
 
-The honeycomb circle on `/` is **not a map**. It's `SphereHolographicWrapper` + `SphereImageGrid` — a rotating 3D ball of barber avatars over an SVG hex texture, rendered by `GlobalLeagueDashboard`. The search bar above it (`BarberSearchAutocomplete`) only searches barber names, with no geocoding and no pin output, which is why the user sees `No barbers found for "Town of North Hempstead"`.
+## 1. Page title registry
 
-The real engine already exists and is healthy:
-- `BarberMapDirectory` (Mapbox GL, `light-v11`) with tiered pins, pulsing user marker, radius circle.
-- `find_barbers_nearby_scored` RPC + `useMapVisibilityWeights` scoring.
-- `BarberLocationSearch` (zip / GPS / city) that returns `{lat, lng, label}`.
+New file `src/config/pageTitles.ts` exporting a route → `{ first, second, icon }` map (icon = lucide component).
 
-It's currently only reachable behind the Map toggle inside `/barbers`.
+Examples:
+- `/` → `BARBER` / `HUB` (Scissors)
+- `/barbers` → `BARBER` / `DIRECTORY` (MapPin)
+- `/creator-hub` → `CREATOR` / `HUB` (Crown)
+- `/portal` → `BATTLE` / `PORTAL` (Zap)
+- `/watch` → `WATCH` / `FEED` (Play)
+- `/tournaments` → `TOURNAMENT` / `ARENA` (Trophy)
+- `/profile` → `MY` / `PROFILE` (User)
+- `/rankings` → `GLOBAL` / `RANKINGS` (BarChart)
+- `/vault` → `VAULT` / `OF HONOR` (Shield)
+- `/studio` → `CAMERA` / `STUDIO` (Camera)
+- `/admin*` → `ADMIN` / `CONTROL` (Shield)
+- `/sovereign-hq` → `SOVEREIGN` / `HQ` (Crown)
+- Dynamic patterns (`/barber/:userId`, `/battles/:id`, `/battle/:id/theater`, `/tournaments/:id`) resolved via small `matchTitle(pathname)` helper with regex fallbacks.
+- Unknown route → `BARBER` / `HUB` default.
 
-## Goal
+First word always white, second always Signature Orange (`text-primary`). Two-color rule lives in the renderer, not in the registry.
 
-The home screen's "globe" area becomes the real interactive map, fed by live barber coordinates and driven by the same search bar at the top.
+## 2. Header announcement bus
 
-## Changes
+New file `src/lib/headerAnnouncements.ts`:
 
-### 1. `src/components/GlobalLeagueDashboard.tsx`
-- Remove `SphereHolographicWrapper` + `SphereImageGrid` block (and the loading skeleton tied to it).
-- Drop the standalone `BarberSearchAutocomplete` import/usage.
-- Render `<BarberMapDirectory />` in the same vertical slot, wrapped so it visually sits in the same circular "hero" position (square container with rounded-2xl border, primary glow ring kept as a thin decorative frame so we don't lose the BARBER-HUB brand vibe — purely CSS, no sphere).
-- Keep `LiveBattleFeed` underneath unchanged.
+```ts
+type Announcement = { first: string; second: string; durationMs?: number };
+export function announce(a: Announcement): void;        // dispatch CustomEvent('header:announce')
+export function useHeaderAnnouncement(): Announcement | null; // hook with internal timer (default 3500ms)
+```
 
-### 2. `src/components/map/BarberMapDirectory.tsx`
-- Accept an optional `variant?: 'hero' | 'page'` prop.
-  - `hero` (used on `/`): hide the internal `BarberLocationSearch` (the page already has one) and the top-right "X nearby" pill stays; height becomes responsive (`h-[60vh] min-h-[420px]`) instead of fixed 500 px so it fits the mobile viewport without empty scroll.
-  - `page` (default, used in `/barbers` map toggle): unchanged behavior.
-- Expose an imperative entry point via a new lightweight hook `useHomeMapLocation` (Zustand or simple module-level event emitter) so the page-level search bar can push `{lat, lng, label}` into the map without prop drilling.
-- On mount in `hero` mode, auto-call `navigator.geolocation` once (with graceful fallback to a default center) so the map lands on the user's area with pins already visible — no empty hex feeling.
+Single active announcement at a time; new announcements replace the current one and reset the timer. When the timer elapses, hook returns `null` and the title morphs back to the page title.
 
-### 3. New `src/components/home/HomeBarberSearchBar.tsx`
-- Replaces `BarberSearchAutocomplete` on the home screen.
-- Composes `BarberLocationSearch` (real geocoder) + a name autocomplete dropdown side-by-side in a single pill:
-  - Left icon: search.
-  - Input: debounced; if it parses as a US zip or matches "City, ST" it routes through the location geocoder; otherwise it shows the name suggestions (reusing the existing autocomplete query from `BarberSearchAutocomplete`).
-  - Right action: pin button → `navigator.geolocation` for "Near me".
-- On location resolved → push `{lat, lng, label}` into `useHomeMapLocation`, which `BarberMapDirectory` subscribes to (triggers `searchNearby` and `flyTo`).
-- On name picked → navigate to that barber's profile (current autocomplete behavior).
+## 3. Header renderer changes (`src/components/Header.tsx`)
 
-### 4. Keep `/barbers` untouched
-- `BarbersDirectory` continues to mount `BarberMapDirectory` in `variant="page"` so nothing regresses there.
+- Replace the centered brand `<button>` with a new `<DynamicHeaderTitle />` component (in the same file or `src/components/header/DynamicHeaderTitle.tsx`).
+- `DynamicHeaderTitle` reads `useLocation().pathname`, resolves via `matchTitle`, and overlays `useHeaderAnnouncement()` when active.
+- Uses `framer-motion` `AnimatePresence` with `mode="wait"`, key = `announcement ?? pathname`, fade + subtle y-translate (200ms). No layout shift.
+- Auto-fit font size: container has fixed height matching current brand (`text-xl sm:text-2xl`). Use a `useFitText` ref hook that measures `scrollWidth` vs `clientWidth` and scales `font-size` down (CSS `transform: scale()` on the inner span) until it fits, clamped to a min of 12px. Re-run on resize and content change.
+- Clicking the title still navigates to `/` (preserve current behavior).
+
+Sub-header icon row:
+- Render a tiny strip directly under the header `<header>` element (inside the same fixed wrapper) showing the page icon + lowercase page slug (e.g. `· barber directory`). Height ~20px, `text-[10px] text-muted-foreground`, centered, fades in/out with the title. Hidden when an announcement is active so it doesn't compete.
+- Pure visual; does not affect the existing `top-[88px] sm:top-[104px]` offset used by `QuickSocialSignIn` — keep that offset unchanged. The icon row sits inside the header pill so total visual height grows by ~20px but the social strip's fixed offset stays as-is (verify visually; if it clips, bump the offset by the same delta in one place).
+
+## 4. Wiring announcements (replace noisy toasts)
+
+Welcome-back announcement:
+- In `src/hooks/useAuth.tsx` (or wherever the current "Welcome back" toast fires), replace the `toast(...)` call with `announce({ first: 'WELCOME BACK', second: displayName?.toUpperCase() ?? 'FRIEND' })`. Remove the toast.
+
+Remove redundant action-confirmation toasts (the user already saw the action succeed):
+- `src/hooks/useLikes.tsx` — drop the `toast.success("Liked!" / "Like removed")` in `toggleLike.onSuccess`. Keep the error toast.
+- Follow toast: search for `toast.success('Followed'` / `'Following'` / `'Unfollowed'` in `src/hooks/` and `src/components/` and remove those success calls; keep error toasts.
+- Leave informational/critical toasts (payments, errors, challenge received, BB awarded, etc.) alone.
+
+Notification system (`useNotifications`) is unchanged — incoming `challenge_received`, payouts, etc. still toast as today. Only the chatty success confirmations and the welcome toast move into the header.
+
+## 5. Files touched
+
+Created:
+- `src/config/pageTitles.ts`
+- `src/lib/headerAnnouncements.ts`
+- `src/components/header/DynamicHeaderTitle.tsx`
+- `src/hooks/useFitText.ts`
+
+Edited:
+- `src/components/Header.tsx` (swap brand text, mount title + sub-icon row)
+- `src/hooks/useAuth.tsx` (welcome toast → announce)
+- `src/hooks/useLikes.tsx` (drop success toasts)
+- 1–2 follow hooks/components (drop follow success toasts)
 
 ## Out of scope
-- Sphere component itself is not deleted (other surfaces may still use it; we just stop using it on home).
-- No DB / RPC / RLS changes — `find_barbers_nearby_scored` and `public_barber_profiles` already return what we need.
-- No styling overhaul of `/barbers`.
 
-## Files touched
-- `src/components/GlobalLeagueDashboard.tsx` (edit)
-- `src/components/map/BarberMapDirectory.tsx` (add `variant` + subscribe to home location store)
-- `src/components/home/HomeBarberSearchBar.tsx` (new)
-- `src/hooks/useHomeMapLocation.ts` (new, small store)
-
-## Acceptance
-- Loading `/` on mobile shows a real Mapbox map (not the hex sphere) in the hero slot, with the user's region centered and barber pins drawn from `find_barbers_nearby_scored`.
-- Typing "Town of North Hempstead" in the home search bar geocodes and drops a radius circle + pins on the home map. No more "No barbers found" dead-end.
-- `/barbers` map view still works exactly as it does today.
+- No changes to logo, BB coin, notification panel, or QuickSocialSignIn strip.
+- No new routes, DB, or edge functions.
+- No changes to the existing real `notifications` table flow.
