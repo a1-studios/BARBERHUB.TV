@@ -371,6 +371,20 @@ export default function CameraStudio() {
       if (!insertedId) throw new Error('Save failed: no record id returned');
       console.info('[CameraStudio] inserted', insertedTable, insertedId);
 
+      // Verification: read the row back. If RLS or a cascade nuked it
+      // between insert and now, surface a clear error instead of a fake success.
+      const { data: verifyRow, error: verifyErr } = await supabase
+        .from(insertedTable)
+        .select('id')
+        .eq('id', insertedId)
+        .maybeSingle();
+      if (verifyErr) console.warn('[CameraStudio] verify error:', verifyErr.message);
+      if (!verifyRow) {
+        throw new Error(
+          'Saved row vanished — your barber profile may have been reset. Re-pick your role and try again.'
+        );
+      }
+
       // Fire-and-forget CF Stream ingest (playback still works via R2 if this fails)
       if (result.publish) {
         supabase.functions.invoke('upload-to-cloudflare-stream', {
