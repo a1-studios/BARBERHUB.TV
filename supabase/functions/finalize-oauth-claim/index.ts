@@ -59,17 +59,26 @@ Deno.serve(async (req) => {
     // 1. Update country_code on profiles up front (sync function preserves it)
     await admin.from('profiles').update({ country_code }).eq('user_id', user.id);
 
-    // 2. Enforce binary role: ensures profiles.user_type, user_roles, and the
-    //    correct specialized profile row (barber_profiles or client_profiles)
-    //    are all consistent — and removes the opposite specialized row.
-    const { error: syncErr } = await admin.rpc('sync_user_binary_role', {
-      p_user_id: user.id,
-      p_role: role,
-    });
-    if (syncErr) {
-      return new Response(JSON.stringify({ error: syncErr.message }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    // 2. Enforce binary role — but skip the sync RPC if the user is already
+    //    locked into this exact role. Roles are permanent post-signup, so
+    //    re-firing the RPC on a returning user is a no-op at best and a
+    //    silent role flip at worst (which used to wipe their barber_profile).
+    const { data: currentProfile } = await admin
+      .from('profiles')
+      .select('user_type')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (currentProfile?.user_type !== role) {
+      const { error: syncErr } = await admin.rpc('sync_user_binary_role', {
+        p_user_id: user.id,
+        p_role: role,
       });
+      if (syncErr) {
+        return new Response(JSON.stringify({ error: syncErr.message }), {
+          status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
     }
 
     // 3. Link the marketing lead and credit BB if not already claimed
