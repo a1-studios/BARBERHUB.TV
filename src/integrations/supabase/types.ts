@@ -160,11 +160,13 @@ export type Database = {
       affiliate_products: {
         Row: {
           created_at: string
+          description: string | null
           display_order: number
           external_link: string
           id: string
           image_url: string
           is_active: boolean
+          merchant_label: string | null
           price_cents: number
           product_type: string
           title: string
@@ -172,11 +174,13 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          description?: string | null
           display_order?: number
           external_link: string
           id?: string
           image_url: string
           is_active?: boolean
+          merchant_label?: string | null
           price_cents: number
           product_type?: string
           title: string
@@ -184,11 +188,13 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          description?: string | null
           display_order?: number
           external_link?: string
           id?: string
           image_url?: string
           is_active?: boolean
+          merchant_label?: string | null
           price_cents?: number
           product_type?: string
           title?: string
