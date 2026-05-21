@@ -510,6 +510,42 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
                   </div>
                 </div>
 
+                {/* Shop address — drives "miles away" for fans */}
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    <Label className="text-sm font-semibold m-0">Shop Address</Label>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded border ${barberForm.latitude && barberForm.longitude ? 'border-emerald-500/40 text-emerald-400' : 'border-amber-500/40 text-amber-400'}`}>
+                      {barberForm.latitude && barberForm.longitude ? 'Located' : 'Not located'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground -mt-1">
+                    Fans see how many miles away you are. Exact street address is hidden unless you allow it.
+                  </p>
+                  <Input placeholder="Street address" value={barberForm.shop_address}
+                    onChange={(e) => setBarberForm(p => ({ ...p, shop_address: e.target.value }))} />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input placeholder="City" value={barberForm.shop_city}
+                      onChange={(e) => setBarberForm(p => ({ ...p, shop_city: e.target.value }))} />
+                    <Input placeholder="State / Region" value={barberForm.shop_state}
+                      onChange={(e) => setBarberForm(p => ({ ...p, shop_state: e.target.value }))} />
+                  </div>
+                  <Input placeholder="Postal code" value={barberForm.shop_postal_code}
+                    onChange={(e) => setBarberForm(p => ({ ...p, shop_postal_code: e.target.value }))} />
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                      <input type="checkbox" checked={barberForm.address_visibility === 'exact'}
+                        onChange={(e) => setBarberForm(p => ({ ...p, address_visibility: e.target.checked ? 'exact' : 'approximate' }))} />
+                      Show exact street address publicly
+                    </label>
+                    <Button type="button" variant="outline" size="sm" onClick={handleGeocodeAddress} disabled={geocoding}>
+                      {geocoding ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : <MapPin className="h-3 w-3 mr-1.5" />}
+                      Locate
+                    </Button>
+                  </div>
+                </div>
+
+
                 {/* Nationality — silent disabled */}
                 <div>
                   <Label>Nationality</Label>
