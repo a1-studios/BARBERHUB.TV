@@ -19,6 +19,9 @@ import { RecordingReviewSheet, type ReviewResult } from '@/components/camera/Rec
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { uploadFileMultipart } from '@/lib/multipartUpload';
+import { captureVideoThumbnail } from '@/lib/videoThumbnail';
+import { pollStreamReady, type StreamReadyTable } from '@/lib/streamReadiness';
 
 type StudioMode = 'idle' | 'portfolio' | 'challenge' | 'course' | 'tips' | 'livestream';
 
