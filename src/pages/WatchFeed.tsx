@@ -98,6 +98,7 @@ const WatchFeed = () => {
         media_url: toCdnUrl(b.featured_video_id!),
         barber_name: b.display_name || b.barber_name || "Barber",
         creator_avatar: b.avatar_url,
+        thumbnail_url: toCdnUrl((b as any).featured_video_thumbnail_url ?? null),
         specialty: specMap[b.barber_id] ?? null,
         barber_user_id: b.user_id,
         cloudflare_stream_uid: null,
@@ -163,7 +164,7 @@ const WatchFeed = () => {
       }
 
       return (data || [])
-        .filter((c: any) => c.media_url?.startsWith("http"))
+      .filter((c: any) => c.media_url?.startsWith("http") && (c.cloudflare_stream_uid || c.stream_status === 'ready' || !c.stream_status))
         .map((c: any) => ({
           type: "video" as const,
           id: `creation-${c.id}`,
@@ -193,7 +194,7 @@ const WatchFeed = () => {
         .limit(30);
       if (error) throw error;
       return (data || [])
-        .filter((s: any) => s.media_url?.startsWith("http"))
+      .filter((s: any) => s.media_url?.startsWith("http") && (s.cloudflare_stream_uid || s.stream_status === 'ready' || !s.stream_status))
         .map((s: any) => ({
           type: "video" as const,
           id: `submission-${s.id}`,
