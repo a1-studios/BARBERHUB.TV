@@ -113,7 +113,7 @@ const GearControlPanel = () => {
     if (!form.name.trim()) { toast.error('Name required'); return; }
     if (!form.price_bb || form.price_bb < 0) { toast.error('Price required'); return; }
     setSaving(true);
-    const { error } = await supabase.functions.invoke('admin-upsert-gear', {
+    const { data, error } = await supabase.functions.invoke('admin-upsert-gear', {
       body: {
         action: 'upsert',
         id: editingId,
@@ -132,7 +132,8 @@ const GearControlPanel = () => {
       },
     });
     setSaving(false);
-    if (error) { toast.error(error.message || 'Save failed'); return; }
+    const errMsg = (data as any)?.error || error?.message;
+    if (errMsg) { toast.error(errMsg); return; }
     toast.success(editingId ? 'Gear updated' : 'Gear added');
     resetForm();
     fetchItems();
