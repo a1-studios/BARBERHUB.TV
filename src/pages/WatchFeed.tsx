@@ -64,6 +64,8 @@ const WatchFeed = () => {
   const [isMuted, setIsMuted] = useState(true);
   const [donationTarget, setDonationTarget] = useState<{ userId: string; name: string } | null>(null);
   const [commentFocusTrigger, setCommentFocusTrigger] = useState(0);
+  const [endedIndex, setEndedIndex] = useState<number | null>(null);
+  const [replayNonce, setReplayNonce] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const viewedContentIds = useRef<Set<string>>(new Set());
 
