@@ -222,7 +222,14 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
         youtube_handle: data.youtube || null,
         require_deposit: data.require_deposit,
         default_no_show_fee_bb: data.default_no_show_fee_bb,
-        booking_message: data.booking_message || null
+        booking_message: data.booking_message || null,
+        shop_address: data.shop_address || null,
+        shop_city: data.shop_city || null,
+        shop_state: data.shop_state || null,
+        shop_postal_code: data.shop_postal_code || null,
+        address_visibility: data.address_visibility,
+        latitude: data.latitude,
+        longitude: data.longitude,
       };
 
       const { error } = await supabase
