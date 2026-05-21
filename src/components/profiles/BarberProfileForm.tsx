@@ -84,7 +84,14 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
         years_experience: formData.years_experience ? parseInt(formData.years_experience) : null,
         portfolio_url: formData.portfolio_url || null,
         phone_number: formData.phone_number.trim(),
-        country_code: formData.country_code
+        country_code: formData.country_code,
+        shop_address: formData.shop_address || null,
+        shop_city: formData.shop_city || null,
+        shop_state: formData.shop_state || null,
+        shop_postal_code: formData.shop_postal_code || null,
+        address_visibility: formData.address_visibility,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
       };
 
       const { error } = await supabase
