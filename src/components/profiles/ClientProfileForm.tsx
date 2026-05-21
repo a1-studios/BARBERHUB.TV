@@ -163,10 +163,7 @@ export function ClientProfileForm({ onProfileCreated, existingProfile }: ClientP
             {errors.country_code && <p className="text-xs text-destructive mt-1">{errors.country_code}</p>}
             <p className="text-[11px] text-muted-foreground mt-1">Your nationality is permanent once set — contact support to change it.</p>
           </div>
-              placeholder="https://your-avatar-image.com"
-              type="url"
-            />
-          </div>
+
 
           <Button type="submit" disabled={loading} className="w-full">
             {loading ? 'Saving...' : (existingProfile ? 'Update Profile' : 'Create Profile')}
