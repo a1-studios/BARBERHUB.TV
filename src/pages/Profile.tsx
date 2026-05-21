@@ -288,7 +288,8 @@ const Profile = () => {
           <ProfileCompletionBanner profile={profile} />
 
           {/* ===== HERO: 3-col grid — specialties | avatar | stats ===== */}
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 pt-2 pb-1">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 pt-2 pb-0">
+
             {/* LEFT — Specialties stacked */}
             <div className="flex flex-col items-start gap-1.5 min-w-0">
               {specialty ? parseSpecialties(specialty).map(id => {
@@ -306,7 +307,8 @@ const Profile = () => {
             </div>
 
             {/* CENTER — Avatar + orbit */}
-            <SocialOrbit radius={56} iconSize={22} links={socialLinksObj}>
+            <SocialOrbit radius={62} iconSize={24} links={socialLinksObj}>
+
               {isBarber ? (
                 <AvatarCrest
                   tier={subscriptionTier}
@@ -327,13 +329,15 @@ const Profile = () => {
                     </AvatarFallback>
                   </Avatar>
                 </AvatarCrest>
+
               ) : (
-                <Avatar className="h-20 w-20 border-2 border-background shadow-lg">
+                <Avatar className="h-[88px] w-[88px] border-2 border-background shadow-lg">
                   <AvatarImage src={profile?.avatar_url || undefined} />
                   <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
                     {displayName.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
+
               )}
             </SocialOrbit>
 
@@ -369,8 +373,8 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* Name + meta — centered under hero */}
-          <div className="flex flex-col items-center text-center -mt-1">
+          <div className="flex flex-col items-center text-center -mt-3">
+
             <h1 className="text-lg font-bold text-foreground flex items-center justify-center gap-1">
               {displayName}
               <DisplayNameEditor
@@ -477,11 +481,6 @@ const Profile = () => {
             {/* ACCOUNT section */}
             <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-2 pb-1">Account</p>
 
-            <NotificationToggle />
-            <InstallAppButton />
-
-            {/* ACCOUNT section */}
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-4 pb-1">Account</p>
             <div className="bg-card/80 backdrop-blur-sm rounded-xl border border-border/30 overflow-hidden divide-y divide-border/20">
               {/* Edit Profile / Settings — unified for barbers */}
               {isBarber ? (
