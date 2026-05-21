@@ -88,6 +88,10 @@ const Profile = () => {
   const [reviewAppointmentId, setReviewAppointmentId] = useState('');
   const [revieweeId, setRevieweeId] = useState('');
   const [isBarberReviewing, setIsBarberReviewing] = useState(false);
+  const [socialDialogOpen, setSocialDialogOpen] = useState(false);
+  const [socialFocus, setSocialFocus] = useState<'instagram' | 'facebook' | 'twitter' | 'youtube' | undefined>();
+  const avatarFileRef = useRef<HTMLInputElement>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   const { barberBucks, showAddFundsModal, setShowAddFundsModal } = useBarberBucks();
 
