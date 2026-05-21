@@ -139,11 +139,7 @@ export function ClientProfileForm({ onProfileCreated, existingProfile }: ClientP
           </div>
 
           <div>
-            <Label className="flex items-center gap-2">
-              <Globe className="h-4 w-4" />
-              Country *
-            </Label>
-          <div>
+
             <Label className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
               Country *
