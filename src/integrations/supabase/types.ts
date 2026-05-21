@@ -2126,22 +2126,7 @@ export type Database = {
           updated_at?: string
           views?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "creator_content_creator_id_fkey"
-            columns: ["creator_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "creator_content_creator_id_fkey"
-            columns: ["creator_id"]
-            isOneToOne: false
-            referencedRelation: "public_user_profiles"
-            referencedColumns: ["user_id"]
-          },
-        ]
+        Relationships: []
       }
       creator_follows: {
         Row: {
