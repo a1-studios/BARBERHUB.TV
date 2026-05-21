@@ -1,52 +1,16 @@
-# Plan
+## Make gear product images fill the card
 
-## What I’ll build
+Update `src/components/ProductShelf.tsx` so each gear tile uses its image as a full-bleed background, with the title and BB price overlaid on top.
 
-1. Fix the Official Gear save flow so Sovereign HQ can successfully save gear after uploading a picture.
-2. Build the missing affiliate-link management structure in Sovereign HQ so you can properly add, edit, activate/deactivate, and remove affiliate items.
+### Changes (single file)
 
-## Implementation steps
+`src/components/ProductShelf.tsx` — restructure the `<button>` for each product:
 
-### 1) Repair gear updates with uploaded images
-- Update the `admin-upsert-gear` access logic so Sovereign users are treated the same as admins for gear writes.
-- Update the `products` table access rules so Sovereign HQ can create and edit official gear records, not just users with the `admin` role.
-- Verify the save path for uploaded `gear-media` URLs so image upload + product save works end-to-end.
-- Improve the frontend error messaging in the gear panel so function failures show the actual reason instead of a generic toast.
+- Make the button `relative aspect-square` (square tile), remove the inner 40×40 thumbnail box and the flex column layout.
+- Render the `image_url` as an absolutely-positioned `<img>` filling the button (`absolute inset-0 w-full h-full object-cover`).
+- Add a bottom gradient overlay (`absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 via-black/50 to-transparent`) so text stays legible over any photo.
+- Stack name + price in a `relative z-10` container pinned to the bottom (`absolute bottom-0 left-0 right-0 p-1.5`), title in white, price row (BB coin + amount) directly under it in neon orange.
+- Fallback when `image_url` is missing: keep current `bg-muted` background so the tile still shows name/price cleanly.
+- Keep the existing 3-column grid, tap handler, "Official Gear" footer label, and `GearPurchaseModal` wiring untouched.
 
-### 2) Add a real affiliate management structure
-- Extend the affiliate data model so each affiliate item can store the fields needed to manage links cleanly from Sovereign HQ, such as:
-  - description
-  - destination link
-  - optional merchant/source label
-  - active state
-  - display order
-  - image/media reference
-- Keep access locked to Sovereign HQ for create/edit/remove actions, while active affiliate items stay publicly readable where needed.
-- If needed, add storage support for affiliate media so you can upload images instead of relying only on pasted URLs.
-
-### 3) Upgrade the Sovereign HQ affiliate panel
-- Replace the current barebones affiliate form with a proper CRUD panel similar to the gear workflow.
-- Add:
-  - create
-  - edit
-  - delete
-  - active toggle
-  - image upload or URL entry
-  - order control
-  - clear validation for missing/invalid fields
-- Route privileged affiliate writes through a protected admin path instead of relying on fragile direct table mutations from the browser.
-
-### 4) Validate the admin flows
-- Test gear image upload + save for existing items.
-- Test affiliate add/edit/delete/toggle using the new structure.
-- Check that public reads still only show active items.
-
-## Technical details
-- **Database:** add/adjust RLS so `sovereign` can manage `products` and affiliate records safely.
-- **Edge functions:** likely add an `admin-upsert-affiliate` function and update `admin-upsert-gear` authorization.
-- **Frontend:** update `GearControlPanel` and `AffiliateControlPanel` to use the protected admin flows and better validation/errors.
-- **Storage:** reuse or add a public media bucket with Sovereign-only write permissions for affiliate images if upload support is included.
-
-## Expected outcome
-- Uploading a gear picture will no longer block saving the gear item.
-- Sovereign HQ will have a complete affiliate-link management setup instead of the current minimal form.
+No backend, schema, or other components touched.
