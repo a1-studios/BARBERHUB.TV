@@ -29,6 +29,10 @@ interface SmartVideoPlayerProps {
   showCenterPlayButton?: boolean;
   /** Tap on the video surface toggles play/pause (single click play, single click pause). */
   tapToToggle?: boolean;
+  /** True manual mode: never auto-attempt playback. Always show centered Play when paused. */
+  manualPlayback?: boolean;
+  /** Imperative replay trigger: bumping this number resets to 0 and plays. */
+  replayTrigger?: number;
 }
 
 const CF_STREAM_CUSTOMER =
@@ -64,6 +68,8 @@ export function SmartVideoPlayer({
   preloadMode = 'none',
   showCenterPlayButton = false,
   tapToToggle = false,
+  manualPlayback = false,
+  replayTrigger,
 }: SmartVideoPlayerProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -260,10 +266,15 @@ export function SmartVideoPlayer({
         setAutoplayBlocked(true);
       }
     };
+    if (manualPlayback) {
+      // Don't auto-play; user must tap the Play button. Still honor pause when shouldPlay flips off.
+      if (!shouldPlay) v.pause();
+      return () => { cancelled = true; if (timeoutId) window.clearTimeout(timeoutId); };
+    }
     if (shouldPlay && !ended) tryPlay();
     else v.pause();
     return () => { cancelled = true; if (timeoutId) window.clearTimeout(timeoutId); };
-  }, [shouldPlay, ended, isHls, canFallbackToDirect, activateDirectFallback]);
+  }, [shouldPlay, ended, isHls, canFallbackToDirect, activateDirectFallback, manualPlayback]);
 
   const handleReplay = useCallback(() => {
     setEnded(false);
@@ -271,6 +282,14 @@ export function SmartVideoPlayer({
     const v = videoRef.current;
     if (v) { v.currentTime = 0; v.play().then(() => setAutoplayBlocked(false)).catch(() => setAutoplayBlocked(true)); }
   }, []);
+
+  // Imperative replay via prop nonce change
+  useEffect(() => {
+    if (replayTrigger === undefined) return;
+    handleReplay();
+  }, [replayTrigger, handleReplay]);
+
+
 
   const handleManualPlay = useCallback(() => {
     const v = videoRef.current;
@@ -348,7 +367,7 @@ export function SmartVideoPlayer({
       )}
 
       {/* Centered play button — shown when autoplay is blocked, or when paused on Watch feed. */}
-      {showCenterPlayButton && !ended && (autoplayBlocked || (shouldPlay && isPaused && !loading)) && (
+      {showCenterPlayButton && !ended && (autoplayBlocked || (manualPlayback && isPaused) || (shouldPlay && isPaused && !loading)) && (
         <button
           onClick={handleManualPlay}
           className="absolute inset-0 flex items-center justify-center bg-black/30 z-10"

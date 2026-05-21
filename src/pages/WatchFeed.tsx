@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSponsorAds } from "@/hooks/useSponsorAds";
-import { ArrowLeft, Play, GraduationCap, Flame, Volume2, VolumeX, Heart, Share2, User, MessageCircle } from "lucide-react";
+import { ArrowLeft, Play, GraduationCap, Flame, Volume2, VolumeX, Heart, Share2, User, MessageCircle, RotateCcw } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
@@ -64,6 +64,8 @@ const WatchFeed = () => {
   const [isMuted, setIsMuted] = useState(true);
   const [donationTarget, setDonationTarget] = useState<{ userId: string; name: string } | null>(null);
   const [commentFocusTrigger, setCommentFocusTrigger] = useState(0);
+  const [endedIndex, setEndedIndex] = useState<number | null>(null);
+  const [replayNonce, setReplayNonce] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const viewedContentIds = useRef<Set<string>>(new Set());
 
@@ -405,6 +407,7 @@ const WatchFeed = () => {
             const idx = Number(entry.target.getAttribute("data-index"));
             if (!isNaN(idx)) {
               setActiveIndex(idx);
+              setEndedIndex((cur) => (cur !== null && cur !== idx ? null : cur));
               const item = pinnedFeed[idx];
               if (item?.content_id && !viewedContentIds.current.has(item.content_id)) {
                 viewedContentIds.current.add(item.content_id);
@@ -443,10 +446,15 @@ const WatchFeed = () => {
     );
   };
 
-  const handleVideoEnded = useCallback((_idx: number) => {
-    // Do not auto-scroll. The centered Replay control handles replay.
-    // Users can swipe to the next item normally.
+  const handleVideoEnded = useCallback((idx: number) => {
+    setEndedIndex(idx);
   }, []);
+
+  const handleReplayActive = useCallback(() => {
+    setEndedIndex(null);
+    setReplayNonce((n) => n + 1);
+  }, []);
+
 
   const handleShare = async (item: FeedItem) => {
     const url = window.location.origin + "/watch";
@@ -568,10 +576,20 @@ const WatchFeed = () => {
               onEnded={() => handleVideoEnded(idx)}
               overlayPayload={item.overlay_payload}
               preloadMode={isActive ? 'auto' : isPrefetch ? 'auto' : 'none'}
-              enableReplay={isActive}
+              enableReplay={false}
               showCenterPlayButton={isActive}
               tapToToggle={isActive}
+              replayTrigger={isActive ? replayNonce : undefined}
             />
+            {isActive && endedIndex === idx && (
+              <button
+                onClick={handleReplayActive}
+                aria-label="Replay"
+                className="absolute bottom-20 left-3 z-20 h-9 w-9 rounded-full bg-black/55 backdrop-blur-sm border border-white/20 flex items-center justify-center text-primary shadow-lg active:scale-95 transition-transform"
+              >
+                <RotateCcw className="h-4 w-4" />
+              </button>
+            )}
           </div>
         ) : (
           // Lightweight poster while off-screen — saves bandwidth + CPU

@@ -319,10 +319,8 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
                 streamUid={playingVideo.uid}
                 fallbackUrl={playingVideo.url}
                 poster={playingVideo.poster}
-                autoPlayWhenVisible
-                forceActive
+                manualPlayback
                 controls
-                loop
                 muted={false}
                 showCenterPlayButton
                 tapToToggle
