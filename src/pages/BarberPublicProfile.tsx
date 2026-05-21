@@ -466,25 +466,37 @@ export default function BarberPublicProfile() {
           <div className="absolute inset-0 bg-gradient-to-br from-background/90 via-background/80 to-primary/20" />
           <CardContent className="relative p-8 z-10">
             <div className="flex flex-col md:flex-row gap-6 items-center">
-              <AvatarCrest
-                tier={subscriptionData?.active_subscription_tier}
-                size="lg"
-                interactive={isOwner}
-                showM4M={true}
-                m4mCertified={subscriptionData?.m4m_certified ?? false}
-                m4mPaid={subscriptionData?.m4m_paid ?? false}
-                m4mLivesTouched={subscriptionData?.m4m_lives_touched ?? 0}
-                barberName={displayName || 'Barber'}
-                barberUserId={userId!}
-                isOwnProfile={isOwner}
+              <SocialOrbit
+                size={128}
+                gap={14}
+                iconSize={28}
+                links={{
+                  instagram: (barberData as any).instagram_handle,
+                  facebook: (barberData as any).facebook_handle,
+                  twitter: (barberData as any).twitter_handle,
+                  youtube: (barberData as any).youtube_handle,
+                }}
               >
-                <Avatar className="w-full h-full">
-                  <AvatarImage src={barberData.avatar_url || undefined} />
-                  <AvatarFallback className="bg-primary/20 text-primary text-4xl font-bold">
-                    {(displayName || 'B').charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              </AvatarCrest>
+                <AvatarCrest
+                  tier={subscriptionData?.active_subscription_tier}
+                  size="lg"
+                  interactive={isOwner}
+                  showM4M={true}
+                  m4mCertified={subscriptionData?.m4m_certified ?? false}
+                  m4mPaid={subscriptionData?.m4m_paid ?? false}
+                  m4mLivesTouched={subscriptionData?.m4m_lives_touched ?? 0}
+                  barberName={displayName || 'Barber'}
+                  barberUserId={userId!}
+                  isOwnProfile={isOwner}
+                >
+                  <Avatar className="w-full h-full">
+                    <AvatarImage src={barberData.avatar_url || undefined} />
+                    <AvatarFallback className="bg-primary/20 text-primary text-4xl font-bold">
+                      {(displayName || 'B').charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </AvatarCrest>
+              </SocialOrbit>
 
               <div className="flex-1 space-y-4">
                 <div>
@@ -515,33 +527,7 @@ export default function BarberPublicProfile() {
                     </div>
                   )}
 
-                  {/* Social Media Icons */}
-                  {(() => {
-                    const socials = [
-                      { key: 'instagram', url: (barberData as any).instagram_handle, icon: Instagram, hoverClass: 'hover:text-pink-500' },
-                      { key: 'twitter', url: (barberData as any).twitter_handle, icon: Twitter, hoverClass: 'hover:text-blue-400' },
-                      { key: 'youtube', url: (barberData as any).youtube_handle, icon: Youtube, hoverClass: 'hover:text-red-500' },
-                      { key: 'facebook', url: (barberData as any).facebook_handle, icon: Facebook, hoverClass: 'hover:text-blue-500' },
-                    ].filter(s => s.url).slice(0, 3);
-
-                    if (socials.length === 0) return null;
-
-                    return (
-                      <div className="flex items-center gap-2 mt-2">
-                        {socials.map(({ key, url, icon: Icon, hoverClass }) => (
-                          <a
-                            key={key}
-                            href={url!.startsWith('http') ? url! : `https://${url}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={`text-muted-foreground ${hoverClass} transition-colors`}
-                          >
-                            <Icon className="h-5 w-5" />
-                          </a>
-                        ))}
-                      </div>
-                    );
-                  })()}
+                  {/* Social icons now orbit the avatar */}
                 </div>
 
                 {/* Stats Row */}
