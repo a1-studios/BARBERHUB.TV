@@ -352,25 +352,49 @@ const WatchFeed = () => {
     return out;
   }, [shuffledContent, sponsors, battleItems]);
 
-  // If ?video= param is set, find the matching feed item and jump to it
+  // Deep-link: pin the targeted video at index 0 so the user never lands on a random clip.
+  // Uses either ?video=<id-or-url> or ?src=<media-url>. Builds a synthetic item if the
+  // target isn't in the loaded feed yet.
+  const pinnedFeed: FeedItem[] = useMemo(() => {
+    const targetKey = targetVideoBarber ? decodeURIComponent(targetVideoBarber) : null;
+    const targetSrc = targetSrcParam ? decodeURIComponent(targetSrcParam) : targetKey;
+    if (!targetKey && !targetSrc) return feed;
+
+    const matchIdx = feed.findIndex(
+      f => (targetKey && (f.content_id === targetKey || f.media_url === targetKey)) ||
+           (targetSrc && f.media_url === targetSrc)
+    );
+    if (matchIdx === 0) return feed;
+    if (matchIdx > 0) {
+      const pinned = feed[matchIdx];
+      return [pinned, ...feed.slice(0, matchIdx), ...feed.slice(matchIdx + 1)];
+    }
+    // Not found — build a synthetic item so the user still sees the exact clip they tapped.
+    if (!targetSrc || !/^https?:\/\//.test(targetSrc)) return feed;
+    const synthetic: FeedItem = {
+      type: "video",
+      id: `pinned-${targetSrc}`,
+      media_url: toCdnUrl(targetSrc),
+      barber_name: "Featured",
+      specialty: null,
+      cloudflare_stream_uid: null,
+    };
+    return [synthetic, ...feed];
+  }, [feed, targetVideoBarber, targetSrcParam]);
+
+  // Ensure the page starts at index 0 (the pinned video) when a deep link is used.
   const [hasJumped, setHasJumped] = useState(false);
   useEffect(() => {
-    if (targetVideoBarber && feed.length > 0 && !hasJumped) {
-      const decodedTarget = decodeURIComponent(targetVideoBarber);
-      const idx = feed.findIndex(f => f.media_url === decodedTarget);
-      if (idx >= 0) {
-        setActiveIndex(idx);
-        setHasJumped(true);
-        setTimeout(() => {
-          const container = containerRef.current;
-          if (container) {
-            const target = container.querySelector(`[data-index="${idx}"]`);
-            target?.scrollIntoView({ behavior: 'instant' });
-          }
-        }, 100);
-      }
+    if ((targetVideoBarber || targetSrcParam) && pinnedFeed.length > 0 && !hasJumped) {
+      setActiveIndex(0);
+      setHasJumped(true);
+      setTimeout(() => {
+        const container = containerRef.current;
+        const target = container?.querySelector(`[data-index="0"]`);
+        target?.scrollIntoView({ behavior: 'instant' });
+      }, 50);
     }
-  }, [targetVideoBarber, feed, hasJumped]);
+  }, [targetVideoBarber, targetSrcParam, pinnedFeed.length, hasJumped]);
 
   // Snap scrolling observer + view tracking
   useEffect(() => {
