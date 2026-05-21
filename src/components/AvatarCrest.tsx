@@ -529,15 +529,6 @@ export const AvatarCrest = ({
           )}
         </div>
 
-        {/* M4M pulse */}
-        {showM4M && m4mState === 'complete' && (
-          <motion.div
-            className="absolute pointer-events-none"
-            style={{ bottom: 0, left: '50%', transform: 'translateX(-50%)', width: 20 * config.wingScale, height: 20 * config.wingScale }}
-            animate={{ scale: [1, 1.15, 1, 1.1, 1] }}
-            transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.6 }}
-          />
-        )}
       </div>
 
       {/* Membership Plans Drawer */}
