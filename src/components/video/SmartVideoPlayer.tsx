@@ -63,7 +63,7 @@ export function SmartVideoPlayer({
   enableReplay = false,
   preloadMode = 'none',
   showCenterPlayButton = false,
-}: SmartVideoPlayerProps) {
+  tapToToggle = false,
   const wrapperRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<Hls | null>(null);
