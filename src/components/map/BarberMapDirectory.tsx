@@ -66,7 +66,19 @@ function getTierStyle(tier: string | null): string {
   }
 }
 
-export function BarberMapDirectory() {
+interface BarberMapDirectoryProps {
+  variant?: 'hero' | 'page';
+  externalLocation?: { lat: number; lng: number; label: string } | null;
+  autoLocate?: boolean;
+  heightClass?: string;
+}
+
+export function BarberMapDirectory({
+  variant = 'page',
+  externalLocation = null,
+  autoLocate = false,
+  heightClass,
+}: BarberMapDirectoryProps = {}) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const markersRef = useRef<mapboxgl.Marker[]>([]);
@@ -79,6 +91,7 @@ export function BarberMapDirectory() {
   const { value: enforceTiersVal } = usePlatformState('enforce_tiers');
   const enforceTiers = enforceTiersVal === 'true';
   const { weights } = useMapVisibilityWeights();
+  const isHero = variant === 'hero';
 
   // Initialize Mapbox map (light theme)
   useEffect(() => {
