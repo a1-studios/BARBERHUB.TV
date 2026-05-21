@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Upload, Trash2, Image as ImageIcon, Video, Loader2 } from 'lucide-react';
+import { Plus, Upload, Trash2, Image as ImageIcon, Video, Loader2, Play } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { SmartVideoPlayer } from '@/components/video/SmartVideoPlayer';
