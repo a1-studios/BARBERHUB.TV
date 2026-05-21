@@ -288,7 +288,8 @@ const Profile = () => {
           <ProfileCompletionBanner profile={profile} />
 
           {/* ===== HERO: 3-col grid — specialties | avatar | stats ===== */}
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 pt-2 pb-1">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 pt-2 pb-0">
+
             {/* LEFT — Specialties stacked */}
             <div className="flex flex-col items-start gap-1.5 min-w-0">
               {specialty ? parseSpecialties(specialty).map(id => {
