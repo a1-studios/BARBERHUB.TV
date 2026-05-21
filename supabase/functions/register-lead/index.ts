@@ -58,7 +58,9 @@ Deno.serve(async (req) => {
     await supabase.from('marketing_leads').upsert(upsert, { onConflict: 'email' });
 
     return new Response(
-      JSON.stringify({ ok: true, lead_token: btoa(`${email}|${Date.now()}`) }),
+      JSON.stringify({ ok: true, already: !!existing, lead_token: btoa(`${email}|${Date.now()}`) }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (err) {
