@@ -11,6 +11,7 @@ import { uploadFileMultipart } from '@/lib/multipartUpload';
 import { captureVideoThumbnail } from '@/lib/videoThumbnail';
 import { pollStreamReady } from '@/lib/streamReadiness';
 import { toast } from 'sonner';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 interface PortfolioManagerProps {
   barberId?: string;
