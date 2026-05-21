@@ -49,6 +49,7 @@ export default function BarberPublicProfile() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
   const [uploadKey, setUploadKey] = useState(0);
+  const [playingVideo, setPlayingVideo] = useState<{ uid: string | null; url: string | null; poster: string | null } | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   
