@@ -462,6 +462,14 @@ const WatchFeed = () => {
           <Heart className="w-7 h-7" />
         </button>
 
+        {/* Comment — opens/focuses the comment input bar */}
+        <button
+          onClick={() => setCommentFocusTrigger((n) => n + 1)}
+          className="text-white drop-shadow-lg active:scale-90 transition-transform"
+        >
+          <MessageCircle className="w-7 h-7" />
+        </button>
+
         {/* Share */}
         <button
           onClick={() => handleShare(item)}
@@ -508,7 +516,7 @@ const WatchFeed = () => {
     return (
       <div className="relative w-full h-full bg-black">
         {/* Floating Danmaku comments — FIRST child, active video only */}
-        {videoUuid && <VideoCommentsLayer videoId={videoUuid} />}
+        {videoUuid && <VideoCommentsLayer videoId={videoUuid} focusTrigger={commentFocusTrigger} />}
 
         {/* Small pill watermark at bottom-third center */}
         <div className="absolute bottom-[18%] left-1/2 -translate-x-1/2 z-20 pointer-events-none select-none px-3 py-1 rounded-full border border-white/30 bg-black/20 backdrop-blur-sm">
