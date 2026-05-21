@@ -1,66 +1,52 @@
-# Fix Barber Video Recording Upload
-
 ## What's actually happening
 
-The R2 upload itself works — I confirmed today's recorded file is live at `https://media.barberhub.tv/portfolios/1779397316476_studio.mp4` (HTTP 200, 1.9 MB). But there are **0 rows in the `creations` table from today** (latest is May 9), even though the `upload-to-cloudflare-stream` edge function was clearly invoked three times today with record IDs that don't exist anywhere in the database.
+Your video uploads ARE working. The file lands in R2, the `creations` row gets inserted, and the Cloudflare Stream ingest is called. I verified this in the edge function logs — `[overlay] received payload for creations/541701c6-…` proves the insert returned a real ID.
 
-That means the DB insert from `CameraStudio.tsx` is either failing silently or the row is being rejected — and **the user gets no feedback either way**, because the code swallows the error:
+But the `creations` table tells a different story:
 
-```ts
-// src/pages/CameraStudio.tsx ~line 349
-const { data: record } = await supabase.from('creations').insert({...}).select('id').single();
-// no `error` captured, no toast, no console.error
-if (record && result.publish) { ...CF stream invoke... }
+- Last surviving row: **May 9** (nothing since)
+- pg_stat counters: **30 inserts, 27 deletes, 3 live rows**
+
+So every recent upload is being **deleted shortly after** it's saved. That's why the upload feels "super quick" but the video never appears anywhere.
+
+## Root cause
+
+`public.creations.barber_id` has `ON DELETE CASCADE` to `barber_profiles`. The RPC `sync_user_binary_role(user_id, role)` — called by the edge function `finalize-oauth-claim` — contains this:
+
+```text
+IF p_role = 'barber' THEN  …keep barber_profiles…
+ELSE
+  …
+  DELETE FROM public.barber_profiles WHERE user_id = p_user_id;
+END IF;
 ```
 
-The flow currently shows "Video published!" toast on R2 success even when the DB row never lands, so the barber thinks it worked.
+`finalize-oauth-claim` is invoked by `ProfileCompletionGate` (and any onboarding re-run) whenever a user re-confirms their role. If a barber ever lands in that flow and the gate sends `role: 'fan'` (or the user toggles, or it's re-fired after a session refresh that read a stale `user_type`), their `barber_profiles` row is dropped — and `creations` cascades with it. Same path also nukes the freshly inserted upload before Cloudflare Stream ever finishes its async copy.
 
-## Root issues to fix
+Counter from `pg_stat_user_tables`: barber_profiles also shows **13 deletes for 22 inserts** — matches the pattern.
 
-1. **Silent insert errors** in `CameraStudio.tsx` (and the same pattern in `PortfolioManager.tsx`, `EducatorUpload.tsx`).
-2. **Missing barber_profile** is treated as a no-op — entire `if (barberProfile)` block is skipped, no DB write, no toast. Barber sees "published" but nothing was saved.
-3. **Category mismatch**: `CameraStudio` writes `category: 'haircut'` for portfolio video, while `PortfolioManager` writes `category: 'video'`. WatchFeed likely filters on one of these, so even successful rows may not appear.
-4. **Premature success toast**: `toast.success('Video published!')` fires before DB insert is confirmed.
-5. **No retry / no debug logging** when CF Stream ingest fails — we lose the trail.
+## Fix plan (no functional change to the signup flow)
 
-## Plan
+1. **Stop the destructive cascade.** Change `creations.barber_id` FK from `ON DELETE CASCADE` to `ON DELETE RESTRICT` (or `SET NULL` if we want orphans), so a stray role-sync can never wipe a barber's portfolio. Apply the same to `creator_content.creator_id`, `battle_submissions`, and any other media tables FK'd to barber/profile rows.
 
-### 1. Harden `uploadRecording` in `src/pages/CameraStudio.tsx`
+2. **Make `sync_user_binary_role` non-destructive.** Replace the `DELETE FROM barber_profiles` / `DELETE FROM client_profiles` lines with a soft flag (e.g., set `is_active=false` or `archived_at=now()`), or skip the delete entirely when the opposite-role profile already has child records (portfolio, submissions, bookings). Update RLS/queries to filter on the active flag.
 
-- Capture `error` from every `supabase.from(...).insert(...)` and `throw` it so the outer `catch` shows a real toast (`Save failed: <message>`).
-- Capture `error` from the `barber_profiles` lookup; if no row, show explicit toast "Your barber profile is missing — finish onboarding to publish videos." and abort.
-- Move the `toast.success('Video published!')` to **after** the insert resolves successfully (currently fires regardless).
-- Normalize portfolio video `category` to `'video'` (match `PortfolioManager`) so WatchFeed picks them up. Keep `'tips'` for tips mode.
-- Add `console.info('[CameraStudio] inserted creation', record.id)` so the trail is visible in the browser.
-- Pass `is_published: result.publish` but also write a draft row when `result.publish === false` so retake/save-as-draft is testable.
+3. **Harden `finalize-oauth-claim` against re-entry.** Short-circuit when the user already has the same role locked in — never re-call the RPC if `profiles.user_type` already matches the requested role. This prevents accidental role flips from re-confirmations.
 
-### 2. Apply the same error-surfacing pattern to sibling uploaders
+4. **CameraStudio publish flow safety net.** After the CF Stream invoke, re-query the just-inserted row by ID; if it's gone, surface a clear error toast ("Your barber profile was reset — please re-pick role") instead of the current silent "Video published!" success.
 
-- `src/components/profiles/PortfolioManager.tsx` (line ~71): already destructures `insertErr` but the surrounding `for` loop logs `Upload error:` without the field name — include the supabase error message in the toast for that file.
-- `src/components/creator/EducatorUpload.tsx`: confirm the same `insert(...).select().single()` pattern surfaces errors; fix if missing.
+5. **One-time backfill (optional).** Recover the orphaned R2 objects: list `r2://…/portfolios/*_studio.*` keys newer than May 9, match owners by upload-time logs, and re-insert `creations` rows for any user who still has a `barber_profiles` row.
 
-### 3. Make CF Stream invoke awaitable (optional, behind the success toast)
+## Files / objects touched
 
-- Today the CF Stream call is fire-and-forget (`.catch(console.error)`), so even when DB row exists, the playable HLS URL never lands if the ingest fails. Add a short `await` (with a 5 s timeout race) so we can mark `cloudflare_stream_uid` synchronously, and toast a soft warning if ingest didn't start.
+- `supabase/migrations/*` — FK constraint changes on `creations`, `creator_content`, `battle_submissions`; update `sync_user_binary_role` to soft-archive instead of delete.
+- `supabase/functions/finalize-oauth-claim/index.ts` — idempotency guard.
+- `src/pages/CameraStudio.tsx` — post-insert verification + clearer error.
+- Any query that reads `barber_profiles` — add `where archived_at is null` filter (if we go the soft-delete route).
 
-### 4. Verify and adjust DB constraints / RLS once (no schema migration unless required)
+## Verification
 
-- Re-confirm the `creations` RLS insert policy passes for the test barber (it requires `barber_profiles.user_id = auth.uid()`). If it doesn't, the missing-profile toast from step 1 will now surface it instead of failing silently.
-- No schema migration is planned unless the captured error reveals a column/CHECK problem (e.g. `overlay_payload` rejecting non-JSON values). If it does, add a follow-up migration in the same pass.
-
-### 5. Verification
-
-- Record a short portfolio clip in CameraStudio → confirm new row in `creations` with `category='video'`, `media_url` reachable, and a toast that names the failure if any step breaks.
-- Open `/watch` → confirm the new clip appears in the feed.
-- Repeat with no `barber_profiles` row (e.g. a fan account) → confirm the explicit toast instead of a fake success.
-
-## Files to touch
-
-- `src/pages/CameraStudio.tsx` — error capture, category fix, toast ordering, optional awaited CF ingest.
-- `src/components/profiles/PortfolioManager.tsx` — richer error toast.
-- `src/components/creator/EducatorUpload.tsx` — same error-surfacing pattern.
-- (Possibly) `supabase/functions/upload-to-cloudflare-stream/index.ts` — return clearer error body for the client to surface.
-
-## Out of scope
-
-No changes to R2 presign, no changes to RLS policies unless step 4 proves them broken, no UI redesign of the review sheet, no changes to LiveKit / battle flows.
+After applying:
+- Upload a video → confirm row stays in `creations` after 60s
+- Re-open `ProfileCompletionGate` and resubmit role → barber's portfolio remains intact
+- `pg_stat_user_tables.creations.n_tup_del` stops climbing during normal use
