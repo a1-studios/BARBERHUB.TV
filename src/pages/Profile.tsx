@@ -283,15 +283,14 @@ const Profile = () => {
 
       <Header />
 
-      <main className="relative z-10 flex-1 px-4 pt-10 pb-20 sm:pt-16">
+      <main className="relative z-10 flex-1 px-4 pt-8 pb-20 sm:pt-16">
         <div className="max-w-md mx-auto min-h-[calc(100dvh-4rem-5rem)] flex flex-col">
           <ProfileCompletionBanner profile={profile} />
 
           {/* ===== HERO: centered avatar first, details arranged below for mobile ===== */}
-          <div className="-mt-1 flex flex-col items-center">
+          <div className="-mt-3 flex w-full flex-col items-center">
             <div className="flex w-full justify-center">
-              <div className="w-fit">
-                <SocialOrbit radius={71} iconSize={28} links={socialLinksObj}>
+              <SocialOrbit radius={71} iconSize={28} links={socialLinksObj} className="mx-auto">
                   {isBarber ? (
                     <AvatarCrest
                       tier={subscriptionTier}
@@ -321,38 +320,37 @@ const Profile = () => {
                     </Avatar>
                   )}
                 </SocialOrbit>
+            </div>
+
+            <div className="mt-1 flex flex-col items-center text-center">
+              <h1 className="text-lg font-bold text-foreground flex items-center justify-center gap-1">
+                {displayName}
+                <DisplayNameEditor
+                  currentName={looksLikeEmail ? '' : rawDisplay}
+                  changedAt={(profile as any)?.display_name_changed_at}
+                />
+              </h1>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                {profile?.username && <span>@{profile.username}</span>}
+                {countryCode && <span>{getCountryFlag(countryCode)}</span>}
+                {!isBarber && (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Fan</Badge>
+                )}
+                {!isBarber && (profile as any)?.sub_category && (
+                  <SubCategoryBadge subCategory={(profile as any).sub_category} size="sm" />
+                )}
               </div>
+              {profile?.bio && <p className="text-[11px] text-muted-foreground line-clamp-1 max-w-[260px] mt-0.5">{profile.bio}</p>}
             </div>
 
-            <div className="flex flex-col items-center text-center mt-2">
-            <h1 className="text-lg font-bold text-foreground flex items-center justify-center gap-1">
-              {displayName}
-              <DisplayNameEditor
-                currentName={looksLikeEmail ? '' : rawDisplay}
-                changedAt={(profile as any)?.display_name_changed_at}
-              />
-            </h1>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              {profile?.username && <span>@{profile.username}</span>}
-              {countryCode && <span>{getCountryFlag(countryCode)}</span>}
-              {!isBarber && (
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Fan</Badge>
-              )}
-              {!isBarber && (profile as any)?.sub_category && (
-                <SubCategoryBadge subCategory={(profile as any).sub_category} size="sm" />
-              )}
-            </div>
-            {profile?.bio && <p className="text-[11px] text-muted-foreground line-clamp-1 max-w-[260px] mt-0.5">{profile.bio}</p>}
-            </div>
-
-            <div className="mt-3 grid w-full max-w-[330px] grid-cols-[minmax(0,1fr)_88px] items-start gap-3">
-              <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-left">
+            <div className="mt-2 grid w-full max-w-[320px] grid-cols-[minmax(0,1fr)_76px] items-start gap-4">
+              <div className="flex min-w-0 flex-col items-start gap-1.5 text-left">
                 {specialty ? parseSpecialties(specialty).map(id => {
                   const tag = getSpecialtyDisplay(id);
                   return tag ? (
                     <span
                       key={id}
-                      className="text-[11px] leading-tight text-muted-foreground"
+                      className="text-[11px] leading-none text-muted-foreground"
                     >
                       {tag.emoji} {tag.label}
                     </span>
