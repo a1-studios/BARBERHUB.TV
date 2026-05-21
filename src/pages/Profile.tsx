@@ -306,7 +306,8 @@ const Profile = () => {
             </div>
 
             {/* CENTER — Avatar + orbit */}
-            <SocialOrbit radius={56} iconSize={22} links={socialLinksObj}>
+            <SocialOrbit radius={62} iconSize={24} links={socialLinksObj}>
+
               {isBarber ? (
                 <AvatarCrest
                   tier={subscriptionTier}
