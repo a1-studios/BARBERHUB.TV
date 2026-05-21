@@ -22,6 +22,7 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [uploading, setUploading] = useState(false);
+  const [playingVideo, setPlayingVideo] = useState<{ uid: string | null; url: string | null; poster: string | null } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch from creations table — same source as BarberPublicProfile
