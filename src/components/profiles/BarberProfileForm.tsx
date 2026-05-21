@@ -29,7 +29,7 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
     years_experience: existingProfile?.years_experience || '',
     location: existingProfile?.location || '',
     portfolio_url: existingProfile?.portfolio_url || '',
-    phone_number: existingProfile?.phone_number || '',
+    phone_number: '',
     country_code: existingProfile?.country_code || '',
     shop_address: existingProfile?.shop_address || '',
     shop_city: existingProfile?.shop_city || '',
@@ -40,6 +40,22 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
     longitude: existingProfile?.longitude ?? null as number | null,
   });
   const [geocoding, setGeocoding] = useState(false);
+
+  // Load own phone from private contacts table
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('user_private_contacts')
+      .select('phone_number')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data?.phone_number) {
+          setFormData((p) => ({ ...p, phone_number: data.phone_number || '' }));
+        }
+      });
+  }, [user]);
+
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
