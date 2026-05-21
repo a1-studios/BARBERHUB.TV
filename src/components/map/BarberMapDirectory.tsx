@@ -296,14 +296,21 @@ export function BarberMapDirectory({
         )}
 
         {mapError ? (
-          <div className="w-full rounded-xl border border-border bg-muted/30 flex items-center justify-center p-6 text-center" style={{ height: '500px' }}>
+          <div
+            className={cn('w-full rounded-xl border border-border bg-muted/30 flex items-center justify-center p-6 text-center', heightClass)}
+            style={heightClass ? undefined : { height: '500px' }}
+          >
             <div className="space-y-2 max-w-sm">
               <MapPin className="h-8 w-8 text-muted-foreground mx-auto" />
               <p className="text-sm text-muted-foreground">{mapError}</p>
             </div>
           </div>
         ) : (
-          <div ref={mapContainer} className="w-full rounded-xl border border-border overflow-hidden" style={{ height: '500px' }} />
+          <div
+            ref={mapContainer}
+            className={cn('w-full rounded-xl border border-border overflow-hidden', heightClass)}
+            style={heightClass ? undefined : { height: '500px' }}
+          />
         )}
       </div>
 
