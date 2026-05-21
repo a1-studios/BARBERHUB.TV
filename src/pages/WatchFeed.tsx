@@ -502,7 +502,6 @@ const WatchFeed = () => {
     const isPrefetch = idx === nextPlayableIdx;
     const shouldMount = isActive || isPrefetch;
     const cleanTitle = cleanDisplayTitle(item.title);
-    const cleanTitle = cleanDisplayTitle(item.title);
     const videoUuid = isActive ? extractVideoUuid(item.id, item.content_id) : null;
 
     return (
