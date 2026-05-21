@@ -260,6 +260,21 @@ export default function CameraStudio() {
     setUploadProgress(10);
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated — please sign in again.');
+
+      // Verify barber profile up-front so we never silently skip the DB insert
+      const { data: barberProfile, error: bpError } = await supabase
+        .from('barber_profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (bpError) throw new Error(`Profile lookup failed: ${bpError.message}`);
+      if (!barberProfile) {
+        throw new Error('Your barber profile is missing — finish onboarding to publish videos.');
+      }
+
       const { data: urlData, error: urlErr } = await supabase.functions.invoke('get-r2-presigned-url', {
         body: { key: filename, contentType },
       });
@@ -272,27 +287,18 @@ export default function CameraStudio() {
         headers: { 'Content-Type': contentType },
         body: blob,
       });
-      if (!res.ok) throw new Error('Upload failed');
+      if (!res.ok) throw new Error(`R2 upload failed (${res.status})`);
 
       setUploadProgress(60);
       const publicUrl = urlData.publicUrl as string;
 
-      // Optional thumbnail upload (parallel-ish, but kept simple/sequential)
+      // Optional thumbnail upload
       let thumbnailUrl: string | null = null;
       if (result.thumbnailDataUrl) {
         thumbnailUrl = await uploadThumbnail(result.thumbnailDataUrl);
       }
 
       setUploadProgress(75);
-
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-
-      const { data: barberProfile } = await supabase
-        .from('barber_profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
 
       const title = result.title || `Studio ${studioMode} ${new Date().toLocaleDateString()}`;
 
@@ -321,9 +327,14 @@ export default function CameraStudio() {
         })),
       };
 
-      if (barberProfile) {
-        if (studioMode === 'course') {
-          const { data: record } = await supabase.from('creator_content').insert({
+      let insertedId: string | null = null;
+      let insertedTable: 'creations' | 'creator_content' = 'creations';
+
+      if (studioMode === 'course') {
+        insertedTable = 'creator_content';
+        const { data: record, error: insertErr } = await supabase
+          .from('creator_content')
+          .insert({
             creator_id: user.id,
             title,
             content_type: 'course_teaser',
@@ -332,21 +343,17 @@ export default function CameraStudio() {
             thumbnail_url: thumbnailUrl,
             overlay_payload: overlayPayload as any,
             is_published: result.publish,
-          }).select('id').single();
-
-          if (record && result.publish) {
-            supabase.functions.invoke('upload-to-cloudflare-stream', {
-              body: {
-                sourceUrl: publicUrl,
-                table: 'creator_content',
-                recordId: record.id,
-                overlayPayload,
-              },
-            }).catch((err: any) => console.error('CF Stream ingest error:', err));
-          }
-        } else {
-          const category = studioMode === 'tips' ? 'tips' : 'haircut';
-          const { data: record } = await supabase.from('creations').insert({
+          })
+          .select('id')
+          .single();
+        if (insertErr) throw new Error(`Save failed: ${insertErr.message}`);
+        insertedId = record?.id ?? null;
+      } else {
+        // Portfolio / tips → creations table. Use 'video' so WatchFeed picks it up.
+        const category = studioMode === 'tips' ? 'tips' : 'video';
+        const { data: record, error: insertErr } = await supabase
+          .from('creations')
+          .insert({
             barber_id: barberProfile.id,
             media_url: publicUrl,
             thumbnail_url: thumbnailUrl,
@@ -354,19 +361,26 @@ export default function CameraStudio() {
             category,
             title,
             is_published: result.publish,
-          }).select('id').single();
+          })
+          .select('id')
+          .single();
+        if (insertErr) throw new Error(`Save failed: ${insertErr.message}`);
+        insertedId = record?.id ?? null;
+      }
 
-          if (record && result.publish) {
-            supabase.functions.invoke('upload-to-cloudflare-stream', {
-              body: {
-                sourceUrl: publicUrl,
-                table: 'creations',
-                recordId: record.id,
-                overlayPayload,
-              },
-            }).catch((err: any) => console.error('CF Stream ingest error:', err));
-          }
-        }
+      if (!insertedId) throw new Error('Save failed: no record id returned');
+      console.info('[CameraStudio] inserted', insertedTable, insertedId);
+
+      // Fire-and-forget CF Stream ingest (playback still works via R2 if this fails)
+      if (result.publish) {
+        supabase.functions.invoke('upload-to-cloudflare-stream', {
+          body: {
+            sourceUrl: publicUrl,
+            table: insertedTable,
+            recordId: insertedId,
+            overlayPayload,
+          },
+        }).catch((err: any) => console.error('[CameraStudio] CF Stream ingest error:', err));
       }
 
       setUploadProgress(100);
@@ -374,7 +388,8 @@ export default function CameraStudio() {
       setPendingBlob(null);
       chunksRef.current = [];
     } catch (err: any) {
-      toast.error(err.message || 'Upload failed');
+      console.error('[CameraStudio] upload error:', err);
+      toast.error(err?.message || 'Upload failed');
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
