@@ -327,6 +327,8 @@ const Profile = () => {
                       {displayName.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
+                </AvatarCrest>
+
               ) : (
                 <Avatar className="h-[88px] w-[88px] border-2 border-background shadow-lg">
                   <AvatarImage src={profile?.avatar_url || undefined} />
