@@ -407,7 +407,7 @@ const WatchFeed = () => {
             const idx = Number(entry.target.getAttribute("data-index"));
             if (!isNaN(idx)) {
               setActiveIndex(idx);
-              const item = feed[idx];
+              const item = pinnedFeed[idx];
               if (item?.content_id && !viewedContentIds.current.has(item.content_id)) {
                 viewedContentIds.current.add(item.content_id);
                 supabase.rpc('increment_content_views', { p_content_id: item.content_id }).then();
@@ -420,7 +420,7 @@ const WatchFeed = () => {
     );
     container.querySelectorAll("[data-index]").forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [feed]);
+  }, [pinnedFeed]);
 
 
   const renderSpecialtyPills = (specialty: string | null | undefined) => {
