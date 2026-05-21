@@ -107,8 +107,9 @@ export function SmartVideoPlayer({
   const shouldPlay = forceActive || (isVisible && activeId === instanceId);
 
   const streamSrc = streamUid ? streamHlsUrl(streamUid) : '';
-  const directSrc = fallbackUrl || '';
-  const canFallbackToDirect = !!streamSrc && !!directSrc && streamSrc !== directSrc;
+  // Never fall back from Cloudflare HLS to the raw R2 mp4 — that bypasses optimization and lags
+  // on mobile. Only allow fallback when there's no streamUid in the first place (legacy items).
+  const canFallbackToDirect = !streamSrc && !!directSrc;
 
   const activateDirectFallback = useCallback((reason: string) => {
     if (!canFallbackToDirect) return;
