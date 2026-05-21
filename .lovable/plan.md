@@ -1,52 +1,47 @@
-## What's actually happening
+## Goal
+The video flashes onto the feed the instant the R2 upload finishes, but Cloudflare Stream hasn't transcoded it yet — so HLS isn't ready and the player ends up serving the raw mp4 (laggy on mobile). Uploads are also a single PUT (slow, no progress, can stall on flaky mobile networks). And portfolio tiles often have no thumbnail.
 
-Your video uploads ARE working. The file lands in R2, the `creations` row gets inserted, and the Cloudflare Stream ingest is called. I verified this in the edge function logs — `[overlay] received payload for creations/541701c6-…` proves the insert returned a real ID.
+We will:
+1. Only show a video in the feed once Cloudflare Stream reports `ready` (so what's served is the optimized HLS).
+2. Switch the R2 upload path from a single PUT to a chunked/multipart upload with real progress.
+3. Auto-generate a portfolio thumbnail at record time and prefer Cloudflare's poster once ready.
 
-But the `creations` table tells a different story:
+## Changes
 
-- Last surviving row: **May 9** (nothing since)
-- pg_stat counters: **30 inserts, 27 deletes, 3 live rows**
+### 1. Readiness gate (no more raw-mp4 fallback in the feed)
+- Add columns to `creations` (and mirror on `creator_content`, `battle_submissions`): `stream_status text default 'pending'` ('pending' | 'ready' | 'errored'), `stream_ready_at timestamptz`, `stream_thumbnail_url text`, `stream_duration_seconds numeric`.
+- `upload-to-cloudflare-stream` edge function:
+  - After the `copy` call, set `stream_status='pending'`.
+  - Add a new edge function `poll-cloudflare-stream` that, given a uid, queries CF Stream `GET /stream/{uid}`, and when `readyToStream === true`, writes `stream_status='ready'`, `stream_thumbnail_url`, `stream_duration_seconds`. Called from the client after upload with exponential backoff (3s → 30s, max 5 min) and also from a cron pass for stragglers.
+- `WatchFeed.tsx`: filter `stream_status = 'ready'` (or items with no stream uid at all, i.e. images). Items still processing show a small "Processing… we'll publish it when it's ready" toast on the uploader side, but they never appear mid-transcode in the feed.
+- `SmartVideoPlayer`: when a `streamUid` is supplied, do NOT fall back to the raw R2 mp4 — that path was masking the real problem. Keep HLS-only with a clean "still preparing" placeholder if it ever errors.
 
-So every recent upload is being **deleted shortly after** it's saved. That's why the upload feels "super quick" but the video never appears anywhere.
+### 2. Chunked / multipart upload with progress
+- The project already has `initiate-multipart-upload`, `presign-upload-part`, `complete-multipart-upload`, `abort-multipart-upload` edge functions — use them.
+- Add `src/lib/multipartUpload.ts` with a `uploadFileMultipart(file, { onProgress, partSize = 8 * 1024 * 1024, concurrency = 3 })` helper:
+  - Initiate → for each 8 MB chunk presign + PUT (3 in parallel) → collect ETags → complete. Abort on failure.
+  - Returns the final public URL + key.
+- `CameraStudio.tsx` and `PortfolioManager.tsx` upload paths: switch from `get-r2-presigned-url` + single PUT to `uploadFileMultipart`. Small files (<8 MB) still go through the single presigned PUT for speed.
+- Surface progress as a real percentage in the existing "Uploading…" UI, then a "Optimizing for playback…" state while we poll Cloudflare Stream.
 
-## Root cause
+### 3. Portfolio thumbnails + smooth playback
+- On record/upload, generate a client-side poster from the first decodable frame (`HTMLVideoElement` + `canvas.toBlob`) and upload it to R2 alongside the video — write its public URL into `creations.thumbnail_url`. This guarantees a poster even before CF Stream finishes.
+- When `stream_status='ready'`, prefer `stream_thumbnail_url` (CF Stream's frame) as the poster — it's smaller and CDN-cached.
+- `PortfolioManager.tsx` tile: render `<img poster>` until tapped, then mount `SmartVideoPlayer`. This eliminates the cold-start lag of mounting an HLS instance per tile and matches the IG/TikTok feel.
 
-`public.creations.barber_id` has `ON DELETE CASCADE` to `barber_profiles`. The RPC `sync_user_binary_role(user_id, role)` — called by the edge function `finalize-oauth-claim` — contains this:
+## Technical notes
+- New migration adds the 4 columns + index on `(stream_status, created_at)` for fast feed queries.
+- `poll-cloudflare-stream` uses the existing `CLOUDFLARE_STREAM_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets; no new secrets needed.
+- CORS: R2 bucket already exposes `ETag` (required for multipart). If a part PUT fails to return ETag, surface a clear error pointing to the CORS doc.
+- The MP4-fallback logic added previously to `SmartVideoPlayer` is removed for Stream-backed items; it stays for legacy items that have only `fallbackUrl`.
 
-```text
-IF p_role = 'barber' THEN  …keep barber_profiles…
-ELSE
-  …
-  DELETE FROM public.barber_profiles WHERE user_id = p_user_id;
-END IF;
-```
-
-`finalize-oauth-claim` is invoked by `ProfileCompletionGate` (and any onboarding re-run) whenever a user re-confirms their role. If a barber ever lands in that flow and the gate sends `role: 'fan'` (or the user toggles, or it's re-fired after a session refresh that read a stale `user_type`), their `barber_profiles` row is dropped — and `creations` cascades with it. Same path also nukes the freshly inserted upload before Cloudflare Stream ever finishes its async copy.
-
-Counter from `pg_stat_user_tables`: barber_profiles also shows **13 deletes for 22 inserts** — matches the pattern.
-
-## Fix plan (no functional change to the signup flow)
-
-1. **Stop the destructive cascade.** Change `creations.barber_id` FK from `ON DELETE CASCADE` to `ON DELETE RESTRICT` (or `SET NULL` if we want orphans), so a stray role-sync can never wipe a barber's portfolio. Apply the same to `creator_content.creator_id`, `battle_submissions`, and any other media tables FK'd to barber/profile rows.
-
-2. **Make `sync_user_binary_role` non-destructive.** Replace the `DELETE FROM barber_profiles` / `DELETE FROM client_profiles` lines with a soft flag (e.g., set `is_active=false` or `archived_at=now()`), or skip the delete entirely when the opposite-role profile already has child records (portfolio, submissions, bookings). Update RLS/queries to filter on the active flag.
-
-3. **Harden `finalize-oauth-claim` against re-entry.** Short-circuit when the user already has the same role locked in — never re-call the RPC if `profiles.user_type` already matches the requested role. This prevents accidental role flips from re-confirmations.
-
-4. **CameraStudio publish flow safety net.** After the CF Stream invoke, re-query the just-inserted row by ID; if it's gone, surface a clear error toast ("Your barber profile was reset — please re-pick role") instead of the current silent "Video published!" success.
-
-5. **One-time backfill (optional).** Recover the orphaned R2 objects: list `r2://…/portfolios/*_studio.*` keys newer than May 9, match owners by upload-time logs, and re-insert `creations` rows for any user who still has a `barber_profiles` row.
-
-## Files / objects touched
-
-- `supabase/migrations/*` — FK constraint changes on `creations`, `creator_content`, `battle_submissions`; update `sync_user_binary_role` to soft-archive instead of delete.
-- `supabase/functions/finalize-oauth-claim/index.ts` — idempotency guard.
-- `src/pages/CameraStudio.tsx` — post-insert verification + clearer error.
-- Any query that reads `barber_profiles` — add `where archived_at is null` filter (if we go the soft-delete route).
-
-## Verification
-
-After applying:
-- Upload a video → confirm row stays in `creations` after 60s
-- Re-open `ProfileCompletionGate` and resubmit role → barber's portfolio remains intact
-- `pg_stat_user_tables.creations.n_tup_del` stops climbing during normal use
+## Files touched
+- new: `supabase/migrations/<ts>_stream_readiness_columns.sql`
+- new: `supabase/functions/poll-cloudflare-stream/index.ts`
+- new: `src/lib/multipartUpload.ts`
+- new: `src/lib/videoThumbnail.ts`
+- edit: `supabase/functions/upload-to-cloudflare-stream/index.ts` (set initial status, return status)
+- edit: `src/pages/WatchFeed.tsx` (filter `stream_status='ready'`, drop raw-mp4 entries)
+- edit: `src/pages/CameraStudio.tsx` (multipart upload, thumbnail capture, post-upload polling, "Optimizing…" state)
+- edit: `src/components/profiles/PortfolioManager.tsx` (multipart upload, thumbnail, tap-to-play tile)
+- edit: `src/components/video/SmartVideoPlayer.tsx` (HLS-only when streamUid present, "preparing" placeholder)
