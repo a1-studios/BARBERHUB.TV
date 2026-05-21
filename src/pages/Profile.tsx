@@ -288,14 +288,20 @@ const Profile = () => {
 
       <Header />
 
-      <main className="relative z-10 flex-1 px-4 pt-8 pb-20 sm:pt-16">
-        <div className="max-w-md mx-auto min-h-[calc(100dvh-4rem-5rem)] flex flex-col">
+      <main className="relative z-10 flex-1 px-4 pt-20 pb-20 sm:pt-24">
+        <div className="max-w-md mx-auto flex flex-col">
           <ProfileCompletionBanner profile={profile} />
 
           {/* ===== HERO: centered avatar first, details arranged below for mobile ===== */}
-          <div className="-mt-3 flex w-full flex-col items-center">
+          <div className="mt-2 flex w-full flex-col items-center">
             <div className="flex w-full justify-center">
-              <SocialOrbit radius={71} iconSize={28} links={socialLinksObj} className="mx-auto">
+              <SocialOrbit
+                radius={71}
+                iconSize={28}
+                links={socialLinksObj}
+                onAddClick={(key) => { setSocialFocus(key as any); setSocialDialogOpen(true); }}
+                className="mx-auto"
+              >
                   {isBarber ? (
                     <AvatarCrest
                       tier={subscriptionTier}
@@ -317,12 +323,22 @@ const Profile = () => {
                       </Avatar>
                     </AvatarCrest>
                   ) : (
-                    <Avatar className="h-[101px] w-[101px] border-2 border-background shadow-lg">
-                      <AvatarImage src={profile?.avatar_url || undefined} />
-                      <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
-                        {displayName.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <button
+                      type="button"
+                      onClick={() => avatarFileRef.current?.click()}
+                      className="relative rounded-full focus:outline-none focus:ring-2 focus:ring-primary/60"
+                      aria-label="Change profile picture"
+                    >
+                      <Avatar className="h-[101px] w-[101px] border-2 border-background shadow-lg">
+                        <AvatarImage src={profile?.avatar_url || undefined} />
+                        <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
+                          {displayName.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="absolute bottom-0 right-0 h-6 w-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow ring-2 ring-background">
+                        {avatarUploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Edit3 className="h-3.5 w-3.5" />}
+                      </span>
+                    </button>
                   )}
                 </SocialOrbit>
             </div>
