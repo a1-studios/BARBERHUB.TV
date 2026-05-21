@@ -82,13 +82,13 @@ function ViewerContent({
           .eq('creator_id', barberUserId)
           .eq('follower_id', user.id);
         setIsFollowing(false);
-        toast.success('Unfollowed');
+        
       } else {
         await supabase
           .from('creator_follows')
           .insert({ creator_id: barberUserId, follower_id: user.id });
         setIsFollowing(true);
-        toast.success('Following!');
+        
       }
     } catch {
       toast.error('Failed to update follow');

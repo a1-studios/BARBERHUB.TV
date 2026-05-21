@@ -267,7 +267,7 @@ export default function BattleTheater() {
     HapticFeedback.like();
     AudioManager.play('like');
     CelebrationEffects.like(window.innerWidth / 4, window.innerHeight / 2);
-    toast.success('Liked! ❤️');
+    
   };
 
   const handleTimeUp = useCallback(() => {
