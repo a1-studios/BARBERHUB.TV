@@ -465,11 +465,10 @@ export default function BarberPublicProfile() {
             />
           )}
           <div className="absolute inset-0 bg-gradient-to-br from-background/90 via-background/80 to-primary/20" />
-          <CardContent className="relative p-8 z-10">
-            <div className="flex flex-col md:flex-row gap-6 items-center">
+          <CardContent className="relative p-6 z-10">
+            <div className="flex flex-col items-center text-center gap-3">
               <SocialOrbit
                 radius={78}
-                
                 iconSize={28}
                 links={{
                   instagram: (barberData as any).instagram_handle,
@@ -499,76 +498,62 @@ export default function BarberPublicProfile() {
                 </AvatarCrest>
               </SocialOrbit>
 
-              <div className="flex-1 space-y-4">
-                <div>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h1 className="text-4xl font-bold text-white">{displayName}</h1>
-                    {barberData.country_code && (
-                      <span className="text-3xl">{getCountryFlag(barberData.country_code)}</span>
-                    )}
-                    {barberData.is_live && (
-                      <Badge variant="destructive" className="animate-pulse text-lg px-3 py-1">
-                        🔴 LIVE NOW
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  {barberData.specialty && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {parseSpecialties(barberData.specialty).map(id => {
-                        const tag = getSpecialtyDisplay(id);
-                        return tag ? (
-                          <Badge key={id} variant="secondary" className="text-xs px-2.5 py-1 bg-primary/10 text-primary border-primary/20">
-                            {tag.emoji} {tag.label}
-                          </Badge>
-                        ) : (
-                          <Badge key={id} variant="secondary" className="text-xs px-2.5 py-1">{id}</Badge>
-                        );
-                      })}
-                    </div>
+              {/* Action row — directly under avatar, above the name (visitors only) */}
+              {!isOwner && (
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  <BarberActionButtons
+                    barberId={barberData.barber_id}
+                    barberUserId={userId!}
+                    onDonateClick={() => setIsDonationModalOpen(true)}
+                  />
+                  {!isVisitorBarber && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="bg-cyan-500 hover:bg-cyan-600 text-black font-semibold"
+                      onClick={() => setIsBookingOpen(true)}
+                    >
+                      <Calendar className="w-4 h-4 mr-1.5" />
+                      Book
+                    </Button>
                   )}
-
-                  {/* Social icons now orbit the avatar */}
                 </div>
+              )}
 
-                {/* Stats Row */}
-                <div className="flex gap-6 flex-wrap">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-white">{stats?.follower_count || 0}</div>
-                    <div className="text-sm text-muted-foreground">Followers</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-white">{stats?.like_count || 0}</div>
-                    <div className="text-sm text-muted-foreground">Likes</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-white">${((stats?.total_donations_cents || 0) / 100).toFixed(0)}</div>
-                    <div className="text-sm text-muted-foreground">Donated</div>
-                  </div>
-                </div>
-
-                {/* Action Buttons - Only show for visitors */}
-                {!isOwner && (
-                  <div className="flex gap-3 flex-wrap">
-                    <BarberActionButtons
-                      barberId={barberData.barber_id}
-                      barberUserId={userId!}
-                      onDonateClick={() => setIsDonationModalOpen(true)}
-                    />
-                    
-                    {!isVisitorBarber && (
-                      <Button 
-                        variant="default" 
-                        size="default"
-                        className="bg-cyan-500 hover:bg-cyan-600 text-black font-semibold"
-                        onClick={() => setIsBookingOpen(true)}
-                      >
-                        <Calendar className="w-4 h-4 mr-2" />
-                        Book Appointment
-                      </Button>
-                    )}
-                  </div>
+              <div className="flex items-center gap-2 flex-wrap justify-center">
+                <h1 className="text-3xl md:text-4xl font-bold text-white">{displayName}</h1>
+                {barberData.country_code && (
+                  <span className="text-2xl">{getCountryFlag(barberData.country_code)}</span>
                 )}
+                {barberData.is_live && (
+                  <Badge variant="destructive" className="animate-pulse text-sm px-2 py-0.5">
+                    🔴 LIVE
+                  </Badge>
+                )}
+              </div>
+
+              {barberData.specialty && (
+                <div className="flex flex-wrap gap-1.5 justify-center">
+                  {parseSpecialties(barberData.specialty).map(id => {
+                    const tag = getSpecialtyDisplay(id);
+                    return tag ? (
+                      <Badge key={id} variant="secondary" className="text-xs px-2.5 py-1 bg-primary/10 text-primary border-primary/20">
+                        {tag.emoji} {tag.label}
+                      </Badge>
+                    ) : (
+                      <Badge key={id} variant="secondary" className="text-xs px-2.5 py-1">{id}</Badge>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Compact inline stats */}
+              <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground pt-1">
+                <span><span className="font-bold text-white">{stats?.follower_count || 0}</span> Followers</span>
+                <span className="opacity-40">·</span>
+                <span><span className="font-bold text-white">{stats?.like_count || 0}</span> Likes</span>
+                <span className="opacity-40">·</span>
+                <span><span className="font-bold text-white">${((stats?.total_donations_cents || 0) / 100).toFixed(0)}</span> Donated</span>
               </div>
             </div>
           </CardContent>
