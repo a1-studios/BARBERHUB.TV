@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { TierRing } from '@/components/TierRing';
 import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
 import { Link } from 'react-router-dom';
-import { ExternalLink, Settings, Plus, ArrowDownToLine, Instagram, Twitter, Youtube, Facebook, LogOut, Trash2 } from 'lucide-react';
+import { ExternalLink, Settings, Plus, ArrowDownToLine, LogOut, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { M4MAvatarBadge } from '@/components/m4m/M4MAvatarBadge';
 import { SocialOrbit } from '@/components/profiles/SocialOrbit';
