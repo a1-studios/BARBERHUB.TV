@@ -167,7 +167,7 @@ const WatchFeed = () => {
           media_url: toCdnUrl(c.media_url),
           title: cleanDisplayTitle(c.title) ?? undefined,
           description: c.description,
-          thumbnail_url: toCdnUrl(c.thumbnail_url),
+          thumbnail_url: toCdnUrl(c.stream_thumbnail_url ?? c.thumbnail_url),
           barber_name: barberMap[c.barber_id]?.name || "Barber",
           specialty: barberMap[c.barber_id]?.specialty ?? null,
           barber_user_id: barberMap[c.barber_id]?.user_id,
