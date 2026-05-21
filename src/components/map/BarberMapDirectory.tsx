@@ -9,6 +9,7 @@ import { calculateVisibilityScore, scoreToScale } from '@/lib/visibilityScore';
 import { toast } from 'sonner';
 import { BarberLocationSearch } from './BarberLocationSearch';
 import { NearbyBarberCard } from './NearbyBarberCard';
+import { NearbySphere } from './NearbySphere';
 import { Link } from 'react-router-dom';
 import { MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
