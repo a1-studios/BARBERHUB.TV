@@ -9,7 +9,7 @@ import { CountrySelector } from '@/components/CountrySelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { AlertCircle, Scissors, Phone, Globe, Lock } from 'lucide-react';
+import { AlertCircle, Scissors, Phone, Globe, Lock, MapPin, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { fbqTrack } from '@/lib/metaPixel';
 import { getCountryFromUrl } from '@/lib/urlParams';
