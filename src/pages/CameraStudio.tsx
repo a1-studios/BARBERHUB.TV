@@ -231,11 +231,9 @@ export default function CameraStudio() {
     setIsRecording(false);
   }, []);
 
-  // Upload a thumbnail data URL to R2 (best-effort) — returns public URL or null
-  const uploadThumbnail = async (dataUrl: string): Promise<string | null> => {
+  // Upload a thumbnail Blob to R2 via the single-PUT presigned helper. Returns public URL or null.
+  const uploadThumbnailBlob = async (blob: Blob): Promise<string | null> => {
     try {
-      const res = await fetch(dataUrl);
-      const blob = await res.blob();
       const key = `thumbnails/${Date.now()}_studio.jpg`;
       const { data: urlData } = await supabase.functions.invoke('get-r2-presigned-url', {
         body: { key, contentType: 'image/jpeg' },
@@ -255,18 +253,19 @@ export default function CameraStudio() {
   const uploadRecording = async (blob: Blob, result: ReviewResult) => {
     const mimeType = activeMimeTypeRef.current;
     const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
-    const folder = R2_FOLDERS[studioMode] || 'portfolios';
-    const filename = `${folder}/${Date.now()}_studio.${ext}`;
+    const folderKey = R2_FOLDERS[studioMode] || 'portfolios';
+    // initiate-multipart-upload categories: portfolios, education, recordings, etc.
+    const category = folderKey;
+    const filename = `${Date.now()}_studio.${ext}`;
     const contentType = mimeType.split(';')[0];
 
     setIsUploading(true);
-    setUploadProgress(10);
+    setUploadProgress(2);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated — please sign in again.');
 
-      // Verify barber profile up-front so we never silently skip the DB insert
       const { data: barberProfile, error: bpError } = await supabase
         .from('barber_profiles')
         .select('id')
@@ -278,30 +277,31 @@ export default function CameraStudio() {
         throw new Error('Your barber profile is missing — finish onboarding to publish videos.');
       }
 
-      const { data: urlData, error: urlErr } = await supabase.functions.invoke('get-r2-presigned-url', {
-        body: { key: filename, contentType },
+      // 1. Capture a poster from the recorded blob in parallel with the upload setup
+      const thumbnailPromise = captureVideoThumbnail(blob).then((thumbBlob) =>
+        thumbBlob ? uploadThumbnailBlob(thumbBlob) : null,
+      ).catch(() => null);
+
+      // 2. Chunked upload — 8MB parts, 3 in parallel. Falls back to single PUT for small files.
+      const { publicUrl } = await uploadFileMultipart(blob, filename, contentType, {
+        category,
+        partSize: 8 * 1024 * 1024,
+        concurrency: 3,
+        // Upload occupies 5%..75% of the progress bar so we can show "Optimizing…" after.
+        onProgress: (pct) => setUploadProgress(5 + Math.round(pct * 70)),
       });
-      if (urlErr || !urlData?.uploadUrl) throw new Error(urlErr?.message || 'Failed to get upload URL');
 
-      setUploadProgress(30);
-
-      const res = await fetch(urlData.uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': contentType },
-        body: blob,
-      });
-      if (!res.ok) throw new Error(`R2 upload failed (${res.status})`);
-
-      setUploadProgress(60);
-      const publicUrl = urlData.publicUrl as string;
-
-      // Optional thumbnail upload
-      let thumbnailUrl: string | null = null;
-      if (result.thumbnailDataUrl) {
-        thumbnailUrl = await uploadThumbnail(result.thumbnailDataUrl);
+      // Resolve thumbnail (may still be null on browsers that can't decode the recording).
+      let thumbnailUrl: string | null = await thumbnailPromise;
+      if (!thumbnailUrl && result.thumbnailDataUrl) {
+        try {
+          const res = await fetch(result.thumbnailDataUrl);
+          const b = await res.blob();
+          thumbnailUrl = await uploadThumbnailBlob(b);
+        } catch { /* ignore */ }
       }
 
-      setUploadProgress(75);
+      setUploadProgress(78);
 
       const title = result.title || `Studio ${studioMode} ${new Date().toLocaleDateString()}`;
 
@@ -331,7 +331,7 @@ export default function CameraStudio() {
       };
 
       let insertedId: string | null = null;
-      let insertedTable: 'creations' | 'creator_content' = 'creations';
+      let insertedTable: StreamReadyTable = 'creations';
 
       if (studioMode === 'course') {
         insertedTable = 'creator_content';
@@ -352,8 +352,7 @@ export default function CameraStudio() {
         if (insertErr) throw new Error(`Save failed: ${insertErr.message}`);
         insertedId = record?.id ?? null;
       } else {
-        // Portfolio / tips → creations table. Use 'video' so WatchFeed picks it up.
-        const category = studioMode === 'tips' ? 'tips' : 'video';
+        const cat = studioMode === 'tips' ? 'tips' : 'video';
         const { data: record, error: insertErr } = await supabase
           .from('creations')
           .insert({
@@ -361,7 +360,7 @@ export default function CameraStudio() {
             media_url: publicUrl,
             thumbnail_url: thumbnailUrl,
             overlay_payload: overlayPayload as any,
-            category,
+            category: cat,
             title,
             is_published: result.publish,
           })
@@ -374,8 +373,6 @@ export default function CameraStudio() {
       if (!insertedId) throw new Error('Save failed: no record id returned');
       console.info('[CameraStudio] inserted', insertedTable, insertedId);
 
-      // Verification: read the row back. If RLS or a cascade nuked it
-      // between insert and now, surface a clear error instead of a fake success.
       const { data: verifyRow, error: verifyErr } = await supabase
         .from(insertedTable)
         .select('id')
@@ -384,24 +381,47 @@ export default function CameraStudio() {
       if (verifyErr) console.warn('[CameraStudio] verify error:', verifyErr.message);
       if (!verifyRow) {
         throw new Error(
-          'Saved row vanished — your barber profile may have been reset. Re-pick your role and try again.'
+          'Saved row vanished — your barber profile may have been reset. Re-pick your role and try again.',
         );
       }
 
-      // Fire-and-forget CF Stream ingest (playback still works via R2 if this fails)
+      setUploadProgress(85);
+
+      // 3. Kick off Cloudflare Stream ingest, then poll until it's ready.
       if (result.publish) {
-        supabase.functions.invoke('upload-to-cloudflare-stream', {
-          body: {
-            sourceUrl: publicUrl,
-            table: insertedTable,
-            recordId: insertedId,
-            overlayPayload,
-          },
-        }).catch((err: any) => console.error('[CameraStudio] CF Stream ingest error:', err));
+        toast.success('Uploaded — optimizing for smooth playback…');
+        try {
+          const { data: ingest, error: ingestErr } = await supabase.functions.invoke('upload-to-cloudflare-stream', {
+            body: {
+              sourceUrl: publicUrl,
+              table: insertedTable,
+              recordId: insertedId,
+              overlayPayload,
+            },
+          });
+          if (ingestErr || !ingest?.uid) {
+            console.warn('[CameraStudio] CF Stream ingest failed:', ingestErr);
+            toast.warning('Saved, but optimization is taking longer than expected. It will appear in the feed shortly.');
+          } else {
+            // Poll until ready — background, doesn't block the UI
+            pollStreamReady(insertedTable, insertedId, ingest.uid, {
+              onStatus: (s) => {
+                if (s === 'ready') {
+                  toast.success('Video is live in the feed!');
+                } else if (s === 'errored') {
+                  toast.error('Cloudflare Stream rejected the video — try a shorter or different recording.');
+                }
+              },
+            }).catch((e) => console.warn('[CameraStudio] poll error:', e));
+          }
+        } catch (e) {
+          console.warn('[CameraStudio] ingest call threw:', e);
+        }
+      } else {
+        toast.success('Draft saved');
       }
 
       setUploadProgress(100);
-      toast.success(result.publish ? 'Video published!' : 'Draft saved');
       setPendingBlob(null);
       chunksRef.current = [];
     } catch (err: any) {
