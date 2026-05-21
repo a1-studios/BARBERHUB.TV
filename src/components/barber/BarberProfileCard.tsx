@@ -24,6 +24,7 @@ interface BarberProfileCardProps {
   showVideo?: boolean;
   showActions?: boolean;
   onProfileClick?: (userId: string) => void;
+  distanceMiles?: number;
 }
 
 export const BarberProfileCard = ({ 
@@ -32,7 +33,8 @@ export const BarberProfileCard = ({
   layout = 'full',
   showVideo = false,
   showActions = true,
-  onProfileClick
+  onProfileClick,
+  distanceMiles,
 }: BarberProfileCardProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -219,6 +221,11 @@ export const BarberProfileCard = ({
                 {barberProfile.is_live && (
                   <Badge variant="destructive" className="animate-pulse">
                     🔴 LIVE
+                  </Badge>
+                )}
+                {typeof distanceMiles === 'number' && (
+                  <Badge variant="outline" className="text-[10px] gap-1 px-1.5 py-0 border-primary/40 text-primary">
+                    📍 {distanceMiles.toFixed(1)} mi
                   </Badge>
                 )}
               </div>

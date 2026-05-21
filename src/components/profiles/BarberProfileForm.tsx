@@ -9,7 +9,7 @@ import { CountrySelector } from '@/components/CountrySelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { AlertCircle, Scissors, Phone, Globe, Lock } from 'lucide-react';
+import { AlertCircle, Scissors, Phone, Globe, Lock, MapPin, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { fbqTrack } from '@/lib/metaPixel';
 import { getCountryFromUrl } from '@/lib/urlParams';
@@ -30,8 +30,16 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
     location: existingProfile?.location || '',
     portfolio_url: existingProfile?.portfolio_url || '',
     phone_number: existingProfile?.phone_number || '',
-    country_code: existingProfile?.country_code || ''
+    country_code: existingProfile?.country_code || '',
+    shop_address: existingProfile?.shop_address || '',
+    shop_city: existingProfile?.shop_city || '',
+    shop_state: existingProfile?.shop_state || '',
+    shop_postal_code: existingProfile?.shop_postal_code || '',
+    address_visibility: existingProfile?.address_visibility || 'approximate',
+    latitude: existingProfile?.latitude ?? null as number | null,
+    longitude: existingProfile?.longitude ?? null as number | null,
   });
+  const [geocoding, setGeocoding] = useState(false);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -76,7 +84,14 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
         years_experience: formData.years_experience ? parseInt(formData.years_experience) : null,
         portfolio_url: formData.portfolio_url || null,
         phone_number: formData.phone_number.trim(),
-        country_code: formData.country_code
+        country_code: formData.country_code,
+        shop_address: formData.shop_address || null,
+        shop_city: formData.shop_city || null,
+        shop_state: formData.shop_state || null,
+        shop_postal_code: formData.shop_postal_code || null,
+        address_visibility: formData.address_visibility,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
       };
 
       const { error } = await supabase
@@ -102,6 +117,45 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGeocodeAddress = async () => {
+    const parts = [formData.shop_address, formData.shop_city, formData.shop_state, formData.shop_postal_code, formData.country_code]
+      .filter(Boolean)
+      .join(', ');
+    if (!parts.trim()) {
+      toast.error('Enter at least a city or street before locating');
+      return;
+    }
+    setGeocoding(true);
+    try {
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        toast.error('Google Maps API key not configured');
+        return;
+      }
+      const res = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(parts)}&key=${apiKey}`
+      );
+      const data = await res.json();
+      if (data.status === 'OK' && data.results?.length > 0) {
+        const r = data.results[0];
+        const { lat, lng } = r.geometry.location;
+        setFormData((p) => ({
+          ...p,
+          latitude: lat,
+          longitude: lng,
+          location: p.location || r.formatted_address,
+        }));
+        toast.success('Address located — fans will now see your distance.');
+      } else {
+        toast.error('Could not locate that address');
+      }
+    } catch (err) {
+      toast.error('Geocoding failed');
+    } finally {
+      setGeocoding(false);
     }
   };
 
@@ -210,6 +264,79 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
               placeholder="City, State/Country"
             />
+          </div>
+
+          {/* Shop address — drives distance to fans */}
+          <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-3">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-primary" />
+              <Label className="text-sm font-semibold m-0">Shop Address</Label>
+              {formData.latitude && formData.longitude ? (
+                <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-400">
+                  Located
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-400">
+                  Not located
+                </Badge>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground -mt-1">
+              Fans see your distance from them. Exact address only shown if you allow it below.
+            </p>
+
+            <Input
+              placeholder="Street address"
+              value={formData.shop_address}
+              onChange={(e) => setFormData({ ...formData, shop_address: e.target.value })}
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                placeholder="City"
+                value={formData.shop_city}
+                onChange={(e) => setFormData({ ...formData, shop_city: e.target.value })}
+              />
+              <Input
+                placeholder="State / Region"
+                value={formData.shop_state}
+                onChange={(e) => setFormData({ ...formData, shop_state: e.target.value })}
+              />
+            </div>
+            <Input
+              placeholder="Postal code"
+              value={formData.shop_postal_code}
+              onChange={(e) => setFormData({ ...formData, shop_postal_code: e.target.value })}
+            />
+
+            <div className="flex items-center justify-between gap-2">
+              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.address_visibility === 'exact'}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      address_visibility: e.target.checked ? 'exact' : 'approximate',
+                    })
+                  }
+                />
+                Show exact street address publicly
+              </label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleGeocodeAddress}
+                disabled={geocoding}
+              >
+                {geocoding ? (
+                  <Loader2 className="h-3 w-3 animate-spin mr-1.5" />
+                ) : (
+                  <MapPin className="h-3 w-3 mr-1.5" />
+                )}
+                Locate
+              </Button>
+            </div>
           </div>
 
           <div>
