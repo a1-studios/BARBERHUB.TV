@@ -422,7 +422,7 @@ export const DynamicBattleHero = () => {
       return (
         <div className="pt-1 sm:pt-2 pb-4 px-4 max-w-7xl mx-auto">
           <div
-            onClick={() => navigate(`/watch?video=${encodeURIComponent(fallbackVideo.featured_video_id)}`)}
+            onClick={() => navigate(`/watch?video=${encodeURIComponent(fallbackVideo.featured_video_id)}&src=${encodeURIComponent(fallbackVideo.featured_video_id)}`)}
             className="aspect-[9/14] md:aspect-video bg-card rounded-2xl shadow-2xl border border-primary/20 overflow-hidden relative cursor-pointer"
           >
             <AnimatePresence mode="wait">
