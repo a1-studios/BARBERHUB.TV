@@ -549,6 +549,7 @@ export type Database = {
       barber_profiles: {
         Row: {
           active_subscription_tier: string | null
+          address_visibility: string
           battles_created_this_month: number
           bio: string | null
           booking_message: string | null
@@ -578,6 +579,10 @@ export type Database = {
           portfolio_url: string | null
           rating: number | null
           require_deposit: boolean
+          shop_address: string | null
+          shop_city: string | null
+          shop_postal_code: string | null
+          shop_state: string | null
           specialty: string | null
           subscription_expires_at: string | null
           tier_level: number
@@ -592,6 +597,7 @@ export type Database = {
         }
         Insert: {
           active_subscription_tier?: string | null
+          address_visibility?: string
           battles_created_this_month?: number
           bio?: string | null
           booking_message?: string | null
@@ -621,6 +627,10 @@ export type Database = {
           portfolio_url?: string | null
           rating?: number | null
           require_deposit?: boolean
+          shop_address?: string | null
+          shop_city?: string | null
+          shop_postal_code?: string | null
+          shop_state?: string | null
           specialty?: string | null
           subscription_expires_at?: string | null
           tier_level?: number
@@ -635,6 +645,7 @@ export type Database = {
         }
         Update: {
           active_subscription_tier?: string | null
+          address_visibility?: string
           battles_created_this_month?: number
           bio?: string | null
           booking_message?: string | null
@@ -664,6 +675,10 @@ export type Database = {
           portfolio_url?: string | null
           rating?: number | null
           require_deposit?: boolean
+          shop_address?: string | null
+          shop_city?: string | null
+          shop_postal_code?: string | null
+          shop_state?: string | null
           specialty?: string | null
           subscription_expires_at?: string | null
           tier_level?: number
