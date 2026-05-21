@@ -395,15 +395,14 @@ const Profile = () => {
 
           {/* ===== QUICK LOCATION TOGGLE (Barbers only) ===== */}
           {isBarber && <LocationQuickToggle />}
-
           {/* ===== iOS GROUPED LIST ===== */}
           <div className="flex-1 space-y-1">
             {/* TOOLS section */}
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-3 pb-1">Tools</p>
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-2 pb-1">Tools</p>
             <div className="bg-card/80 backdrop-blur-sm rounded-xl border border-border/30 overflow-hidden divide-y divide-border/20">
               {/* Transactions */}
               <Collapsible open={txOpen} onOpenChange={setTxOpen}>
-                <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
+                <CollapsibleTrigger className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-muted/30 transition-colors">
                   <div className="flex items-center gap-3">
                     <Receipt className="h-4 w-4 text-primary" />
                     <span className="text-sm font-medium text-foreground">Recent Transactions</span>
@@ -420,7 +419,7 @@ const Profile = () => {
               {/* Appointments (fans) */}
               {!isBarber && (
                 <Collapsible open={apptOpen} onOpenChange={setApptOpen}>
-                  <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
+                  <CollapsibleTrigger className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-muted/30 transition-colors">
                     <div className="flex items-center gap-3">
                       <CalendarDays className="h-4 w-4 text-primary" />
                       <span className="text-sm font-medium text-foreground">My Appointments</span>
@@ -438,7 +437,7 @@ const Profile = () => {
               {/* Manage Appointments & Bounties (barbers) */}
               {isBarber && (
                 <Collapsible open={barberApptOpen} onOpenChange={setBarberApptOpen}>
-                  <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
+                  <CollapsibleTrigger className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-muted/30 transition-colors">
                     <div className="flex items-center gap-3">
                       <CalendarDays className="h-4 w-4 text-primary" />
                       <span className="text-sm font-medium text-foreground">Manage Appointments</span>
@@ -455,7 +454,7 @@ const Profile = () => {
 
               {/* My Rewards */}
               <Collapsible open={prizesOpen} onOpenChange={setPrizesOpen}>
-                <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
+                <CollapsibleTrigger className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-muted/30 transition-colors">
                   <div className="flex items-center gap-3">
                     <Gift className="h-4 w-4 text-primary" />
                     <span className="text-sm font-medium text-foreground">My Rewards</span>
@@ -469,7 +468,15 @@ const Profile = () => {
             </div>
 
             {/* NOTIFICATIONS */}
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-4 pb-1">Notifications</p>
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-2 pb-1">Notifications</p>
+            <NotificationToggle />
+            <div className="md:hidden">
+              <InstallAppButton />
+            </div>
+
+            {/* ACCOUNT section */}
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-2 pb-1">Account</p>
+
             <NotificationToggle />
             <InstallAppButton />
 
