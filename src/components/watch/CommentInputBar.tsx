@@ -25,6 +25,7 @@ export function CommentInputBar({
   disabled,
   placeholder = 'Add a comment…',
   className,
+  focusTrigger,
 }: CommentInputBarProps) {
   const [value, setValue] = useState('');
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
@@ -32,6 +33,13 @@ export function CommentInputBar({
   const [emojiOpen, setEmojiOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<number | null>(null);
+
+  // Focus input when trigger changes
+  useEffect(() => {
+    if (focusTrigger !== undefined && focusTrigger > 0) {
+      inputRef.current?.focus();
+    }
+  }, [focusTrigger]);
 
   // Detect @mention trigger at cursor tail
   useEffect(() => {
