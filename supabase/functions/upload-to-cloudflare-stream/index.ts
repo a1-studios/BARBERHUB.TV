@@ -101,11 +101,12 @@ Deno.serve(async (req) => {
 
     const streamUid = cfData.result.uid;
 
-    // Update the database record with the stream UID
+    // Update the database record with the stream UID and mark as pending so the
+    // feed doesn't show it until poll-cloudflare-stream flips it to 'ready'.
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
     const { error: updateError } = await supabaseAdmin
       .from(table)
-      .update({ cloudflare_stream_uid: streamUid })
+      .update({ cloudflare_stream_uid: streamUid, stream_status: "pending" })
       .eq("id", recordId);
 
     if (updateError) {
