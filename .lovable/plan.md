@@ -1,53 +1,44 @@
-## Goal
+## Problem
 
-On the Barbers Directory map view: (1) promote **Top Matches Near You** above the Mapbox map, (2) give every nearby card the same fixed size, and (3) bring back the old floating-profile **sphere** as a hero element fed by the same nearby-barbers query that powers the map.
+Signup emails arrive, but neither path completes:
 
-## Changes
+1. **Email button** sends users to `https://msuepyfssovvkjzpfjzu.supabase.co/auth/v1/verify?token=...&type=signup&redirect_to=https://barberhub.tv/auth/callback`. Supabase redirects to `/auth/callback?code=...` (PKCE), but `AuthCallback.tsx` only listens for an existing session or hash tokens — it never calls `supabase.auth.exchangeCodeForSession(code)`. After 6s the page shows "Link Expired".
+2. **6-digit code** in the email has nowhere to be entered on the site.
 
-### 1. `src/components/map/BarberMapDirectory.tsx` — reorder + sphere + uniform cards
+Auth logs confirm `/otp` returns 200 (email is sent correctly), so the only gap is on the client.
 
-- **Move the "Top Matches Near You" rail** (currently lines ~317-344, rendered *after* the map block) so it renders *before* the map container. Keep its data source (`scoredBarbers`) unchanged — it already comes from the live RPC `find_barbers_nearby`.
-- **Drop the `.reverse()`** so order matches visibility ranking (best first).
-- **Stop the horizontal snap rail on desktop** and switch the card row to a uniform layout:
-  - Mobile (<sm): horizontal snap scroll, every card the **same fixed width** (`w-[260px]` instead of `w-[78vw] max-w-[240px]`).
-  - ≥sm: 2-up grid; ≥lg: 3-up grid. All cards equal height (`h-full` + `grid` parent).
-- **Insert the sphere block above the rail** when `scoredBarbers.length >= 4` (fall back to rail-only otherwise). The sphere is the visual "hero" of the section; the rail sits directly under it as a tap-friendly list.
+## Fix
 
-### 2. `src/components/map/NearbyBarberCard.tsx` — fixed dimensions
+### 1. `src/pages/AuthCallback.tsx` — handle the `?code=` flow
+- On mount, read `?code=` from `window.location.search`.
+- If present, call `supabase.auth.exchangeCodeForSession(code)`.
+  - Success → existing `onAuthStateChange('SIGNED_IN')` already fires → success UI + redirect to `/`.
+  - Error → set `status='error'` with the returned message and keep the resend form.
+- Keep the existing hash-token / `getSession()` fallback for older links.
+- Bump the hard timeout from 6s to 10s so a slow exchange doesn't false-fail.
 
-- Replace `w-[78vw] max-w-[240px]` with `w-full` and let the parent control width.
-- Add `h-full flex flex-col` so cards in a grid stretch to equal height; push the `View Profile` button to the bottom with `mt-auto`.
+### 2. Add a code-entry fallback on the same `/auth/callback` page
+- In the `error` branch (and also reachable via a small "Have a code?" toggle in the `verifying` branch), show an OTP input:
+  - Email field (prefilled from `localStorage.raffle_pending_claim.email` if present, else manual).
+  - 6-digit code field (numeric, autoComplete="one-time-code").
+  - Submit calls `supabase.auth.verifyOtp({ email, token, type: 'email' })`.
+  - Success → same SIGNED_IN handler completes the flow.
+- Reuse existing cyber-styled inputs/buttons; no new design system tokens.
 
-### 3. New file `src/components/map/NearbySphere.tsx` — wraps `SphereImageGrid`
-
-- Accepts `barbers: ScoredBarber[]` (the same shape already built in `BarberMapDirectory`).
-- Maps each barber to the `ImageData` shape expected by `SphereImageGrid`:
-  ```ts
-  { id, src: avatar_url ?? fallback, alt: name, title: name,
-    description: specialty ?? location, rank: index+1,
-    isChampion: index === 0, location, rating: score }
-  ```
-- Renders `<SphereHolographicWrapper><SphereImageGrid images={...} autoRotate showChampionCrown /></SphereHolographicWrapper>` with a responsive `containerSize` (≈320 on mobile, 480 on desktop).
-- Clicking an avatar navigates to `/barber/:user_id` (wire through `SphereImageGrid`'s existing `selectedImage` state via a small `onSelect` prop — add the prop if missing, otherwise use the existing modal then a "View Profile" link).
-- Empty/loading states: skeleton sphere placeholder while `loading` is true.
-
-### 4. `src/pages/BarbersDirectory.tsx` — no structural change required
-
-- The page-level `TopBarbersNearbyRail` (used only in list view) stays as-is.
-- All work above happens inside `BarberMapDirectory`, which is already mounted by the page when `viewMode === 'map'`.
-
-## Section order after the change (map view)
-
-```
-[ Location search + radius chips ]
-[ 🌐 NearbySphere — floating avatars of top nearby barbers ]
-[ Top Matches Near You — uniform card grid/rail ]
-[ Mapbox map with pins ]
-[ Empty state (if no barbers in radius) ]
-```
+### 3. Make the email's code box land users in the right place
+- Update `supabase/auth-email-templates/confirm-signup.html`:
+  - Above the `{{ .Token }}` block, change the "Or use this code" line to read: "Or enter this code at https://barberhub.tv/auth/callback".
+  - Wrap the code box in an anchor to `https://barberhub.tv/auth/callback` so tapping it opens the page where the input now exists.
+- No other template/branding changes.
 
 ## Out of scope
 
-- No DB / RPC / Edge Function changes — the sphere reuses the existing `find_barbers_nearby` results.
-- No changes to list view, header, or other pages.
-- No new sphere physics — reuse `SphereImageGrid` + `SphereHolographicWrapper` as-is.
+- No DB migrations, no edge function changes, no Supabase Auth setting changes.
+- No changes to `StepClaimAccount.tsx` (it already uses `signInWithOtp` with the correct `emailRedirectTo`).
+- No changes to OAuth/social login or password reset flow.
+
+## Technical notes
+
+- `exchangeCodeForSession` is the supported call for Supabase's PKCE `?code=` redirects in `@supabase/supabase-js` v2.
+- `verifyOtp({ type: 'email' })` is the correct type for the 6-digit token emitted by `{{ .Token }}` in a signup/magic-link email (works for both signup confirm and magic link).
+- The existing `AuthHashHandler` already routes stray `#access_token=` hashes to `/auth/callback`, so the new logic covers all three delivery modes (hash, code, OTP) in one place.
