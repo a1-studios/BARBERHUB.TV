@@ -27,6 +27,8 @@ interface SmartVideoPlayerProps {
   preloadMode?: 'none' | 'metadata' | 'auto';
   /** Show a large centered Play button when autoplay is blocked / video is paused. */
   showCenterPlayButton?: boolean;
+  /** Tap on the video surface toggles play/pause (single click play, single click pause). */
+  tapToToggle?: boolean;
 }
 
 const CF_STREAM_CUSTOMER =
@@ -61,6 +63,7 @@ export function SmartVideoPlayer({
   enableReplay = false,
   preloadMode = 'none',
   showCenterPlayButton = false,
+  tapToToggle = false,
 }: SmartVideoPlayerProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -278,6 +281,19 @@ export function SmartVideoPlayer({
     });
   }, []);
 
+  const handleSurfaceTap = useCallback(() => {
+    if (!tapToToggle) return;
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) {
+      v.play().then(() => setAutoplayBlocked(false)).catch(() => {
+        try { v.muted = true; v.play().then(() => setAutoplayBlocked(false)).catch(() => {}); } catch { /* ignore */ }
+      });
+    } else {
+      v.pause();
+    }
+  }, [tapToToggle]);
+
   const handleEnded = () => {
     setEnded(true);
     onEnded?.();
@@ -303,6 +319,7 @@ export function SmartVideoPlayer({
         preload={shouldPlay ? 'auto' : preloadMode}
         className="w-full h-full object-cover"
         crossOrigin={vttUrl ? 'anonymous' : undefined}
+        onClick={tapToToggle ? handleSurfaceTap : undefined}
         onLoadedData={() => setLoading(false)}
         onWaiting={() => setLoading(true)}
         onPlaying={() => { setLoading(false); setIsPaused(false); setAutoplayBlocked(false); }}

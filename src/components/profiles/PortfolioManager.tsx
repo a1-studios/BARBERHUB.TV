@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Upload, Trash2, Image as ImageIcon, Video, Loader2 } from 'lucide-react';
+import { Plus, Upload, Trash2, Image as ImageIcon, Video, Loader2, Play } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { SmartVideoPlayer } from '@/components/video/SmartVideoPlayer';
@@ -258,9 +258,11 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
                     />
                   )}
 
-                  {isVid && (
-                    <div className="absolute bottom-1 right-1 bg-black/70 rounded-full p-1 pointer-events-none">
-                      <Video className="w-3 h-3 text-white" />
+                  {isVid && !processing && (
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <span className="flex items-center justify-center h-9 w-9 rounded-full bg-black/60 backdrop-blur-sm border border-white/20 shadow-lg">
+                        <Play className="w-4 h-4 text-white ml-0.5" fill="currentColor" />
+                      </span>
                     </div>
                   )}
 

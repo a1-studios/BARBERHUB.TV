@@ -64,8 +64,6 @@ const WatchFeed = () => {
   const [isMuted, setIsMuted] = useState(true);
   const [donationTarget, setDonationTarget] = useState<{ userId: string; name: string } | null>(null);
   const [commentFocusTrigger, setCommentFocusTrigger] = useState(0);
-  // Tap-to-play: track which feed indices the user explicitly started.
-  const [userPlayed, setUserPlayed] = useState<Set<number>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const viewedContentIds = useRef<Set<string>>(new Set());
 
@@ -540,7 +538,6 @@ const WatchFeed = () => {
     const isActive = activeIndex === idx;
     const isPrefetch = idx === nextPlayableIdx;
     const shouldMount = isActive || isPrefetch;
-    const hasUserPlayed = userPlayed.has(idx);
     const cleanTitle = cleanDisplayTitle(item.title);
     const videoUuid = isActive ? extractVideoUuid(item.id, item.content_id) : null;
 
@@ -563,7 +560,7 @@ const WatchFeed = () => {
               streamUid={item.cloudflare_stream_uid}
               fallbackUrl={item.media_url}
               poster={item.thumbnail_url}
-              forceActive={isActive && hasUserPlayed}
+              forceActive={isActive}
               autoPlayWhenVisible={false}
               muted={isMuted}
               controls={false}
@@ -571,8 +568,9 @@ const WatchFeed = () => {
               onEnded={() => handleVideoEnded(idx)}
               overlayPayload={item.overlay_payload}
               preloadMode={isActive ? 'auto' : isPrefetch ? 'auto' : 'none'}
-              enableReplay={isActive && hasUserPlayed}
-              showCenterPlayButton={isActive && hasUserPlayed}
+              enableReplay={isActive}
+              showCenterPlayButton={isActive}
+              tapToToggle={isActive}
             />
           </div>
         ) : (
@@ -589,19 +587,6 @@ const WatchFeed = () => {
           ) : (
             <div className="absolute inset-0 bg-black" />
           )
-        )}
-
-        {/* Tap-to-play overlay — shown until the user taps Play on the active item */}
-        {isActive && !hasUserPlayed && (
-          <button
-            onClick={() => setUserPlayed(prev => { const n = new Set(prev); n.add(idx); return n; })}
-            className="absolute inset-0 z-20 flex items-center justify-center bg-black/30"
-            aria-label="Play"
-          >
-            <span className="flex items-center justify-center h-20 w-20 rounded-full bg-primary/90 text-primary-foreground shadow-2xl shadow-primary/40 active:scale-95 transition-transform">
-              <Play className="h-9 w-9 ml-1" fill="currentColor" />
-            </span>
-          </button>
         )}
 
         {item.type === "educator" && (
