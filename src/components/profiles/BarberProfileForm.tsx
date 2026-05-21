@@ -120,6 +120,45 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
     }
   };
 
+  const handleGeocodeAddress = async () => {
+    const parts = [formData.shop_address, formData.shop_city, formData.shop_state, formData.shop_postal_code, formData.country_code]
+      .filter(Boolean)
+      .join(', ');
+    if (!parts.trim()) {
+      toast.error('Enter at least a city or street before locating');
+      return;
+    }
+    setGeocoding(true);
+    try {
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        toast.error('Google Maps API key not configured');
+        return;
+      }
+      const res = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(parts)}&key=${apiKey}`
+      );
+      const data = await res.json();
+      if (data.status === 'OK' && data.results?.length > 0) {
+        const r = data.results[0];
+        const { lat, lng } = r.geometry.location;
+        setFormData((p) => ({
+          ...p,
+          latitude: lat,
+          longitude: lng,
+          location: p.location || r.formatted_address,
+        }));
+        toast.success('Address located — fans will now see your distance.');
+      } else {
+        toast.error('Could not locate that address');
+      }
+    } catch (err) {
+      toast.error('Geocoding failed');
+    } finally {
+      setGeocoding(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
