@@ -445,10 +445,15 @@ const WatchFeed = () => {
     );
   };
 
-  const handleVideoEnded = useCallback((_idx: number) => {
-    // Do not auto-scroll. The centered Replay control handles replay.
-    // Users can swipe to the next item normally.
+  const handleVideoEnded = useCallback((idx: number) => {
+    setEndedIndex(idx);
   }, []);
+
+  const handleReplayActive = useCallback(() => {
+    setEndedIndex(null);
+    setReplayNonce((n) => n + 1);
+  }, []);
+
 
   const handleShare = async (item: FeedItem) => {
     const url = window.location.origin + "/watch";
