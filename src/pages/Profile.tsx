@@ -375,7 +375,6 @@ const Profile = () => {
 
           <div className="flex flex-col items-center text-center -mt-3">
 
-          <div className="flex flex-col items-center text-center -mt-1">
             <h1 className="text-lg font-bold text-foreground flex items-center justify-center gap-1">
               {displayName}
               <DisplayNameEditor
