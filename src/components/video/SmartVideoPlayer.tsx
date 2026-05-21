@@ -74,6 +74,7 @@ export function SmartVideoPlayer({
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [vttUrl, setVttUrl] = useState<string | null>(null);
+  const [preferFallback, setPreferFallback] = useState(false);
   const mountedRef = useRef(true);
 
   useEffect(() => () => { mountedRef.current = false; }, []);
@@ -105,10 +106,28 @@ export function SmartVideoPlayer({
 
   const shouldPlay = forceActive || (isVisible && activeId === instanceId);
 
+  const streamSrc = streamUid ? streamHlsUrl(streamUid) : '';
+  const directSrc = fallbackUrl || '';
+  const canFallbackToDirect = !!streamSrc && !!directSrc && streamSrc !== directSrc;
+
+  const activateDirectFallback = useCallback((reason: string) => {
+    if (!canFallbackToDirect) return;
+    console.warn('[SmartVideoPlayer] falling back to direct video source:', reason, { streamUid, directSrc });
+    setPreferFallback(true);
+    setLoading(true);
+    setAutoplayBlocked(false);
+  }, [canFallbackToDirect, streamUid, directSrc]);
+
+  useEffect(() => {
+    setPreferFallback(false);
+    setAutoplayBlocked(false);
+    setEnded(false);
+  }, [streamUid, fallbackUrl]);
+
   // Resolve the canonical src for this player
-  const src = streamUid ? streamHlsUrl(streamUid) : fallbackUrl || '';
+  const src = !preferFallback && streamSrc ? streamSrc : directSrc || streamSrc;
   const effectivePoster = poster || (streamUid ? streamPosterUrl(streamUid) : undefined);
-  const isHls = !!streamUid;
+  const isHls = !!streamSrc && !preferFallback;
 
   // Reset loading whenever the underlying source changes
   useEffect(() => { setLoading(true); setEnded(false); }, [src]);
@@ -149,7 +168,12 @@ export function SmartVideoPlayer({
         hls.startLoad();
       });
       hls.on(Hls.Events.ERROR, (_e, data) => {
-        if (data.fatal) hls.recoverMediaError();
+        if (!data.fatal) return;
+        if (canFallbackToDirect) {
+          activateDirectFallback(data.details || data.type || 'hls-fatal');
+          return;
+        }
+        hls.recoverMediaError();
       });
       hlsRef.current = hls;
     } else {
@@ -162,7 +186,7 @@ export function SmartVideoPlayer({
       if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
       try { v.removeAttribute('src'); v.load(); } catch { /* ignore */ }
     };
-  }, [src, isHls, shouldAttach]);
+  }, [src, isHls, shouldAttach, canFallbackToDirect, activateDirectFallback]);
 
   // Effect B — reconfigure the existing hls instance when active state flips.
   // No destroy; just raise buffer caps so the warmed prefetch survives.
@@ -222,12 +246,19 @@ export function SmartVideoPlayer({
         }
         if (cancelled || !mountedRef.current) return;
         await attemptPlay();
-      } catch { if (!cancelled) setAutoplayBlocked(true); }
+      } catch (err: any) {
+        if (cancelled) return;
+        if (err?.message === 'load-timeout' && isHls && canFallbackToDirect) {
+          activateDirectFallback('load-timeout');
+          return;
+        }
+        setAutoplayBlocked(true);
+      }
     };
     if (shouldPlay && !ended) tryPlay();
     else v.pause();
     return () => { cancelled = true; if (timeoutId) window.clearTimeout(timeoutId); };
-  }, [shouldPlay, ended]);
+  }, [shouldPlay, ended, isHls, canFallbackToDirect, activateDirectFallback]);
 
   const handleReplay = useCallback(() => {
     setEnded(false);
@@ -274,6 +305,13 @@ export function SmartVideoPlayer({
         onWaiting={() => setLoading(true)}
         onPlaying={() => { setLoading(false); setIsPaused(false); setAutoplayBlocked(false); }}
         onCanPlay={() => setLoading(false)}
+        onError={() => {
+          if (isHls && canFallbackToDirect) {
+            activateDirectFallback('video-element-error');
+            return;
+          }
+          setLoading(false);
+        }}
         onPause={() => setIsPaused(true)}
         onPlay={() => setIsPaused(false)}
         onTimeUpdate={(e) => setCurrentTime((e.target as HTMLVideoElement).currentTime)}
