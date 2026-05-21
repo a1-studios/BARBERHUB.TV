@@ -407,6 +407,7 @@ const WatchFeed = () => {
             const idx = Number(entry.target.getAttribute("data-index"));
             if (!isNaN(idx)) {
               setActiveIndex(idx);
+              setEndedIndex((cur) => (cur !== null && cur !== idx ? null : cur));
               const item = pinnedFeed[idx];
               if (item?.content_id && !viewedContentIds.current.has(item.content_id)) {
                 viewedContentIds.current.add(item.content_id);
