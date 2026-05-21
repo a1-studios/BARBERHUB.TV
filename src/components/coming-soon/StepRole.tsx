@@ -63,16 +63,16 @@ export const StepRole = ({ email, initialRole, initialCountry, initialPhone, onC
     <SwipeableStep direction={direction} canAdvance={ready && !submitting} onSwipeNext={submit} onSwipeBack={onBack}>
       <div className="space-y-5">
         <div className="text-center space-y-1.5">
-          <span className="text-[10px] uppercase tracking-wider text-white/40 font-bold">Step 2 of 3</span>
+          <span className="text-[10px] uppercase tracking-wider text-white/40 font-bold">Step 1 of 2</span>
           <h2 className="text-2xl sm:text-3xl font-black uppercase tracking-tight bg-gradient-to-r from-amber-300 via-orange-500 to-orange-600 bg-clip-text text-transparent">
-            Pick your side
+            What's your role?
           </h2>
-          <p className="text-sm text-white/65">This locks your lane. Choose carefully.</p>
+          <p className="text-sm text-white/65">Locks your lane. Choose carefully.</p>
         </div>
 
         <div className="grid grid-cols-2 gap-2">
-          <RoleCard icon={<Scissors className="w-5 h-5" />} title="Barber" sub="Compete & earn" active={role === 'barber'} onClick={() => { haptic(); setRole('barber'); }} />
-          <RoleCard icon={<Heart className="w-5 h-5" />} title="Fan" sub="Watch & sponsor" active={role === 'fan'} onClick={() => { haptic(); setRole('fan'); setBarberStatus(null); }} />
+          <RoleCard icon={<Scissors className="w-5 h-5" />} title="I'm a Barber" sub="Compete & earn" active={role === 'barber'} onClick={() => { haptic(); setRole('barber'); }} />
+          <RoleCard icon={<Heart className="w-5 h-5" />} title="I'm a Fan" sub="Watch & sponsor" active={role === 'fan'} onClick={() => { haptic(); setRole('fan'); setBarberStatus(null); }} />
         </div>
 
         {/* Inline barber sub-status */}
