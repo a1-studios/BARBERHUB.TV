@@ -3,6 +3,7 @@ import { User, Session, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { authCallbackRedirect } from '@/lib/authRedirects';
 import { toast } from 'sonner';
+import { announce } from '@/lib/headerAnnouncements';
 
 interface AuthContextType {
   user: User | null;
