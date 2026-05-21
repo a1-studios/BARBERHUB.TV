@@ -75,22 +75,6 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
     if (!formData.country_code) {
       newErrors.country_code = 'Country/nationality is required for tournament matching';
     }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user) return;
-
-    if (!validate()) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
-    setLoading(true);
-    try {
       const profileData = {
         user_id: user.id,
         name: formData.name.trim(),
@@ -99,12 +83,36 @@ export function BarberProfileForm({ onProfileCreated, existingProfile }: BarberP
         location: formData.location || null,
         years_experience: formData.years_experience ? parseInt(formData.years_experience) : null,
         portfolio_url: formData.portfolio_url || null,
-        phone_number: formData.phone_number.trim(),
         country_code: formData.country_code,
         shop_address: formData.shop_address || null,
         shop_city: formData.shop_city || null,
         shop_state: formData.shop_state || null,
         shop_postal_code: formData.shop_postal_code || null,
+        address_visibility: formData.address_visibility,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+      };
+
+      const { error } = await supabase
+        .from('barber_profiles')
+        .upsert(profileData, { onConflict: 'user_id' });
+
+      if (error) throw error;
+
+      // Save phone number to private contacts (owner-only RLS)
+      await supabase
+        .from('user_private_contacts')
+        .upsert(
+          { user_id: user.id, phone_number: formData.phone_number.trim(), updated_at: new Date().toISOString() },
+          { onConflict: 'user_id' }
+        );
+
+      // Also update country_code in profiles table
+      await supabase
+        .from('profiles')
+        .update({ country_code: formData.country_code })
+        .eq('user_id', user.id);
+
         address_visibility: formData.address_visibility,
         latitude: formData.latitude,
         longitude: formData.longitude,
