@@ -24,6 +24,7 @@ interface BarberProfileCardProps {
   showVideo?: boolean;
   showActions?: boolean;
   onProfileClick?: (userId: string) => void;
+  distanceMiles?: number;
 }
 
 export const BarberProfileCard = ({ 
@@ -32,7 +33,8 @@ export const BarberProfileCard = ({
   layout = 'full',
   showVideo = false,
   showActions = true,
-  onProfileClick
+  onProfileClick,
+  distanceMiles,
 }: BarberProfileCardProps) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
