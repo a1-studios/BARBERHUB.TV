@@ -15,6 +15,7 @@ import { SmartVideoPlayer } from "@/components/video/SmartVideoPlayer";
 import { cleanDisplayTitle } from "@/lib/utils";
 // Watch feed always starts muted to guarantee autoplay on mobile.
 import { toCdnUrl } from "@/lib/mediaCdn";
+import { VideoCommentsLayer, extractVideoUuid } from "@/components/watch/VideoCommentsLayer";
 
 interface FeedItem {
   type: "video" | "sponsor" | "educator" | "platform" | "battle";
