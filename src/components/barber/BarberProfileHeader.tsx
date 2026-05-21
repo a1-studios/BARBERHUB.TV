@@ -7,7 +7,7 @@ import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
 import { Link } from 'react-router-dom';
 import { ExternalLink, Settings, Plus, ArrowDownToLine, Instagram, Twitter, Youtube, Facebook, LogOut, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { M4MHeartbeat } from '@/components/m4m/M4MHeartbeat';
+import { M4MAvatarBadge } from '@/components/m4m/M4MAvatarBadge';
 
 interface BarberProfileHeaderProps {
   avatar_url?: string | null;
@@ -110,7 +110,7 @@ export function BarberProfileHeader({
       
       <CardContent className="relative p-4 md:p-8 z-10">
         <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start">
-          <div className="flex flex-col items-center gap-1">
+          <div className="relative">
             <TierRing tier={subscription_tier} size="lg" interactive={showActions}>
               <Avatar className="w-20 h-20 md:w-32 md:h-32">
                 <AvatarImage src={avatar_url || undefined} />
@@ -119,14 +119,16 @@ export function BarberProfileHeader({
                 </AvatarFallback>
               </Avatar>
             </TierRing>
-            <M4MHeartbeat
+            <M4MAvatarBadge
               certified={m4m_certified}
               paid={m4m_paid}
               livesTouched={m4m_lives_touched}
               barberName={display_name}
               barberUserId={barber_user_id || ''}
-              size="md"
               isOwnProfile={showActions}
+              size={38}
+              position="bottom-right"
+              className="md:!w-[52px] md:!h-[52px]"
             />
           </div>
 

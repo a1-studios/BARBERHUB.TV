@@ -10,6 +10,7 @@ import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { useTiersEnabled } from '@/hooks/useTiersEnabled';
 import { Coins } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { M4MAvatarBadge } from '@/components/m4m/M4MAvatarBadge';
 
 interface AvatarCrestProps {
   tier: string | null | undefined;
@@ -354,7 +355,7 @@ export const AvatarCrest = ({
   }
 
   const cx = config.svgSize / 2;
-  const cy = config.svgSize / 2 - (showM4M ? 6 * config.wingScale : 0);
+  const cy = config.svgSize / 2;
   const starCount = validTier === 'diamond' ? 6 : validTier === 'gold' ? 5 : validTier === 'silver' ? 4 : validTier === 'bronze' ? 3 : 0;
   const tierColors = TIER_COLORS[validTier];
 
@@ -389,7 +390,7 @@ export const AvatarCrest = ({
   };
 
   const svgW = config.svgSize + 40 * config.wingScale;
-  const svgH = config.svgSize + (showM4M ? 24 * config.wingScale : 8 * config.wingScale);
+  const svgH = config.svgSize + 8 * config.wingScale;
   const nextTierColors = getNextTierColor(validTier);
 
   return (
@@ -478,41 +479,39 @@ export const AvatarCrest = ({
               />
             )}
 
-            {/* M4M Heart */}
-            {showM4M && (
-              <motion.g
-                onClick={handleM4MClick}
-                className="cursor-pointer"
-                style={{ pointerEvents: 'all' }}
-                {...(m4mState === 'certified' ? {
-                  animate: { opacity: [0.4, 1, 1, 0.4] },
-                  transition: { duration: 3, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1 },
-                } : {})}
-              >
-                <M4MHeart
-                  cx={svgW / 2}
-                  cy={cy + (svgH - config.svgSize) / 2 + config.ringR + 22 * config.wingScale}
-                  scale={config.wingScale}
-                  glowState={m4mState}
-                />
-              </motion.g>
-            )}
+            {/* M4M heart now rendered as overlay on the avatar (below) */}
           </svg>
 
-          {/* Avatar */}
+          {/* Avatar with M4M badge overlay */}
           <div
-            className="absolute rounded-full overflow-hidden"
+            className="absolute"
             style={{
               width: config.avatarSize,
               height: config.avatarSize,
               left: (svgW - config.avatarSize) / 2,
               top: cy + (svgH - config.svgSize) / 2 - config.avatarSize / 2,
             }}
-            onClick={handleRingClick}
-            role={interactive ? 'button' : undefined}
-            tabIndex={interactive ? 0 : undefined}
           >
-            {children}
+            <div
+              className="w-full h-full rounded-full overflow-hidden relative"
+              onClick={handleRingClick}
+              role={interactive ? 'button' : undefined}
+              tabIndex={interactive ? 0 : undefined}
+            >
+              {children}
+            </div>
+            {showM4M && (
+              <M4MAvatarBadge
+                certified={m4mCertified}
+                paid={m4mPaid}
+                livesTouched={m4mLivesTouched}
+                barberName={barberName}
+                barberUserId={barberUserId}
+                isOwnProfile={isOwnProfile}
+                size={Math.round(config.avatarSize * 0.36)}
+                position="bottom-right"
+              />
+            )}
           </div>
 
           {/* "Upgrade" label on ghost hover */}
@@ -530,15 +529,6 @@ export const AvatarCrest = ({
           )}
         </div>
 
-        {/* M4M pulse */}
-        {showM4M && m4mState === 'complete' && (
-          <motion.div
-            className="absolute pointer-events-none"
-            style={{ bottom: 0, left: '50%', transform: 'translateX(-50%)', width: 20 * config.wingScale, height: 20 * config.wingScale }}
-            animate={{ scale: [1, 1.15, 1, 1.1, 1] }}
-            transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.6 }}
-          />
-        )}
       </div>
 
       {/* Membership Plans Drawer */}

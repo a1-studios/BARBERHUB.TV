@@ -14,7 +14,7 @@ import { BarberVideoSection } from './BarberVideoSection';
 import { BarberActionButtons } from './BarberActionButtons';
 import { TierRing } from '../TierRing';
 import { SubCategoryBadge } from '../SubCategoryBadge';
-import { M4MHeartbeat } from '../m4m/M4MHeartbeat';
+import { M4MAvatarBadge } from '../m4m/M4MAvatarBadge';
 import { parseSpecialties, getSpecialtyDisplay } from '@/config/specialtyTags';
 
 interface BarberProfileCardProps {
@@ -186,22 +186,25 @@ export const BarberProfileCard = ({
       <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:border-primary/40 transition-all duration-300">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-3">
-            <TierRing tier={extraProfileData?.active_subscription_tier} size="sm">
-              <Avatar className="w-12 h-12">
-                <AvatarImage src={barberProfile.avatar_url || undefined} />
-                <AvatarFallback className="bg-primary/20 text-primary font-semibold">
-                  {(displayName || 'B').charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-            </TierRing>
-            <M4MHeartbeat
-              certified={extraProfileData?.m4m_certified ?? false}
-              paid={extraProfileData?.m4m_paid ?? false}
-              livesTouched={extraProfileData?.m4m_lives_touched ?? 0}
-              barberName={displayName || 'Barber'}
-              barberUserId={userId}
-              size="sm"
-            />
+            <div className="relative">
+              <TierRing tier={extraProfileData?.active_subscription_tier} size="sm">
+                <Avatar className="w-12 h-12">
+                  <AvatarImage src={barberProfile.avatar_url || undefined} />
+                  <AvatarFallback className="bg-primary/20 text-primary font-semibold">
+                    {(displayName || 'B').charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </TierRing>
+              <M4MAvatarBadge
+                certified={extraProfileData?.m4m_certified ?? false}
+                paid={extraProfileData?.m4m_paid ?? false}
+                livesTouched={extraProfileData?.m4m_lives_touched ?? 0}
+                barberName={displayName || 'Barber'}
+                barberUserId={userId}
+                size={20}
+                position="bottom-right"
+              />
+            </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <CardTitle className="text-lg text-white">
