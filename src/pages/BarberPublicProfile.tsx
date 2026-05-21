@@ -722,7 +722,7 @@ export default function BarberPublicProfile() {
                 
                 {portfolio && portfolio.length > 0 ? (
                   <div className="space-y-6">
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                       {portfolio.map((creation) => {
                         const isVid = isVideoItem(creation);
                         return (
