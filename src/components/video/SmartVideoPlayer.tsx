@@ -367,7 +367,7 @@ export function SmartVideoPlayer({
       )}
 
       {/* Centered play button — shown when autoplay is blocked, or when paused on Watch feed. */}
-      {showCenterPlayButton && !ended && (autoplayBlocked || (shouldPlay && isPaused && !loading)) && (
+      {showCenterPlayButton && !ended && (autoplayBlocked || (manualPlayback && isPaused) || (shouldPlay && isPaused && !loading)) && (
         <button
           onClick={handleManualPlay}
           className="absolute inset-0 flex items-center justify-center bg-black/30 z-10"
