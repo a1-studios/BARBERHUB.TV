@@ -288,9 +288,8 @@ const Profile = () => {
           <ProfileCompletionBanner profile={profile} />
 
           {/* ===== HERO: 3-col grid — specialties | avatar | stats ===== */}
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 pt-2 pb-0">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 -mt-2 pt-0 pb-0">
 
-            {/* LEFT — Specialties stacked */}
             {/* LEFT — Specialties stacked */}
             <div className="flex flex-col items-start gap-1 min-w-0">
               {specialty ? parseSpecialties(specialty).map(id => {
@@ -306,40 +305,40 @@ const Profile = () => {
               }) : null}
             </div>
 
-            {/* CENTER — Avatar + orbit */}
-            <SocialOrbit radius={62} iconSize={24} links={socialLinksObj}>
-
-              {isBarber ? (
-                <AvatarCrest
-                  tier={subscriptionTier}
-                  size="md"
-                  interactive
-                  showM4M
-                  m4mCertified={m4mCertified}
-                  m4mPaid={m4mPaid}
-                  m4mLivesTouched={m4mLivesTouched}
-                  barberName={displayName}
-                  barberUserId={user?.id || ''}
-                  isOwnProfile={true}
-                >
-                  <Avatar className="w-full h-full">
+            {/* CENTER — Avatar + orbit (always centered, +15% size, mobile-first) */}
+            <div className="flex items-center justify-center mx-auto">
+              <SocialOrbit radius={71} iconSize={28} links={socialLinksObj}>
+                {isBarber ? (
+                  <AvatarCrest
+                    tier={subscriptionTier}
+                    size="lg"
+                    interactive
+                    showM4M
+                    m4mCertified={m4mCertified}
+                    m4mPaid={m4mPaid}
+                    m4mLivesTouched={m4mLivesTouched}
+                    barberName={displayName}
+                    barberUserId={user?.id || ''}
+                    isOwnProfile={true}
+                  >
+                    <Avatar className="w-full h-full">
+                      <AvatarImage src={profile?.avatar_url || undefined} />
+                      <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
+                        {displayName.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </AvatarCrest>
+                ) : (
+                  <Avatar className="h-[101px] w-[101px] border-2 border-background shadow-lg">
                     <AvatarImage src={profile?.avatar_url || undefined} />
                     <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
                       {displayName.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                </AvatarCrest>
+                )}
+              </SocialOrbit>
+            </div>
 
-              ) : (
-                <Avatar className="h-[88px] w-[88px] border-2 border-background shadow-lg">
-                  <AvatarImage src={profile?.avatar_url || undefined} />
-                  <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
-                    {displayName.charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-
-              )}
-            </SocialOrbit>
 
             {/* RIGHT — Stats stacked */}
             <div className="flex flex-col items-end gap-1.5 text-right">
