@@ -288,6 +288,7 @@ const App = () => (
         <Sonner position="top-right" />
         <BrowserRouter>
           <AppContent />
+          <OneTapRaffleReveal />
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
