@@ -281,6 +281,19 @@ export function SmartVideoPlayer({
     });
   }, []);
 
+  const handleSurfaceTap = useCallback(() => {
+    if (!tapToToggle) return;
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) {
+      v.play().then(() => setAutoplayBlocked(false)).catch(() => {
+        try { v.muted = true; v.play().then(() => setAutoplayBlocked(false)).catch(() => {}); } catch { /* ignore */ }
+      });
+    } else {
+      v.pause();
+    }
+  }, [tapToToggle]);
+
   const handleEnded = () => {
     setEnded(true);
     onEnded?.();
