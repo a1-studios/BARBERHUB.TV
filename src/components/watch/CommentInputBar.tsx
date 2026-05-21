@@ -11,6 +11,7 @@ interface CommentInputBarProps {
   disabled?: boolean;
   placeholder?: string;
   className?: string;
+  focusTrigger?: number; // increments to request focus
 }
 
 const MAX_LEN = 150;
