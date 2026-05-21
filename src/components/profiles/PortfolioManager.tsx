@@ -70,20 +70,33 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
         const isVid = file.type.startsWith('video/');
         const filename = `${Date.now()}_${file.name.replace(/[^a-z0-9._-]/gi, '_')}`;
 
-        // Capture poster from videos in parallel with the upload
+        // Capture poster from videos in parallel with the upload — await before insert
+        // so thumbnail_url is persisted with the row.
         const thumbPromise = isVid
           ? captureVideoThumbnail(file).then(async (b) => {
               if (!b) return null;
-              const thumbKey = `thumbnails/${Date.now()}_${file.name}.jpg`;
-              const { data } = await supabase.functions.invoke('get-r2-presigned-url', {
-                body: { key: thumbKey, contentType: 'image/jpeg' },
-              });
-              if (!data?.uploadUrl) return null;
-              const put = await fetch(data.uploadUrl, {
-                method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: b,
-              });
-              return put.ok ? (data.publicUrl as string) : null;
-            }).catch(() => null)
+              try {
+                const thumbKey = `thumbnails/${Date.now()}_${file.name.replace(/[^a-z0-9._-]/gi, '_')}.jpg`;
+                const { data, error } = await supabase.functions.invoke('get-r2-presigned-url', {
+                  body: { key: thumbKey, contentType: 'image/jpeg' },
+                });
+                if (error || !data?.uploadUrl) {
+                  console.warn('[thumb] presign failed', error);
+                  return null;
+                }
+                const put = await fetch(data.uploadUrl, {
+                  method: 'PUT', headers: { 'Content-Type': 'image/jpeg' }, body: b,
+                });
+                if (!put.ok) {
+                  console.warn('[thumb] PUT failed', put.status);
+                  return null;
+                }
+                return data.publicUrl as string;
+              } catch (e) {
+                console.warn('[thumb] upload error', e);
+                return null;
+              }
+            }).catch((e) => { console.warn('[thumb] capture error', e); return null; })
           : Promise.resolve<string | null>(null);
 
         const { publicUrl } = await uploadFileMultipart(file, filename, file.type, {
@@ -106,10 +119,13 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
 
         if (isVid && newCreation?.id) {
           toast.info('Optimizing video for smooth playback…');
-          const { data: ingest } = await supabase.functions.invoke('upload-to-cloudflare-stream', {
+          const { data: ingest, error: ingestErr } = await supabase.functions.invoke('upload-to-cloudflare-stream', {
             body: { sourceUrl: publicUrl, table: 'creations', recordId: newCreation.id },
           });
-          if (ingest?.uid) {
+          if (ingestErr || !ingest?.uid) {
+            console.error('[ingest] failed', ingestErr, ingest);
+            toast.warning('Video uploaded — optimization will retry shortly');
+          } else {
             pollStreamReady('creations', newCreation.id, ingest.uid, {
               onStatus: (s) => {
                 if (s === 'ready') {
