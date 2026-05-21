@@ -91,8 +91,8 @@ export function PortfolioManager({ barberId, readonly = false }: PortfolioManage
 
         uploaded++;
       } catch (error: any) {
-        toast.error(`Failed to upload ${file.name}`);
-        console.error('Upload error:', error);
+        console.error('Upload error:', file.name, error);
+        toast.error(`Failed to upload ${file.name}: ${error?.message || 'unknown error'}`);
       }
     }
 
