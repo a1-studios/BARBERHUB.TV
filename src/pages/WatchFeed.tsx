@@ -58,11 +58,14 @@ const WatchFeed = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const targetVideoBarber = searchParams.get('video');
+  const targetSrcParam = searchParams.get('src');
   const { isFan } = useUserRole();
   const [activeIndex, setActiveIndex] = useState(0);
   const [isMuted, setIsMuted] = useState(true);
   const [donationTarget, setDonationTarget] = useState<{ userId: string; name: string } | null>(null);
   const [commentFocusTrigger, setCommentFocusTrigger] = useState(0);
+  // Tap-to-play: track which feed indices the user explicitly started.
+  const [userPlayed, setUserPlayed] = useState<Set<number>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const viewedContentIds = useRef<Set<string>>(new Set());
 
@@ -349,25 +352,49 @@ const WatchFeed = () => {
     return out;
   }, [shuffledContent, sponsors, battleItems]);
 
-  // If ?video= param is set, find the matching feed item and jump to it
+  // Deep-link: pin the targeted video at index 0 so the user never lands on a random clip.
+  // Uses either ?video=<id-or-url> or ?src=<media-url>. Builds a synthetic item if the
+  // target isn't in the loaded feed yet.
+  const pinnedFeed: FeedItem[] = useMemo(() => {
+    const targetKey = targetVideoBarber ? decodeURIComponent(targetVideoBarber) : null;
+    const targetSrc = targetSrcParam ? decodeURIComponent(targetSrcParam) : targetKey;
+    if (!targetKey && !targetSrc) return feed;
+
+    const matchIdx = feed.findIndex(
+      f => (targetKey && (f.content_id === targetKey || f.media_url === targetKey)) ||
+           (targetSrc && f.media_url === targetSrc)
+    );
+    if (matchIdx === 0) return feed;
+    if (matchIdx > 0) {
+      const pinned = feed[matchIdx];
+      return [pinned, ...feed.slice(0, matchIdx), ...feed.slice(matchIdx + 1)];
+    }
+    // Not found — build a synthetic item so the user still sees the exact clip they tapped.
+    if (!targetSrc || !/^https?:\/\//.test(targetSrc)) return feed;
+    const synthetic: FeedItem = {
+      type: "video",
+      id: `pinned-${targetSrc}`,
+      media_url: toCdnUrl(targetSrc),
+      barber_name: "Featured",
+      specialty: null,
+      cloudflare_stream_uid: null,
+    };
+    return [synthetic, ...feed];
+  }, [feed, targetVideoBarber, targetSrcParam]);
+
+  // Ensure the page starts at index 0 (the pinned video) when a deep link is used.
   const [hasJumped, setHasJumped] = useState(false);
   useEffect(() => {
-    if (targetVideoBarber && feed.length > 0 && !hasJumped) {
-      const decodedTarget = decodeURIComponent(targetVideoBarber);
-      const idx = feed.findIndex(f => f.media_url === decodedTarget);
-      if (idx >= 0) {
-        setActiveIndex(idx);
-        setHasJumped(true);
-        setTimeout(() => {
-          const container = containerRef.current;
-          if (container) {
-            const target = container.querySelector(`[data-index="${idx}"]`);
-            target?.scrollIntoView({ behavior: 'instant' });
-          }
-        }, 100);
-      }
+    if ((targetVideoBarber || targetSrcParam) && pinnedFeed.length > 0 && !hasJumped) {
+      setActiveIndex(0);
+      setHasJumped(true);
+      setTimeout(() => {
+        const container = containerRef.current;
+        const target = container?.querySelector(`[data-index="0"]`);
+        target?.scrollIntoView({ behavior: 'instant' });
+      }, 50);
     }
-  }, [targetVideoBarber, feed, hasJumped]);
+  }, [targetVideoBarber, targetSrcParam, pinnedFeed.length, hasJumped]);
 
   // Snap scrolling observer + view tracking
   useEffect(() => {
@@ -380,7 +407,7 @@ const WatchFeed = () => {
             const idx = Number(entry.target.getAttribute("data-index"));
             if (!isNaN(idx)) {
               setActiveIndex(idx);
-              const item = feed[idx];
+              const item = pinnedFeed[idx];
               if (item?.content_id && !viewedContentIds.current.has(item.content_id)) {
                 viewedContentIds.current.add(item.content_id);
                 supabase.rpc('increment_content_views', { p_content_id: item.content_id }).then();
@@ -393,7 +420,7 @@ const WatchFeed = () => {
     );
     container.querySelectorAll("[data-index]").forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [feed]);
+  }, [pinnedFeed]);
 
 
   const renderSpecialtyPills = (specialty: string | null | undefined) => {
@@ -496,12 +523,12 @@ const WatchFeed = () => {
   // activeIndex. Sponsor cards don't prefetch anything, so naive activeIndex+1
   // wastes the warm slot. Scan forward up to 4 positions — feed is small.
   const nextPlayableIdx = useMemo(() => {
-    for (let i = activeIndex + 1; i < Math.min(feed.length, activeIndex + 5); i++) {
-      const t = feed[i]?.type;
+    for (let i = activeIndex + 1; i < Math.min(pinnedFeed.length, activeIndex + 5); i++) {
+      const t = pinnedFeed[i]?.type;
       if (t === 'video' || t === 'educator' || t === 'platform' || t === 'battle') return i;
     }
     return -1;
-  }, [feed, activeIndex]);
+  }, [pinnedFeed, activeIndex]);
 
   const renderVideoItem = (item: FeedItem, idx: number) => {
     // Don't render placeholder cards — only real playable media
@@ -513,6 +540,7 @@ const WatchFeed = () => {
     const isActive = activeIndex === idx;
     const isPrefetch = idx === nextPlayableIdx;
     const shouldMount = isActive || isPrefetch;
+    const hasUserPlayed = userPlayed.has(idx);
     const cleanTitle = cleanDisplayTitle(item.title);
     const videoUuid = isActive ? extractVideoUuid(item.id, item.content_id) : null;
 
@@ -535,7 +563,7 @@ const WatchFeed = () => {
               streamUid={item.cloudflare_stream_uid}
               fallbackUrl={item.media_url}
               poster={item.thumbnail_url}
-              forceActive={isActive}
+              forceActive={isActive && hasUserPlayed}
               autoPlayWhenVisible={false}
               muted={isMuted}
               controls={false}
@@ -543,8 +571,8 @@ const WatchFeed = () => {
               onEnded={() => handleVideoEnded(idx)}
               overlayPayload={item.overlay_payload}
               preloadMode={isActive ? 'auto' : isPrefetch ? 'auto' : 'none'}
-              enableReplay={isActive}
-              showCenterPlayButton={isActive}
+              enableReplay={isActive && hasUserPlayed}
+              showCenterPlayButton={isActive && hasUserPlayed}
             />
           </div>
         ) : (
@@ -561,6 +589,19 @@ const WatchFeed = () => {
           ) : (
             <div className="absolute inset-0 bg-black" />
           )
+        )}
+
+        {/* Tap-to-play overlay — shown until the user taps Play on the active item */}
+        {isActive && !hasUserPlayed && (
+          <button
+            onClick={() => setUserPlayed(prev => { const n = new Set(prev); n.add(idx); return n; })}
+            className="absolute inset-0 z-20 flex items-center justify-center bg-black/30"
+            aria-label="Play"
+          >
+            <span className="flex items-center justify-center h-20 w-20 rounded-full bg-primary/90 text-primary-foreground shadow-2xl shadow-primary/40 active:scale-95 transition-transform">
+              <Play className="h-9 w-9 ml-1" fill="currentColor" />
+            </span>
+          </button>
         )}
 
         {item.type === "educator" && (
@@ -605,12 +646,12 @@ const WatchFeed = () => {
       </button>
 
       <div ref={containerRef} className="flex-1 overflow-y-scroll snap-y snap-mandatory scrollbar-hide">
-        {feed.length === 0 && (
+        {pinnedFeed.length === 0 && (
           <div className="flex items-center justify-center" style={{ height: '100dvh' }}>
             <p className="text-muted-foreground text-sm">No content yet — check back soon!</p>
           </div>
         )}
-        {feed.map((item, idx) => (
+        {pinnedFeed.map((item, idx) => (
           <div
             key={item.id}
             data-index={idx}
