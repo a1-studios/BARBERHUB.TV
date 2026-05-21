@@ -287,14 +287,30 @@ const Profile = () => {
         <div className="max-w-md mx-auto min-h-[calc(100dvh-4rem-5rem)] flex flex-col">
           <ProfileCompletionBanner profile={profile} />
 
-          {/* ===== HERO: Avatar ===== */}
-          <div className="relative flex flex-col items-center pt-8 pb-2">
+          {/* ===== HERO: 3-col grid — specialties | avatar | stats ===== */}
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 pt-2 pb-1">
+            {/* LEFT — Specialties stacked */}
+            <div className="flex flex-col items-start gap-1.5 min-w-0">
+              {specialty ? parseSpecialties(specialty).map(id => {
+                const tag = getSpecialtyDisplay(id);
+                return tag ? (
+                  <Badge
+                    key={id}
+                    variant="secondary"
+                    className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary border-primary/20 max-w-full truncate"
+                  >
+                    {tag.emoji} {tag.label}
+                  </Badge>
+                ) : null;
+              }) : null}
+            </div>
 
-            <SocialOrbit radius={70} iconSize={26} links={socialLinksObj}>
+            {/* CENTER — Avatar + orbit */}
+            <SocialOrbit radius={56} iconSize={22} links={socialLinksObj}>
               {isBarber ? (
                 <AvatarCrest
                   tier={subscriptionTier}
-                  size="lg"
+                  size="md"
                   interactive
                   showM4M
                   m4mCertified={m4mCertified}
@@ -306,30 +322,63 @@ const Profile = () => {
                 >
                   <Avatar className="w-full h-full">
                     <AvatarImage src={profile?.avatar_url || undefined} />
-                    <AvatarFallback className="bg-primary/20 text-primary text-3xl font-bold">
+                    <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
                       {displayName.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 </AvatarCrest>
               ) : (
-                <Avatar className="h-28 w-28 border-4 border-background shadow-lg">
+                <Avatar className="h-20 w-20 border-2 border-background shadow-lg">
                   <AvatarImage src={profile?.avatar_url || undefined} />
-                  <AvatarFallback className="bg-primary/20 text-primary text-3xl font-bold">
+                  <AvatarFallback className="bg-primary/20 text-primary text-2xl font-bold">
                     {displayName.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
               )}
             </SocialOrbit>
 
-            {/* Name + meta */}
-            <h1 className="text-xl font-bold text-foreground mt-2 text-center flex items-center justify-center gap-1">
+            {/* RIGHT — Stats stacked */}
+            <div className="flex flex-col items-end gap-1.5 text-right">
+              {isBarber && barberStats ? (
+                <>
+                  <div>
+                    <div className="text-base font-bold leading-none text-foreground">{barberStats.follower_count || 0}</div>
+                    <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Foll</div>
+                  </div>
+                  <div>
+                    <div className="text-base font-bold leading-none text-foreground">{barberStats.like_count || 0}</div>
+                    <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Likes</div>
+                  </div>
+                  <div>
+                    <div className="text-base font-bold leading-none text-primary">${((barberStats.total_donations_cents || 0) / 100).toFixed(0)}</div>
+                    <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Don</div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <div className="text-base font-bold leading-none text-foreground">{clientProfile?.total_votes_cast || 0}</div>
+                    <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Votes</div>
+                  </div>
+                  <div>
+                    <div className="text-base font-bold leading-none text-primary">{clientProfile?.voting_power || 1}x</div>
+                    <div className="text-[9px] text-muted-foreground uppercase tracking-wide">Power</div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Name + meta — centered under hero */}
+          <div className="flex flex-col items-center text-center -mt-1">
+            <h1 className="text-lg font-bold text-foreground flex items-center justify-center gap-1">
               {displayName}
               <DisplayNameEditor
                 currentName={looksLikeEmail ? '' : rawDisplay}
                 changedAt={(profile as any)?.display_name_changed_at}
               />
             </h1>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               {profile?.username && <span>@{profile.username}</span>}
               {countryCode && <span>{getCountryFlag(countryCode)}</span>}
               {!isBarber && (
@@ -339,67 +388,21 @@ const Profile = () => {
                 <SubCategoryBadge subCategory={(profile as any).sub_category} size="sm" />
               )}
             </div>
-            {specialty && (
-              <div className="flex flex-wrap justify-center gap-1.5 mt-1">
-                {parseSpecialties(specialty).map(id => {
-                  const tag = getSpecialtyDisplay(id);
-                  return tag ? (
-                    <Badge key={id} variant="secondary" className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary border-primary/20">
-                      {tag.emoji} {tag.label}
-                    </Badge>
-                  ) : (
-                    <Badge key={id} variant="secondary" className="text-[10px] px-2 py-0.5">{id}</Badge>
-                  );
-                })}
-              </div>
-            )}
-            {profile?.bio && <p className="text-xs text-muted-foreground text-center mt-0.5 max-w-[260px]">{profile.bio}</p>}
-
-            {/* Social icons now orbit the avatar */}
+            {profile?.bio && <p className="text-[11px] text-muted-foreground line-clamp-1 max-w-[260px] mt-0.5">{profile.bio}</p>}
           </div>
 
-          {/* ===== STATS ROW ===== */}
-          <div className="flex justify-center gap-6 py-3">
-            {isBarber && barberStats ? (
-              <>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-foreground">{barberStats.follower_count || 0}</div>
-                  <div className="text-[10px] text-muted-foreground">Followers</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-foreground">{barberStats.like_count || 0}</div>
-                  <div className="text-[10px] text-muted-foreground">Likes</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-primary">${((barberStats.total_donations_cents || 0) / 100).toFixed(0)}</div>
-                  <div className="text-[10px] text-muted-foreground">Donated</div>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-foreground">{clientProfile?.total_votes_cast || 0}</div>
-                  <div className="text-[10px] text-muted-foreground">Votes Cast</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-lg font-bold text-primary">{clientProfile?.voting_power || 1}x</div>
-                  <div className="text-[10px] text-muted-foreground">Vote Power</div>
-                </div>
-              </>
-            )}
-          </div>
+
 
           {/* ===== QUICK LOCATION TOGGLE (Barbers only) ===== */}
           {isBarber && <LocationQuickToggle />}
-
           {/* ===== iOS GROUPED LIST ===== */}
           <div className="flex-1 space-y-1">
             {/* TOOLS section */}
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-3 pb-1">Tools</p>
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-2 pb-1">Tools</p>
             <div className="bg-card/80 backdrop-blur-sm rounded-xl border border-border/30 overflow-hidden divide-y divide-border/20">
               {/* Transactions */}
               <Collapsible open={txOpen} onOpenChange={setTxOpen}>
-                <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
+                <CollapsibleTrigger className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-muted/30 transition-colors">
                   <div className="flex items-center gap-3">
                     <Receipt className="h-4 w-4 text-primary" />
                     <span className="text-sm font-medium text-foreground">Recent Transactions</span>
@@ -416,7 +419,7 @@ const Profile = () => {
               {/* Appointments (fans) */}
               {!isBarber && (
                 <Collapsible open={apptOpen} onOpenChange={setApptOpen}>
-                  <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
+                  <CollapsibleTrigger className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-muted/30 transition-colors">
                     <div className="flex items-center gap-3">
                       <CalendarDays className="h-4 w-4 text-primary" />
                       <span className="text-sm font-medium text-foreground">My Appointments</span>
@@ -434,7 +437,7 @@ const Profile = () => {
               {/* Manage Appointments & Bounties (barbers) */}
               {isBarber && (
                 <Collapsible open={barberApptOpen} onOpenChange={setBarberApptOpen}>
-                  <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
+                  <CollapsibleTrigger className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-muted/30 transition-colors">
                     <div className="flex items-center gap-3">
                       <CalendarDays className="h-4 w-4 text-primary" />
                       <span className="text-sm font-medium text-foreground">Manage Appointments</span>
@@ -451,7 +454,7 @@ const Profile = () => {
 
               {/* My Rewards */}
               <Collapsible open={prizesOpen} onOpenChange={setPrizesOpen}>
-                <CollapsibleTrigger className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors">
+                <CollapsibleTrigger className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-muted/30 transition-colors">
                   <div className="flex items-center gap-3">
                     <Gift className="h-4 w-4 text-primary" />
                     <span className="text-sm font-medium text-foreground">My Rewards</span>
@@ -465,7 +468,15 @@ const Profile = () => {
             </div>
 
             {/* NOTIFICATIONS */}
-            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-4 pb-1">Notifications</p>
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-2 pb-1">Notifications</p>
+            <NotificationToggle />
+            <div className="md:hidden">
+              <InstallAppButton />
+            </div>
+
+            {/* ACCOUNT section */}
+            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider px-3 pt-2 pb-1">Account</p>
+
             <NotificationToggle />
             <InstallAppButton />
 
@@ -476,7 +487,7 @@ const Profile = () => {
               {isBarber ? (
                 <button
                   onClick={() => navigate(`/barber/${user?.id}?edit=true`)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
+                  className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-muted/30 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <Settings className="h-4 w-4 text-primary" />
@@ -487,7 +498,7 @@ const Profile = () => {
               ) : (
                 <button
                   onClick={() => setShowEditDrawer(true)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
+                  className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-muted/30 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <Edit3 className="h-4 w-4 text-primary" />
@@ -501,7 +512,7 @@ const Profile = () => {
               {isBarber && (
                 <Link
                   to={`/barber/${user?.id}`}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
+                  className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-muted/30 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <ExternalLink className="h-4 w-4 text-primary" />
@@ -515,7 +526,7 @@ const Profile = () => {
               {!isBarber && (profile as any)?.sub_category !== 'official_sponsor' && (
                 <button
                   onClick={() => setShowSponsorModal(true)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/30 transition-colors"
+                  className="w-full flex items-center justify-between px-3.5 py-2 hover:bg-muted/30 transition-colors"
                 >
                   <div className="flex items-center gap-3">
                     <Award className="h-4 w-4 text-amber-400" />
@@ -528,7 +539,7 @@ const Profile = () => {
               {/* Sign Out */}
               <button
                 onClick={async () => { await signOut(); navigate('/'); }}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors"
+                className="w-full flex items-center gap-3 px-3.5 py-2 hover:bg-muted/30 transition-colors"
               >
                 <LogOut className="h-4 w-4 text-muted-foreground" />
                 <span className="text-sm text-muted-foreground">Sign Out</span>
@@ -537,7 +548,7 @@ const Profile = () => {
               {/* Delete Account */}
               <button
                 onClick={() => { setDeleteStep(1); setShowDeleteConfirm(true); }}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-destructive/10 transition-colors"
+                className="w-full flex items-center gap-3 px-3.5 py-2 hover:bg-destructive/10 transition-colors"
               >
                 <Trash2 className="h-4 w-4 text-destructive/70" />
                 <span className="text-sm text-destructive/70">Delete Account</span>
@@ -545,8 +556,8 @@ const Profile = () => {
             </div>
 
             {/* BB Pill — centered at bottom */}
-            <div className="flex justify-center pt-4 pb-2">
-              <div className="flex items-center gap-2 bg-card/80 backdrop-blur-sm px-4 py-2 rounded-full border border-border/40">
+            <div className="flex justify-center pt-2 pb-1">
+              <div className="flex items-center gap-2 bg-card/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-border/40">
                 <RotatingBBCoin
                   avatarUrl={profile?.avatar_url}
                   displayName={displayName}
@@ -557,12 +568,13 @@ const Profile = () => {
                 <span className="text-[10px] text-cyan-400 font-medium">BB</span>
                 <button
                   onClick={() => setShowAddFundsModal(true)}
-                  className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center hover:bg-primary/30 transition-colors"
+                  className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center hover:bg-primary/30 transition-colors"
                 >
                   <Plus className="h-3 w-3 text-primary" />
                 </button>
               </div>
             </div>
+
           </div>
         </div>
       </main>
