@@ -164,7 +164,14 @@ export function BarberSettings({ onBack }: BarberSettingsProps) {
         require_deposit: (barberProfile as any).require_deposit ?? true,
         default_no_show_fee_bb: (barberProfile as any).default_no_show_fee_bb ?? 50,
         booking_message: (barberProfile as any).booking_message || '',
-        slot_duration_minutes: availabilityData?.slot_duration_minutes?.toString() || '30'
+        slot_duration_minutes: availabilityData?.slot_duration_minutes?.toString() || '30',
+        shop_address: (barberProfile as any).shop_address || '',
+        shop_city: (barberProfile as any).shop_city || '',
+        shop_state: (barberProfile as any).shop_state || '',
+        shop_postal_code: (barberProfile as any).shop_postal_code || '',
+        address_visibility: (barberProfile as any).address_visibility || 'approximate',
+        latitude: (barberProfile as any).latitude ?? null,
+        longitude: (barberProfile as any).longitude ?? null,
       });
     }
   }, [barberProfile, availabilityData]);
