@@ -64,8 +64,6 @@ const WatchFeed = () => {
   const [isMuted, setIsMuted] = useState(true);
   const [donationTarget, setDonationTarget] = useState<{ userId: string; name: string } | null>(null);
   const [commentFocusTrigger, setCommentFocusTrigger] = useState(0);
-  // Tap-to-play: track which feed indices the user explicitly started.
-  const [userPlayed, setUserPlayed] = useState<Set<number>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
   const viewedContentIds = useRef<Set<string>>(new Set());
 
