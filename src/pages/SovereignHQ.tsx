@@ -18,6 +18,7 @@ import AffiliateControlPanel from '@/components/sovereign/AffiliateControlPanel'
 import GearControlPanel from '@/components/sovereign/GearControlPanel';
 import MediaPipelinePanel from '@/components/sovereign/MediaPipelinePanel';
 import MapVisibilityEnginePanel from '@/components/sovereign/MapVisibilityEnginePanel';
+import AccessCodePanel from '@/components/sovereign/AccessCodePanel';
 
 const SovereignHQ = () => {
   const { user } = useAuth();
@@ -94,6 +95,7 @@ const SovereignHQ = () => {
           <UserControlPanel stats={userStats} onRefresh={refresh} />
         </div>
 
+        <AccessCodePanel />
         <SponsorControlPanel onRefresh={refresh} />
         <GearControlPanel />
         <AffiliateControlPanel onRefresh={refresh} />
