@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Helmet } from 'react-helmet-async';
+import { Helmet } from 'react-helmet';
 import { DynamicBattleHero } from '@/components/DynamicBattleHero';
 import { ImmersiveFactionBanners } from '@/components/factions/ImmersiveFactionBanners';
 import { ProductShelf } from '@/components/ProductShelf';
