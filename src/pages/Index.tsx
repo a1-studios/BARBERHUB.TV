@@ -15,6 +15,7 @@ import { LiveBarberStreams } from "@/components/battles/LiveBarberStreams";
 import { useAuth } from "@/hooks/useAuth";
 import { FEATURES } from "@/config/features";
 import { ImmersiveFactionBanners } from "@/components/factions/ImmersiveFactionBanners";
+import { VelvetRopeLanding } from "@/components/landing/VelvetRopeLanding";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -232,6 +233,11 @@ const Index = () => {
       </div>
     );
   }
+
+  // 🔒 Velvet Rope — invite-only landing for unauthenticated visitors.
+  // Legacy public homepage (LandingHero, LaunchWizard, Spin CTA, etc.) is
+  // preserved verbatim below as a fallback. To revert, delete the next line.
+  if (!user) return <VelvetRopeLanding />;
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden">
