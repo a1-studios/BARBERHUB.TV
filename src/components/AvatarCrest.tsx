@@ -33,7 +33,7 @@ const M4M_CYAN = '#00E5FF';
 const SIZE_CONFIG = {
   sm: { svgSize: 80, avatarSize: 52, ringR: 30, wingScale: 0.65, starSize: 3 },
   md: { svgSize: 110, avatarSize: 72, ringR: 40, wingScale: 0.85, starSize: 4 },
-  lg: { svgSize: 160, avatarSize: 104, ringR: 58, wingScale: 1, starSize: 5 },
+  lg: { svgSize: 184, avatarSize: 120, ringR: 67, wingScale: 1.15, starSize: 6 },
 };
 
 const TIER_COLORS = {

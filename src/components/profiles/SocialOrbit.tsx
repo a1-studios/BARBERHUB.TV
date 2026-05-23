@@ -44,8 +44,8 @@ const normalizeUrl = (raw: string) => (raw.startsWith('http') ? raw : `https://$
  */
 export function SocialOrbit({
   children,
-  radius = 72,
-  iconSize = 28,
+  radius = 83,
+  iconSize = 32,
   links,
   className,
   onAddClick,

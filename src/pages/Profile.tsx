@@ -296,8 +296,8 @@ const Profile = () => {
           <div className="mt-2 flex w-full flex-col items-center">
             <div className="flex w-full justify-center">
               <SocialOrbit
-                radius={71}
-                iconSize={28}
+                radius={82}
+                iconSize={32}
                 links={socialLinksObj}
                 onAddClick={(key) => { setSocialFocus(key as any); setSocialDialogOpen(true); }}
                 className="mx-auto"
