@@ -49,6 +49,77 @@ export type Database = {
           },
         ]
       }
+      access_code_redemptions: {
+        Row: {
+          code_id: string
+          email: string | null
+          id: string
+          redeemed_at: string
+          user_id: string | null
+        }
+        Insert: {
+          code_id: string
+          email?: string | null
+          id?: string
+          redeemed_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          code_id?: string
+          email?: string | null
+          id?: string
+          redeemed_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_code_redemptions_code_id_fkey"
+            columns: ["code_id"]
+            isOneToOne: false
+            referencedRelation: "access_codes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      access_codes: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          notes: string | null
+          type: string
+          updated_at: string
+          usage_count: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          notes?: string | null
+          type: string
+          updated_at?: string
+          usage_count?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          notes?: string | null
+          type?: string
+          updated_at?: string
+          usage_count?: number
+        }
+        Relationships: []
+      }
       ad_events: {
         Row: {
           content_id: string | null
@@ -5410,6 +5481,7 @@ export type Database = {
           username: string
         }[]
       }
+      get_public_league_stats: { Args: never; Returns: Json }
       get_public_profile: {
         Args: { profile_user_id: string }
         Returns: {
@@ -5462,6 +5534,7 @@ export type Database = {
         Args: { increment_by?: number; submission_id: string }
         Returns: undefined
       }
+      is_global_vip_mode: { Args: never; Returns: boolean }
       is_sovereign: { Args: never; Returns: boolean }
       mark_email_failed: {
         Args: {
@@ -5530,6 +5603,10 @@ export type Database = {
         }
         Returns: Json
       }
+      redeem_access_code: {
+        Args: { p_code: string; p_email: string; p_user_id: string }
+        Returns: Json
+      }
       refresh_barber_stats: { Args: never; Returns: undefined }
       reset_monthly_battle_counters: { Args: never; Returns: undefined }
       sync_user_binary_role: {
@@ -5561,6 +5638,14 @@ export type Database = {
       update_tournament_standings: {
         Args: { battle_id_param: string }
         Returns: undefined
+      }
+      validate_access_code: {
+        Args: { p_code: string }
+        Returns: {
+          code_id: string
+          type: string
+          valid: boolean
+        }[]
       }
       validate_user_action: {
         Args: { action_type: string; target_user_type: string }
