@@ -1,85 +1,94 @@
+## What's wrong now
 
-# Real Backend Data + Working Sign-In
+1. **Header reads "Barber Hub"** — should be `BARBER-HUB` all caps.
+2. **Live battle still shows fallback Marco/Diego** — root cause: `battles.barber1_id` / `barber2_id` reference `barber_profiles.id`, NOT `auth user_id`. Our query joins `public_user_profiles` on `user_id`, so it returns 0 rows → fallback fires. Same hidden bug will hit any code that assumes barber IDs == user IDs.
+3. **PK card is left/right** — user wants top/bottom split (matches the vertical phone form factor and the real Theater feed).
+4. **VS badge looks off-center** — it's centered on the card root but the headline strip above pushes the visual midline; needs to sit on the actual seam between the two stacked tiles.
+5. **Lots of dead vertical space** in every card — under-using the ~520px stage on a 390×782 viewport.
+6. **Open Challenges shows fallbacks** — DB only has expired/completed rows; we need to widen the query (include `accepted`/recent + show "waiting for challenger" empty-state when truly none) instead of inventing fake stakes.
+7. **No interactive 3D element** — user wants a globe slide they can spin/drag, with clickable barber pins that open the auth modal.
 
-Two issues to fix on the Velvet Rope landing:
+## Plan
 
-1. **Sign-In is blocked by VIP gate** — existing users shouldn't see the code prompt
-2. **Teaser cards use mocked data** — switch to live Supabase reads (we have plenty of real data already)
+### 1. Header → `BARBER-HUB`
+`VelvetRopeLanding.tsx`: replace the two `<span>`s with one uppercase wordmark — `BARBER` in white + `-HUB` in primary, `tracking-[0.15em]` for the editorial feel. Keep the spinning pole + cyan pulse chrome.
 
-## 1. Unblock sign-in for existing users
+### 2. Fix barber-id resolution (real data, no more fake Marco/Diego)
+`useLandingData.ts → useLiveBattle`:
+- After fetching the battle row, collect both `barber1_id` and `barber2_id`.
+- Query `barber_profiles` with `select('id, user_id')` filtered by those IDs to translate profile-id → auth user-id.
+- Then query `public_user_profiles` on the resolved `user_id`s for `display_name`, `avatar_url`, `country_code`.
+- Return both barbers fully populated. Drop the fallbacks from `LiveNowCard` (only show a subtle "warming up" state if truly null).
 
-`AuthModalV2` always starts at `step: 'gate'`, which forces the VIP-code prompt before identity. In `mode === 'signin'` we skip the gate entirely and jump to `identity` — existing users just need email + 6-digit OTP.
+Also relax the battle filter so we always find one: prefer `status='live'`, fall back to most recent `status IN ('live','active','upcoming')` regardless of streaming flags.
 
-**Edit:** `src/components/auth/AuthModalV2.tsx`
-- Initial step on open: `mode === 'signin' ? 'identity' : 'gate'`
-- Reset effect mirrors the same logic
-- "Edit email" / back buttons in sign-in flow go back to `identity`, not `gate`
-- Description for `identity` step in sign-in mode reads "Enter your email — we'll send a 6-digit code."
+### 3. Live PK card → vertical (top/bottom) + centered VS
+`LiveNowCard.tsx`:
+- Switch grid from `grid-cols-2` to `grid-rows-2` (full-width tiles stacked).
+- Top tile: barber 1, orange gradient, "LIVE" pill top-left, name + flag bottom-left.
+- Bottom tile: barber 2, cyan/blue gradient, viewer count top-right, name + flag bottom-right.
+- VS badge anchored to the horizontal seam: `top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2` inside the grid container (not the outer card), so it sits exactly on the divider.
+- Add a thin animated divider line (orange→cyan gradient) across the seam to sell the "PK" feel.
+- Use the freed vertical space: big animated avatar on each side (h-28 w-28), real name, country flag, and a tiny "12 votes / sec" ticker underneath the seam.
 
-That's the entire sign-in fix. The Supabase OTP send/verify path (`signInWithOtp` + `verifyOtp`) already works with `shouldCreateUser: false` for sign-in mode, so no other changes.
+### 4. Use empty space — denser teasers
+- **TopBarbersCard**: add a 2-row "rising stars" strip below the podium — 4 small avatar chips of barbers 4-7 from the same query (already fetching 6).
+- **BookingCard**: add 3 next-available time pills (e.g. "Today 4:30 / 6:15 / Tomorrow 9:00") under the featured barber to tease real-time booking.
+- **ChallengesCard**: real-data query change → fetch latest 3 of any status, then re-bucket: `open` shows live TTL, `accepted` shows "matched", `expired/completed` rendered greyed as "history" so the card never falls back to invented stakes. If there are 0 rows globally, show a single empty-state card "Be the first to throw a stake".
+- **WatchFeedCard**: shrink phone frame, add a side rail with 2 tiny vertical-clip thumbnails labelled "Up next" so the static feel goes away.
 
-## 2. Wire teaser cards to real Supabase data
+### 5. New slide — interactive 3D Barber Globe
+Add `BarberGlobeCard.tsx` (new 6th slide).
+- Pure CSS-3D / Framer-Motion sphere — no Three.js dependency. A wrapper `div` with `transform-style: preserve-3d` rotated by `rotateX/rotateY` springs that follow pointer drag (and a slow auto-rotate when idle, paused while the user is dragging).
+- Place ~14 barber "pins" on the sphere using fibonacci-sphere lat/long → translateZ + rotateY/rotateX so they live on the surface. Each pin = the barber's avatar + flag + name on hover.
+- Data source: reuse `useTopBarbers()` (already fetches 6) and extend the query to `limit(14)`, ordered by recency. Pins for missing rows are filled with country-flag emoji "ghost" pins.
+- Drag: `onPointerDown/Move/Up` → update two `useMotionValue`s, applied via `useTransform` to `rotateX/rotateY`. Inertia via `animate(value, target, { type: 'spring' })`.
+- Click a pin → calls a prop `onPinClick(barber)` → bubbles up to `InsideTheHubStage` → up to `VelvetRopeLanding`, which opens `AuthModalV2` with a new "preview" mode showing the barber's name/avatar above the existing role + VIP code flow ("Sign up or redeem a VIP invite to view <name>'s profile").
+- Auto-rotation pauses while the user interacts; the carousel auto-advance also pauses while pointer is down on the globe (extend the existing `pausedUntil` in `InsideTheHubStage`).
+- Header chip: "Global Barbershop · Spin to explore", subtle radial glow behind the sphere, country grid backdrop.
 
-Real data confirmed live in DB:
-- `get_public_league_stats()` RPC → live_battles=3, active_battles=6, barbers_total=9, fans_total=28, countries=10, bb_in_circulation=105
-- `battles` table → vote counts, live viewers, `barber1_is_streaming` / `barber2_is_streaming`, titles
-- `open_challenges` table → `challenger_username`, `stake_amount`, `expires_at`, `status='open'`
-- `public_user_profiles` view → real `display_name`, `avatar_url`, `country_code`, `user_type` (avatars are already in public Supabase storage)
-- `battle_submissions` → `thumbnail_url`, `media_url`, `stream_thumbnail_url` for the watch feed (when present)
+### 6. Wire pin → auth modal
+- `VelvetRopeLanding`: add `previewBarber` state. New `openAuthForBarber(barber)` sets `previewBarber`, sets `mode='signup'`, opens modal.
+- `AuthModalV2`: accept optional `previewBarber` prop. When set and on the first step, render a top "card" with avatar + name + flag + tagline "Inside, you can book, follow, and throw down with <name>."
 
-### New shared hook
+### 7. Slide order in `InsideTheHubStage`
+`live → globe → top → book → challenges → watch` (globe second so it's the user's first wow after the live PK).
 
-**Create:** `src/components/landing/teasers/useLandingData.ts`
-- React Query hook(s) that fetch:
-  - `get_public_league_stats()` (already used)
-  - `battles` filtered to `status IN ('live','active')` or streaming flags true, joined with two `public_user_profiles` lookups for both barbers — limit 1 most-recent (drives Live Now card)
-  - `public_user_profiles` where `user_type='barber'` with avatar_url not null, ordered by created_at desc, limit 6 (drives Top Barbers podium — DB has no BB-leaderboard yet, so we rank by activity proxy: barbers with avatars + country come first; we display country flag + display_name, not faux BB amounts unless `bb_in_circulation` is split per-barber, which it isn't)
-  - `open_challenges` where `status='open'` ordered by `created_at desc`, limit 3 (drives Challenges card)
-  - `battle_submissions` where `thumbnail_url is not null` ordered by `created_at desc`, limit 5 (drives Watch Feed card; falls back to gradient tiles if empty)
-- All queries `staleTime: 60s`, `refetchInterval: 90s`. Public-only data — no auth required.
-- Graceful fallbacks: if a query returns empty, the card shows a curated "Inside the Hub" filler instead of breaking. No card disappears.
+```text
+┌─────────── stage 520px ───────────┐
+│  Live PK (vertical, full-bleed)   │
+│  Globe (drag, 14 barber pins)     │
+│  Podium + rising stars strip      │
+│  Booking + 3 slot pills           │
+│  Challenges (real, no fakes)      │
+│  Watch feed + side rail           │
+└───────────────────────────────────┘
+```
 
-### Card rewrites
+## Technical notes
 
-Each card receives data via props from `InsideTheHubStage`, which calls the hook once and passes slices down. No card calls Supabase directly.
-
-**`LiveNowCard`** — already takes `liveBattles` + `viewers`. Add a `battle` prop with `{ title, barber1: { name, flag, avatar }, barber2: { name, flag, avatar } }` derived from the most-recent live battle. Renders avatars (or country flag fallback) instead of the static ✂️ emoji. Title shown as a marquee strip at the bottom. Falls back to current Marco/Diego mock if no live battle.
-
-**`TopBarbersCard`** — accepts `barbers: Array<{ name, flag, avatar_url }>` (top 3). Uses real avatars in the crests (with country-flag fallback for nulls). Removes the fabricated BB amounts since the DB doesn't expose per-barber BB; replaces them with the real `country_code` flag + `display_name`. Sub-label switches from "X BB" to "🇺🇸 USA" style.
-
-**`BookingCard`** — accepts `featuredBarber: { name, avatar, country_code }` (random from real top barbers). Slot times stay illustrative (we have no public-slot endpoint and surfacing real client appointments would leak data) — but the barber identity is real, with their actual avatar and flag.
-
-**`ChallengesCard`** — accepts `challenges: Array<{ from, flag, stake, ttl }>` from `open_challenges`. `ttl` computed live from `expires_at - now()`. Stake from `stake_amount`. `from` from `challenger_username`. Falls back to current curated stack if zero open challenges.
-
-**`WatchFeedCard`** — accepts `clips: Array<{ thumbnail_url, title, author }>`. Uses real `battle_submissions` thumbnails when available. Falls back to current gradient + emoji tiles when none. Auto-cycles every 1.8s as today.
-
-### Stage edits
-
-**Edit:** `src/components/landing/InsideTheHubStage.tsx`
-- Replace inline `useQuery` with `useLandingData()` from the new hook
-- Pass each card its data slice
-- Keep autoplay/dots/swipe behavior unchanged
+- No DB migration needed — all changes are read-side query reshaping. `barber_profiles` and `public_user_profiles` are already public-readable.
+- Globe uses CSS 3D transforms only. No new dependency. Framer-motion is already in the project.
+- All copy/colors stay on the existing tokens: orange (`#f97316`), cyan, deep-black `#0a0a0f`. No raw white/black tailwind classes added.
+- Pin clicks on the globe **only** open the auth modal for unauthenticated visitors (which is the only state on this landing route). No deep linking yet — that comes once they're inside.
 
 ## Files
 
-**Create**
-- `src/components/landing/teasers/useLandingData.ts`
-
 **Edit**
-- `src/components/auth/AuthModalV2.tsx` — sign-in skips gate
-- `src/components/landing/InsideTheHubStage.tsx` — use new hook, pass props
-- `src/components/landing/teasers/LiveNowCard.tsx` — accept real battle
-- `src/components/landing/teasers/TopBarbersCard.tsx` — accept real top barbers
-- `src/components/landing/teasers/BookingCard.tsx` — accept real featured barber
-- `src/components/landing/teasers/ChallengesCard.tsx` — accept real open challenges
-- `src/components/landing/teasers/WatchFeedCard.tsx` — accept real clips
+- `src/components/landing/VelvetRopeLanding.tsx` — header caps, previewBarber state, globe pin handler
+- `src/components/landing/InsideTheHubStage.tsx` — add globe slide, plumb `onPinClick`, pause-on-drag
+- `src/components/landing/teasers/useLandingData.ts` — fix `useLiveBattle` join via `barber_profiles`, widen `useOpenChallenges`, bump `useTopBarbers` to 14
+- `src/components/landing/teasers/LiveNowCard.tsx` — vertical split, centered VS, real-data only
+- `src/components/landing/teasers/TopBarbersCard.tsx` — rising-stars strip
+- `src/components/landing/teasers/BookingCard.tsx` — 3 slot pills
+- `src/components/landing/teasers/ChallengesCard.tsx` — real-data buckets, empty state
+- `src/components/landing/teasers/WatchFeedCard.tsx` — side rail
+- `src/components/auth/AuthModalV2.tsx` — optional `previewBarber` header card
 
-**No DB changes.** All reads use existing public RPC + tables already covered by RLS policies that allow anon read on `public_user_profiles`, `battles`, `open_challenges`, `battle_submissions`.
+**Create**
+- `src/components/landing/teasers/BarberGlobeCard.tsx` — interactive 3D sphere
 
 ## Out of scope
-
-- Building a real "top barbers by BB earned" leaderboard (DB tracks `bb_in_circulation` only as a global total — would need a new RPC)
-- Showing real available booking slots for non-authenticated visitors (leaks PII)
-- Replacing the OTP login with social OAuth on this screen
-
-Ready to build on approval.
+- Three.js / WebGL globe (CSS-3D is enough at this density, keeps bundle lean).
+- Real booking-slot data (UI tease only — slots come from authed flow).
+- New roles / DB writes.

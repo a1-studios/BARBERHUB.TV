@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { usePlatformState } from '@/hooks/usePlatformState';
 import { toast } from 'sonner';
 import { Loader2, Mail, Scissors, Users, ShieldCheck, KeyRound, ArrowLeft } from 'lucide-react';
+import { PublicBarber, countryFlag } from '@/components/landing/teasers/useLandingData';
 
 type Role = 'barber' | 'fan';
 type Step = 'gate' | 'role' | 'identity' | 'verify';
@@ -17,6 +18,7 @@ interface AuthModalV2Props {
   onClose: () => void;
   intendedRole?: Role | null;
   mode?: 'signup' | 'signin';
+  previewBarber?: PublicBarber | null;
 }
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
@@ -32,6 +34,7 @@ export function AuthModalV2({
   onClose,
   intendedRole = null,
   mode = 'signup',
+  previewBarber = null,
 }: AuthModalV2Props) {
   const { value: vipModeRaw } = usePlatformState('global_vip_mode');
   const vipMode = useMemo(() => vipModeRaw === 'true', [vipModeRaw]);
@@ -223,6 +226,31 @@ export function AuthModalV2({
             {step === 'verify' && `Enter the code we sent to ${email}.`}
           </DialogDescription>
         </DialogHeader>
+
+        {previewBarber && (
+          <div className="rounded-xl border border-orange-500/40 bg-gradient-to-br from-orange-500/10 to-cyan-400/10 p-3 flex items-center gap-3">
+            {previewBarber.avatar_url ? (
+              <img
+                src={previewBarber.avatar_url}
+                alt={previewBarber.display_name ?? 'Barber'}
+                className="h-12 w-12 rounded-full object-cover ring-2 ring-orange-400/60"
+              />
+            ) : (
+              <div className="h-12 w-12 rounded-full bg-white/[0.06] ring-2 ring-orange-400/60 flex items-center justify-center text-xl">
+                {countryFlag(previewBarber.country_code)}
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="text-sm font-bold text-white truncate">
+                {previewBarber.display_name ?? 'Barber'} {countryFlag(previewBarber.country_code)}
+              </div>
+              <div className="text-[11px] text-white/60 leading-tight mt-0.5">
+                Sign up or redeem a VIP invite to book, follow & throw down.
+              </div>
+            </div>
+          </div>
+        )}
+
 
         {step === 'gate' && (
           <div className="space-y-4">

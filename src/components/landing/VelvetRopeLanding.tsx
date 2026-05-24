@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet';
 import { Scissors, Users } from 'lucide-react';
 import AuthModalV2 from '@/components/auth/AuthModalV2';
 import { InsideTheHubStage } from './InsideTheHubStage';
+import { PublicBarber } from './teasers/useLandingData';
 import barberPole from '@/assets/barber-pole.png';
 
 type Role = 'barber' | 'fan';
@@ -12,17 +13,25 @@ export const VelvetRopeLanding = () => {
   const [role, setRole] = useState<Role | null>(null);
   const [authMode, setAuthMode] = useState<'signup' | 'signin'>('signup');
   const [code, setCode] = useState('');
+  const [previewBarber, setPreviewBarber] = useState<PublicBarber | null>(null);
 
   const openAuth = (r: Role | null, mode: 'signup' | 'signin') => {
     setRole(r);
     setAuthMode(mode);
+    setPreviewBarber(null);
+    setAuthOpen(true);
+  };
+
+  const openAuthForBarber = (b: PublicBarber) => {
+    setPreviewBarber(b.user_id ? b : null);
+    setAuthMode('signup');
     setAuthOpen(true);
   };
 
   return (
     <div className="h-[100dvh] w-full max-w-full overflow-hidden bg-[#0a0a0f] text-white flex flex-col">
       <Helmet>
-        <title>Global Barber Streaming Platform — Invite-Only Beta</title>
+        <title>BARBER-HUB — Global Barber Streaming, Invite-Only Beta</title>
         <meta
           name="description"
           content="Invite-only global barber streaming platform. Live PK battles, sponsor deals, education, and the 2026 Global Championship."
@@ -42,12 +51,12 @@ export const VelvetRopeLanding = () => {
           <div className="relative z-10 px-4 flex items-center justify-between h-14">
             <img
               src={barberPole}
-              alt="Barber Hub Logo"
+              alt="BARBER-HUB Logo"
               className="h-10 w-10 animate-[spin_11s_linear_infinite]"
             />
-            <span className="text-lg font-bold tracking-tight">
-              <span className="text-white">Barber</span>
-              <span className="text-primary"> Hub</span>
+            <span className="text-xl font-black tracking-[0.18em] uppercase">
+              <span className="text-white">BARBER</span>
+              <span className="text-primary">-HUB</span>
             </span>
             <div className="w-10" />
           </div>
@@ -102,7 +111,7 @@ export const VelvetRopeLanding = () => {
 
       {/* Inside the Hub — rotating feature tease */}
       <section className="flex-1 min-h-0 px-4 pb-2">
-        <InsideTheHubStage />
+        <InsideTheHubStage onPinClick={openAuthForBarber} />
       </section>
 
       {/* Sign-in for existing users */}
@@ -120,6 +129,7 @@ export const VelvetRopeLanding = () => {
         onClose={() => setAuthOpen(false)}
         intendedRole={role}
         mode={authMode}
+        previewBarber={previewBarber}
       />
     </div>
   );
