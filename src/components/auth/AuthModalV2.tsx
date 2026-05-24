@@ -34,6 +34,7 @@ export function AuthModalV2({
   onClose,
   intendedRole = null,
   mode = 'signup',
+  previewBarber = null,
 }: AuthModalV2Props) {
   const { value: vipModeRaw } = usePlatformState('global_vip_mode');
   const vipMode = useMemo(() => vipModeRaw === 'true', [vipModeRaw]);
