@@ -4,6 +4,7 @@ import { Scissors, Users } from 'lucide-react';
 import AuthModalV2 from '@/components/auth/AuthModalV2';
 import { InsideTheHubStage } from './InsideTheHubStage';
 import { WatchFeedStrip } from './teasers/WatchFeedStrip';
+import { BottomGlobeSection } from './teasers/BottomGlobeSection';
 import { PublicBarber } from './teasers/useLandingData';
 import barberPole from '@/assets/barber-pole.png';
 
