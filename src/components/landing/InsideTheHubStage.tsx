@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { LiveNowCard } from './teasers/LiveNowCard';
-import { TopBarbersCard } from './teasers/TopBarbersCard';
+import { LeaguePulseCard } from './teasers/LeaguePulseCard';
 import { BookingCard } from './teasers/BookingCard';
 import { ChallengesCard } from './teasers/ChallengesCard';
 import { GearCard } from './teasers/GearCard';
-import { BarberGlobeCard } from './teasers/BarberGlobeCard';
 import { useLandingData, PublicBarber } from './teasers/useLandingData';
 
 const ROTATE_MS = 4500;
@@ -22,11 +21,9 @@ export const InsideTheHubStage = ({ onPinClick }: Props) => {
   const viewers = liveBattle?.viewers ?? stats?.fans_total ?? 0;
   const fallbackBarber = topBarbers[0] ?? null;
 
-  const handlePin = (b: PublicBarber) => onPinClick?.(b);
-
   const slides = [
     { key: 'live',       node: <LiveNowCard liveBattles={liveBattles} viewers={viewers} battle={liveBattle} /> },
-    { key: 'top',        node: <TopBarbersCard barbers={topBarbers} /> },
+    { key: 'pulse',      node: <LeaguePulseCard stats={stats} barbers={topBarbers} /> },
     { key: 'book',       node: <BookingCard featured={featuredDetail} fallbackBarber={fallbackBarber} /> },
     { key: 'gear',       node: <GearCard products={products} /> },
     { key: 'challenges', node: <ChallengesCard challenges={challenges} /> },
