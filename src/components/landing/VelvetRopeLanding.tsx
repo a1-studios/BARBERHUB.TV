@@ -115,6 +115,12 @@ export const VelvetRopeLanding = () => {
         <InsideTheHubStage onPinClick={openAuthForBarber} />
       </section>
 
+      {/* Watch Feed strip — pinned to bottom */}
+      <div className="flex-none">
+        <WatchFeedStrip />
+      </div>
+
+
       {/* Sign-in for existing users */}
       <footer className="flex-none px-4 pb-3 pt-1 text-center">
         <button
