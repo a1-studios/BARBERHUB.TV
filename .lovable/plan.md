@@ -1,46 +1,68 @@
-## Why the teasers don't feel "real"
+## Root cause: RLS blocks the landing page
 
-I audited the DB. Real rows we have today:
-- **9 barbers** in `public_user_profiles` (5 with avatars), each linked to `barber_profiles` with `specialty`, `rating`, `years_experience`, `location`, `is_live`
-- **6 active/upcoming battles** in `battles` ✅ (already wired)
-- **3 active products** in `products` (Razor, Snapback, Cape) with real images + BB prices — **never queried**
-- **5 historical appointments** in `appointments` — none future, none open
-- **0 rows** in `battle_submissions` and **0 live `stream_sessions`** — that's why the Watch strip is all emoji
+You're right to be frustrated — the data **is in the DB**, but the landing page is visited as an **anonymous (logged-out) user**, and the RLS policies say:
 
-So the gap is real, not architectural. Plan to close it:
+| Table | SELECT policy | Anon can read? |
+|---|---|---|
+| `battles` | `auth.uid() IS NOT NULL` | ❌ **No** — that's why Live PK shows "Warming up / Warming up" |
+| `battle_submissions` | `auth.uid() IS NOT NULL` | ❌ **No** — that's why Watch strip has 0 clips |
+| `appointments` | Owner-only | ❌ No (expected; we don't need this for anon) |
+| `barber_profiles` | Public policy `true` for anon | ✅ Yes |
+| `public_user_profiles` (view) | Inherits — readable | ✅ Yes |
+| `products` (active) | Public | ✅ Yes |
 
-### 1. Sphere — show all 9 real barbers
-`useTopBarbers` currently does `.not('avatar_url','is',null)` which drops 4 of 9 barbers. Remove that filter, lower `PIN_COUNT` from 14 to match what's actually returned (cap at `Math.max(barbers.length, 8)`), and use `barber_profiles.country_code` + `is_live` as a green ring on pins that are live right now.
+So Live + Watch are dark for everyone who isn't signed in, which is the entire purpose of the landing page. That's not a code bug, it's a server-side gate.
 
-### 2. Booking card — pull real barber, real specialties, real availability
-Stop hardcoding `Andre "The Blade"` and the `9:00 / 10:30 / 12:00` grid.
-- Featured barber = `useTopBarbers()[0]` joined to `barber_profiles` for `specialty`, `rating`, `years_experience`, `shop_city`, `is_live`
-- Replace fake slot grid with **real signal**: query `appointments WHERE barber_user_id=… AND scheduled_at>=today` to compute "next 3 open windows" against a 9–17 working day; if zero, show "Next available: tomorrow 9:00" derived locally and a real "**X cuts booked this month**" count from `appointments` for that barber
-- Specialty pills come from `barber_profiles.specialty` (string, comma-split)
+## Fix: one SECURITY DEFINER RPC for the landing teasers
 
-### 3. New Gear teaser slide — pulled from `products`
-Add `GearCard.tsx` as a new slide between `book` and `challenges`. Queries `products WHERE is_active=true ORDER BY display_order LIMIT 4`. Shows real `image_url`, `name`, `price_bb` with a "Tap to shop in BB" CTA. New hook `useFeaturedProducts()` in `useLandingData.ts`.
+I'll add **one** Postgres function `get_landing_teasers()` that runs with elevated privileges and returns only the **public, non-sensitive slice** needed by the landing page:
 
-### 4. Watch feed strip — only render if real
-- Extend `useFeaturedClips` to also query `stream_sessions WHERE recording_url IS NOT NULL` and `barber_profiles.featured_video_id` / `youtube_channel_id` for thumbnails
-- For `battle_submissions.cloudflare_stream_uid`, build CF Stream thumbnail URL `https://videodelivery.net/{uid}/thumbnails/thumbnail.jpg`
-- If after all that we still have 0 real clips, **hide the strip entirely** instead of rendering 6 emoji boxes. Honest empty state > fake content.
+```jsonc
+{
+  "live_battle": {
+    "id", "title", "viewers", "status",
+    "barber1": { "user_id", "display_name", "avatar_url", "country_code", "is_live" },
+    "barber2": { /* same shape, may be null */ }
+  },
+  "featured_clips": [
+    { "id", "title", "thumbnail_url", "author" }   // resolves cloudflare_stream_uid → videodelivery thumb
+  ],
+  "league_stats": { /* mirrors get_public_league_stats */ }
+}
+```
 
-### 5. Live PK card — already real, leave alone
-Already resolves `barber_profiles.id → public_user_profiles`. No change.
+Why an RPC instead of opening RLS:
+- `battles` and `battle_submissions` legitimately need authenticated-only access for full rows (organizer ids, scoring fields, voting metadata). Loosening their RLS would leak more than we want.
+- The RPC is a hand-picked projection — only the columns the teaser cards render. No vote counts, no organizer ids, no economy data.
+- One round-trip instead of 4. Faster landing.
 
-### Files
-- Edit `src/components/landing/teasers/useLandingData.ts` (drop avatar filter; add `useFeaturedProducts`; add appointments lookup; CF Stream thumb resolution)
-- Edit `BarberGlobeCard.tsx` (dynamic pin count, live ring)
-- Rewrite `BookingCard.tsx` (real barber + real availability; remove hardcoded arrays)
-- Create `src/components/landing/teasers/GearCard.tsx`
-- Edit `InsideTheHubStage.tsx` (insert gear slide)
-- Edit `WatchFeedStrip.tsx` (hide when empty; CF thumbs)
+The function:
+- `LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public`
+- Picks the most relevant battle: `status='live'` and both barber ids set, ordered by `barber1_is_streaming OR barber2_is_streaming DESC, created_at DESC`
+- Resolves `barber_profiles.id → user_id → public_user_profiles` inside the SQL
+- Limits clips to 8 with a non-null thumbnail (or a `cloudflare_stream_uid` we URL-build client-side)
+- `GRANT EXECUTE ... TO anon, authenticated`
 
-### Out of scope (call out, don't build)
-- No DB writes, no new tables, no edge functions
-- Won't seed fake clips/appointments — if they're empty, the UI shows that honestly
-- No Cloudflare account changes; only resolves thumbnail URLs from existing `cloudflare_stream_uid` values
+## Client changes
 
-### Open question
-Booking availability: do you want me to **derive** "next free slot" from a fixed 9–17 working day minus existing appointments (cheap, no schema change), or wait until you have a real `barber_availability` table? I'll go with the derived approach unless you say otherwise.
+`src/components/landing/teasers/useLandingData.ts`:
+- Replace `useLiveBattle`, `useFeaturedClips`, `useLeagueStats` with **one** `useLandingTeasers()` calling the new RPC.
+- Keep `useTopBarbers`, `useFeaturedProducts`, `useOpenChallenges`, `useFeaturedBarberDetail` — those tables are already anon-readable.
+- Resolve `cloudflare_stream_uid` → `https://videodelivery.net/{uid}/thumbnails/thumbnail.jpg?time=2s` in the hook (RPC returns the uid; URL building stays client-side so we don't bake a domain into Postgres).
+
+## Also fixing while I'm here
+- The "React detected a change in the order of Hooks" warning in `InsideTheHubStage` (the `slides` array length now changes between renders when `featuredDetail` flips from undefined → loaded; I'll stabilize it).
+- `TopBarbersCard` has a hard-coded `Kairo / Soren / Rafa` fallback — remove it, show real barbers only.
+
+## Files
+- **New migration**: create `get_landing_teasers()` RPC + GRANT
+- Edit `src/components/landing/teasers/useLandingData.ts` (single RPC for live + clips + stats)
+- Edit `src/components/landing/teasers/TopBarbersCard.tsx` (drop Kairo/Soren/Rafa fallback)
+- Edit `src/components/landing/InsideTheHubStage.tsx` (stable slides array)
+
+## Out of scope
+- No RLS changes to `battles`, `battle_submissions`, or `appointments` — they stay locked down.
+- No new tables, no fake seed data.
+- No edge function — pure Postgres RPC is enough.
+
+After this, the Live PK card will show **El-bory vs cj** (your real live battle) on the public landing without any sign-in, and any future submission with a Cloudflare Stream UID will populate the Watch strip automatically.
