@@ -1,0 +1,90 @@
+import { motion, AnimatePresence } from 'framer-motion';
+import { Play, Heart, Share2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useCountUp } from './useCountUp';
+
+const CLIPS = [
+  { emoji: '✂️', tint: 'from-orange-600 via-rose-700 to-purple-900', title: 'Skin fade in 90s', author: '@kairo' },
+  { emoji: '🪒', tint: 'from-cyan-600 via-blue-800 to-indigo-900',    title: 'Razor lineup',     author: '@soren' },
+  { emoji: '🔥', tint: 'from-yellow-500 via-orange-700 to-rose-900',  title: 'Freestyle design', author: '@rafa'  },
+];
+
+export const WatchFeedCard = () => {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setI((x) => (x + 1) % CLIPS.length), 1800);
+    return () => clearInterval(t);
+  }, []);
+  const likes = useCountUp(2400 + i * 137, 800, [i]);
+
+  const clip = CLIPS[i];
+
+  return (
+    <div className="relative h-full w-full flex flex-col">
+      <div className="flex items-center justify-between mb-2">
+        <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] px-2 py-1 rounded-full bg-orange-400/15 text-orange-300 border border-orange-400/40">
+          <Play className="h-3 w-3" /> Watch Feed
+        </span>
+        <span className="text-[10px] text-white/60">24/7 · Endless cuts</span>
+      </div>
+
+      <div className="relative flex-1 rounded-xl overflow-hidden border border-white/10 flex items-center justify-center bg-black">
+        {/* Phone-frame vertical clip */}
+        <div className="relative h-full aspect-[9/16] max-h-full rounded-lg overflow-hidden border border-white/15">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -30 }}
+              transition={{ duration: 0.4 }}
+              className={`absolute inset-0 bg-gradient-to-br ${clip.tint} flex items-center justify-center`}
+            >
+              <motion.div
+                animate={{ scale: [1, 1.08, 1], rotate: [0, 4, 0] }}
+                transition={{ duration: 3, repeat: Infinity }}
+                className="text-7xl drop-shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
+              >
+                {clip.emoji}
+              </motion.div>
+
+              {/* Right rail */}
+              <div className="absolute right-2 bottom-12 flex flex-col items-center gap-3">
+                <motion.div
+                  animate={{ scale: [1, 1.15, 1] }}
+                  transition={{ duration: 1.4, repeat: Infinity }}
+                  className="flex flex-col items-center"
+                >
+                  <Heart className="h-5 w-5 text-rose-400 fill-rose-400 drop-shadow" />
+                  <span className="text-[9px] text-white font-semibold">{(likes / 1000).toFixed(1)}k</span>
+                </motion.div>
+                <div className="flex flex-col items-center">
+                  <Share2 className="h-5 w-5 text-white/90 drop-shadow" />
+                  <span className="text-[9px] text-white font-semibold">{42 + i * 9}</span>
+                </div>
+              </div>
+
+              {/* Bottom caption */}
+              <div className="absolute bottom-2 left-2 right-12">
+                <div className="text-[11px] font-bold text-white">{clip.author}</div>
+                <div className="text-[10px] text-white/80">{clip.title}</div>
+              </div>
+
+              {/* Live progress dots */}
+              <div className="absolute top-2 left-2 right-2 flex gap-1">
+                {CLIPS.map((_, j) => (
+                  <div key={j} className={`h-0.5 flex-1 rounded-full ${j === i ? 'bg-white' : 'bg-white/30'}`} />
+                ))}
+              </div>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+
+      <div className="mt-2 flex items-center justify-between text-[11px]">
+        <span className="text-white/70 font-medium">Endless cuts · Vertical feed</span>
+        <span className="text-orange-300">Watch inside →</span>
+      </div>
+    </div>
+  );
+};

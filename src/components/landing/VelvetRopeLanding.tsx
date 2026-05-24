@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Scissors, Users } from 'lucide-react';
 import AuthModalV2 from '@/components/auth/AuthModalV2';
-import { LeaguePulseStrip } from './LeaguePulseStrip';
-import { RotatingTeaserStage } from './RotatingTeaserStage';
+import { InsideTheHubStage } from './InsideTheHubStage';
 import barberPole from '@/assets/barber-pole.png';
 
 type Role = 'barber' | 'fan';
@@ -101,14 +100,9 @@ export const VelvetRopeLanding = () => {
         </section>
       )}
 
-      {/* League Pulse — thin band */}
-      <section className="flex-none px-4 pb-2">
-        <LeaguePulseStrip />
-      </section>
-
-      {/* Rotating Teaser Stage — fills remaining space, no scroll */}
+      {/* Inside the Hub — rotating feature tease */}
       <section className="flex-1 min-h-0 px-4 pb-2">
-        <RotatingTeaserStage />
+        <InsideTheHubStage />
       </section>
 
       {/* Sign-in for existing users */}
