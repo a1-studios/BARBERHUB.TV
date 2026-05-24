@@ -9,7 +9,6 @@ interface Props {
 }
 
 const RADIUS = 110; // px
-const PIN_COUNT = 14;
 
 // Even point distribution on a sphere (Fibonacci spiral)
 const fibonacciSphere = (n: number) => {
@@ -87,10 +86,10 @@ const Pin = ({
           <img
             src={barber.avatar_url}
             alt={barber.display_name ?? 'barber'}
-            className="h-9 w-9 rounded-full object-cover ring-2 ring-orange-400/80 shadow-[0_0_14px_rgba(249,115,22,0.7)]"
+            className={`h-9 w-9 rounded-full object-cover ring-2 ${barber.is_live ? 'ring-rose-400 shadow-[0_0_18px_rgba(244,63,94,0.85)] animate-pulse' : 'ring-orange-400/80 shadow-[0_0_14px_rgba(249,115,22,0.7)]'}`}
           />
         ) : (
-          <div className="h-9 w-9 rounded-full bg-[#0a0a0f] ring-2 ring-cyan-400/70 flex items-center justify-center text-base shadow-[0_0_14px_rgba(34,211,238,0.5)]">
+          <div className={`h-9 w-9 rounded-full bg-[#0a0a0f] ring-2 flex items-center justify-center text-base ${barber?.is_live ? 'ring-rose-400 shadow-[0_0_14px_rgba(244,63,94,0.7)]' : 'ring-cyan-400/70 shadow-[0_0_14px_rgba(34,211,238,0.5)]'}`}>
             {countryFlag(barber?.country_code)}
           </div>
         )}
@@ -103,7 +102,8 @@ const Pin = ({
 };
 
 export const BarberGlobeCard = ({ barbers, onPinClick }: Props) => {
-  const points = useMemo(() => fibonacciSphere(PIN_COUNT), []);
+  const pinCount = Math.max(8, Math.min(14, barbers.length || 8));
+  const points = useMemo(() => fibonacciSphere(pinCount), [pinCount]);
 
   const rxRaw = useMotionValue(20);
   const ryRaw = useMotionValue(-10);
@@ -244,7 +244,7 @@ export const BarberGlobeCard = ({ barbers, onPinClick }: Props) => {
       </div>
 
       <div className="mt-2 flex items-center justify-between text-[11px]">
-        <span className="text-white/70 font-medium">{barbers.length || PIN_COUNT}+ barbers worldwide</span>
+        <span className="text-white/70 font-medium">{barbers.length || pinCount}+ barbers worldwide</span>
         <span className="text-cyan-300">Drag to spin →</span>
       </div>
     </div>
