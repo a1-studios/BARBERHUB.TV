@@ -4,7 +4,6 @@ import { LiveNowCard } from './teasers/LiveNowCard';
 import { TopBarbersCard } from './teasers/TopBarbersCard';
 import { BookingCard } from './teasers/BookingCard';
 import { ChallengesCard } from './teasers/ChallengesCard';
-import { WatchFeedCard } from './teasers/WatchFeedCard';
 import { BarberGlobeCard } from './teasers/BarberGlobeCard';
 import { useLandingData, PublicBarber } from './teasers/useLandingData';
 
@@ -16,7 +15,7 @@ interface Props {
 }
 
 export const InsideTheHubStage = ({ onPinClick }: Props) => {
-  const { stats, liveBattle, topBarbers, challenges, clips } = useLandingData();
+  const { stats, liveBattle, topBarbers, challenges } = useLandingData();
 
   const liveBattles = stats?.live_battles ?? 0;
   const viewers = liveBattle?.viewers ?? stats?.fans_total ?? 0;
@@ -30,7 +29,6 @@ export const InsideTheHubStage = ({ onPinClick }: Props) => {
     { key: 'top',        node: <TopBarbersCard barbers={topBarbers} /> },
     { key: 'book',       node: <BookingCard featuredBarber={featuredBarber} /> },
     { key: 'challenges', node: <ChallengesCard challenges={challenges} /> },
-    { key: 'watch',      node: <WatchFeedCard clips={clips} /> },
   ];
 
   const [idx, setIdx] = useState(0);

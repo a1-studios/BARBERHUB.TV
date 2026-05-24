@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet';
 import { Scissors, Users } from 'lucide-react';
 import AuthModalV2 from '@/components/auth/AuthModalV2';
 import { InsideTheHubStage } from './InsideTheHubStage';
+import { WatchFeedStrip } from './teasers/WatchFeedStrip';
 import { PublicBarber } from './teasers/useLandingData';
 import barberPole from '@/assets/barber-pole.png';
 
@@ -113,6 +114,12 @@ export const VelvetRopeLanding = () => {
       <section className="flex-1 min-h-0 px-4 pb-2">
         <InsideTheHubStage onPinClick={openAuthForBarber} />
       </section>
+
+      {/* Watch Feed strip — pinned to bottom */}
+      <div className="flex-none">
+        <WatchFeedStrip />
+      </div>
+
 
       {/* Sign-in for existing users */}
       <footer className="flex-none px-4 pb-3 pt-1 text-center">
