@@ -4,7 +4,6 @@ import { LiveNowCard } from './teasers/LiveNowCard';
 import { TopBarbersCard } from './teasers/TopBarbersCard';
 import { BookingCard } from './teasers/BookingCard';
 import { ChallengesCard } from './teasers/ChallengesCard';
-import { WatchFeedCard } from './teasers/WatchFeedCard';
 import { BarberGlobeCard } from './teasers/BarberGlobeCard';
 import { useLandingData, PublicBarber } from './teasers/useLandingData';
 
