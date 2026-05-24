@@ -1,143 +1,90 @@
 
-# Phase 1 (Final) — Velvet Rope + OTP, Parallel & Non-Destructive
+# Velvet Rope Landing — Dynamic Feature Tease
 
-All previous constraints stand: `Index.tsx` body untouched except for a single early-return, no legacy auth files deleted, `useAuth.tsx` exports unchanged, `AuthDialog` and every existing CTA preserved. Adds: binary Barber/Fan logic preserved end-to-end, sub-category aggregation surfaced on the Velvet Rope, and a dynamic teaser grid built from existing components.
+Replace the static "League Pulse" stat strip with a mobile-first, auto-rotating teaser stage that gives non-members an irresistible peek at what's inside the app. Keep the existing signature header, role pills, VIP code panel, and Sign-in footer untouched. Keep the brand: Deep Black (#0a0a0f), Neon Orange, Zion Cyan — no purple/pink gradients from the reference.
 
----
+## What the user will see
 
-## Pillar 1 — Velvet Rope Landing (Isolated, Dynamic, Binary-Aware)
+A single iPhone-height frame (no scroll) with the existing chrome on top, then a **rotating "Inside the Hub" stage** that auto-cycles through 5 themed cards every ~4s with smooth fade/slide transitions. Each card is a real, live preview of an app feature with subtle 3D motion, pulsing live dots, and animated counters.
 
-### 1.1 Component scaffold
-New file: `src/components/landing/VelvetRopeLanding.tsx`. Self-contained. Imports only existing components — no new visual primitives.
-
-### 1.2 Binary role preservation
-- The landing surfaces **two visitor intents** before auth: **"I'm a Barber"** vs **"I'm a Fan"**. Stored in modal-local state and forwarded to `AuthModalV2`'s `intendedRole` prop.
-- After successful OTP verify, `AuthModalV2` writes the chosen role exactly the way the current onboarding does — via `user_roles` insert + `profiles.user_type` — so the existing `useUserRole` / `useUserProfile` / `RoleBadge` / `SubCategoryBadge` pipelines all keep working unchanged.
-- Sub-category (`licensed_pro`, `beginner`, `educator`, `official_sponsor`) collection stays in the existing post-signup onboarding flow. Velvet Rope only captures the binary role; sub-cat is captured downstream as it is today. No change to `profiles.subcategory` writers.
-
-### 1.3 Aggregated stats strip (live, role-segmented)
-A horizontal "League Pulse" bar at the top of Velvet Rope, read-only, refreshes every 60s via React Query. New SECURITY DEFINER RPC `get_public_league_stats()` returns:
-- `barbers_total`, `barbers_licensed_pro`, `barbers_beginner`, `barbers_educator`, `barbers_official_sponsor`
-- `fans_total`
-- `active_battles`, `live_streams_now`, `countries_represented`, `bb_in_circulation`
-
-All counts come from existing tables (`profiles`, `user_roles`, plus existing public views). RPC is exposed to `anon`. No PII. Reuses `LivePulseMonitor`'s visual language but in a public-safe, role-segmented variant: `src/components/landing/LeaguePulseStrip.tsx`.
-
-### 1.4 Dynamic teaser grid (existing components, locked overlays)
-Each tile is one existing component rendered in **read-only teaser mode** behind a translucent "🔒 VIP ONLY — Redeem Invite" overlay. Clicking any locked tile opens `AuthModalV2`. New thin wrapper `src/components/landing/LockedTeaser.tsx` provides the overlay + blur + hover lift; it does not modify the underlying component.
-
-Tiles, in order:
-
-1. **Live PK Battles** → `DynamicBattleHero` (existing). Teases head-to-head challenges.
-2. **Watch Feed** → reuses a 3-card horizontal preview of `WatchFeed`'s top items (read via existing public RPC, no new query).
-3. **Live Streaming Now** → `LiveBarberStreams` (existing) — barber→barber go-live teaser.
-4. **Faction Banners** → `ImmersiveFactionBanners` (existing) — culture & national pride.
-5. **Global League Map** → `GlobalLeagueDashboard` (existing) — national/international competition.
-6. **2026 Championship** → `tournament/PrizePoolCard` + `LiveMatchCounter` (existing) — international stakes.
-7. **Academy & Education** → `academy/AcademyRail` (existing) — educator sub-cat showcase.
-8. **Brand Deals & Sponsors** → `factions/SponsoredBadge` + `admin/SponsorAdsManager`'s public preview slice (existing) — official_sponsor sub-cat showcase.
-9. **M4M Mental Health Fund** → `m4m/M4MHeartbeat` (existing) — medical/community pillar.
-10. **Universal Barter Gateway** → `barter/UniversalBarterGateway` (existing) — community/development pillar.
-11. **Creator Hub Preview** → `creator/...` first-card teaser — career development.
-12. **Product Shelf** → `ProductShelf` (existing) — culture/gear.
-
-Each tile carries a small chip tagging which pillar it represents (Compete · Stream · Education · Brand Deals · Medical · Community · Culture · Development) so the messaging matches the user's framing.
-
-### 1.5 CTAs
-- Primary hero CTA: **Redeem VIP Invite** → `AuthModalV2` with `intendedRole=null`.
-- Two secondary chips beneath the hero: **I'm a Barber** / **I'm a Fan** → `AuthModalV2` with `intendedRole='barber' | 'fan'`.
-- Tiny muted link: "Already a member? Sign in" → `AuthModalV2` in sign-in mode.
-- The existing public Sign Up button, Spin CTA, `LandingHero`, `LaunchWizard`, and every other current entry point stay in `Index.tsx` source code, unmodified — they're simply unreachable while Velvet Rope is shown.
-
-### 1.6 `Index.tsx` change (one line)
-Insert immediately after the `loading` guard:
+```text
+┌──────────────────────────────────┐
+│  Signature Header (existing)     │
+│  Barber | Fan pills (existing)   │
+│  VIP code panel (conditional)    │
+├──────────────────────────────────┤
+│                                  │
+│   [ Rotating Teaser Stage ]      │
+│                                  │
+│   • dot • dot • dot • dot • dot  │
+├──────────────────────────────────┤
+│  Already a member? Sign in       │
+└──────────────────────────────────┘
 ```
-if (!user) return <VelvetRopeLanding />;
-```
-Nothing else in `Index.tsx` is touched. To revert: delete that line.
 
-### 1.7 SEO
-`VelvetRopeLanding` sets its own `<title>`, meta description, canonical, and JSON-LD via existing SEO helpers — invite-only barber competition platform messaging.
+## The 5 rotating cards
 
----
+Pulled from real Supabase data via the existing `get_public_league_stats` RPC + a couple light public reads, so numbers are alive but no auth is needed.
 
-## Pillar 2 — Access Code Engine (additive only)
+1. **Live Now** — top-left red pulse, a faux split-screen PK frame using two `LivePreviewTile` thumbnails (real `is_live` barbers from `barber_profiles` if available, fallback to curated avatars). Shows live battle count + viewer counter ticking. Tagline: *"X battles streaming right now."*
 
-(Unchanged from prior revision.)
+2. **Top Barbers Podium (3D)** — three avatar crests on a tilted podium with CSS 3D transform + slow rotateY hover. Country flags, BB earnings counter animating up. Tagline: *"This week's leaders."*
 
-### 2A. Migration
-- `access_codes` (`code`, `is_active`, `type ∈ {vip,promo}`, `usage_count`, `max_uses`, `notes`, `created_by`).
-- `access_code_redemptions` audit table.
-- `platform_state` row `global_vip_mode = 'false'`.
-- RLS: writes gated by `is_sovereign()`; reads only via SECURITY DEFINER RPCs:
-  - `validate_access_code(p_code)`
-  - `redeem_access_code(p_code, p_user_id, p_email)` (FOR UPDATE row lock — economy-integrity standard)
-  - `is_global_vip_mode()`
-  - `get_public_league_stats()` (Pillar 1.3)
+3. **Book the Best** — mock appointment card with calendar slots filling in real-time (animated check-ins), specialty pills, and "Near You" badge. Tagline: *"Book pros in 60 seconds."*
 
-### 2B. Sovereign HQ admin
-- New `src/components/sovereign/AccessCodePanel.tsx` mounted as a new tab in `SovereignHQ.tsx` (no existing panels altered).
-- Global VIP Mode toggle, code generator, codes table, redemption drill-down.
-- Edge function `sovereign-access-codes` for all writes, sovereign-JWT verified.
+4. **Open Challenges** — stack of 2-3 challenge cards fanning out, with BB stake amounts (100 / 250 / 500), countdown timers, and a "Throw Down" pulse button. Tagline: *"Stake. Battle. Win BB."*
 
----
+5. **Watch Feed Tease** — vertical-video phone frame with auto-playing muted clip thumbnails cycling, like/share counters animating. Tagline: *"Endless cuts, 24/7."*
 
-## Pillar 3 — Magic Link Tear-Down → DEFERRED
+Each card uses the existing brand palette — Neon Orange for barber/competitive accents, Zion Cyan for fan/social accents, no gradient soup.
 
-Nothing deleted. `useAuth.tsx`, `AuthHashHandler`, `AuthCallback`, `AuthDialog`, `ForgotPasswordForm`, `GoogleOneTap`, `OneTapRaffleReveal`, `ResetPassword`, `authRedirects.ts`, `QuickSocialSignIn` all stay. Cleanup happens in a future phase after the new flow is validated in production.
+## Motion & polish
 
----
+- Framer Motion `AnimatePresence` with `mode="wait"`, fade + slight Y-slide between cards
+- Auto-advance every 4s; pause on tap; tap-to-skip-forward
+- 5 progress dots at the bottom; the active dot fills left-to-right as a 4s timer
+- Subtle parallax: each card's hero element gets a gentle floating animation (`y: [0, -6, 0]` over 6s)
+- Live red pulse dot on Live Now card
+- Number counters use `motion` springy count-up (no library needed — small custom hook)
+- Reduced-motion respects `prefers-reduced-motion`: rotation pauses, animations become fades
 
-## Pillar 4 — `AuthModalV2` (Parallel, Binary-Aware)
+## Files
 
-New file: `src/components/auth/AuthModalV2.tsx`. Isolated; only the Velvet Rope mounts it. Uses `supabase.auth.*` directly; does not touch `useAuth`'s API.
+**New**
+- `src/components/landing/InsideTheHubStage.tsx` — the rotating stage container, AnimatePresence, dots, autoplay logic
+- `src/components/landing/teasers/LiveNowCard.tsx`
+- `src/components/landing/teasers/TopBarbersCard.tsx`
+- `src/components/landing/teasers/BookingCard.tsx`
+- `src/components/landing/teasers/ChallengesCard.tsx`
+- `src/components/landing/teasers/WatchFeedCard.tsx`
+- `src/components/landing/teasers/useCountUp.ts` — tiny animated counter hook
 
-### Props
-- `open: boolean`
-- `intendedRole?: 'barber' | 'fan' | null`
-- `mode?: 'signup' | 'signin'`
-- `onClose: () => void`
+**Edited**
+- `src/components/landing/VelvetRopeLanding.tsx` — replace `<LeaguePulseStrip />` and the existing `<RotatingTeaserStage />` section with a single `<InsideTheHubStage />` filling the remaining viewport height (`flex-1 min-h-0`)
 
-### State machine: `'gate' | 'role' | 'identity' | 'verify' | 'done'`
+**Untouched**
+- Signature header, role pills, VIP code panel, Sign-in footer, AuthModalV2
+- `LeaguePulseStrip.tsx` and `RotatingTeaserStage.tsx` left in repo (unreferenced) in case you want to revert; can delete in a follow-up if you confirm
 
-**Step 0 — Boot.** Read VIP mode via `usePlatformState('global_vip_mode')`.
+## Data sources (read-only, public)
 
-**Step 1 — Gate.** Single uppercase access-code input.
-- VIP mode ON → required, label "VIP Invite Code", validates via `validate_access_code`.
-- VIP mode OFF → optional, label "Promo / Referral Code (optional)".
-- Stores `{ codeId, codeType }` in modal state.
+- `supabase.rpc('get_public_league_stats')` — for Live Now battle/viewer counts and BB-in-play
+- `barber_profiles` public view — top 3 barbers by recent BB / wins for the podium (already exposed via `public_user_profiles` view per security memory)
+- Static curated avatars/clips as fallback if RPCs are slow, so the stage never shows empty
 
-**Step 2 — Role (only if `intendedRole == null` and `mode === 'signup'`).** Two large cards: **Barber** (compete, stream, earn BB) vs **Fan** (vote, sponsor, watch). Selection is the binary role.
+No new edge functions, no migrations, no schema changes — pure presentation layer.
 
-**Step 3 — Identity.** Single "Email or Phone Number" input.
-- Phone regex match → toast "SMS login is in beta. Please use your email." Stay on step.
-- Email regex match → `supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true, data: { intended_role: chosenRole } } })`. (No `emailRedirectTo` — pure 6-digit token flow. Resend SMTP wiring untouched.) Loading state disables submit to prevent spam. Advance.
+## Mobile constraints honored
 
-**Step 4 — Verify.** 6-cell `input-otp` PIN.
-- Auto-submit on 6 digits + manual Verify button: `supabase.auth.verifyOtp({ email, token, type: 'email' })`.
-- On success:
-  1. If first-time user (no `user_roles` row), insert `user_roles (user_id, role=chosenRole)` and upsert `profiles.user_type=chosenRole` — exactly mirroring the existing onboarding path. Sub-category is **not** set here; it remains owned by the existing post-signup onboarding (`useProfileSetup`, `WelcomeModal`, etc.) so `licensed_pro` / `beginner` / `educator` / `official_sponsor` aggregation behavior is unchanged.
-  2. If a code was supplied in Step 1, call `redeem_access_code(codeId, user.id, email)`.
-  3. Close modal. Existing `useAuth` session listener picks up the new session → Velvet Rope's early-return falls through → user lands on the normal authenticated `/` view, where existing role-based UI (Fan Arena vs Barber Arena, `RoleBadge`, `SubCategoryBadge`, `useUserRole`-gated CTAs) renders correctly. Existing onboarding flows trigger as today for sub-category capture.
-- **Resend Code** button with 60s client countdown; calls `signInWithOtp` again. Friendly toasts for invalid / expired / rate-limited.
-- "Edit email" link returns to Step 3.
+- Entire page still fits 100dvh with zero scroll on a 390×742 viewport (the user's current preview)
+- Stage uses `flex-1 min-h-0` so it absorbs whatever vertical space remains after header/pills/code/footer
+- All text uses `clamp()` or Tailwind responsive scales; no overflow risk
+- Cards designed at 320px min-width baseline
 
-### Wiring
-- Velvet Rope's "Redeem VIP Invite" + "I'm a Barber" + "I'm a Fan" + "Sign in" all open `AuthModalV2`.
-- Header, footer, `LandingHero`, `LaunchWizard`, and every existing CTA continue to use legacy `AuthDialog` / signup flows untouched.
+## Out of scope (ask if you want them)
 
-### Supabase Auth dashboard (manual, no code)
-- Confirm Email OTP enabled, length 6, expiry ≥10 min. Resend SMTP wiring is not modified.
+- Replacing the signature header (you said keep it as-is)
+- Dragging/swiping between cards (autoplay only, with tap-to-advance)
+- Real video playback in Watch Feed card (using thumbnail cycle to keep page lightweight)
 
----
-
-## Execution order
-1. Migration: tables, RPCs (`validate_access_code`, `redeem_access_code`, `is_global_vip_mode`, `get_public_league_stats`), `platform_state` seed.
-2. `AuthModalV2` (parallel, isolated).
-3. `LeaguePulseStrip` + `LockedTeaser` + `VelvetRopeLanding` + the one-line `Index.tsx` early-return.
-4. Sovereign `AccessCodePanel` + `sovereign-access-codes` edge function.
-
-## Risk & reversibility
-- One-line revert restores legacy public homepage exactly.
-- Legacy magic-link, password-reset, OAuth journeys remain fully functional.
-- Binary Barber/Fan logic and sub-category aggregation pipelines are untouched — Velvet Rope reads aggregates, onboarding writes sub-cats as today.
+Ready to build on approval.
