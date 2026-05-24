@@ -5372,6 +5372,7 @@ export type Database = {
         }[]
       }
       get_fee_structure: { Args: never; Returns: Json }
+      get_landing_teasers: { Args: never; Returns: Json }
       get_m4m_fund_summary: {
         Args: never
         Returns: {
