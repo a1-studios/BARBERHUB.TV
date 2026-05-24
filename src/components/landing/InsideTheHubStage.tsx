@@ -5,20 +5,28 @@ import { TopBarbersCard } from './teasers/TopBarbersCard';
 import { BookingCard } from './teasers/BookingCard';
 import { ChallengesCard } from './teasers/ChallengesCard';
 import { WatchFeedCard } from './teasers/WatchFeedCard';
-import { useLandingData } from './teasers/useLandingData';
+import { BarberGlobeCard } from './teasers/BarberGlobeCard';
+import { useLandingData, PublicBarber } from './teasers/useLandingData';
 
 const ROTATE_MS = 4500;
 const PAUSE_MS = 9000;
 
-export const InsideTheHubStage = () => {
+interface Props {
+  onPinClick?: (barber: PublicBarber) => void;
+}
+
+export const InsideTheHubStage = ({ onPinClick }: Props) => {
   const { stats, liveBattle, topBarbers, challenges, clips } = useLandingData();
 
   const liveBattles = stats?.live_battles ?? 0;
   const viewers = liveBattle?.viewers ?? stats?.fans_total ?? 0;
   const featuredBarber = topBarbers[0] ?? null;
 
+  const handlePin = (b: PublicBarber) => onPinClick?.(b);
+
   const slides = [
     { key: 'live',       node: <LiveNowCard liveBattles={liveBattles} viewers={viewers} battle={liveBattle} /> },
+    { key: 'globe',      node: <BarberGlobeCard barbers={topBarbers} onPinClick={handlePin} /> },
     { key: 'top',        node: <TopBarbersCard barbers={topBarbers} /> },
     { key: 'book',       node: <BookingCard featuredBarber={featuredBarber} /> },
     { key: 'challenges', node: <ChallengesCard challenges={challenges} /> },
@@ -50,12 +58,15 @@ export const InsideTheHubStage = () => {
     touchStart.current = null;
   };
 
+  // Pause auto-advance while user is interacting with the globe (or any pointer down)
+  const onPointerDownCapture = () => setPausedUntil(Date.now() + PAUSE_MS);
+
   return (
     <div
       className="relative h-full w-full flex flex-col"
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
-      onClick={() => setPausedUntil(Date.now() + PAUSE_MS)}
+      onPointerDownCapture={onPointerDownCapture}
     >
       <div className="flex-1 min-h-0 relative">
         <AnimatePresence mode="wait">

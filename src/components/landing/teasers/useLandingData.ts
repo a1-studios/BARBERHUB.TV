@@ -30,6 +30,7 @@ export interface OpenChallengeTease {
   from: string;
   stake: number;
   expiresAt: string | null;
+  status: 'open' | 'accepted' | 'history';
 }
 
 export interface ClipTease {
@@ -46,6 +47,30 @@ export const countryFlag = (code?: string | null) => {
 
 const QUERY_OPTS = { staleTime: 60_000, refetchInterval: 90_000 } as const;
 
+// Resolve barber_profiles.id -> public_user_profiles row
+const resolveBarbers = async (barberProfileIds: string[]): Promise<Record<string, PublicBarber>> => {
+  if (!barberProfileIds.length) return {};
+  const { data: bp } = await supabase
+    .from('barber_profiles')
+    .select('id, user_id')
+    .in('id', barberProfileIds);
+  const userIds = (bp ?? []).map((r: any) => r.user_id).filter(Boolean) as string[];
+  if (!userIds.length) return {};
+  const { data: profs } = await supabase
+    .from('public_user_profiles')
+    .select('user_id, display_name, avatar_url, country_code')
+    .in('user_id', userIds);
+  const byUserId = new Map<string, PublicBarber>(
+    (profs ?? []).map((p: any) => [p.user_id, p as PublicBarber]),
+  );
+  const out: Record<string, PublicBarber> = {};
+  for (const row of bp ?? []) {
+    const prof = byUserId.get((row as any).user_id);
+    if (prof) out[(row as any).id] = prof;
+  }
+  return out;
+};
+
 export const useLeagueStats = () =>
   useQuery<LeagueStats>({
     queryKey: ['landing-league-stats'],
@@ -57,9 +82,9 @@ export const useLeagueStats = () =>
     ...QUERY_OPTS,
   });
 
-export const useTopBarbers = () =>
+export const useTopBarbers = (limit = 14) =>
   useQuery<PublicBarber[]>({
-    queryKey: ['landing-top-barbers'],
+    queryKey: ['landing-top-barbers', limit],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('public_user_profiles')
@@ -67,7 +92,7 @@ export const useTopBarbers = () =>
         .eq('user_type', 'barber')
         .not('avatar_url', 'is', null)
         .order('created_at', { ascending: false })
-        .limit(6);
+        .limit(limit);
       if (error) throw error;
       return (data ?? []) as PublicBarber[];
     },
@@ -78,28 +103,27 @@ export const useLiveBattle = () =>
   useQuery<LiveBattleTease | null>({
     queryKey: ['landing-live-battle'],
     queryFn: async () => {
-      // Try a streaming or live battle first
+      // Prefer a live, fully-paired battle
       const { data: battles, error } = await supabase
         .from('battles')
-        .select('id, title, barber1_id, barber2_id, barber1_live_viewers, barber2_live_viewers, live_viewers, status, barber1_is_streaming, barber2_is_streaming, starts_at')
-        .or('barber1_is_streaming.eq.true,barber2_is_streaming.eq.true,status.eq.live,status.eq.active')
-        .order('starts_at', { ascending: false, nullsFirst: false })
-        .limit(1);
+        .select('id, title, barber1_id, barber2_id, barber1_live_viewers, barber2_live_viewers, live_viewers, status, barber1_is_streaming, barber2_is_streaming, starts_at, created_at')
+        .in('status', ['live', 'active', 'upcoming'])
+        .not('barber1_id', 'is', null)
+        .not('barber2_id', 'is', null)
+        .order('status', { ascending: true })
+        .order('created_at', { ascending: false })
+        .limit(5);
       if (error) throw error;
-      const b = battles?.[0];
+      const b = (battles ?? []).sort((a: any, z: any) => {
+        const score = (x: any) => (x.status === 'live' ? 3 : x.status === 'active' ? 2 : 1)
+          + ((x.barber1_is_streaming || x.barber2_is_streaming) ? 0.5 : 0);
+        return score(z) - score(a);
+      })[0];
       if (!b) return null;
 
       const ids = [b.barber1_id, b.barber2_id].filter(Boolean) as string[];
-      let profiles: PublicBarber[] = [];
-      if (ids.length) {
-        const { data: profs } = await supabase
-          .from('public_user_profiles')
-          .select('user_id, display_name, avatar_url, country_code')
-          .in('user_id', ids);
-        profiles = (profs ?? []) as PublicBarber[];
-      }
+      const map = await resolveBarbers(ids);
 
-      const find = (id: string | null) => profiles.find((p) => p.user_id === id) ?? null;
       const viewers =
         (b.barber1_live_viewers ?? 0) + (b.barber2_live_viewers ?? 0) + (b.live_viewers ?? 0);
 
@@ -107,8 +131,8 @@ export const useLiveBattle = () =>
         id: b.id,
         title: b.title ?? null,
         viewers,
-        barber1: find(b.barber1_id),
-        barber2: find(b.barber2_id),
+        barber1: b.barber1_id ? map[b.barber1_id] ?? null : null,
+        barber2: b.barber2_id ? map[b.barber2_id] ?? null : null,
       };
     },
     staleTime: 30_000,
@@ -119,19 +143,29 @@ export const useOpenChallenges = () =>
   useQuery<OpenChallengeTease[]>({
     queryKey: ['landing-open-challenges'],
     queryFn: async () => {
+      // Pull most recent of any status — we relabel client-side so the card
+      // never has to invent fake stakes.
       const { data, error } = await supabase
         .from('open_challenges')
-        .select('id, challenger_username, stake_amount, expires_at, status')
-        .eq('status', 'open')
+        .select('id, challenger_username, stake_amount, expires_at, status, created_at')
         .order('created_at', { ascending: false })
-        .limit(3);
+        .limit(6);
       if (error) throw error;
-      return (data ?? []).map((c) => ({
-        id: c.id as string,
-        from: (c.challenger_username as string) ?? 'Anon',
-        stake: (c.stake_amount as number) ?? 0,
-        expiresAt: (c.expires_at as string) ?? null,
-      }));
+      const rows = (data ?? []).map((c: any) => {
+        const raw = (c.status as string) ?? 'open';
+        const status: OpenChallengeTease['status'] =
+          raw === 'open' ? 'open' : raw === 'accepted' || raw === 'matched' ? 'accepted' : 'history';
+        return {
+          id: c.id as string,
+          from: (c.challenger_username as string) ?? 'Anon',
+          stake: (c.stake_amount as number) ?? 0,
+          expiresAt: (c.expires_at as string) ?? null,
+          status,
+        };
+      });
+      // Prioritize open > accepted > history
+      const order = { open: 0, accepted: 1, history: 2 } as const;
+      return rows.sort((a, b) => order[a.status] - order[b.status]).slice(0, 3);
     },
     ...QUERY_OPTS,
   });
@@ -148,7 +182,7 @@ export const useFeaturedClips = () =>
         .limit(5);
       if (error) throw error;
       const rows = data ?? [];
-      const userIds = Array.from(new Set(rows.map((r) => r.user_id).filter(Boolean))) as string[];
+      const userIds = Array.from(new Set(rows.map((r: any) => r.user_id).filter(Boolean))) as string[];
       let profiles: PublicBarber[] = [];
       if (userIds.length) {
         const { data: profs } = await supabase
@@ -157,7 +191,7 @@ export const useFeaturedClips = () =>
           .in('user_id', userIds);
         profiles = (profs ?? []) as PublicBarber[];
       }
-      return rows.map((r) => ({
+      return rows.map((r: any) => ({
         id: r.id as string,
         title: (r.title as string) ?? null,
         thumbnail_url: ((r.thumbnail_url ?? r.stream_thumbnail_url) as string) ?? null,
@@ -170,7 +204,7 @@ export const useFeaturedClips = () =>
 export const useLandingData = () => {
   const stats = useLeagueStats();
   const liveBattle = useLiveBattle();
-  const topBarbers = useTopBarbers();
+  const topBarbers = useTopBarbers(14);
   const challenges = useOpenChallenges();
   const clips = useFeaturedClips();
   return {
