@@ -227,6 +227,31 @@ export function AuthModalV2({
           </DialogDescription>
         </DialogHeader>
 
+        {previewBarber && (
+          <div className="rounded-xl border border-orange-500/40 bg-gradient-to-br from-orange-500/10 to-cyan-400/10 p-3 flex items-center gap-3">
+            {previewBarber.avatar_url ? (
+              <img
+                src={previewBarber.avatar_url}
+                alt={previewBarber.display_name ?? 'Barber'}
+                className="h-12 w-12 rounded-full object-cover ring-2 ring-orange-400/60"
+              />
+            ) : (
+              <div className="h-12 w-12 rounded-full bg-white/[0.06] ring-2 ring-orange-400/60 flex items-center justify-center text-xl">
+                {countryFlag(previewBarber.country_code)}
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="text-sm font-bold text-white truncate">
+                {previewBarber.display_name ?? 'Barber'} {countryFlag(previewBarber.country_code)}
+              </div>
+              <div className="text-[11px] text-white/60 leading-tight mt-0.5">
+                Sign up or redeem a VIP invite to book, follow & throw down.
+              </div>
+            </div>
+          </div>
+        )}
+
+
         {step === 'gate' && (
           <div className="space-y-4">
             <div>
