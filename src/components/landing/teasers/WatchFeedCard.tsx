@@ -2,22 +2,36 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Heart, Share2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useCountUp } from './useCountUp';
+import { ClipTease } from './useLandingData';
 
-const CLIPS = [
-  { emoji: '✂️', tint: 'from-orange-600 via-rose-700 to-purple-900', title: 'Skin fade in 90s', author: '@kairo' },
-  { emoji: '🪒', tint: 'from-cyan-600 via-blue-800 to-indigo-900',    title: 'Razor lineup',     author: '@soren' },
-  { emoji: '🔥', tint: 'from-yellow-500 via-orange-700 to-rose-900',  title: 'Freestyle design', author: '@rafa'  },
+interface Props {
+  clips: ClipTease[];
+}
+
+const FALLBACK_TINTS = [
+  'from-orange-600 via-rose-700 to-purple-900',
+  'from-cyan-600 via-blue-800 to-indigo-900',
+  'from-yellow-500 via-orange-700 to-rose-900',
 ];
+const FALLBACK_EMOJI = ['✂️', '🪒', '🔥'];
+const FALLBACK_TITLES = ['Skin fade in 90s', 'Razor lineup', 'Freestyle design'];
+const FALLBACK_AUTHORS = ['@kairo', '@soren', '@rafa'];
 
-export const WatchFeedCard = () => {
+export const WatchFeedCard = ({ clips }: Props) => {
+  const useFallback = clips.length === 0;
+  const len = useFallback ? 3 : Math.min(clips.length, 5);
   const [i, setI] = useState(0);
+
   useEffect(() => {
-    const t = setInterval(() => setI((x) => (x + 1) % CLIPS.length), 1800);
+    const t = setInterval(() => setI((x) => (x + 1) % len), 1800);
     return () => clearInterval(t);
-  }, []);
+  }, [len]);
+
   const likes = useCountUp(2400 + i * 137, 800, [i]);
 
-  const clip = CLIPS[i];
+  const clip = useFallback
+    ? null
+    : clips[i % len];
 
   return (
     <div className="relative h-full w-full flex flex-col">
@@ -29,7 +43,6 @@ export const WatchFeedCard = () => {
       </div>
 
       <div className="relative flex-1 rounded-xl overflow-hidden border border-white/10 flex items-center justify-center bg-black">
-        {/* Phone-frame vertical clip */}
         <div className="relative h-full aspect-[9/16] max-h-full rounded-lg overflow-hidden border border-white/15">
           <AnimatePresence mode="wait">
             <motion.div
@@ -38,17 +51,28 @@ export const WatchFeedCard = () => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -30 }}
               transition={{ duration: 0.4 }}
-              className={`absolute inset-0 bg-gradient-to-br ${clip.tint} flex items-center justify-center`}
+              className="absolute inset-0"
             >
-              <motion.div
-                animate={{ scale: [1, 1.08, 1], rotate: [0, 4, 0] }}
-                transition={{ duration: 3, repeat: Infinity }}
-                className="text-7xl drop-shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
-              >
-                {clip.emoji}
-              </motion.div>
+              {clip?.thumbnail_url ? (
+                <img
+                  src={clip.thumbnail_url}
+                  alt={clip.title ?? 'Clip'}
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              ) : (
+                <div className={`absolute inset-0 bg-gradient-to-br ${FALLBACK_TINTS[i % 3]} flex items-center justify-center`}>
+                  <motion.div
+                    animate={{ scale: [1, 1.08, 1], rotate: [0, 4, 0] }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                    className="text-7xl drop-shadow-[0_8px_24px_rgba(0,0,0,0.5)]"
+                  >
+                    {FALLBACK_EMOJI[i % 3]}
+                  </motion.div>
+                </div>
+              )}
 
-              {/* Right rail */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
+
               <div className="absolute right-2 bottom-12 flex flex-col items-center gap-3">
                 <motion.div
                   animate={{ scale: [1, 1.15, 1] }}
@@ -64,15 +88,17 @@ export const WatchFeedCard = () => {
                 </div>
               </div>
 
-              {/* Bottom caption */}
               <div className="absolute bottom-2 left-2 right-12">
-                <div className="text-[11px] font-bold text-white">{clip.author}</div>
-                <div className="text-[10px] text-white/80">{clip.title}</div>
+                <div className="text-[11px] font-bold text-white truncate">
+                  {clip?.author ? `@${clip.author}` : FALLBACK_AUTHORS[i % 3]}
+                </div>
+                <div className="text-[10px] text-white/80 truncate">
+                  {clip?.title ?? FALLBACK_TITLES[i % 3]}
+                </div>
               </div>
 
-              {/* Live progress dots */}
               <div className="absolute top-2 left-2 right-2 flex gap-1">
-                {CLIPS.map((_, j) => (
+                {Array.from({ length: len }).map((_, j) => (
                   <div key={j} className={`h-0.5 flex-1 rounded-full ${j === i ? 'bg-white' : 'bg-white/30'}`} />
                 ))}
               </div>
