@@ -1,94 +1,46 @@
-## What's wrong now
+## Why the teasers don't feel "real"
 
-1. **Header reads "Barber Hub"** — should be `BARBER-HUB` all caps.
-2. **Live battle still shows fallback Marco/Diego** — root cause: `battles.barber1_id` / `barber2_id` reference `barber_profiles.id`, NOT `auth user_id`. Our query joins `public_user_profiles` on `user_id`, so it returns 0 rows → fallback fires. Same hidden bug will hit any code that assumes barber IDs == user IDs.
-3. **PK card is left/right** — user wants top/bottom split (matches the vertical phone form factor and the real Theater feed).
-4. **VS badge looks off-center** — it's centered on the card root but the headline strip above pushes the visual midline; needs to sit on the actual seam between the two stacked tiles.
-5. **Lots of dead vertical space** in every card — under-using the ~520px stage on a 390×782 viewport.
-6. **Open Challenges shows fallbacks** — DB only has expired/completed rows; we need to widen the query (include `accepted`/recent + show "waiting for challenger" empty-state when truly none) instead of inventing fake stakes.
-7. **No interactive 3D element** — user wants a globe slide they can spin/drag, with clickable barber pins that open the auth modal.
+I audited the DB. Real rows we have today:
+- **9 barbers** in `public_user_profiles` (5 with avatars), each linked to `barber_profiles` with `specialty`, `rating`, `years_experience`, `location`, `is_live`
+- **6 active/upcoming battles** in `battles` ✅ (already wired)
+- **3 active products** in `products` (Razor, Snapback, Cape) with real images + BB prices — **never queried**
+- **5 historical appointments** in `appointments` — none future, none open
+- **0 rows** in `battle_submissions` and **0 live `stream_sessions`** — that's why the Watch strip is all emoji
 
-## Plan
+So the gap is real, not architectural. Plan to close it:
 
-### 1. Header → `BARBER-HUB`
-`VelvetRopeLanding.tsx`: replace the two `<span>`s with one uppercase wordmark — `BARBER` in white + `-HUB` in primary, `tracking-[0.15em]` for the editorial feel. Keep the spinning pole + cyan pulse chrome.
+### 1. Sphere — show all 9 real barbers
+`useTopBarbers` currently does `.not('avatar_url','is',null)` which drops 4 of 9 barbers. Remove that filter, lower `PIN_COUNT` from 14 to match what's actually returned (cap at `Math.max(barbers.length, 8)`), and use `barber_profiles.country_code` + `is_live` as a green ring on pins that are live right now.
 
-### 2. Fix barber-id resolution (real data, no more fake Marco/Diego)
-`useLandingData.ts → useLiveBattle`:
-- After fetching the battle row, collect both `barber1_id` and `barber2_id`.
-- Query `barber_profiles` with `select('id, user_id')` filtered by those IDs to translate profile-id → auth user-id.
-- Then query `public_user_profiles` on the resolved `user_id`s for `display_name`, `avatar_url`, `country_code`.
-- Return both barbers fully populated. Drop the fallbacks from `LiveNowCard` (only show a subtle "warming up" state if truly null).
+### 2. Booking card — pull real barber, real specialties, real availability
+Stop hardcoding `Andre "The Blade"` and the `9:00 / 10:30 / 12:00` grid.
+- Featured barber = `useTopBarbers()[0]` joined to `barber_profiles` for `specialty`, `rating`, `years_experience`, `shop_city`, `is_live`
+- Replace fake slot grid with **real signal**: query `appointments WHERE barber_user_id=… AND scheduled_at>=today` to compute "next 3 open windows" against a 9–17 working day; if zero, show "Next available: tomorrow 9:00" derived locally and a real "**X cuts booked this month**" count from `appointments` for that barber
+- Specialty pills come from `barber_profiles.specialty` (string, comma-split)
 
-Also relax the battle filter so we always find one: prefer `status='live'`, fall back to most recent `status IN ('live','active','upcoming')` regardless of streaming flags.
+### 3. New Gear teaser slide — pulled from `products`
+Add `GearCard.tsx` as a new slide between `book` and `challenges`. Queries `products WHERE is_active=true ORDER BY display_order LIMIT 4`. Shows real `image_url`, `name`, `price_bb` with a "Tap to shop in BB" CTA. New hook `useFeaturedProducts()` in `useLandingData.ts`.
 
-### 3. Live PK card → vertical (top/bottom) + centered VS
-`LiveNowCard.tsx`:
-- Switch grid from `grid-cols-2` to `grid-rows-2` (full-width tiles stacked).
-- Top tile: barber 1, orange gradient, "LIVE" pill top-left, name + flag bottom-left.
-- Bottom tile: barber 2, cyan/blue gradient, viewer count top-right, name + flag bottom-right.
-- VS badge anchored to the horizontal seam: `top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2` inside the grid container (not the outer card), so it sits exactly on the divider.
-- Add a thin animated divider line (orange→cyan gradient) across the seam to sell the "PK" feel.
-- Use the freed vertical space: big animated avatar on each side (h-28 w-28), real name, country flag, and a tiny "12 votes / sec" ticker underneath the seam.
+### 4. Watch feed strip — only render if real
+- Extend `useFeaturedClips` to also query `stream_sessions WHERE recording_url IS NOT NULL` and `barber_profiles.featured_video_id` / `youtube_channel_id` for thumbnails
+- For `battle_submissions.cloudflare_stream_uid`, build CF Stream thumbnail URL `https://videodelivery.net/{uid}/thumbnails/thumbnail.jpg`
+- If after all that we still have 0 real clips, **hide the strip entirely** instead of rendering 6 emoji boxes. Honest empty state > fake content.
 
-### 4. Use empty space — denser teasers
-- **TopBarbersCard**: add a 2-row "rising stars" strip below the podium — 4 small avatar chips of barbers 4-7 from the same query (already fetching 6).
-- **BookingCard**: add 3 next-available time pills (e.g. "Today 4:30 / 6:15 / Tomorrow 9:00") under the featured barber to tease real-time booking.
-- **ChallengesCard**: real-data query change → fetch latest 3 of any status, then re-bucket: `open` shows live TTL, `accepted` shows "matched", `expired/completed` rendered greyed as "history" so the card never falls back to invented stakes. If there are 0 rows globally, show a single empty-state card "Be the first to throw a stake".
-- **WatchFeedCard**: shrink phone frame, add a side rail with 2 tiny vertical-clip thumbnails labelled "Up next" so the static feel goes away.
+### 5. Live PK card — already real, leave alone
+Already resolves `barber_profiles.id → public_user_profiles`. No change.
 
-### 5. New slide — interactive 3D Barber Globe
-Add `BarberGlobeCard.tsx` (new 6th slide).
-- Pure CSS-3D / Framer-Motion sphere — no Three.js dependency. A wrapper `div` with `transform-style: preserve-3d` rotated by `rotateX/rotateY` springs that follow pointer drag (and a slow auto-rotate when idle, paused while the user is dragging).
-- Place ~14 barber "pins" on the sphere using fibonacci-sphere lat/long → translateZ + rotateY/rotateX so they live on the surface. Each pin = the barber's avatar + flag + name on hover.
-- Data source: reuse `useTopBarbers()` (already fetches 6) and extend the query to `limit(14)`, ordered by recency. Pins for missing rows are filled with country-flag emoji "ghost" pins.
-- Drag: `onPointerDown/Move/Up` → update two `useMotionValue`s, applied via `useTransform` to `rotateX/rotateY`. Inertia via `animate(value, target, { type: 'spring' })`.
-- Click a pin → calls a prop `onPinClick(barber)` → bubbles up to `InsideTheHubStage` → up to `VelvetRopeLanding`, which opens `AuthModalV2` with a new "preview" mode showing the barber's name/avatar above the existing role + VIP code flow ("Sign up or redeem a VIP invite to view <name>'s profile").
-- Auto-rotation pauses while the user interacts; the carousel auto-advance also pauses while pointer is down on the globe (extend the existing `pausedUntil` in `InsideTheHubStage`).
-- Header chip: "Global Barbershop · Spin to explore", subtle radial glow behind the sphere, country grid backdrop.
+### Files
+- Edit `src/components/landing/teasers/useLandingData.ts` (drop avatar filter; add `useFeaturedProducts`; add appointments lookup; CF Stream thumb resolution)
+- Edit `BarberGlobeCard.tsx` (dynamic pin count, live ring)
+- Rewrite `BookingCard.tsx` (real barber + real availability; remove hardcoded arrays)
+- Create `src/components/landing/teasers/GearCard.tsx`
+- Edit `InsideTheHubStage.tsx` (insert gear slide)
+- Edit `WatchFeedStrip.tsx` (hide when empty; CF thumbs)
 
-### 6. Wire pin → auth modal
-- `VelvetRopeLanding`: add `previewBarber` state. New `openAuthForBarber(barber)` sets `previewBarber`, sets `mode='signup'`, opens modal.
-- `AuthModalV2`: accept optional `previewBarber` prop. When set and on the first step, render a top "card" with avatar + name + flag + tagline "Inside, you can book, follow, and throw down with <name>."
+### Out of scope (call out, don't build)
+- No DB writes, no new tables, no edge functions
+- Won't seed fake clips/appointments — if they're empty, the UI shows that honestly
+- No Cloudflare account changes; only resolves thumbnail URLs from existing `cloudflare_stream_uid` values
 
-### 7. Slide order in `InsideTheHubStage`
-`live → globe → top → book → challenges → watch` (globe second so it's the user's first wow after the live PK).
-
-```text
-┌─────────── stage 520px ───────────┐
-│  Live PK (vertical, full-bleed)   │
-│  Globe (drag, 14 barber pins)     │
-│  Podium + rising stars strip      │
-│  Booking + 3 slot pills           │
-│  Challenges (real, no fakes)      │
-│  Watch feed + side rail           │
-└───────────────────────────────────┘
-```
-
-## Technical notes
-
-- No DB migration needed — all changes are read-side query reshaping. `barber_profiles` and `public_user_profiles` are already public-readable.
-- Globe uses CSS 3D transforms only. No new dependency. Framer-motion is already in the project.
-- All copy/colors stay on the existing tokens: orange (`#f97316`), cyan, deep-black `#0a0a0f`. No raw white/black tailwind classes added.
-- Pin clicks on the globe **only** open the auth modal for unauthenticated visitors (which is the only state on this landing route). No deep linking yet — that comes once they're inside.
-
-## Files
-
-**Edit**
-- `src/components/landing/VelvetRopeLanding.tsx` — header caps, previewBarber state, globe pin handler
-- `src/components/landing/InsideTheHubStage.tsx` — add globe slide, plumb `onPinClick`, pause-on-drag
-- `src/components/landing/teasers/useLandingData.ts` — fix `useLiveBattle` join via `barber_profiles`, widen `useOpenChallenges`, bump `useTopBarbers` to 14
-- `src/components/landing/teasers/LiveNowCard.tsx` — vertical split, centered VS, real-data only
-- `src/components/landing/teasers/TopBarbersCard.tsx` — rising-stars strip
-- `src/components/landing/teasers/BookingCard.tsx` — 3 slot pills
-- `src/components/landing/teasers/ChallengesCard.tsx` — real-data buckets, empty state
-- `src/components/landing/teasers/WatchFeedCard.tsx` — side rail
-- `src/components/auth/AuthModalV2.tsx` — optional `previewBarber` header card
-
-**Create**
-- `src/components/landing/teasers/BarberGlobeCard.tsx` — interactive 3D sphere
-
-## Out of scope
-- Three.js / WebGL globe (CSS-3D is enough at this density, keeps bundle lean).
-- Real booking-slot data (UI tease only — slots come from authed flow).
-- New roles / DB writes.
+### Open question
+Booking availability: do you want me to **derive** "next free slot" from a fixed 9–17 working day minus existing appointments (cheap, no schema change), or wait until you have a real `barber_availability` table? I'll go with the derived approach unless you say otherwise.
