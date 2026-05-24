@@ -15,7 +15,7 @@ interface Props {
 }
 
 export const InsideTheHubStage = ({ onPinClick }: Props) => {
-  const { stats, liveBattle, topBarbers, challenges, clips } = useLandingData();
+  const { stats, liveBattle, topBarbers, challenges } = useLandingData();
 
   const liveBattles = stats?.live_battles ?? 0;
   const viewers = liveBattle?.viewers ?? stats?.fans_total ?? 0;
