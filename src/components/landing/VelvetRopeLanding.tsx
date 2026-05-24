@@ -116,10 +116,15 @@ export const VelvetRopeLanding = () => {
         <InsideTheHubStage onPinClick={openAuthForBarber} />
       </section>
 
-      {/* Watch Feed strip — pinned to bottom */}
+      {/* Watch Feed strip */}
       <div className="flex-none">
         <WatchFeedStrip />
       </div>
+
+      {/* Global BarbershopSpin — pinned to bottom */}
+      <BottomGlobeSection onPinClick={openAuthForBarber} />
+
+
 
 
       {/* Sign-in for existing users */}
