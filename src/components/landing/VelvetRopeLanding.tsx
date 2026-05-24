@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet';
 import { Scissors, Users } from 'lucide-react';
 import AuthModalV2 from '@/components/auth/AuthModalV2';
 import { InsideTheHubStage } from './InsideTheHubStage';
+import { WatchFeedStrip } from './teasers/WatchFeedStrip';
 import { PublicBarber } from './teasers/useLandingData';
 import barberPole from '@/assets/barber-pole.png';
 
