@@ -13,9 +13,8 @@ const FALLBACK_EMOJI = ['✂️', '🪒', '🔥', '💈', '⚡', '👑'];
 
 export const WatchFeedStrip = () => {
   const { clips } = useLandingData();
-  const items = clips.length > 0
-    ? clips.slice(0, 8).map((c, i) => ({ thumb: c.thumbnail_url ?? null, title: c.title ?? '—', tintIdx: i % 6 }))
-    : Array.from({ length: 6 }).map((_, i) => ({ thumb: null as string | null, title: '', tintIdx: i % 6 }));
+  if (clips.length === 0) return null;
+  const items = clips.slice(0, 8).map((c, i) => ({ thumb: c.thumbnail_url ?? null, title: c.title ?? '—', tintIdx: i % 6 }));
 
   return (
     <div className="px-4 pb-1">
