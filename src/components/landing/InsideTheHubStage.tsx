@@ -29,7 +29,6 @@ export const InsideTheHubStage = ({ onPinClick }: Props) => {
     { key: 'top',        node: <TopBarbersCard barbers={topBarbers} /> },
     { key: 'book',       node: <BookingCard featuredBarber={featuredBarber} /> },
     { key: 'challenges', node: <ChallengesCard challenges={challenges} /> },
-    { key: 'watch',      node: <WatchFeedCard clips={clips} /> },
   ];
 
   const [idx, setIdx] = useState(0);
