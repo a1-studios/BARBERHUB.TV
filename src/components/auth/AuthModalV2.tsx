@@ -36,7 +36,7 @@ export function AuthModalV2({
   const { value: vipModeRaw } = usePlatformState('global_vip_mode');
   const vipMode = useMemo(() => vipModeRaw === 'true', [vipModeRaw]);
 
-  const [step, setStep] = useState<Step>('gate');
+  const [step, setStep] = useState<Step>(mode === 'signin' ? 'identity' : 'gate');
   const [code, setCode] = useState('');
   const [validatedCode, setValidatedCode] = useState<{ id: string; type: string } | null>(null);
   const [role, setRole] = useState<Role | null>(intendedRole);
@@ -50,7 +50,7 @@ export function AuthModalV2({
   // Reset on open
   useEffect(() => {
     if (open) {
-      setStep('gate');
+      setStep(mode === 'signin' ? 'identity' : 'gate');
       setCode('');
       setValidatedCode(null);
       setRole(intendedRole ?? null);
@@ -60,7 +60,7 @@ export function AuthModalV2({
       setLoading(false);
       setResendIn(0);
     }
-  }, [open, intendedRole]);
+  }, [open, intendedRole, mode]);
 
   // Resend countdown
   useEffect(() => {
