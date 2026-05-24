@@ -26,7 +26,6 @@ export const InsideTheHubStage = ({ onPinClick }: Props) => {
 
   const slides = [
     { key: 'live',       node: <LiveNowCard liveBattles={liveBattles} viewers={viewers} battle={liveBattle} /> },
-    { key: 'globe',      node: <BarberGlobeCard barbers={topBarbers} onPinClick={handlePin} /> },
     { key: 'top',        node: <TopBarbersCard barbers={topBarbers} /> },
     { key: 'book',       node: <BookingCard featured={featuredDetail} fallbackBarber={fallbackBarber} /> },
     { key: 'gear',       node: <GearCard products={products} /> },
