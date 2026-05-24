@@ -56,13 +56,6 @@ export const VelvetRopeLanding = () => {
       </div>
 
 
-      {/* Global Title (binary two-color) */}
-      <section className="flex-none px-4 pt-3 pb-2 text-center">
-        <h1 className="text-[22px] leading-tight font-black tracking-tight">
-          <span className="text-white">Global Barber</span>{' '}
-          <span className="text-orange-500">Streaming Platform</span>
-        </h1>
-      </section>
 
       {/* Role pills — medium, side-by-side */}
       <section className="flex-none px-4 pb-2 flex items-center justify-center gap-2.5">
