@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { Scissors, Users } from 'lucide-react';
 import AuthModalV2 from '@/components/auth/AuthModalV2';
-import { LeaguePulseStrip } from './LeaguePulseStrip';
-import { RotatingTeaserStage } from './RotatingTeaserStage';
+import { InsideTheHubStage } from './InsideTheHubStage';
 import barberPole from '@/assets/barber-pole.png';
 
 type Role = 'barber' | 'fan';
