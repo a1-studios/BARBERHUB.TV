@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { usePlatformState } from '@/hooks/usePlatformState';
 import { toast } from 'sonner';
 import { Loader2, Mail, Scissors, Users, ShieldCheck, KeyRound, ArrowLeft } from 'lucide-react';
+import { PublicBarber, countryFlag } from '@/components/landing/teasers/useLandingData';
 
 type Role = 'barber' | 'fan';
 type Step = 'gate' | 'role' | 'identity' | 'verify';
@@ -17,6 +18,7 @@ interface AuthModalV2Props {
   onClose: () => void;
   intendedRole?: Role | null;
   mode?: 'signup' | 'signin';
+  previewBarber?: PublicBarber | null;
 }
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
