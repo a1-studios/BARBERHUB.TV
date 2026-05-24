@@ -69,30 +69,6 @@ const QUERY_OPTS = { staleTime: 60_000, refetchInterval: 90_000 } as const;
 const cfStreamThumb = (uid: string | null | undefined) =>
   uid ? `https://videodelivery.net/${uid}/thumbnails/thumbnail.jpg?time=2s` : null;
 
-// Resolve barber_profiles.id -> public_user_profiles row (+is_live)
-const resolveBarbers = async (barberProfileIds: string[]): Promise<Record<string, PublicBarber>> => {
-  if (!barberProfileIds.length) return {};
-  const { data: bp } = await supabase
-    .from('barber_profiles')
-    .select('id, user_id, is_live')
-    .in('id', barberProfileIds);
-  const userIds = (bp ?? []).map((r: any) => r.user_id).filter(Boolean) as string[];
-  if (!userIds.length) return {};
-  const { data: profs } = await supabase
-    .from('public_user_profiles')
-    .select('user_id, display_name, avatar_url, country_code')
-    .in('user_id', userIds);
-  const byUserId = new Map<string, PublicBarber>(
-    (profs ?? []).map((p: any) => [p.user_id, p as PublicBarber]),
-  );
-  const out: Record<string, PublicBarber> = {};
-  for (const row of bp ?? []) {
-    const prof = byUserId.get((row as any).user_id);
-    if (prof) out[(row as any).id] = { ...prof, is_live: !!(row as any).is_live };
-  }
-  return out;
-};
-
 export const useLeagueStats = () =>
   useQuery<LeagueStats>({
     queryKey: ['landing-league-stats'],
@@ -132,43 +108,43 @@ export const useTopBarbers = (limit = 14) =>
     ...QUERY_OPTS,
   });
 
-export const useLiveBattle = () =>
-  useQuery<LiveBattleTease | null>({
-    queryKey: ['landing-live-battle'],
+interface LandingTeasersRpc {
+  live_battle: {
+    id: string;
+    title: string | null;
+    viewers: number;
+    barber1: PublicBarber | null;
+    barber2: PublicBarber | null;
+  } | null;
+  featured_clips: Array<{
+    id: string;
+    title: string | null;
+    thumbnail_url: string | null;
+    cloudflare_stream_uid: string | null;
+    author: string | null;
+  }>;
+}
+
+const useLandingTeasers = () =>
+  useQuery<LandingTeasersRpc>({
+    queryKey: ['landing-teasers-rpc'],
     queryFn: async () => {
-      const { data: battles, error } = await supabase
-        .from('battles')
-        .select('id, title, barber1_id, barber2_id, barber1_live_viewers, barber2_live_viewers, live_viewers, status, barber1_is_streaming, barber2_is_streaming, starts_at, created_at')
-        .in('status', ['live', 'active', 'upcoming'])
-        .not('barber1_id', 'is', null)
-        .not('barber2_id', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(5);
+      const { data, error } = await supabase.rpc('get_landing_teasers' as any);
       if (error) throw error;
-      const b = (battles ?? []).sort((a: any, z: any) => {
-        const score = (x: any) => (x.status === 'live' ? 3 : x.status === 'active' ? 2 : 1)
-          + ((x.barber1_is_streaming || x.barber2_is_streaming) ? 0.5 : 0);
-        return score(z) - score(a);
-      })[0];
-      if (!b) return null;
-
-      const ids = [b.barber1_id, b.barber2_id].filter(Boolean) as string[];
-      const map = await resolveBarbers(ids);
-
-      const viewers =
-        (b.barber1_live_viewers ?? 0) + (b.barber2_live_viewers ?? 0) + (b.live_viewers ?? 0);
-
+      const v = (data ?? {}) as Partial<LandingTeasersRpc>;
       return {
-        id: b.id,
-        title: b.title ?? null,
-        viewers,
-        barber1: b.barber1_id ? map[b.barber1_id] ?? null : null,
-        barber2: b.barber2_id ? map[b.barber2_id] ?? null : null,
+        live_battle: v.live_battle ?? null,
+        featured_clips: v.featured_clips ?? [],
       };
     },
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
+
+export const useLiveBattle = () => {
+  const q = useLandingTeasers();
+  return { ...q, data: (q.data?.live_battle ?? null) as LiveBattleTease | null };
+};
 
 export const useOpenChallenges = () =>
   useQuery<OpenChallengeTease[]>({
@@ -198,44 +174,18 @@ export const useOpenChallenges = () =>
     ...QUERY_OPTS,
   });
 
-export const useFeaturedClips = () =>
-  useQuery<ClipTease[]>({
-    queryKey: ['landing-featured-clips'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('battle_submissions')
-        .select('id, title, thumbnail_url, stream_thumbnail_url, cloudflare_stream_uid, user_id')
-        .order('created_at', { ascending: false })
-        .limit(12);
-      if (error) throw error;
-      const rows = data ?? [];
-      const userIds = Array.from(new Set(rows.map((r: any) => r.user_id).filter(Boolean))) as string[];
-      let profiles: PublicBarber[] = [];
-      if (userIds.length) {
-        const { data: profs } = await supabase
-          .from('public_user_profiles')
-          .select('user_id, display_name, avatar_url, country_code')
-          .in('user_id', userIds);
-        profiles = (profs ?? []) as PublicBarber[];
-      }
-      return rows
-        .map((r: any) => {
-          const thumb =
-            (r.thumbnail_url as string | null) ??
-            (r.stream_thumbnail_url as string | null) ??
-            cfStreamThumb(r.cloudflare_stream_uid as string | null);
-          return {
-            id: r.id as string,
-            title: (r.title as string) ?? null,
-            thumbnail_url: thumb,
-            author: profiles.find((p) => p.user_id === r.user_id)?.display_name ?? null,
-          };
-        })
-        .filter((c) => !!c.thumbnail_url)
-        .slice(0, 8);
-    },
-    ...QUERY_OPTS,
-  });
+export const useFeaturedClips = () => {
+  const q = useLandingTeasers();
+  const data: ClipTease[] = (q.data?.featured_clips ?? [])
+    .map((r) => ({
+      id: r.id,
+      title: r.title,
+      thumbnail_url: r.thumbnail_url ?? cfStreamThumb(r.cloudflare_stream_uid),
+      author: r.author,
+    }))
+    .filter((c) => !!c.thumbnail_url);
+  return { ...q, data };
+};
 
 export const useFeaturedProducts = () =>
   useQuery<ProductTease[]>({
