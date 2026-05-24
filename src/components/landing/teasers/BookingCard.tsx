@@ -1,11 +1,23 @@
 import { motion } from 'framer-motion';
 import { Calendar, MapPin, Star } from 'lucide-react';
+import { countryFlag, PublicBarber } from './useLandingData';
+
+interface Props {
+  featuredBarber: PublicBarber | null;
+}
 
 const SLOTS = ['9:00', '10:30', '12:00', '1:30', '3:00', '4:30'];
-// Mark some as booked for liveness
 const BOOKED = new Set([0, 2, 3]);
 
-export const BookingCard = () => {
+const FALLBACK: PublicBarber = {
+  user_id: 'a',
+  display_name: 'Andre "The Blade"',
+  country_code: 'US',
+  avatar_url: null,
+};
+
+export const BookingCard = ({ featuredBarber }: Props) => {
+  const b = featuredBarber ?? FALLBACK;
   return (
     <div className="relative h-full w-full flex flex-col">
       <div className="flex items-center justify-between mb-2">
@@ -18,26 +30,28 @@ export const BookingCard = () => {
       </div>
 
       <div className="relative flex-1 rounded-xl overflow-hidden border border-white/10 bg-gradient-to-b from-cyan-500/[0.06] via-transparent to-transparent p-3 flex flex-col">
-        {/* Barber row */}
         <div className="flex items-center gap-3 mb-3">
-          <div className="relative h-12 w-12 rounded-full bg-gradient-to-br from-orange-500 to-rose-600 ring-2 ring-orange-400/40 flex items-center justify-center text-xl">
-            🇺🇸
+          <div className="relative h-12 w-12 rounded-full bg-gradient-to-br from-orange-500 to-rose-600 ring-2 ring-orange-400/40 flex items-center justify-center overflow-hidden">
+            {b.avatar_url ? (
+              <img src={b.avatar_url} alt={b.display_name ?? ''} className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-xl">{countryFlag(b.country_code)}</span>
+            )}
             <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-[#0a0a0f]" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="text-sm font-bold text-white truncate">Andre "The Blade"</span>
+              <span className="text-sm font-bold text-white truncate">{b.display_name ?? 'Barber'}</span>
               <span className="text-[10px] px-1 py-0.5 rounded bg-yellow-400/20 text-yellow-300 font-semibold">PRO</span>
             </div>
             <div className="flex items-center gap-1 text-[10px] text-white/60">
               <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" /> 4.9
               <span>·</span>
-              <span>2.1 mi</span>
+              <span>{countryFlag(b.country_code)} {b.country_code ?? '—'}</span>
             </div>
           </div>
         </div>
 
-        {/* Specialty pills */}
         <div className="flex gap-1.5 mb-3 flex-wrap">
           {['✂️ Fades', '🪒 Lineup', '🔥 Designs'].map((s) => (
             <span key={s} className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/10 text-white/80">
@@ -46,7 +60,6 @@ export const BookingCard = () => {
           ))}
         </div>
 
-        {/* Today's slots */}
         <div className="text-[10px] uppercase tracking-wider text-white/50 mb-1.5">Today's slots</div>
         <div className="grid grid-cols-3 gap-1.5">
           {SLOTS.map((time, i) => {
