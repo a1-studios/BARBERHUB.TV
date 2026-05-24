@@ -219,7 +219,7 @@ export function AuthModalV2({
           <DialogDescription className="text-white/50">
             {step === 'gate' && (vipMode ? 'A VIP invite code is required to enter.' : 'Enter a promo or referral code, or continue without one.')}
             {step === 'role' && 'Choose how you’ll experience Barber Hub.'}
-            {step === 'identity' && 'We’ll email you a 6-digit code — no password needed.'}
+            {step === 'identity' && (mode === 'signin' ? 'Enter your email — we’ll send a 6-digit code.' : 'We’ll email you a 6-digit code — no password needed.')}
             {step === 'verify' && `Enter the code we sent to ${email}.`}
           </DialogDescription>
         </DialogHeader>
