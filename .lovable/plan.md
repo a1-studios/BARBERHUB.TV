@@ -1,90 +1,85 @@
 
-# Velvet Rope Landing — Dynamic Feature Tease
+# Real Backend Data + Working Sign-In
 
-Replace the static "League Pulse" stat strip with a mobile-first, auto-rotating teaser stage that gives non-members an irresistible peek at what's inside the app. Keep the existing signature header, role pills, VIP code panel, and Sign-in footer untouched. Keep the brand: Deep Black (#0a0a0f), Neon Orange, Zion Cyan — no purple/pink gradients from the reference.
+Two issues to fix on the Velvet Rope landing:
 
-## What the user will see
+1. **Sign-In is blocked by VIP gate** — existing users shouldn't see the code prompt
+2. **Teaser cards use mocked data** — switch to live Supabase reads (we have plenty of real data already)
 
-A single iPhone-height frame (no scroll) with the existing chrome on top, then a **rotating "Inside the Hub" stage** that auto-cycles through 5 themed cards every ~4s with smooth fade/slide transitions. Each card is a real, live preview of an app feature with subtle 3D motion, pulsing live dots, and animated counters.
+## 1. Unblock sign-in for existing users
 
-```text
-┌──────────────────────────────────┐
-│  Signature Header (existing)     │
-│  Barber | Fan pills (existing)   │
-│  VIP code panel (conditional)    │
-├──────────────────────────────────┤
-│                                  │
-│   [ Rotating Teaser Stage ]      │
-│                                  │
-│   • dot • dot • dot • dot • dot  │
-├──────────────────────────────────┤
-│  Already a member? Sign in       │
-└──────────────────────────────────┘
-```
+`AuthModalV2` always starts at `step: 'gate'`, which forces the VIP-code prompt before identity. In `mode === 'signin'` we skip the gate entirely and jump to `identity` — existing users just need email + 6-digit OTP.
 
-## The 5 rotating cards
+**Edit:** `src/components/auth/AuthModalV2.tsx`
+- Initial step on open: `mode === 'signin' ? 'identity' : 'gate'`
+- Reset effect mirrors the same logic
+- "Edit email" / back buttons in sign-in flow go back to `identity`, not `gate`
+- Description for `identity` step in sign-in mode reads "Enter your email — we'll send a 6-digit code."
 
-Pulled from real Supabase data via the existing `get_public_league_stats` RPC + a couple light public reads, so numbers are alive but no auth is needed.
+That's the entire sign-in fix. The Supabase OTP send/verify path (`signInWithOtp` + `verifyOtp`) already works with `shouldCreateUser: false` for sign-in mode, so no other changes.
 
-1. **Live Now** — top-left red pulse, a faux split-screen PK frame using two `LivePreviewTile` thumbnails (real `is_live` barbers from `barber_profiles` if available, fallback to curated avatars). Shows live battle count + viewer counter ticking. Tagline: *"X battles streaming right now."*
+## 2. Wire teaser cards to real Supabase data
 
-2. **Top Barbers Podium (3D)** — three avatar crests on a tilted podium with CSS 3D transform + slow rotateY hover. Country flags, BB earnings counter animating up. Tagline: *"This week's leaders."*
+Real data confirmed live in DB:
+- `get_public_league_stats()` RPC → live_battles=3, active_battles=6, barbers_total=9, fans_total=28, countries=10, bb_in_circulation=105
+- `battles` table → vote counts, live viewers, `barber1_is_streaming` / `barber2_is_streaming`, titles
+- `open_challenges` table → `challenger_username`, `stake_amount`, `expires_at`, `status='open'`
+- `public_user_profiles` view → real `display_name`, `avatar_url`, `country_code`, `user_type` (avatars are already in public Supabase storage)
+- `battle_submissions` → `thumbnail_url`, `media_url`, `stream_thumbnail_url` for the watch feed (when present)
 
-3. **Book the Best** — mock appointment card with calendar slots filling in real-time (animated check-ins), specialty pills, and "Near You" badge. Tagline: *"Book pros in 60 seconds."*
+### New shared hook
 
-4. **Open Challenges** — stack of 2-3 challenge cards fanning out, with BB stake amounts (100 / 250 / 500), countdown timers, and a "Throw Down" pulse button. Tagline: *"Stake. Battle. Win BB."*
+**Create:** `src/components/landing/teasers/useLandingData.ts`
+- React Query hook(s) that fetch:
+  - `get_public_league_stats()` (already used)
+  - `battles` filtered to `status IN ('live','active')` or streaming flags true, joined with two `public_user_profiles` lookups for both barbers — limit 1 most-recent (drives Live Now card)
+  - `public_user_profiles` where `user_type='barber'` with avatar_url not null, ordered by created_at desc, limit 6 (drives Top Barbers podium — DB has no BB-leaderboard yet, so we rank by activity proxy: barbers with avatars + country come first; we display country flag + display_name, not faux BB amounts unless `bb_in_circulation` is split per-barber, which it isn't)
+  - `open_challenges` where `status='open'` ordered by `created_at desc`, limit 3 (drives Challenges card)
+  - `battle_submissions` where `thumbnail_url is not null` ordered by `created_at desc`, limit 5 (drives Watch Feed card; falls back to gradient tiles if empty)
+- All queries `staleTime: 60s`, `refetchInterval: 90s`. Public-only data — no auth required.
+- Graceful fallbacks: if a query returns empty, the card shows a curated "Inside the Hub" filler instead of breaking. No card disappears.
 
-5. **Watch Feed Tease** — vertical-video phone frame with auto-playing muted clip thumbnails cycling, like/share counters animating. Tagline: *"Endless cuts, 24/7."*
+### Card rewrites
 
-Each card uses the existing brand palette — Neon Orange for barber/competitive accents, Zion Cyan for fan/social accents, no gradient soup.
+Each card receives data via props from `InsideTheHubStage`, which calls the hook once and passes slices down. No card calls Supabase directly.
 
-## Motion & polish
+**`LiveNowCard`** — already takes `liveBattles` + `viewers`. Add a `battle` prop with `{ title, barber1: { name, flag, avatar }, barber2: { name, flag, avatar } }` derived from the most-recent live battle. Renders avatars (or country flag fallback) instead of the static ✂️ emoji. Title shown as a marquee strip at the bottom. Falls back to current Marco/Diego mock if no live battle.
 
-- Framer Motion `AnimatePresence` with `mode="wait"`, fade + slight Y-slide between cards
-- Auto-advance every 4s; pause on tap; tap-to-skip-forward
-- 5 progress dots at the bottom; the active dot fills left-to-right as a 4s timer
-- Subtle parallax: each card's hero element gets a gentle floating animation (`y: [0, -6, 0]` over 6s)
-- Live red pulse dot on Live Now card
-- Number counters use `motion` springy count-up (no library needed — small custom hook)
-- Reduced-motion respects `prefers-reduced-motion`: rotation pauses, animations become fades
+**`TopBarbersCard`** — accepts `barbers: Array<{ name, flag, avatar_url }>` (top 3). Uses real avatars in the crests (with country-flag fallback for nulls). Removes the fabricated BB amounts since the DB doesn't expose per-barber BB; replaces them with the real `country_code` flag + `display_name`. Sub-label switches from "X BB" to "🇺🇸 USA" style.
+
+**`BookingCard`** — accepts `featuredBarber: { name, avatar, country_code }` (random from real top barbers). Slot times stay illustrative (we have no public-slot endpoint and surfacing real client appointments would leak data) — but the barber identity is real, with their actual avatar and flag.
+
+**`ChallengesCard`** — accepts `challenges: Array<{ from, flag, stake, ttl }>` from `open_challenges`. `ttl` computed live from `expires_at - now()`. Stake from `stake_amount`. `from` from `challenger_username`. Falls back to current curated stack if zero open challenges.
+
+**`WatchFeedCard`** — accepts `clips: Array<{ thumbnail_url, title, author }>`. Uses real `battle_submissions` thumbnails when available. Falls back to current gradient + emoji tiles when none. Auto-cycles every 1.8s as today.
+
+### Stage edits
+
+**Edit:** `src/components/landing/InsideTheHubStage.tsx`
+- Replace inline `useQuery` with `useLandingData()` from the new hook
+- Pass each card its data slice
+- Keep autoplay/dots/swipe behavior unchanged
 
 ## Files
 
-**New**
-- `src/components/landing/InsideTheHubStage.tsx` — the rotating stage container, AnimatePresence, dots, autoplay logic
-- `src/components/landing/teasers/LiveNowCard.tsx`
-- `src/components/landing/teasers/TopBarbersCard.tsx`
-- `src/components/landing/teasers/BookingCard.tsx`
-- `src/components/landing/teasers/ChallengesCard.tsx`
-- `src/components/landing/teasers/WatchFeedCard.tsx`
-- `src/components/landing/teasers/useCountUp.ts` — tiny animated counter hook
+**Create**
+- `src/components/landing/teasers/useLandingData.ts`
 
-**Edited**
-- `src/components/landing/VelvetRopeLanding.tsx` — replace `<LeaguePulseStrip />` and the existing `<RotatingTeaserStage />` section with a single `<InsideTheHubStage />` filling the remaining viewport height (`flex-1 min-h-0`)
+**Edit**
+- `src/components/auth/AuthModalV2.tsx` — sign-in skips gate
+- `src/components/landing/InsideTheHubStage.tsx` — use new hook, pass props
+- `src/components/landing/teasers/LiveNowCard.tsx` — accept real battle
+- `src/components/landing/teasers/TopBarbersCard.tsx` — accept real top barbers
+- `src/components/landing/teasers/BookingCard.tsx` — accept real featured barber
+- `src/components/landing/teasers/ChallengesCard.tsx` — accept real open challenges
+- `src/components/landing/teasers/WatchFeedCard.tsx` — accept real clips
 
-**Untouched**
-- Signature header, role pills, VIP code panel, Sign-in footer, AuthModalV2
-- `LeaguePulseStrip.tsx` and `RotatingTeaserStage.tsx` left in repo (unreferenced) in case you want to revert; can delete in a follow-up if you confirm
+**No DB changes.** All reads use existing public RPC + tables already covered by RLS policies that allow anon read on `public_user_profiles`, `battles`, `open_challenges`, `battle_submissions`.
 
-## Data sources (read-only, public)
+## Out of scope
 
-- `supabase.rpc('get_public_league_stats')` — for Live Now battle/viewer counts and BB-in-play
-- `barber_profiles` public view — top 3 barbers by recent BB / wins for the podium (already exposed via `public_user_profiles` view per security memory)
-- Static curated avatars/clips as fallback if RPCs are slow, so the stage never shows empty
-
-No new edge functions, no migrations, no schema changes — pure presentation layer.
-
-## Mobile constraints honored
-
-- Entire page still fits 100dvh with zero scroll on a 390×742 viewport (the user's current preview)
-- Stage uses `flex-1 min-h-0` so it absorbs whatever vertical space remains after header/pills/code/footer
-- All text uses `clamp()` or Tailwind responsive scales; no overflow risk
-- Cards designed at 320px min-width baseline
-
-## Out of scope (ask if you want them)
-
-- Replacing the signature header (you said keep it as-is)
-- Dragging/swiping between cards (autoplay only, with tap-to-advance)
-- Real video playback in Watch Feed card (using thumbnail cycle to keep page lightweight)
+- Building a real "top barbers by BB earned" leaderboard (DB tracks `bb_in_circulation` only as a global total — would need a new RPC)
+- Showing real available booking slots for non-authenticated visitors (leaks PII)
+- Replacing the OTP login with social OAuth on this screen
 
 Ready to build on approval.
