@@ -4,6 +4,7 @@ import { Scissors, Users } from 'lucide-react';
 import AuthModalV2 from '@/components/auth/AuthModalV2';
 import { InsideTheHubStage } from './InsideTheHubStage';
 import { WatchFeedStrip } from './teasers/WatchFeedStrip';
+import { BottomGlobeSection } from './teasers/BottomGlobeSection';
 import { PublicBarber } from './teasers/useLandingData';
 import barberPole from '@/assets/barber-pole.png';
 
@@ -115,10 +116,15 @@ export const VelvetRopeLanding = () => {
         <InsideTheHubStage onPinClick={openAuthForBarber} />
       </section>
 
-      {/* Watch Feed strip — pinned to bottom */}
+      {/* Watch Feed strip */}
       <div className="flex-none">
         <WatchFeedStrip />
       </div>
+
+      {/* Global BarbershopSpin — pinned to bottom */}
+      <BottomGlobeSection onPinClick={openAuthForBarber} />
+
+
 
 
       {/* Sign-in for existing users */}
