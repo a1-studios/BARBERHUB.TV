@@ -100,14 +100,9 @@ export const VelvetRopeLanding = () => {
         </section>
       )}
 
-      {/* League Pulse — thin band */}
-      <section className="flex-none px-4 pb-2">
-        <LeaguePulseStrip />
-      </section>
-
-      {/* Rotating Teaser Stage — fills remaining space, no scroll */}
+      {/* Inside the Hub — rotating feature tease */}
       <section className="flex-1 min-h-0 px-4 pb-2">
-        <RotatingTeaserStage />
+        <InsideTheHubStage />
       </section>
 
       {/* Sign-in for existing users */}
