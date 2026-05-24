@@ -1,43 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { LiveNowCard } from './teasers/LiveNowCard';
 import { TopBarbersCard } from './teasers/TopBarbersCard';
 import { BookingCard } from './teasers/BookingCard';
 import { ChallengesCard } from './teasers/ChallengesCard';
 import { WatchFeedCard } from './teasers/WatchFeedCard';
+import { useLandingData } from './teasers/useLandingData';
 
 const ROTATE_MS = 4500;
 const PAUSE_MS = 9000;
 
-interface LeagueStats {
-  live_battles?: number;
-  active_battles?: number;
-  fans_total?: number;
-}
-
 export const InsideTheHubStage = () => {
-  const { data } = useQuery<LeagueStats>({
-    queryKey: ['public-league-stats'],
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_public_league_stats');
-      if (error) throw error;
-      return (data as unknown as LeagueStats) ?? {};
-    },
-    refetchInterval: 60_000,
-    staleTime: 30_000,
-  });
+  const { stats, liveBattle, topBarbers, challenges, clips } = useLandingData();
 
-  const liveBattles = data?.live_battles ?? 0;
-  const viewers = data?.fans_total ?? 0;
+  const liveBattles = stats?.live_battles ?? 0;
+  const viewers = liveBattle?.viewers ?? stats?.fans_total ?? 0;
+  const featuredBarber = topBarbers[0] ?? null;
 
   const slides = [
-    { key: 'live',       node: <LiveNowCard liveBattles={liveBattles} viewers={viewers} /> },
-    { key: 'top',        node: <TopBarbersCard /> },
-    { key: 'book',       node: <BookingCard /> },
-    { key: 'challenges', node: <ChallengesCard /> },
-    { key: 'watch',      node: <WatchFeedCard /> },
+    { key: 'live',       node: <LiveNowCard liveBattles={liveBattles} viewers={viewers} battle={liveBattle} /> },
+    { key: 'top',        node: <TopBarbersCard barbers={topBarbers} /> },
+    { key: 'book',       node: <BookingCard featuredBarber={featuredBarber} /> },
+    { key: 'challenges', node: <ChallengesCard challenges={challenges} /> },
+    { key: 'watch',      node: <WatchFeedCard clips={clips} /> },
   ];
 
   const [idx, setIdx] = useState(0);
@@ -87,7 +72,6 @@ export const InsideTheHubStage = () => {
         </AnimatePresence>
       </div>
 
-      {/* Progress dots */}
       <div className="flex-none mt-2 flex justify-center gap-1.5">
         {slides.map((s, i) => (
           <button
