@@ -111,7 +111,7 @@ export const VelvetRopeLanding = () => {
 
       {/* Inside the Hub — rotating feature tease */}
       <section className="flex-1 min-h-0 px-4 pb-2">
-        <InsideTheHubStage />
+        <InsideTheHubStage onPinClick={openAuthForBarber} />
       </section>
 
       {/* Sign-in for existing users */}
@@ -129,6 +129,7 @@ export const VelvetRopeLanding = () => {
         onClose={() => setAuthOpen(false)}
         intendedRole={role}
         mode={authMode}
+        previewBarber={previewBarber}
       />
     </div>
   );
