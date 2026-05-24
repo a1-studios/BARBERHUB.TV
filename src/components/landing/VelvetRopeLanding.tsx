@@ -58,7 +58,7 @@ export const VelvetRopeLanding = () => {
 
 
       {/* Role pills — medium, side-by-side */}
-      <section className="flex-none px-4 pb-2 flex items-center justify-center gap-2.5">
+      <section className="flex-none px-4 py-3 flex items-center justify-center gap-2.5">
         <button
           onClick={() => setRole('barber')}
           className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition border ${
