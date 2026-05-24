@@ -6,12 +6,6 @@ interface Props {
   barbers: PublicBarber[];
 }
 
-const FALLBACK: PublicBarber[] = [
-  { user_id: 'k', display_name: 'Kairo', country_code: 'BR', avatar_url: null },
-  { user_id: 's', display_name: 'Soren', country_code: 'SE', avatar_url: null },
-  { user_id: 'r', display_name: 'Rafa',  country_code: 'ES', avatar_url: null },
-];
-
 const TINTS = [
   'from-yellow-300 to-amber-500',
   'from-zinc-200 to-zinc-400',
@@ -20,10 +14,17 @@ const TINTS = [
 const HEIGHTS = ['h-24', 'h-20', 'h-16'];
 
 export const TopBarbersCard = ({ barbers }: Props) => {
-  const top3 = (barbers.length >= 3 ? barbers.slice(0, 3) : FALLBACK);
-  const rising = barbers.length > 3 ? barbers.slice(3, 7) : [];
+  const top3 = barbers.slice(0, 3);
+  const rising = barbers.slice(3, 7);
+  if (top3.length === 0) {
+    return (
+      <div className="relative h-full w-full flex items-center justify-center text-white/40 text-xs">
+        Leaderboard loading…
+      </div>
+    );
+  }
   const podium = top3.map((b, i) => ({ ...b, rank: i + 1, color: TINTS[i], height: HEIGHTS[i] }));
-  const order = [podium[1], podium[0], podium[2]];
+  const order = top3.length >= 3 ? [podium[1], podium[0], podium[2]] : podium;
 
   return (
     <div className="relative h-full w-full flex flex-col">
