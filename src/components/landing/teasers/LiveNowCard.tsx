@@ -92,15 +92,6 @@ export const LiveNowCard = ({ liveBattles, viewers, battle }: Props) => {
         {/* Animated seam */}
         <div className="pointer-events-none absolute left-0 right-0 top-1/2 -translate-y-1/2 h-[2px] bg-gradient-to-r from-orange-500 via-white/70 to-cyan-400 z-10" />
 
-        {/* Centered VS — anchored to the seam */}
-        <motion.div
-          initial={{ scale: 0, rotate: -180 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ delay: 0.3, type: 'spring' }}
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 h-11 w-11 rounded-full bg-[#0a0a0f] border-2 border-orange-500 flex items-center justify-center text-orange-500 font-black text-sm shadow-[0_0_22px_rgba(249,115,22,0.7)]"
-        >
-          VS
-        </motion.div>
 
         {battle?.title && (
           <div className="absolute bottom-0 inset-x-0 z-10 bg-gradient-to-t from-black/85 to-transparent px-2 py-1.5 text-[10px] text-white/90 truncate text-center">
