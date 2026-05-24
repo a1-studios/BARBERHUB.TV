@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Trophy, Globe } from 'lucide-react';
-import { countryFlag, PublicBarber } from './useLandingData';
+import { countryFlag, type PublicBarber } from './useLandingData';
 
 interface Props {
   barbers: PublicBarber[];
