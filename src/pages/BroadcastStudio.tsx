@@ -169,6 +169,7 @@ export default function BroadcastStudio() {
     (location.state as any)?.serverUrl || null
   );
   const [isEnding, setIsEnding] = useState(false);
+  const [started, setStarted] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
