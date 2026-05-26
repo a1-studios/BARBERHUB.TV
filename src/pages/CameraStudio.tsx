@@ -458,6 +458,29 @@ export default function CameraStudio() {
         toast.error(streamDeniedReason || 'Live streaming is not available');
         return;
       }
+
+      // Pre-warm camera/mic INSIDE the user gesture so mobile browsers
+      // actually show the permission prompt before we navigate away.
+      try {
+        const warmup = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: true,
+        });
+        warmup.getTracks().forEach((t) => t.stop());
+      } catch (err: any) {
+        const name = err?.name || '';
+        if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+          toast.error('Camera/microphone blocked. Enable them in your browser settings, then try again.');
+        } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+          toast.error('No camera or microphone found on this device.');
+        } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+          toast.error('Camera is in use by another app. Close it and try again.');
+        } else {
+          toast.error('Could not access camera/microphone.');
+        }
+        return;
+      }
+
       // Get broadcast token and navigate to studio
       toast.loading('Starting broadcast...', { id: 'broadcast-start' });
       const { data, error } = await supabase.functions.invoke('generate-broadcast-token');
