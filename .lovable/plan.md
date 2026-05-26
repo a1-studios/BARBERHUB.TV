@@ -1,68 +1,58 @@
-## Root cause: RLS blocks the landing page
+## Problem
 
-You're right to be frustrated — the data **is in the DB**, but the landing page is visited as an **anonymous (logged-out) user**, and the RLS policies say:
+When a barber taps **Live Stream** in Camera Studio, the flow is:
 
-| Table | SELECT policy | Anon can read? |
-|---|---|---|
-| `battles` | `auth.uid() IS NOT NULL` | ❌ **No** — that's why Live PK shows "Warming up / Warming up" |
-| `battle_submissions` | `auth.uid() IS NOT NULL` | ❌ **No** — that's why Watch strip has 0 clips |
-| `appointments` | Owner-only | ❌ No (expected; we don't need this for anon) |
-| `barber_profiles` | Public policy `true` for anon | ✅ Yes |
-| `public_user_profiles` (view) | Inherits — readable | ✅ Yes |
-| `products` (active) | Public | ✅ Yes |
+1. `handleModeSelect('livestream')` → `await supabase.functions.invoke('generate-broadcast-token')` → `navigate('/broadcast/:id/studio')`
+2. `BroadcastStudio` mounts `<LiveKitRoom video audio connect={true}>` inside a `useEffect`-driven render
+3. LiveKit SDK then calls `getUserMedia` internally — but this happens **after** an `await` + route change, so it's no longer in a direct user-gesture context
 
-So Live + Watch are dark for everyone who isn't signed in, which is the entire purpose of the landing page. That's not a code bug, it's a server-side gate.
+On mobile browsers (the user is on a 390px viewport) this is exactly the case where `getUserMedia` is silently refused or never prompts. There are no edge-function logs because the failure is purely client-side, before LiveKit ever connects.
 
-## Fix: one SECURITY DEFINER RPC for the landing teasers
+The companion symptom: `generate-broadcast-token` is also called a second time inside `BroadcastStudio` if state is missing, which can race with the first call.
 
-I'll add **one** Postgres function `get_landing_teasers()` that runs with elevated privileges and returns only the **public, non-sensitive slice** needed by the landing page:
+## Fix
 
-```jsonc
-{
-  "live_battle": {
-    "id", "title", "viewers", "status",
-    "barber1": { "user_id", "display_name", "avatar_url", "country_code", "is_live" },
-    "barber2": { /* same shape, may be null */ }
-  },
-  "featured_clips": [
-    { "id", "title", "thumbnail_url", "author" }   // resolves cloudflare_stream_uid → videodelivery thumb
-  ],
-  "league_stats": { /* mirrors get_public_league_stats */ }
-}
+Acquire camera + mic permission **inside the user gesture** that starts the live-stream flow, then hand off to LiveKit.
+
+### 1. `src/pages/CameraStudio.tsx` — `handleModeSelect('livestream')`
+
+Before calling `generate-broadcast-token`, request the media stream from the click handler so the browser shows its prompt while still inside the gesture:
+
+```text
+- check canStream / streamPermLoading (unchanged)
+- call navigator.mediaDevices.getUserMedia({ video:{facingMode:'user', width:1280, height:720}, audio:true })
+- on NotAllowedError / NotFoundError / NotReadableError → toast a clear message and abort
+- immediately stop those tracks (LiveKit will re-acquire) — the permission grant persists for the origin/session
+- THEN call generate-broadcast-token and navigate
 ```
 
-Why an RPC instead of opening RLS:
-- `battles` and `battle_submissions` legitimately need authenticated-only access for full rows (organizer ids, scoring fields, voting metadata). Loosening their RLS would leak more than we want.
-- The RPC is a hand-picked projection — only the columns the teaser cards render. No vote counts, no organizer ids, no economy data.
-- One round-trip instead of 4. Faster landing.
+This means the OS permission dialog appears on the tap, and by the time LiveKit's SDK calls `getUserMedia`, the browser already has a granted permission and skips the prompt.
 
-The function:
-- `LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public`
-- Picks the most relevant battle: `status='live'` and both barber ids set, ordered by `barber1_is_streaming OR barber2_is_streaming DESC, created_at DESC`
-- Resolves `barber_profiles.id → user_id → public_user_profiles` inside the SQL
-- Limits clips to 8 with a non-null thumbnail (or a `cloudflare_stream_uid` we URL-build client-side)
-- `GRANT EXECUTE ... TO anon, authenticated`
+### 2. `src/pages/BroadcastStudio.tsx` — gate auto-connect behind a tap
 
-## Client changes
+Even with permission pre-granted, defer mounting `<LiveKitRoom connect={true} video audio>` until the user taps a **"Go Live"** button on this page. This guarantees the LiveKit publish step itself also runs inside a gesture, which fixes the remaining iOS Safari case where a route transition strips gesture context.
 
-`src/components/landing/teasers/useLandingData.ts`:
-- Replace `useLiveBattle`, `useFeaturedClips`, `useLeagueStats` with **one** `useLandingTeasers()` calling the new RPC.
-- Keep `useTopBarbers`, `useFeaturedProducts`, `useOpenChallenges`, `useFeaturedBarberDetail` — those tables are already anon-readable.
-- Resolve `cloudflare_stream_uid` → `https://videodelivery.net/{uid}/thumbnails/thumbnail.jpg?time=2s` in the hook (RPC returns the uid; URL building stays client-side so we don't bake a domain into Postgres).
+```text
+- add state `const [started, setStarted] = useState(false)`
+- while !started: render a centered "Tap to Go Live" button (and the existing "Connecting..." spinner only after tap)
+- only when started && token && serverUrl: render <LiveKitRoom ...>
+- on tap, setStarted(true)
+```
 
-## Also fixing while I'm here
-- The "React detected a change in the order of Hooks" warning in `InsideTheHubStage` (the `slides` array length now changes between renders when `featuredDetail` flips from undefined → loaded; I'll stabilize it).
-- `TopBarbersCard` has a hard-coded `Kairo / Soren / Rafa` fallback — remove it, show real barbers only.
+### 3. Stop the duplicate token fetch
+
+In `BroadcastStudio.tsx` the second `useEffect` re-fetches `generate-broadcast-token` if state is missing. Since Camera Studio now always passes the token via route state, keep the fallback but guard it with `started` so it never races with the initial call.
+
+### 4. Add a clear error path
+
+If permission is denied in step 1, show: *"Camera/microphone blocked. Enable them in your browser settings, then try again."* — and do **not** navigate to BroadcastStudio.
 
 ## Files
-- **New migration**: create `get_landing_teasers()` RPC + GRANT
-- Edit `src/components/landing/teasers/useLandingData.ts` (single RPC for live + clips + stats)
-- Edit `src/components/landing/teasers/TopBarbersCard.tsx` (drop Kairo/Soren/Rafa fallback)
-- Edit `src/components/landing/InsideTheHubStage.tsx` (stable slides array)
+
+- `src/pages/CameraStudio.tsx` — modify `handleModeSelect`
+- `src/pages/BroadcastStudio.tsx` — add tap-to-go-live gate, guard fallback token fetch
 
 ## Out of scope
-- No RLS changes to `battles`, `battle_submissions`, or `appointments` — they stay locked down.
-- No new tables, no fake seed data.
-- No edge function — pure Postgres RPC is enough.
 
-After this, the Live PK card will show **El-bory vs cj** (your real live battle) on the public landing without any sign-in, and any future submission with a Cloudflare Stream UID will populate the Watch strip automatically.
+- No changes to edge functions, LiveKit credentials, or DB schema.
+- Contender Theater (PK battles) uses `useLiveKitStream` which already requests permission inside `startStream` from a click, so it's not affected.

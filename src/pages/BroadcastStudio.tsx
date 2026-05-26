@@ -169,6 +169,7 @@ export default function BroadcastStudio() {
     (location.state as any)?.serverUrl || null
   );
   const [isEnding, setIsEnding] = useState(false);
+  const [started, setStarted] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -188,8 +189,9 @@ export default function BroadcastStudio() {
     navigate('/studio', { replace: true });
   }, [navigate]);
 
-  // If no token from route state, fetch one
+  // If no token from route state, fetch one — only after user taps Go Live
   useEffect(() => {
+    if (!started) return;
     if (token && serverUrl) return;
 
     (async () => {
@@ -204,7 +206,7 @@ export default function BroadcastStudio() {
       setToken(data.token);
       setServerUrl(data.serverUrl);
     })();
-  }, [token, serverUrl, navigateToStudio]);
+  }, [started, token, serverUrl, navigateToStudio]);
 
   useEffect(() => {
     if (!barberId || !token || !serverUrl) return;
@@ -280,6 +282,56 @@ export default function BroadcastStudio() {
     toast.info('Broadcast disconnected');
     navigateToStudio();
   }, [navigateToStudio]);
+
+  const handleGoLive = useCallback(async () => {
+    // Re-prime camera/mic inside this gesture so LiveKit's publish step
+    // (which happens on mount of <LiveKitRoom connect video audio>) inherits
+    // an active user-gesture context on iOS Safari.
+    try {
+      const warmup = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: true,
+      });
+      warmup.getTracks().forEach((t) => t.stop());
+    } catch (err: any) {
+      const name = err?.name || '';
+      if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+        toast.error('Camera/microphone blocked. Enable them in your browser settings.');
+      } else if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+        toast.error('No camera or microphone found.');
+      } else if (name === 'NotReadableError' || name === 'TrackStartError') {
+        toast.error('Camera is in use by another app.');
+      } else {
+        toast.error('Could not access camera/microphone.');
+      }
+      return;
+    }
+    setStarted(true);
+  }, []);
+
+  if (!started) {
+    return (
+      <div className="fixed inset-0 bg-black flex items-center justify-center px-6">
+        <div className="flex flex-col items-center gap-6 text-center">
+          <Radio className="h-12 w-12 text-primary" />
+          <div>
+            <h2 className="text-white text-xl font-bold">Ready to go live?</h2>
+            <p className="text-white/60 text-sm mt-2 max-w-xs">
+              Tap below to grant camera & mic access and start broadcasting.
+            </p>
+          </div>
+          <Button
+            size="lg"
+            className="rounded-full h-14 px-8 bg-red-600 hover:bg-red-700 text-white font-bold gap-2"
+            onClick={handleGoLive}
+          >
+            <Radio className="h-5 w-5" />
+            GO LIVE
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (!token || !serverUrl) {
     return (
