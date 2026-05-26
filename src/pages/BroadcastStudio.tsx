@@ -189,8 +189,9 @@ export default function BroadcastStudio() {
     navigate('/studio', { replace: true });
   }, [navigate]);
 
-  // If no token from route state, fetch one
+  // If no token from route state, fetch one — only after user taps Go Live
   useEffect(() => {
+    if (!started) return;
     if (token && serverUrl) return;
 
     (async () => {
@@ -205,7 +206,7 @@ export default function BroadcastStudio() {
       setToken(data.token);
       setServerUrl(data.serverUrl);
     })();
-  }, [token, serverUrl, navigateToStudio]);
+  }, [started, token, serverUrl, navigateToStudio]);
 
   useEffect(() => {
     if (!barberId || !token || !serverUrl) return;
