@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { RotatingBBCoin } from "./economy/RotatingBBCoin";
 import { GearPurchaseModal } from "./GearPurchaseModal";
+import { GearImageLightbox } from "./GearImageLightbox";
 import { toast } from "sonner";
 
 interface GearProduct {
@@ -54,6 +55,7 @@ const RotatingImage = ({ images, alt }: { images: string[]; alt: string }) => {
 export const ProductShelf = () => {
   const { user } = useAuth();
   const [selectedProduct, setSelectedProduct] = useState<GearProduct | null>(null);
+  const [lightbox, setLightbox] = useState<{ product: GearProduct; images: string[] } | null>(null);
 
   const { data: products = [] } = useQuery({
     queryKey: ["gear_products"],
@@ -70,7 +72,12 @@ export const ProductShelf = () => {
     },
   });
 
-  const handleTap = (product: GearProduct) => {
+  const openLightbox = (product: GearProduct, images: string[]) => {
+    if (images.length === 0) return;
+    setLightbox({ product, images });
+  };
+
+  const openPurchase = (product: GearProduct) => {
     if (!user) {
       toast.error("Please sign in to purchase gear");
       return;
