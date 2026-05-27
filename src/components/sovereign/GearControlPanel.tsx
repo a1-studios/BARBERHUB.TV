@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ShoppingBag, Plus, Trash2, Upload, Link as LinkIcon, Pencil, X } from 'lucide-react';
+import { ShoppingBag, Plus, Trash2, Upload, Link as LinkIcon, Pencil, X, RefreshCw, UploadCloud, DownloadCloud } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
