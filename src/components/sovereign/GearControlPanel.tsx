@@ -182,6 +182,19 @@ const GearControlPanel = () => {
     if (error) toast.error('Failed to delete'); else { toast.success('Removed'); fetchItems(); }
   };
 
+  const [syncingId, setSyncingId] = useState<string | null>(null);
+  const shopifySync = async (id: string, action: 'push' | 'pull') => {
+    setSyncingId(id);
+    const { data, error } = await supabase.functions.invoke('shopify-sync-product', {
+      body: { action, product_id: id },
+    });
+    setSyncingId(null);
+    const errMsg = (data as any)?.error || error?.message;
+    if (errMsg) { toast.error(errMsg); return; }
+    toast.success(action === 'push' ? 'Pushed to Shopify' : 'Pulled from Shopify');
+    fetchItems();
+  };
+
   const inputClass = 'bg-[#0a0a0f] border-white/10 text-white text-xs';
 
   return (
