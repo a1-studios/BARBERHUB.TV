@@ -99,33 +99,44 @@ export const ProductShelf = () => {
               : []
             ).slice(0, 5);
             return (
-              <button
+              <div
                 key={product.id}
-                onClick={() => handleTap(product)}
                 className="relative aspect-square overflow-hidden rounded-lg bg-muted border border-border transition-transform hover:scale-[1.02]"
               >
-                {imgs.length > 0 && <RotatingImage images={imgs} alt={product.name} />}
+                <button
+                  type="button"
+                  onClick={() => openLightbox(product, imgs)}
+                  className="absolute inset-0 w-full h-full"
+                  aria-label={`View ${product.name} images`}
+                >
+                  {imgs.length > 0 && <RotatingImage images={imgs} alt={product.name} />}
 
-                {/* Top gradient for title legibility */}
-                <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-black/80 via-black/40 to-transparent" />
-                {/* Bottom gradient for price legibility */}
-                <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/85 via-black/45 to-transparent" />
+                  {/* Top gradient for title legibility */}
+                  <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-black/80 via-black/40 to-transparent" />
+                  {/* Bottom gradient for price legibility */}
+                  <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/85 via-black/45 to-transparent" />
 
-                {/* Title — top center */}
-                <div className="absolute top-1 left-0 right-0 px-1 z-10">
-                  <p className="text-[10px] font-semibold text-white text-center truncate leading-tight drop-shadow">
-                    {renderTitleWithHub(product.name)}
-                  </p>
-                </div>
+                  {/* Title — top center */}
+                  <div className="absolute top-1 left-0 right-0 px-1 z-10">
+                    <p className="text-[10px] font-semibold text-white text-center truncate leading-tight drop-shadow">
+                      {renderTitleWithHub(product.name)}
+                    </p>
+                  </div>
+                </button>
 
-                {/* Price — bottom center */}
-                <div className="absolute bottom-1 left-0 right-0 z-10 flex items-center justify-center gap-1">
+                {/* Price pill — bottom center, tappable to buy */}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); openPurchase(product); }}
+                  className="absolute bottom-1 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/70 hover:bg-orange-500/90 active:scale-95 transition"
+                  aria-label={`Buy ${product.name} for ${product.price_bb} BB`}
+                >
                   <RotatingBBCoin size="xs" />
-                  <p className="text-[10px] text-orange-500 font-bold leading-none drop-shadow">
+                  <span className="text-[10px] text-orange-300 font-bold leading-none drop-shadow">
                     {product.price_bb} BB
-                  </p>
-                </div>
-              </button>
+                  </span>
+                </button>
+              </div>
             );
           })}
         </div>
@@ -140,6 +151,14 @@ export const ProductShelf = () => {
         onClose={() => setSelectedProduct(null)}
         product={selectedProduct || { id: "", name: "", price_bb: 0, image_url: null }}
       />
+
+      {lightbox && (
+        <GearImageLightbox
+          images={lightbox.images}
+          productName={lightbox.product.name}
+          onClose={() => setLightbox(null)}
+        />
+      )}
     </>
   );
 };
