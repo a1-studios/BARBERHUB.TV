@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ShoppingBag, Plus, Trash2, Upload, Link as LinkIcon, Pencil, X } from 'lucide-react';
+import { ShoppingBag, Plus, Trash2, Upload, Link as LinkIcon, Pencil, X, RefreshCw, UploadCloud, DownloadCloud } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -182,6 +182,19 @@ const GearControlPanel = () => {
     if (error) toast.error('Failed to delete'); else { toast.success('Removed'); fetchItems(); }
   };
 
+  const [syncingId, setSyncingId] = useState<string | null>(null);
+  const shopifySync = async (id: string, action: 'push' | 'pull') => {
+    setSyncingId(id);
+    const { data, error } = await supabase.functions.invoke('shopify-sync-product', {
+      body: { action, product_id: id },
+    });
+    setSyncingId(null);
+    const errMsg = (data as any)?.error || error?.message;
+    if (errMsg) { toast.error(errMsg); return; }
+    toast.success(action === 'push' ? 'Pushed to Shopify' : 'Pulled from Shopify');
+    fetchItems();
+  };
+
   const inputClass = 'bg-[#0a0a0f] border-white/10 text-white text-xs';
 
   return (
@@ -293,6 +306,28 @@ const GearControlPanel = () => {
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <Switch checked={item.is_active} onCheckedChange={() => toggleActive(item.id)} />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => shopifySync(item.id, 'push')}
+                disabled={syncingId === item.id}
+                title={item.shopify_product_id ? 'Update on Shopify' : 'Push to Shopify'}
+                className="h-7 w-7 text-emerald-400/70 hover:text-emerald-300"
+              >
+                {syncingId === item.id ? <RefreshCw className="h-3 w-3 animate-spin" /> : <UploadCloud className="h-3 w-3" />}
+              </Button>
+              {item.shopify_product_id && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => shopifySync(item.id, 'pull')}
+                  disabled={syncingId === item.id}
+                  title="Pull latest from Shopify"
+                  className="h-7 w-7 text-cyan-400/70 hover:text-cyan-300"
+                >
+                  <DownloadCloud className="h-3 w-3" />
+                </Button>
+              )}
               <Button variant="ghost" size="icon" onClick={() => startEdit(item)} className="h-7 w-7 text-white/50 hover:text-white">
                 <Pencil className="h-3 w-3" />
               </Button>
