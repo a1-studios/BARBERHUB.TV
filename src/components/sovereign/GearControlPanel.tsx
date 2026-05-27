@@ -306,6 +306,28 @@ const GearControlPanel = () => {
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <Switch checked={item.is_active} onCheckedChange={() => toggleActive(item.id)} />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => shopifySync(item.id, 'push')}
+                disabled={syncingId === item.id}
+                title={item.shopify_product_id ? 'Update on Shopify' : 'Push to Shopify'}
+                className="h-7 w-7 text-emerald-400/70 hover:text-emerald-300"
+              >
+                {syncingId === item.id ? <RefreshCw className="h-3 w-3 animate-spin" /> : <UploadCloud className="h-3 w-3" />}
+              </Button>
+              {item.shopify_product_id && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => shopifySync(item.id, 'pull')}
+                  disabled={syncingId === item.id}
+                  title="Pull latest from Shopify"
+                  className="h-7 w-7 text-cyan-400/70 hover:text-cyan-300"
+                >
+                  <DownloadCloud className="h-3 w-3" />
+                </Button>
+              )}
               <Button variant="ghost" size="icon" onClick={() => startEdit(item)} className="h-7 w-7 text-white/50 hover:text-white">
                 <Pencil className="h-3 w-3" />
               </Button>
