@@ -1,58 +1,51 @@
-## Problem
+## 1. Fullscreen swipeable image gallery
 
-When a barber taps **Live Stream** in Camera Studio, the flow is:
+**New component** `src/components/GearImageLightbox.tsx`
+- Portal-rendered fullscreen overlay (black backdrop, z-50)
+- Receives `images: string[]`, `startIndex`, `productName`, `onClose`
+- Swipe left/right via framer-motion `drag="x"` with snap on threshold (>60px or velocity)
+- Tap-arrow buttons on desktop, dot indicators at bottom
+- Pinch/double-tap zoom skipped to keep scope tight; close on X or backdrop tap
+- Counter "2 / 5" top-left, product name top-center
 
-1. `handleModeSelect('livestream')` → `await supabase.functions.invoke('generate-broadcast-token')` → `navigate('/broadcast/:id/studio')`
-2. `BroadcastStudio` mounts `<LiveKitRoom video audio connect={true}>` inside a `useEffect`-driven render
-3. LiveKit SDK then calls `getUserMedia` internally — but this happens **after** an `await` + route change, so it's no longer in a direct user-gesture context
+**Edit** `src/components/ProductShelf.tsx`
+- Replace current `handleTap` behavior: tapping the image opens the lightbox instead of the purchase modal
+- Add a small "Buy" pill overlay on the card (or keep price area tappable) that opens `GearPurchaseModal` — so purchasing still works
+- State: `lightboxProduct` separate from `selectedProduct`
 
-On mobile browsers (the user is on a 390px viewport) this is exactly the case where `getUserMedia` is silently refused or never prompts. There are no edge-function logs because the failure is purely client-side, before LiveKit ever connects.
+## 2. Shopify integration (connect existing store)
 
-The companion symptom: `generate-broadcast-token` is also called a second time inside `BroadcastStudio` if state is missing, which can race with the first call.
+The Lovable Shopify enable tool requires Lovable Cloud, but this project uses an external Supabase. So we'll wire Shopify directly using the **Shopify Admin GraphQL API** with a Custom App access token — same pattern already hinted at by `shopify_product_id` / `shopify_variant_id` columns on `products`.
 
-## Fix
+### Secrets to add
+- `SHOPIFY_STORE_DOMAIN` (e.g. `barberhub.myshopify.com`)
+- `SHOPIFY_ADMIN_TOKEN` (Admin API access token from a Custom App with `read_products, write_products, read_inventory, write_inventory` scopes)
 
-Acquire camera + mic permission **inside the user gesture** that starts the live-stream flow, then hand off to LiveKit.
+### New edge function `supabase/functions/shopify-sync-product/index.ts`
+Actions:
+- `push` — given a local `product_id`, create or update the matching Shopify product (title, body_html=description, price from `price_bb` converted to USD by `price_bb/5`, images from `image_urls`, sku, inventory). Stores returned `shopify_product_id` + first `shopify_variant_id` back on the row.
+- `pull` — given a `shopify_product_id`, refresh title/price/images/stock back into local row.
+- `list_shop_products` — proxy to fetch existing Shopify products so admin can map an existing Shopify item to a local row.
 
-### 1. `src/pages/CameraStudio.tsx` — `handleModeSelect('livestream')`
+Sovereign-only (verify caller via existing `has_role` admin check used by `admin-upsert-gear`).
 
-Before calling `generate-broadcast-token`, request the media stream from the click handler so the browser shows its prompt while still inside the gesture:
+### Admin UI changes in `src/components/sovereign/GearControlPanel.tsx`
+- Add a "Sync to Shopify" button on each row (calls `shopify-sync-product` with `push`)
+- Add a "Pull from Shopify" button when `shopify_product_id` is set
+- Add an "Import from Shopify…" dropdown in the Add Gear form populated by `list_shop_products`, that pre-fills name/price/images and stores the IDs
 
-```text
-- check canStream / streamPermLoading (unchanged)
-- call navigator.mediaDevices.getUserMedia({ video:{facingMode:'user', width:1280, height:720}, audio:true })
-- on NotAllowedError / NotFoundError / NotReadableError → toast a clear message and abort
-- immediately stop those tracks (LiveKit will re-acquire) — the permission grant persists for the origin/session
-- THEN call generate-broadcast-token and navigate
-```
+### Checkout wiring (purchase flow)
+- `GearPurchaseModal` stays the BB-based purchase. If a product has `shopify_product_id` AND `requires_shipping=true`, after BB deduction the existing `purchase-product-bb` edge function should also call Shopify's `draftOrderCreate` to fulfill the physical order. Add this step inside `purchase-product-bb` (uses same secrets); creates a draft order tagged with the buyer's email and shipping address, marked paid. Out of scope for this plan to redesign checkout UX — just plumb the fulfillment hand-off.
 
-This means the OS permission dialog appears on the tap, and by the time LiveKit's SDK calls `getUserMedia`, the browser already has a granted permission and skips the prompt.
+### Database
+No schema changes needed — `shopify_product_id`, `shopify_variant_id`, `requires_shipping` already exist.
 
-### 2. `src/pages/BroadcastStudio.tsx` — gate auto-connect behind a tap
+## 3. What I will NOT change
+- BB economy, prices, tax splits
+- Existing purchase-product-bb business logic (only adds Shopify draft order call when applicable)
+- Card layout/typography of the gear shelf
 
-Even with permission pre-granted, defer mounting `<LiveKitRoom connect={true} video audio>` until the user taps a **"Go Live"** button on this page. This guarantees the LiveKit publish step itself also runs inside a gesture, which fixes the remaining iOS Safari case where a route transition strips gesture context.
-
-```text
-- add state `const [started, setStarted] = useState(false)`
-- while !started: render a centered "Tap to Go Live" button (and the existing "Connecting..." spinner only after tap)
-- only when started && token && serverUrl: render <LiveKitRoom ...>
-- on tap, setStarted(true)
-```
-
-### 3. Stop the duplicate token fetch
-
-In `BroadcastStudio.tsx` the second `useEffect` re-fetches `generate-broadcast-token` if state is missing. Since Camera Studio now always passes the token via route state, keep the fallback but guard it with `started` so it never races with the initial call.
-
-### 4. Add a clear error path
-
-If permission is denied in step 1, show: *"Camera/microphone blocked. Enable them in your browser settings, then try again."* — and do **not** navigate to BroadcastStudio.
-
-## Files
-
-- `src/pages/CameraStudio.tsx` — modify `handleModeSelect`
-- `src/pages/BroadcastStudio.tsx` — add tap-to-go-live gate, guard fallback token fetch
-
-## Out of scope
-
-- No changes to edge functions, LiveKit credentials, or DB schema.
-- Contender Theater (PK battles) uses `useLiveKitStream` which already requests permission inside `startStream` from a click, so it's not affected.
+## Technical notes
+- Shopify Admin REST/GraphQL is called server-side from the edge function with `X-Shopify-Access-Token` header
+- Price conversion: `price_usd = price_bb / 5` (per project economy memory)
+- Inventory not decremented on Shopify side until the draft order is completed — acceptable for v1
