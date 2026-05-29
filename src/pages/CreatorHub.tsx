@@ -68,13 +68,17 @@ export default function CreatorHub() {
           <p className="text-sm text-muted-foreground text-center max-w-xs mb-6">
             Upload masterclasses, tutorials, and tips. Build your legacy and earn Barber Bucks.
           </p>
-          <AuthDialog>
-            <Button size="lg" className="btn-primary">
-              <Scissors className="mr-2 h-5 w-5" />
-              Start Creating
-            </Button>
-          </AuthDialog>
+          <Button size="lg" className="btn-primary" onClick={() => setShowSignup(true)}>
+            <Scissors className="mr-2 h-5 w-5" />
+            Start Creating
+          </Button>
         </div>
+        <AuthModalV2
+          open={showSignup}
+          onClose={() => setShowSignup(false)}
+          intendedRole="barber"
+          mode="signup"
+        />
       </>
     );
   }
