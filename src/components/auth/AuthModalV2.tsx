@@ -7,11 +7,13 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { supabase } from '@/integrations/supabase/client';
 import { usePlatformState } from '@/hooks/usePlatformState';
 import { toast } from 'sonner';
-import { Loader2, Mail, Scissors, Users, ShieldCheck, KeyRound, ArrowLeft } from 'lucide-react';
+import { Loader2, Mail, Phone, Scissors, Users, ShieldCheck, KeyRound, ArrowLeft } from 'lucide-react';
 import { PublicBarber, countryFlag } from '@/components/landing/teasers/useLandingData';
+import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js';
 
 type Role = 'barber' | 'fan';
 type Step = 'gate' | 'role' | 'identity' | 'verify';
+type Channel = 'email' | 'sms';
 
 interface AuthModalV2Props {
   open: boolean;
@@ -22,7 +24,24 @@ interface AuthModalV2Props {
 }
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
-const PHONE_RE = /^\+?[0-9\s\-()]{7,}$/;
+
+/**
+ * Detect whether the user typed an email or a phone number.
+ * Returns the canonical value (email lowercase or E.164 phone) or null on failure.
+ */
+function classifyIdentity(raw: string, defaultCountry: CountryCode = 'US'):
+  | { channel: 'email'; value: string }
+  | { channel: 'sms'; value: string }
+  | null {
+  const v = raw.trim();
+  if (!v) return null;
+  if (EMAIL_RE.test(v)) return { channel: 'email', value: v.toLowerCase() };
+  const digits = v.replace(/[^\d+]/g, '');
+  if (digits.replace(/\D/g, '').length < 7) return null;
+  const parsed = parsePhoneNumberFromString(digits, defaultCountry);
+  if (parsed?.isValid()) return { channel: 'sms', value: parsed.number };
+  return null;
+}
 
 /**
  * Parallel OTP + VIP auth modal. Isolated from the legacy AuthDialog/useAuth API.
