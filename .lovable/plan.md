@@ -1,55 +1,26 @@
-## Landing page revamp
+## Plan
 
-### 1. Replace static "Watch Feed" strip with a Feature Highlight Reel
-Repurpose the `WatchFeedStrip` slot into a single, taller "highlight box" that auto-rotates through the platform's killer features instead of fake clip thumbnails.
+### 1. `VelvetRopeLanding.tsx` — breathing space
+- Add `mt-3` (or `pt-3`) gap between the header card and the FeatureHighlightReel container so the reel no longer kisses the header.
 
-Slides (auto-advance every ~4s, swipeable):
-- **Global Map** — preview of Mapbox dark style with pulsing pins ("Find barbers anywhere")
-- **Find a Barber Near You** — search bar mock + nearby card snippet
-- **Rotating World Flags** — horizontal flag ticker representing global reach (uses country emoji flags, marquee animation)
-- **Live Battles / Stream** — thumbnail with pulsing LIVE dot
-- **Earn BB** — spinning coin + "+15 BB on signup"
+### 2. `FeatureHighlightReel.tsx` — manual control + clean globe
+- Remove auto-advance `useEffect` / `setTimeout`. Slides only change via swipe or dot click.
+- Add touch swipe handlers (`onTouchStart` / `onTouchEnd`, ~50px threshold) on the slide container for left/right navigation.
+- Keep dots clickable (already done) — make them larger tap targets.
+- For the `global` slide ONLY: remove the `SlideShell` wrapper (no top tag chip, no bottom title/sub bar, no inner radial background box). Render the globe full-bleed inside the reel card so the user has maximum room to drag it. The orbiting slogan handles the messaging.
+- Remove the `LegendsHeadline` slogan overlay from the top of the reel (it currently covers all slides).
 
-New file: `src/components/landing/FeatureHighlightReel.tsx`. Replaces `<WatchFeedStrip />` in `VelvetRopeLanding.tsx`. Same vertical footprint (`flex-1 min-h-0`).
+### 3. New `OrbitingSlogan.tsx` (rendered inside the globe slide)
+- Words "WHERE · BARBERS · BECOME · LEGENDS · ★ ·" rotating in a circle around the 3D globe using SVG `<textPath>` on a `<circle>` with a CSS `@keyframes spin` animation (~30s linear infinite).
+- Positioned absolutely, centered on the globe, `pointer-events-none` so it never blocks globe dragging.
+- Orange for WHERE/BECOME, white for BARBERS/LEGENDS to preserve the existing two-color logic.
+- Only renders on the globe slide (so other slides keep their own titles).
 
-### 2. Two-color slogan
-Update `LegendsHeadline.tsx`:
-- "WHERE" → orange
-- "BARBERS" → white
-- "BECOME" → orange
-- "LEGENDS" → white (keep current glow, swap to white drop-shadow)
-
-### 3. Rotating CTA button upgrades (`RotatingJoinCTA.tsx`)
-- Add **STREAM** and **EARN-BB** to the rotation list → `JOIN, WIN, WATCH, VOTE, CHALLENGE, STREAM, EARN-BB`
-- For `EARN-BB`, render the spinning BB coin (`RotatingBBCoin`) inline next to the word
-- Text color → signature orange (`text-orange-500`) instead of cyan-100; keep cyan neon outline
-- Increase button size ~10%: `h-11 → h-12`, `px-8 → px-9`, `text-sm → text-[15px]`
-
-### 4. Unified Email/Phone + OTP box, moved under the CTA
-Remove the current inline sign-in form above the CTA. New component `src/components/landing/InlineOtpBox.tsx` placed directly under the rotating CTA.
-
-Behavior:
-- Single input with **morphing placeholder** that cycles "Email" ⇄ "Phone" every 2s (pauses when focused/typed)
-- Orange glow outline (`border-orange-500/60 shadow-[0_0_18px_rgba(249,115,22,0.45)]`)
-- "Go" button → on submit, detects email vs phone via regex, calls the existing OTP send path:
-  - Email → `supabase.auth.signInWithOtp({ email })`
-  - Phone → `supabase.auth.signInWithOtp({ phone })` (Twilio SMS OTP, per existing `twilio-sms-otp` integration)
-- After send, swap input for 6-digit code entry (6 boxed cells) and verify via `supabase.auth.verifyOtp`
-- On success, route per role default
-
-### 5. Layout order in `VelvetRopeLanding.tsx`
-1. Header
-2. Two-color headline
-3. Feature Highlight Reel (flex-1)
-4. Rotating CTA + "+15 BB" subtext
-5. Inline OTP box (orange glow)
-6. Stats row
-7. Footer sign-in link (kept for returning users)
+### 4. `LegendsHeadline.tsx`
+- No longer used on the landing; leave file in place (still imported elsewhere potentially) but remove its usage from the reel & landing.
 
 ### Technical notes
-- Files created: `FeatureHighlightReel.tsx`, `InlineOtpBox.tsx`
-- Files edited: `LegendsHeadline.tsx`, `RotatingJoinCTA.tsx`, `VelvetRopeLanding.tsx`
-- Files removed from landing: inline email/phone form block (logic replaced by `InlineOtpBox`)
-- Reuse `RotatingBBCoin` from `src/components/economy/RotatingBBCoin.tsx`
-- Flags: use unicode regional indicator emojis in a horizontally-scrolling marquee (no extra deps)
-- OTP path uses existing Supabase auth + Twilio SMS OTP edge functions already wired in the project
+- Swipe detection: track `touchStartX` in a ref; on touchend compare delta; `(idx + dir + slides.length) % slides.length`.
+- SVG textPath orbit: viewBox 0 0 400 400, circle r≈170, rotating group via `transform-origin: center; animation: orbit 28s linear infinite`.
+- Globe slide structure becomes: `<div class="absolute inset-0"> <GlobePulse /> <OrbitingSlogan /> </div>` — no chrome.
+- Non-globe slides keep their existing `SlideShell` with tag + title + subtitle.
