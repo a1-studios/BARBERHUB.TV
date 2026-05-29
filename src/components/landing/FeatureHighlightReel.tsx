@@ -135,19 +135,6 @@ const slides: Slide[] = [
     ),
   },
   {
-    id: 'global',
-    label: 'Global',
-    render: () => (
-      <SlideShell tag="Worldwide" title="Barbers in 60+ Countries" sub="One global championship">
-        <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(ellipse_at_center,#1a1a2e_0%,#000_75%)]">
-          <div className="h-full aspect-square max-h-full">
-            <GlobePulse />
-          </div>
-        </div>
-      </SlideShell>
-    ),
-  },
-  {
     id: 'live',
     label: 'Live',
     render: () => (
