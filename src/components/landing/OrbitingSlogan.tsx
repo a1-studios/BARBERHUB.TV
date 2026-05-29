@@ -15,7 +15,7 @@ export const OrbitingSlogan = () => {
         <defs>
           <path
             id="orbit-circle"
-            d="M 200,200 m -178,0 a 178,178 0 1,1 356,0 a 178,178 0 1,1 -356,0"
+            d="M 200,200 m -184,0 a 184,184 0 1,1 368,0 a 184,184 0 1,1 -368,0"
           />
         </defs>
         <text
@@ -23,9 +23,9 @@ export const OrbitingSlogan = () => {
           style={{
             fontWeight: 900,
             fontSize: "20px",
-            letterSpacing: "0.32em",
+            letterSpacing: "0.3em",
             textTransform: "uppercase",
-            filter: "drop-shadow(0 0 8px rgba(0,0,0,0.9))",
+            filter: "drop-shadow(0 0 8px rgba(0,0,0,0.95))",
           }}
         >
           <textPath href="#orbit-circle" startOffset="0">

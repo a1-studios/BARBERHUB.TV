@@ -1,15 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useRef, useState } from 'react';
 import { MapPin, Search, Radio, Coins } from 'lucide-react';
 import { GlobePulse } from '@/components/ui/cobe-globe-pulse';
 import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
-import { LegendsHeadline } from './LegendsHeadline';
+import { OrbitingSlogan } from './OrbitingSlogan';
 
 /**
- * Auto-rotating highlight reel. Globe is the first slide and dwells 7s so users
- * can interact with it; other slides advance every 4s.
+ * Manually-controlled highlight reel. User swipes or taps dots to navigate.
+ * Globe is the first slide and renders full-bleed (no chrome) so users have
+ * maximum room to drag it; the slogan orbits around it.
  */
 
-type Slide = { id: string; label: string; durationMs?: number; render: () => React.ReactNode };
+type Slide = { id: string; label: string; render: () => React.ReactNode };
 
 const SlideShell = ({
   tag,
@@ -49,15 +50,11 @@ const slides: Slide[] = [
   {
     id: 'global',
     label: 'Global',
-    durationMs: 7000,
     render: () => (
-      <SlideShell tag="Worldwide" title="Barbers in 60+ Countries" sub="Drag the globe — one global championship">
-        <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(ellipse_at_center,#1a1a2e_0%,#000_75%)]">
-          <div className="h-full aspect-square max-h-full">
-            <GlobePulse />
-          </div>
-        </div>
-      </SlideShell>
+      <div className="absolute inset-0 bg-black flex items-center justify-center">
+        <GlobePulse />
+        <OrbitingSlogan />
+      </div>
     ),
   },
   {
@@ -66,7 +63,6 @@ const slides: Slide[] = [
     render: () => (
       <SlideShell tag="Global Map" title="Find Barbers Anywhere" sub="Live map of barbers worldwide">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,#0c2340_0%,#000_70%)]">
-          {/* fake lat/long grid */}
           <div
             className="absolute inset-0 opacity-30"
             style={{
@@ -75,7 +71,6 @@ const slides: Slide[] = [
               backgroundSize: '28px 28px',
             }}
           />
-          {/* pulsing pins */}
           {[
             { l: '22%', t: '38%' },
             { l: '46%', t: '28%' },
@@ -202,46 +197,55 @@ const slides: Slide[] = [
 
 export const FeatureHighlightReel = () => {
   const [idx, setIdx] = useState(0);
+  const touchStartX = useRef<number | null>(null);
 
-  useEffect(() => {
-    const dwell = slides[idx]?.durationMs ?? 4000;
-    const id = setTimeout(() => {
-      if (document.visibilityState !== 'visible') return;
-      setIdx((i) => (i + 1) % slides.length);
-    }, dwell);
-    return () => clearTimeout(id);
-  }, [idx]);
+  const go = (dir: number) =>
+    setIdx((i) => (i + dir + slides.length) % slides.length);
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+    touchStartX.current = null;
+  };
 
   return (
     <div className="w-full h-full min-h-[180px] flex flex-col">
-      <div className="relative flex-1 rounded-xl overflow-hidden border border-orange-500/30 bg-black/60 shadow-[0_0_24px_rgba(249,115,22,0.25)]">
+      <div
+        className="relative flex-1 rounded-xl overflow-hidden border border-orange-500/30 bg-black/60 shadow-[0_0_24px_rgba(249,115,22,0.25)]"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
         {slides.map((s, i) => (
           <div
             key={s.id}
-            className={`absolute inset-0 transition-opacity duration-700 ${
+            className={`absolute inset-0 transition-opacity duration-500 ${
               i === idx ? 'opacity-100' : 'opacity-0 pointer-events-none'
             }`}
           >
             {s.render()}
           </div>
         ))}
-        {/* Slogan overlay — sits inside the feature card on every slide */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 px-3 pt-7 pb-6 bg-gradient-to-b from-black/85 via-black/50 to-transparent">
-          <LegendsHeadline />
-        </div>
       </div>
       {/* dots */}
-      <div className="flex items-center justify-center gap-1.5 pt-2">
+      <div className="flex items-center justify-center gap-2 pt-2">
         {slides.map((s, i) => (
           <button
             key={s.id}
             type="button"
             onClick={() => setIdx(i)}
             aria-label={s.label}
-            className={`h-1.5 rounded-full transition-all ${
-              i === idx ? 'w-5 bg-orange-400' : 'w-1.5 bg-white/25'
-            }`}
-          />
+            className="p-1.5 -m-1 group"
+          >
+            <span
+              className={`block h-1.5 rounded-full transition-all ${
+                i === idx ? 'w-5 bg-orange-400' : 'w-1.5 bg-white/25 group-hover:bg-white/50'
+              }`}
+            />
+          </button>
         ))}
       </div>
     </div>
