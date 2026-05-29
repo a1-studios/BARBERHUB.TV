@@ -23,6 +23,26 @@ const Privacy = () => (
       </ul>
     </Section>
 
+    <Section n="2a" title="SMS Consent and Phone Numbers">
+      <p>
+        When you provide a mobile phone number for sign-up, login, or account recovery, you opt in to receive
+        one-time SMS verification codes ("OTPs") and security-related transactional messages from Barber-Hub.
+      </p>
+      <p>
+        <strong>
+          No mobile information will be shared with third parties/affiliates for marketing/promotional purposes.
+          All other use-case categories exclude text messaging originator opt-in data and consent; this information
+          will not be shared with any third parties under any circumstances.
+        </strong>
+      </p>
+      <p>
+        Phone numbers are stored encrypted at rest and used solely for authentication, account security, and (where
+        you have separately opted in) booking notifications. You may remove your phone number at any time from your
+        account settings, which will disable SMS-based login on that number.
+      </p>
+    </Section>
+
+
     <Section n="3" title="How We Share Data">
       <p>We do not sell data. We share strictly with processors:</p>
       <ul>
