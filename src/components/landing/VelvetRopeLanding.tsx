@@ -1,18 +1,14 @@
 import { useState } from 'react';
 import { Helmet } from 'react-helmet';
-import AuthModalV2 from '@/components/auth/AuthModalV2';
 import { LaunchWizard } from '@/components/coming-soon/LaunchWizard';
 import { LegendsHeadline } from './LegendsHeadline';
 import { LiveStatsRow } from './LiveStatsRow';
 import { FeatureHighlightReel } from './FeatureHighlightReel';
 import { RotatingJoinCTA } from './RotatingJoinCTA';
 import { InlineOtpBox } from './InlineOtpBox';
-import { PublicBarber } from './teasers/useLandingData';
 import barberPole from '@/assets/barber-pole.png';
 
 export const VelvetRopeLanding = () => {
-  const [authOpen, setAuthOpen] = useState(false);
-  const [previewBarber] = useState<PublicBarber | null>(null);
   const [spinOpen, setSpinOpen] = useState(false);
 
   return (
@@ -74,22 +70,22 @@ export const VelvetRopeLanding = () => {
           <LiveStatsRow />
         </section>
 
-        <footer className="flex-none px-3 pb-2 text-center">
-          <button
-            onClick={() => setAuthOpen(true)}
-            className="text-[11px] text-white/50 hover:text-white transition"
-          >
-            Already a member? <span className="underline text-white/80">Sign in</span>
-          </button>
+        <footer className="flex-none px-3 pb-2 text-center space-y-1">
+          <nav className="flex items-center justify-center gap-3 text-[10px] text-white/45">
+            <a href="/terms" className="hover:text-white/80 transition">Terms</a>
+            <span className="text-white/20">·</span>
+            <a href="/privacy" className="hover:text-white/80 transition">Privacy</a>
+            <span className="text-white/20">·</span>
+            <a href="/aup" className="hover:text-white/80 transition">Acceptable Use</a>
+            <span className="text-white/20">·</span>
+            <a href="/cookies" className="hover:text-white/80 transition">Cookies</a>
+          </nav>
+          <p className="text-[10px] text-white/35">
+            © 2026 BARBER-HUB · Operated by Barber Hub LLC
+          </p>
         </footer>
       </div>
 
-      <AuthModalV2
-        open={authOpen}
-        onClose={() => setAuthOpen(false)}
-        mode="signin"
-        previewBarber={previewBarber}
-      />
 
       {spinOpen && <LaunchWizard onClose={() => setSpinOpen(false)} />}
     </div>
