@@ -31,6 +31,7 @@ export default function CreatorHub() {
   const [showChallenge, setShowChallenge] = useState(false);
   const [showDeals, setShowDeals] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showSignup, setShowSignup] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<AcademyCourse | null>(null);
 
   // Redirect non-barbers
