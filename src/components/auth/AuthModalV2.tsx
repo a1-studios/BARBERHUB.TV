@@ -7,11 +7,13 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import { supabase } from '@/integrations/supabase/client';
 import { usePlatformState } from '@/hooks/usePlatformState';
 import { toast } from 'sonner';
-import { Loader2, Mail, Scissors, Users, ShieldCheck, KeyRound, ArrowLeft } from 'lucide-react';
+import { Loader2, Mail, Phone, Scissors, Users, ShieldCheck, KeyRound, ArrowLeft } from 'lucide-react';
 import { PublicBarber, countryFlag } from '@/components/landing/teasers/useLandingData';
+import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js';
 
 type Role = 'barber' | 'fan';
 type Step = 'gate' | 'role' | 'identity' | 'verify';
+type Channel = 'email' | 'sms';
 
 interface AuthModalV2Props {
   open: boolean;
@@ -22,7 +24,24 @@ interface AuthModalV2Props {
 }
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
-const PHONE_RE = /^\+?[0-9\s\-()]{7,}$/;
+
+/**
+ * Detect whether the user typed an email or a phone number.
+ * Returns the canonical value (email lowercase or E.164 phone) or null on failure.
+ */
+function classifyIdentity(raw: string, defaultCountry: CountryCode = 'US'):
+  | { channel: 'email'; value: string }
+  | { channel: 'sms'; value: string }
+  | null {
+  const v = raw.trim();
+  if (!v) return null;
+  if (EMAIL_RE.test(v)) return { channel: 'email', value: v.toLowerCase() };
+  const digits = v.replace(/[^\d+]/g, '');
+  if (digits.replace(/\D/g, '').length < 7) return null;
+  const parsed = parsePhoneNumberFromString(digits, defaultCountry);
+  if (parsed?.isValid()) return { channel: 'sms', value: parsed.number };
+  return null;
+}
 
 /**
  * Parallel OTP + VIP auth modal. Isolated from the legacy AuthDialog/useAuth API.
@@ -44,7 +63,11 @@ export function AuthModalV2({
   const [validatedCode, setValidatedCode] = useState<{ id: string; type: string } | null>(null);
   const [role, setRole] = useState<Role | null>(intendedRole);
   const [identity, setIdentity] = useState('');
+  const [defaultCountry] = useState<CountryCode>('US');
+  // Verified target after identity submit
+  const [channel, setChannel] = useState<Channel>('email');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendIn, setResendIn] = useState(0);
@@ -58,7 +81,9 @@ export function AuthModalV2({
       setValidatedCode(null);
       setRole(intendedRole ?? null);
       setIdentity('');
+      setChannel('email');
       setEmail('');
+      setPhone('');
       setPin('');
       setLoading(false);
       setResendIn(0);
@@ -120,31 +145,41 @@ export function AuthModalV2({
     setStep('identity');
   };
 
-  // Step 3: Identity
+  // Step 3: Identity — smart-detect email vs phone
   const handleIdentitySubmit = async () => {
-    const v = identity.trim();
-    if (PHONE_RE.test(v) && !EMAIL_RE.test(v)) {
-      toast.info('SMS login is in beta. Please use your email.');
-      return;
-    }
-    if (!EMAIL_RE.test(v)) {
-      toast.error('Enter a valid email address.');
+    const detected = classifyIdentity(identity, defaultCountry);
+    if (!detected) {
+      toast.error('Enter a valid email address or phone number.');
       return;
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: v,
-        options: {
-          shouldCreateUser: mode === 'signup',
-          data: role ? { intended_role: role } : undefined,
-        },
-      });
-      if (error) throw error;
-      setEmail(v);
+      if (detected.channel === 'email') {
+        const { error } = await supabase.auth.signInWithOtp({
+          email: detected.value,
+          options: {
+            shouldCreateUser: mode === 'signup',
+            data: role ? { intended_role: role } : undefined,
+          },
+        });
+        if (error) throw error;
+        setEmail(detected.value);
+        setPhone('');
+        setChannel('email');
+        toast.success('Code sent. Check your inbox.');
+      } else {
+        const { data, error } = await supabase.functions.invoke('send-sms-otp', {
+          body: { phone: detected.value },
+        });
+        if (error) throw error;
+        if ((data as any)?.error) throw new Error((data as any).error);
+        setPhone(detected.value);
+        setEmail('');
+        setChannel('sms');
+        toast.success('Code sent via SMS.');
+      }
       setStep('verify');
       setResendIn(60);
-      toast.success('Code sent. Check your inbox.');
     } catch (e: any) {
       toast.error(e?.message ?? 'Could not send code.');
     } finally {
@@ -152,35 +187,56 @@ export function AuthModalV2({
     }
   };
 
-  // Step 4: Verify
+  // Step 4: Verify (channel-aware)
   const handleVerify = async (token: string) => {
     if (token.length !== 6) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        email,
-        token,
-        type: 'email',
-      });
-      if (error) throw error;
-      const userId = data.user?.id;
+      let userId: string | undefined;
+      let userEmail: string | undefined;
+
+      if (channel === 'email') {
+        const { data, error } = await supabase.auth.verifyOtp({
+          email,
+          token,
+          type: 'email',
+        });
+        if (error) throw error;
+        userId = data.user?.id;
+        userEmail = data.user?.email ?? email;
+      } else {
+        // SMS: ask edge fn to verify + mint a magic link, then exchange via verifyOtp.
+        const { data, error } = await supabase.functions.invoke('verify-sms-otp', {
+          body: { phone, code: token, intended_role: role },
+        });
+        if (error) throw error;
+        const payload = data as any;
+        if (payload?.error) throw new Error(payload.error);
+        const hashed = payload?.hashed_token as string | undefined;
+        const linkEmail = payload?.email as string | undefined;
+        if (!hashed || !linkEmail) throw new Error('Verification did not return a session token.');
+        const { data: verified, error: vErr } = await supabase.auth.verifyOtp({
+          email: linkEmail,
+          token_hash: hashed,
+          type: 'magiclink',
+        });
+        if (vErr) throw vErr;
+        userId = verified.user?.id ?? payload?.user_id;
+        userEmail = linkEmail;
+      }
+
       if (userId && role) {
-        // Mirror existing onboarding writes — binary role only, sub-category
-        // remains owned by the existing post-signup onboarding flow.
         await supabase.from('user_roles').upsert(
           { user_id: userId, role },
           { onConflict: 'user_id,role', ignoreDuplicates: true },
         );
-        await supabase
-          .from('profiles')
-          .update({ user_type: role })
-          .eq('user_id', userId);
+        await supabase.from('profiles').update({ user_type: role }).eq('user_id', userId);
       }
       if (validatedCode && userId) {
         await supabase.rpc('redeem_access_code', {
           p_code: code.trim().toUpperCase(),
           p_user_id: userId,
-          p_email: email,
+          p_email: userEmail ?? email,
         });
       }
       toast.success('Welcome to Barber Hub.');
@@ -194,14 +250,24 @@ export function AuthModalV2({
   };
 
   const handleResend = async () => {
-    if (resendIn > 0 || !email) return;
+    if (resendIn > 0) return;
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { shouldCreateUser: mode === 'signup' },
-      });
-      if (error) throw error;
+      if (channel === 'email') {
+        if (!email) return;
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: { shouldCreateUser: mode === 'signup' },
+        });
+        if (error) throw error;
+      } else {
+        if (!phone) return;
+        const { data, error } = await supabase.functions.invoke('send-sms-otp', {
+          body: { phone },
+        });
+        if (error) throw error;
+        if ((data as any)?.error) throw new Error((data as any).error);
+      }
       setResendIn(60);
       toast.success('New code sent.');
     } catch (e: any) {
@@ -222,8 +288,8 @@ export function AuthModalV2({
           <DialogDescription className="text-white/50">
             {step === 'gate' && (vipMode ? 'A VIP invite code is required to enter.' : 'Enter a promo or referral code, or continue without one.')}
             {step === 'role' && 'Choose how you’ll experience Barber Hub.'}
-            {step === 'identity' && (mode === 'signin' ? 'Enter your email — we’ll send a 6-digit code.' : 'We’ll email you a 6-digit code — no password needed.')}
-            {step === 'verify' && `Enter the code we sent to ${email}.`}
+            {step === 'identity' && (mode === 'signin' ? 'Enter your email or phone — we’ll send a 6-digit code.' : 'We’ll send a 6-digit code to your email or phone — no password needed.')}
+            {step === 'verify' && `Enter the code we sent to ${channel === 'sms' ? phone : email}.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -306,33 +372,43 @@ export function AuthModalV2({
           </div>
         )}
 
-        {step === 'identity' && (
-          <div className="space-y-4">
-            <div>
-              <Label className="text-white/70">Email or Phone Number</Label>
-              <div className="relative mt-1">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
-                <Input
-                  value={identity}
-                  onChange={(e) => setIdentity(e.target.value)}
-                  placeholder="you@example.com"
-                  className="pl-9 bg-white/5 border-white/10 text-white"
-                  autoFocus
-                  onKeyDown={(e) => e.key === 'Enter' && handleIdentitySubmit()}
-                />
+        {step === 'identity' && (() => {
+          const detected = classifyIdentity(identity, defaultCountry);
+          const Icon = detected?.channel === 'sms' ? Phone : Mail;
+          return (
+            <div className="space-y-4">
+              <div>
+                <Label className="text-white/70">Email or Phone Number</Label>
+                <div className="relative mt-1">
+                  <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                  <Input
+                    value={identity}
+                    onChange={(e) => setIdentity(e.target.value)}
+                    placeholder="you@example.com  or  +1 555 123 4567"
+                    className="pl-9 bg-white/5 border-white/10 text-white"
+                    autoFocus
+                    inputMode={detected?.channel === 'sms' ? 'tel' : 'email'}
+                    autoComplete={detected?.channel === 'sms' ? 'tel' : 'email'}
+                    onKeyDown={(e) => e.key === 'Enter' && handleIdentitySubmit()}
+                  />
+                </div>
+                <p className="mt-2 text-[11px] text-white/40">
+                  {detected?.channel === 'sms'
+                    ? `We’ll text a code to ${detected.value}. Msg & data rates may apply. Reply STOP to opt out.`
+                    : 'Use the email or phone tied to your account. SMS uses standard message rates.'}
+                </p>
               </div>
-              <p className="mt-2 text-[11px] text-white/40">SMS login is in beta — email only for now.</p>
-            </div>
-            <Button onClick={handleIdentitySubmit} disabled={loading} className="w-full bg-orange-500 hover:bg-orange-600">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send 6-digit code'}
-            </Button>
-            {mode === 'signup' && !intendedRole && (
-              <Button variant="ghost" size="sm" onClick={() => setStep('role')} className="text-white/50">
-                <ArrowLeft className="h-3 w-3 mr-1" /> Change role
+              <Button onClick={handleIdentitySubmit} disabled={loading} className="w-full bg-orange-500 hover:bg-orange-600">
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send 6-digit code'}
               </Button>
-            )}
-          </div>
-        )}
+              {mode === 'signup' && !intendedRole && (
+                <Button variant="ghost" size="sm" onClick={() => setStep('role')} className="text-white/50">
+                  <ArrowLeft className="h-3 w-3 mr-1" /> Change role
+                </Button>
+              )}
+            </div>
+          );
+        })()}
 
         {step === 'verify' && (
           <div className="space-y-4">
@@ -364,7 +440,7 @@ export function AuthModalV2({
             </Button>
             <div className="flex items-center justify-between text-xs">
               <button onClick={() => setStep('identity')} className="text-white/50 hover:text-white">
-                Edit email
+                Edit {channel === 'sms' ? 'phone' : 'email'}
               </button>
               <button
                 onClick={handleResend}

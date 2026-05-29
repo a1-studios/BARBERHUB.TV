@@ -5,6 +5,7 @@ import { useProfileValidator } from '@/hooks/useProfileValidator';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { AuthDialog } from '@/components/auth/AuthDialog';
+import { AuthModalV2 } from '@/components/auth/AuthModalV2';
 import { ProfileSetupPrompt } from '@/components/auth/ProfileSetupPrompt';
 import { CreatorActionBar } from '@/components/creator/CreatorActionBar';
 import { UploadDrawer } from '@/components/creator/UploadDrawer';
@@ -30,6 +31,7 @@ export default function CreatorHub() {
   const [showChallenge, setShowChallenge] = useState(false);
   const [showDeals, setShowDeals] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [showSignup, setShowSignup] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<AcademyCourse | null>(null);
 
   // Redirect non-barbers
@@ -66,13 +68,17 @@ export default function CreatorHub() {
           <p className="text-sm text-muted-foreground text-center max-w-xs mb-6">
             Upload masterclasses, tutorials, and tips. Build your legacy and earn Barber Bucks.
           </p>
-          <AuthDialog>
-            <Button size="lg" className="btn-primary">
-              <Scissors className="mr-2 h-5 w-5" />
-              Start Creating
-            </Button>
-          </AuthDialog>
+          <Button size="lg" className="btn-primary" onClick={() => setShowSignup(true)}>
+            <Scissors className="mr-2 h-5 w-5" />
+            Start Creating
+          </Button>
         </div>
+        <AuthModalV2
+          open={showSignup}
+          onClose={() => setShowSignup(false)}
+          intendedRole="barber"
+          mode="signup"
+        />
       </>
     );
   }
