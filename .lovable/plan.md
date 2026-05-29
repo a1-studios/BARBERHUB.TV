@@ -1,26 +1,20 @@
 ## Plan
 
-### 1. `VelvetRopeLanding.tsx` — breathing space
-- Add `mt-3` (or `pt-3`) gap between the header card and the FeatureHighlightReel container so the reel no longer kisses the header.
+### 1. `OrbitingSlogan.tsx` — tilted 3D halo ring
+- Tilt the orbit ring on the X-axis to read as a 3D angel halo around the globe instead of a flat 2D circle.
+- Wrap the SVG in a perspective container: outer `div` with `style={{ perspective: '800px' }}`.
+- Inner SVG gets `transform: rotateX(72deg)` (steep tilt so it reads as a ring around the equator from a slight top view) and the existing `orbit-spin` rotation runs on a child `<g>` instead of the whole SVG so rotation happens in the tilted plane.
+- Switch the spin from CSS rotate (which only rotates 2D) to SMIL `<animateTransform>` inside the SVG `<g>`, so it spins inside the tilted plane and properly orbits around the globe like a ring.
+- Increase radius slightly and reduce font size so the text wraps cleanly along the tilted ellipse.
 
-### 2. `FeatureHighlightReel.tsx` — manual control + clean globe
-- Remove auto-advance `useEffect` / `setTimeout`. Slides only change via swipe or dot click.
-- Add touch swipe handlers (`onTouchStart` / `onTouchEnd`, ~50px threshold) on the slide container for left/right navigation.
-- Keep dots clickable (already done) — make them larger tap targets.
-- For the `global` slide ONLY: remove the `SlideShell` wrapper (no top tag chip, no bottom title/sub bar, no inner radial background box). Render the globe full-bleed inside the reel card so the user has maximum room to drag it. The orbiting slogan handles the messaging.
-- Remove the `LegendsHeadline` slogan overlay from the top of the reel (it currently covers all slides).
+### 2. `FeatureHighlightReel.tsx` — transparent globe slide, no card
+- For the `global` slide specifically, render OUTSIDE the bordered card chrome. Approach: detect when `idx === 0` and conditionally drop the border + shadow + background on the reel container, or render the globe slide as a sibling that overlays full-bleed with no border.
+- Cleanest implementation: remove the slide's inner `bg-black` wrapper, and on the outer reel container apply conditional classes — when current slide is `global`, use `border-transparent bg-transparent shadow-none`; otherwise keep `border-orange-500/30 bg-black/60 shadow-[0_0_24px_rgba(249,115,22,0.25)]`.
 
-### 3. New `OrbitingSlogan.tsx` (rendered inside the globe slide)
-- Words "WHERE · BARBERS · BECOME · LEGENDS · ★ ·" rotating in a circle around the 3D globe using SVG `<textPath>` on a `<circle>` with a CSS `@keyframes spin` animation (~30s linear infinite).
-- Positioned absolutely, centered on the globe, `pointer-events-none` so it never blocks globe dragging.
-- Orange for WHERE/BECOME, white for BARBERS/LEGENDS to preserve the existing two-color logic.
-- Only renders on the globe slide (so other slides keep their own titles).
-
-### 4. `LegendsHeadline.tsx`
-- No longer used on the landing; leave file in place (still imported elsewhere potentially) but remove its usage from the reel & landing.
+### 3. `VelvetRopeLanding.tsx` — more breathing space
+- Increase the gap between the header and the feature reel container. Change the reel wrapper's `pt-4` to `pt-8` (and add `mt-2` on the wrapper) so there's a clear visual separation.
 
 ### Technical notes
-- Swipe detection: track `touchStartX` in a ref; on touchend compare delta; `(idx + dir + slides.length) % slides.length`.
-- SVG textPath orbit: viewBox 0 0 400 400, circle r≈170, rotating group via `transform-origin: center; animation: orbit 28s linear infinite`.
-- Globe slide structure becomes: `<div class="absolute inset-0"> <GlobePulse /> <OrbitingSlogan /> </div>` — no chrome.
-- Non-globe slides keep their existing `SlideShell` with tag + title + subtitle.
+- SMIL animateTransform: `<animateTransform attributeName="transform" type="rotate" from="0 200 200" to="360 200 200" dur="32s" repeatCount="indefinite" />` applied to the rotating `<g>` containing the textPath.
+- Tilted plane uses CSS `transform: rotateX(72deg)` on the SVG; the SVG itself doesn't spin — only the inner group spins via SMIL, which keeps the spin axis perpendicular to the tilted ring (true halo effect).
+- Globe slide becomes background-free so the globe floats directly over the page's dark background with no card border around it.
