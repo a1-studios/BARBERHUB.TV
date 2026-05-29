@@ -61,6 +61,9 @@ const slides: Slide[] = [
     ),
   },
   {
+    id: 'map',
+    label: 'Global Map',
+    render: () => (
       <SlideShell tag="Global Map" title="Find Barbers Anywhere" sub="Live map of barbers worldwide">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,#0c2340_0%,#000_70%)]">
           {/* fake lat/long grid */}
