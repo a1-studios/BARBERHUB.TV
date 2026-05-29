@@ -204,12 +204,13 @@ export const FeatureHighlightReel = () => {
   const [idx, setIdx] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(() => {
+    const dwell = slides[idx]?.durationMs ?? 4000;
+    const id = setTimeout(() => {
       if (document.visibilityState !== 'visible') return;
       setIdx((i) => (i + 1) % slides.length);
-    }, 4000);
-    return () => clearInterval(id);
-  }, []);
+    }, dwell);
+    return () => clearTimeout(id);
+  }, [idx]);
 
   return (
     <div className="w-full h-full min-h-[180px] flex flex-col">
@@ -224,6 +225,10 @@ export const FeatureHighlightReel = () => {
             {s.render()}
           </div>
         ))}
+        {/* Slogan overlay — sits inside the feature card on every slide */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 px-3 pt-7 pb-6 bg-gradient-to-b from-black/85 via-black/50 to-transparent">
+          <LegendsHeadline />
+        </div>
       </div>
       {/* dots */}
       <div className="flex items-center justify-center gap-1.5 pt-2">
