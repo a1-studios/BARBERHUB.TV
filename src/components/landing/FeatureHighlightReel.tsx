@@ -2,15 +2,14 @@ import { useEffect, useState } from 'react';
 import { MapPin, Search, Radio, Coins } from 'lucide-react';
 import { GlobePulse } from '@/components/ui/cobe-globe-pulse';
 import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
+import { LegendsHeadline } from './LegendsHeadline';
 
 /**
- * Auto-rotating highlight reel showcasing platform features in place of the static
- * watch feed strip. Five slides cycling every 4s — map, find a barber, global flags,
- * live battles, earn BB.
+ * Auto-rotating highlight reel. Globe is the first slide and dwells 7s so users
+ * can interact with it; other slides advance every 4s.
  */
 
-
-type Slide = { id: string; label: string; render: () => React.ReactNode };
+type Slide = { id: string; label: string; durationMs?: number; render: () => React.ReactNode };
 
 const SlideShell = ({
   tag,
@@ -47,6 +46,20 @@ const SlideShell = ({
 );
 
 const slides: Slide[] = [
+  {
+    id: 'global',
+    label: 'Global',
+    durationMs: 7000,
+    render: () => (
+      <SlideShell tag="Worldwide" title="Barbers in 60+ Countries" sub="Drag the globe — one global championship">
+        <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(ellipse_at_center,#1a1a2e_0%,#000_75%)]">
+          <div className="h-full aspect-square max-h-full">
+            <GlobePulse />
+          </div>
+        </div>
+      </SlideShell>
+    ),
+  },
   {
     id: 'map',
     label: 'Global Map',
@@ -122,19 +135,6 @@ const slides: Slide[] = [
     ),
   },
   {
-    id: 'global',
-    label: 'Global',
-    render: () => (
-      <SlideShell tag="Worldwide" title="Barbers in 60+ Countries" sub="One global championship">
-        <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(ellipse_at_center,#1a1a2e_0%,#000_75%)]">
-          <div className="h-full aspect-square max-h-full">
-            <GlobePulse />
-          </div>
-        </div>
-      </SlideShell>
-    ),
-  },
-  {
     id: 'live',
     label: 'Live',
     render: () => (
@@ -204,12 +204,13 @@ export const FeatureHighlightReel = () => {
   const [idx, setIdx] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(() => {
+    const dwell = slides[idx]?.durationMs ?? 4000;
+    const id = setTimeout(() => {
       if (document.visibilityState !== 'visible') return;
       setIdx((i) => (i + 1) % slides.length);
-    }, 4000);
-    return () => clearInterval(id);
-  }, []);
+    }, dwell);
+    return () => clearTimeout(id);
+  }, [idx]);
 
   return (
     <div className="w-full h-full min-h-[180px] flex flex-col">
@@ -224,6 +225,10 @@ export const FeatureHighlightReel = () => {
             {s.render()}
           </div>
         ))}
+        {/* Slogan overlay — sits inside the feature card on every slide */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 px-3 pt-7 pb-6 bg-gradient-to-b from-black/85 via-black/50 to-transparent">
+          <LegendsHeadline />
+        </div>
       </div>
       {/* dots */}
       <div className="flex items-center justify-center gap-1.5 pt-2">
