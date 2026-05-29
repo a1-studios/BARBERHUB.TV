@@ -44,12 +44,8 @@ export const VelvetRopeLanding = () => {
           </header>
         </div>
 
-        {/* Headline now lives inside the Feature Highlight Reel as an overlay */}
-
-
-
         {/* Feature Highlight Reel — takes available slack */}
-        <div className="flex-1 min-h-0 flex flex-col justify-center px-3 py-2 overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col justify-center px-3 pt-4 pb-2 overflow-hidden">
           <FeatureHighlightReel />
         </div>
 
