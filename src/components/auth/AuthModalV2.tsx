@@ -18,6 +18,7 @@ interface AuthModalV2Props {
   onClose: () => void;
   mode?: 'signup' | 'signin';
   previewBarber?: PublicBarber | null;
+  prefillIdentity?: string;
 }
 
 const EMAIL_RE = /^\S+@\S+\.\S+$/;
@@ -50,6 +51,7 @@ export function AuthModalV2({
   onClose,
   mode = 'signup',
   previewBarber = null,
+  prefillIdentity = '',
 }: AuthModalV2Props) {
   const [step, setStep] = useState<Step>('identity');
   const [identity, setIdentity] = useState('');
@@ -65,7 +67,7 @@ export function AuthModalV2({
   useEffect(() => {
     if (open) {
       setStep('identity');
-      setIdentity('');
+      setIdentity(prefillIdentity ?? '');
       setChannel('email');
       setEmail('');
       setPhone('');
@@ -73,7 +75,7 @@ export function AuthModalV2({
       setLoading(false);
       setResendIn(0);
     }
-  }, [open, mode]);
+  }, [open, mode, prefillIdentity]);
 
   useEffect(() => {
     if (resendIn <= 0) return;
