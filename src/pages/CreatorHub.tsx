@@ -5,6 +5,7 @@ import { useProfileValidator } from '@/hooks/useProfileValidator';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { AuthDialog } from '@/components/auth/AuthDialog';
+import { AuthModalV2 } from '@/components/auth/AuthModalV2';
 import { ProfileSetupPrompt } from '@/components/auth/ProfileSetupPrompt';
 import { CreatorActionBar } from '@/components/creator/CreatorActionBar';
 import { UploadDrawer } from '@/components/creator/UploadDrawer';
