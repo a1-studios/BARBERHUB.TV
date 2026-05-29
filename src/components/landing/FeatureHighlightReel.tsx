@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { MapPin, Search, Radio, Coins, Globe2 } from 'lucide-react';
+import { MapPin, Search, Radio, Coins } from 'lucide-react';
+import { GlobePulse } from '@/components/ui/cobe-globe-pulse';
 import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
 
 /**
@@ -8,7 +9,6 @@ import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
  * live battles, earn BB.
  */
 
-const FLAGS = ['🇺🇸', '🇨🇦', '🇲🇽', '🇧🇷', '🇬🇧', '🇫🇷', '🇪🇸', '🇮🇹', '🇩🇪', '🇳🇬', '🇿🇦', '🇪🇬', '🇮🇳', '🇯🇵', '🇰🇷', '🇨🇳', '🇦🇺', '🇦🇪', '🇸🇦', '🇹🇷', '🇦🇷', '🇨🇴', '🇩🇴', '🇯🇲', '🇵🇭'];
 
 type Slide = { id: string; label: string; render: () => React.ReactNode };
 
@@ -126,16 +126,9 @@ const slides: Slide[] = [
     label: 'Global',
     render: () => (
       <SlideShell tag="Worldwide" title="Barbers in 60+ Countries" sub="One global championship">
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[radial-gradient(ellipse_at_center,#1a1a2e_0%,#000_75%)]">
-          <Globe2 className="h-8 w-8 text-cyan-300 animate-[spin_8s_linear_infinite] drop-shadow-[0_0_10px_rgba(34,211,238,0.7)]" />
-          <div className="relative w-full overflow-hidden">
-            <div className="flex gap-3 animate-[marquee_22s_linear_infinite] whitespace-nowrap text-2xl">
-              {[...FLAGS, ...FLAGS].map((f, i) => (
-                <span key={i} className="inline-block">
-                  {f}
-                </span>
-              ))}
-            </div>
+        <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(ellipse_at_center,#1a1a2e_0%,#000_75%)]">
+          <div className="h-full aspect-square max-h-full">
+            <GlobePulse />
           </div>
         </div>
       </SlideShell>
