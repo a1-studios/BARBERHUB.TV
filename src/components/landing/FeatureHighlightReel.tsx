@@ -2,15 +2,14 @@ import { useEffect, useState } from 'react';
 import { MapPin, Search, Radio, Coins } from 'lucide-react';
 import { GlobePulse } from '@/components/ui/cobe-globe-pulse';
 import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
+import { LegendsHeadline } from './LegendsHeadline';
 
 /**
- * Auto-rotating highlight reel showcasing platform features in place of the static
- * watch feed strip. Five slides cycling every 4s — map, find a barber, global flags,
- * live battles, earn BB.
+ * Auto-rotating highlight reel. Globe is the first slide and dwells 7s so users
+ * can interact with it; other slides advance every 4s.
  */
 
-
-type Slide = { id: string; label: string; render: () => React.ReactNode };
+type Slide = { id: string; label: string; durationMs?: number; render: () => React.ReactNode };
 
 const SlideShell = ({
   tag,
