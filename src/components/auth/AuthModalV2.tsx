@@ -145,31 +145,41 @@ export function AuthModalV2({
     setStep('identity');
   };
 
-  // Step 3: Identity
+  // Step 3: Identity — smart-detect email vs phone
   const handleIdentitySubmit = async () => {
-    const v = identity.trim();
-    if (PHONE_RE.test(v) && !EMAIL_RE.test(v)) {
-      toast.info('SMS login is in beta. Please use your email.');
-      return;
-    }
-    if (!EMAIL_RE.test(v)) {
-      toast.error('Enter a valid email address.');
+    const detected = classifyIdentity(identity, defaultCountry);
+    if (!detected) {
+      toast.error('Enter a valid email address or phone number.');
       return;
     }
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email: v,
-        options: {
-          shouldCreateUser: mode === 'signup',
-          data: role ? { intended_role: role } : undefined,
-        },
-      });
-      if (error) throw error;
-      setEmail(v);
+      if (detected.channel === 'email') {
+        const { error } = await supabase.auth.signInWithOtp({
+          email: detected.value,
+          options: {
+            shouldCreateUser: mode === 'signup',
+            data: role ? { intended_role: role } : undefined,
+          },
+        });
+        if (error) throw error;
+        setEmail(detected.value);
+        setPhone('');
+        setChannel('email');
+        toast.success('Code sent. Check your inbox.');
+      } else {
+        const { data, error } = await supabase.functions.invoke('send-sms-otp', {
+          body: { phone: detected.value },
+        });
+        if (error) throw error;
+        if ((data as any)?.error) throw new Error((data as any).error);
+        setPhone(detected.value);
+        setEmail('');
+        setChannel('sms');
+        toast.success('Code sent via SMS.');
+      }
       setStep('verify');
       setResendIn(60);
-      toast.success('Code sent. Check your inbox.');
     } catch (e: any) {
       toast.error(e?.message ?? 'Could not send code.');
     } finally {
@@ -177,35 +187,56 @@ export function AuthModalV2({
     }
   };
 
-  // Step 4: Verify
+  // Step 4: Verify (channel-aware)
   const handleVerify = async (token: string) => {
     if (token.length !== 6) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.verifyOtp({
-        email,
-        token,
-        type: 'email',
-      });
-      if (error) throw error;
-      const userId = data.user?.id;
+      let userId: string | undefined;
+      let userEmail: string | undefined;
+
+      if (channel === 'email') {
+        const { data, error } = await supabase.auth.verifyOtp({
+          email,
+          token,
+          type: 'email',
+        });
+        if (error) throw error;
+        userId = data.user?.id;
+        userEmail = data.user?.email ?? email;
+      } else {
+        // SMS: ask edge fn to verify + mint a magic link, then exchange via verifyOtp.
+        const { data, error } = await supabase.functions.invoke('verify-sms-otp', {
+          body: { phone, code: token, intended_role: role },
+        });
+        if (error) throw error;
+        const payload = data as any;
+        if (payload?.error) throw new Error(payload.error);
+        const hashed = payload?.hashed_token as string | undefined;
+        const linkEmail = payload?.email as string | undefined;
+        if (!hashed || !linkEmail) throw new Error('Verification did not return a session token.');
+        const { data: verified, error: vErr } = await supabase.auth.verifyOtp({
+          email: linkEmail,
+          token_hash: hashed,
+          type: 'magiclink',
+        });
+        if (vErr) throw vErr;
+        userId = verified.user?.id ?? payload?.user_id;
+        userEmail = linkEmail;
+      }
+
       if (userId && role) {
-        // Mirror existing onboarding writes — binary role only, sub-category
-        // remains owned by the existing post-signup onboarding flow.
         await supabase.from('user_roles').upsert(
           { user_id: userId, role },
           { onConflict: 'user_id,role', ignoreDuplicates: true },
         );
-        await supabase
-          .from('profiles')
-          .update({ user_type: role })
-          .eq('user_id', userId);
+        await supabase.from('profiles').update({ user_type: role }).eq('user_id', userId);
       }
       if (validatedCode && userId) {
         await supabase.rpc('redeem_access_code', {
           p_code: code.trim().toUpperCase(),
           p_user_id: userId,
-          p_email: email,
+          p_email: userEmail ?? email,
         });
       }
       toast.success('Welcome to Barber Hub.');
@@ -219,14 +250,24 @@ export function AuthModalV2({
   };
 
   const handleResend = async () => {
-    if (resendIn > 0 || !email) return;
+    if (resendIn > 0) return;
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { shouldCreateUser: mode === 'signup' },
-      });
-      if (error) throw error;
+      if (channel === 'email') {
+        if (!email) return;
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: { shouldCreateUser: mode === 'signup' },
+        });
+        if (error) throw error;
+      } else {
+        if (!phone) return;
+        const { data, error } = await supabase.functions.invoke('send-sms-otp', {
+          body: { phone },
+        });
+        if (error) throw error;
+        if ((data as any)?.error) throw new Error((data as any).error);
+      }
       setResendIn(60);
       toast.success('New code sent.');
     } catch (e: any) {
