@@ -440,7 +440,7 @@ export function AuthModalV2({
             </Button>
             <div className="flex items-center justify-between text-xs">
               <button onClick={() => setStep('identity')} className="text-white/50 hover:text-white">
-                Edit email
+                Edit {channel === 'sms' ? 'phone' : 'email'}
               </button>
               <button
                 onClick={handleResend}
