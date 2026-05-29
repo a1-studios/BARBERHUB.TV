@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { MapPin, Search, Radio, Coins, Globe2 } from 'lucide-react';
+import { MapPin, Search, Radio, Coins } from 'lucide-react';
+import { GlobePulse } from '@/components/ui/cobe-globe-pulse';
 import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
 
 /**
