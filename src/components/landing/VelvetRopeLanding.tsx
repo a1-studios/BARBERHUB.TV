@@ -74,13 +74,19 @@ export const VelvetRopeLanding = () => {
           <LiveStatsRow />
         </section>
 
-        <footer className="flex-none px-3 pb-2 text-center">
-          <button
-            onClick={() => setAuthOpen(true)}
-            className="text-[11px] text-white/50 hover:text-white transition"
-          >
-            Already a member? <span className="underline text-white/80">Sign in</span>
-          </button>
+        <footer className="flex-none px-3 pb-2 text-center space-y-1">
+          <nav className="flex items-center justify-center gap-3 text-[10px] text-white/45">
+            <a href="/terms" className="hover:text-white/80 transition">Terms</a>
+            <span className="text-white/20">·</span>
+            <a href="/privacy" className="hover:text-white/80 transition">Privacy</a>
+            <span className="text-white/20">·</span>
+            <a href="/aup" className="hover:text-white/80 transition">Acceptable Use</a>
+            <span className="text-white/20">·</span>
+            <a href="/cookies" className="hover:text-white/80 transition">Cookies</a>
+          </nav>
+          <p className="text-[10px] text-white/35">
+            © 2026 BARBER-HUB · Operated by Barber Hub LLC
+          </p>
         </footer>
       </div>
 
