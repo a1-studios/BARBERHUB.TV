@@ -136,3 +136,7 @@ project_id = "msuepyfssovvkjzpfjzu"
     verify_jwt = false
   [functions.poll-stream-status-cron]
     verify_jwt = false
+  [functions.send-sms-otp]
+    verify_jwt = false
+  [functions.verify-sms-otp]
+    verify_jwt = false

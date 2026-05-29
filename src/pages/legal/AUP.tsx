@@ -24,7 +24,24 @@ const AUP = () => (
 
     <Section n="3" title="Live Streaming Rules">
       <p>You must be visible during barber service streams. We reserve the right to terminate any stream violating this policy without prior notice.</p>
+      <p>
+        <strong>Zero tolerance for copyrighted material.</strong> Broadcasting unauthorized copyrighted content during
+        a live stream — including but not limited to commercial music, films, television programs, sporting events,
+        or any third-party audio/visual work for which you do not hold a license or other valid right — is strictly
+        prohibited. Violations result in:
+      </p>
+      <ul>
+        <li>Immediate termination of the live stream without prior notice.</li>
+        <li>A DMCA strike against the offending account, per our <a href="/dmca">Copyright / DMCA Policy</a>.</li>
+        <li>Forfeiture of any associated competition entry, BB earnings from the stream, and prize-pool eligibility.</li>
+        <li>Permanent account ban for repeat offenses.</li>
+      </ul>
+      <p>
+        You are solely responsible for ensuring that all audio, visuals, branding, and background content shown in
+        your stream are either original, licensed, or in the public domain.
+      </p>
     </Section>
+
 
     <Section n="4" title="Enforcement">
       <p>We may issue warnings, temporary suspensions, or permanent bans based on severity. Appeals can be sent to <a href="mailto:APPEALS@BARBERHUB.TV">APPEALS@BARBERHUB.TV</a> within 14 days.</p>

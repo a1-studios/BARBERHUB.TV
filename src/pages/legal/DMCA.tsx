@@ -30,11 +30,12 @@ export default function DMCA() {
         <h2><span className="num">3.</span> Designated Copyright Agent</h2>
         <p>
           DMCA notices should be sent to:<br />
-          <strong>Barber Hub LLC — Copyright Agent</strong><br />
+          <strong>A1Studios Film LLC — Copyright Agent</strong><br />
           175 East Shore Road, Great Neck, NY<br />
           Email: <a href="mailto:dmca@barberhub.tv">dmca@barberhub.tv</a>
         </p>
       </section>
+
 
       <section>
         <h2><span className="num">4.</span> Counter-Notification</h2>
