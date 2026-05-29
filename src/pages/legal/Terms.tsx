@@ -162,7 +162,50 @@ const Terms = () => (
 
       <SubHeading>5.5 Future Token</SubHeading>
       <p>Barber-Hub may introduce a blockchain-based token in the future. Any such transition will be governed by separate terms and will not automatically affect existing BB balances without notice and consent.</p>
+
+      <SubHeading>5.6 Virtual Currency (Barber Bucks) — Status & Payouts</SubHeading>
+      <p>
+        Barber Bucks ("BB") are a <strong>non-transferable digital platform utility</strong> issued by Barber-Hub for
+        use exclusively within the Platform. BB are not legal tender, not a security, not a stored-value instrument,
+        and have <strong>no inherent cash value outside the Platform</strong>. BB cannot be transferred between user
+        accounts, gifted off-platform, or redeemed for cash directly from Barber-Hub.
+      </p>
+      <p>
+        Fiat payouts (i.e. converting eligible BB earnings to real-world currency in your bank account) are handled
+        entirely by our third-party payment processor, <strong>Stripe</strong>, via Stripe Connect. All payouts are
+        subject to Stripe's own terms, identity verification, and tax reporting requirements, and to the following
+        additional gating:
+      </p>
+      <ul>
+        <li><strong>18+ age verification</strong> is mandatory before any payout is initiated.</li>
+        <li><strong>KYC (Know Your Customer)</strong> verification through Stripe must be complete and in good standing.</li>
+        <li>Only the Barber account type is eligible for fiat payouts; Fan accounts may earn and spend BB on-platform but cannot cash out.</li>
+        <li>Barber-Hub reserves the right to withhold or claw back BB and payouts where fraud, manipulation, or violation of these Terms is suspected.</li>
+      </ul>
     </Section>
+
+    <Section n="5b" title="Mobile Messaging (SMS)">
+      <p>
+        <strong>
+          By entering your phone number during sign-up or login, you consent to receive secure, automated SMS text
+          messages containing One-Time Passwords (OTPs). Message frequency varies. Message and data rates may apply.
+          You can cancel the SMS service at any time by replying STOP. For assistance, reply HELP or contact
+          support@barberhub.tv.
+        </strong>
+      </p>
+      <p>
+        SMS messages from Barber-Hub are transactional in nature (account authentication and security) and are not
+        used for marketing or promotional purposes. We do not share your phone number or SMS opt-in data with any
+        third party for marketing. See our <a href="/privacy">Privacy Policy</a> for full details on how phone
+        numbers are handled.
+      </p>
+      <p>
+        Carriers are not liable for delayed or undelivered messages. Standard data and message rates from your
+        mobile carrier may apply. Supported carriers may vary; Barber-Hub does not guarantee delivery on every
+        carrier or in every country.
+      </p>
+    </Section>
+
 
     <Section n="6" title="Fan Donations">
       <p>Fans may send monetary donations to barbers through the platform. Donations are processed via Stripe. Barber-Hub takes a <strong>5% platform fee</strong> on all donations. Donations are voluntary and non-refundable.</p>
