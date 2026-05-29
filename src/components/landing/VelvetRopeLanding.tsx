@@ -110,6 +110,11 @@ export const VelvetRopeLanding = () => {
           </p>
         </section>
 
+        {/* Stats */}
+        <section className="flex-none px-3 pt-2 pb-1">
+          <LiveStatsRow />
+        </section>
+
         <footer className="flex-none px-3 pb-2 text-center">
           <button
             onClick={() => openAuth('signin')}
