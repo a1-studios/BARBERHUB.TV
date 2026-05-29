@@ -1,24 +1,21 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { supabase } from '@/integrations/supabase/client';
-import { usePlatformState } from '@/hooks/usePlatformState';
 import { toast } from 'sonner';
-import { Loader2, Mail, Phone, Scissors, Users, ShieldCheck, KeyRound, ArrowLeft } from 'lucide-react';
+import { Loader2, Mail, Phone, ShieldCheck, KeyRound } from 'lucide-react';
 import { PublicBarber, countryFlag } from '@/components/landing/teasers/useLandingData';
 import { parsePhoneNumberFromString, type CountryCode } from 'libphonenumber-js';
 
-type Role = 'barber' | 'fan';
-type Step = 'gate' | 'role' | 'identity' | 'verify';
+type Step = 'identity' | 'verify';
 type Channel = 'email' | 'sms';
 
 interface AuthModalV2Props {
   open: boolean;
   onClose: () => void;
-  intendedRole?: Role | null;
   mode?: 'signup' | 'signin';
   previewBarber?: PublicBarber | null;
 }
@@ -44,27 +41,19 @@ function classifyIdentity(raw: string, defaultCountry: CountryCode = 'US'):
 }
 
 /**
- * Parallel OTP + VIP auth modal. Isolated from the legacy AuthDialog/useAuth API.
- * Mounted only by VelvetRopeLanding. Uses supabase.auth.* directly so we don't
- * touch existing exports while the new flow is being validated.
+ * Frictionless OTP auth modal — identity → verify, no gate, no role selection.
+ * New users land as the default `fan` role (DB trigger). Role + VIP upgrade
+ * happens later inside ProfileCompletionGate.
  */
 export function AuthModalV2({
   open,
   onClose,
-  intendedRole = null,
   mode = 'signup',
   previewBarber = null,
 }: AuthModalV2Props) {
-  const { value: vipModeRaw } = usePlatformState('global_vip_mode');
-  const vipMode = useMemo(() => vipModeRaw === 'true', [vipModeRaw]);
-
-  const [step, setStep] = useState<Step>(mode === 'signin' ? 'identity' : 'gate');
-  const [code, setCode] = useState('');
-  const [validatedCode, setValidatedCode] = useState<{ id: string; type: string } | null>(null);
-  const [role, setRole] = useState<Role | null>(intendedRole);
+  const [step, setStep] = useState<Step>('identity');
   const [identity, setIdentity] = useState('');
   const [defaultCountry] = useState<CountryCode>('US');
-  // Verified target after identity submit
   const [channel, setChannel] = useState<Channel>('email');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -73,13 +62,9 @@ export function AuthModalV2({
   const [resendIn, setResendIn] = useState(0);
   const resendTimer = useRef<number | null>(null);
 
-  // Reset on open
   useEffect(() => {
     if (open) {
-      setStep(mode === 'signin' ? 'identity' : 'gate');
-      setCode('');
-      setValidatedCode(null);
-      setRole(intendedRole ?? null);
+      setStep('identity');
       setIdentity('');
       setChannel('email');
       setEmail('');
@@ -88,9 +73,8 @@ export function AuthModalV2({
       setLoading(false);
       setResendIn(0);
     }
-  }, [open, intendedRole, mode]);
+  }, [open, mode]);
 
-  // Resend countdown
   useEffect(() => {
     if (resendIn <= 0) return;
     resendTimer.current = window.setTimeout(() => setResendIn((s) => s - 1), 1000);
@@ -99,53 +83,9 @@ export function AuthModalV2({
     };
   }, [resendIn]);
 
-  const closeAndReset = () => {
-    onClose();
-  };
+  const closeAndReset = () => onClose();
 
-  // Step 1: Gate
-  const handleGateSubmit = async () => {
-    const trimmed = code.trim().toUpperCase();
-    if (!trimmed) {
-      if (vipMode) {
-        toast.error('A VIP invite code is required.');
-        return;
-      }
-      // Optional + empty → skip validation
-      setValidatedCode(null);
-      advanceFromGate();
-      return;
-    }
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.rpc('validate_access_code', { p_code: trimmed });
-      if (error) throw error;
-      const row = Array.isArray(data) ? data[0] : data;
-      if (!row?.valid) {
-        toast.error('Invalid or exhausted code.');
-        return;
-      }
-      setValidatedCode({ id: row.code_id as string, type: row.type as string });
-      advanceFromGate();
-    } catch (e: any) {
-      toast.error(e?.message ?? 'Could not validate code.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const advanceFromGate = () => {
-    if (mode === 'signup' && !role) setStep('role');
-    else setStep('identity');
-  };
-
-  // Step 2: Role
-  const pickRole = (r: Role) => {
-    setRole(r);
-    setStep('identity');
-  };
-
-  // Step 3: Identity — smart-detect email vs phone
+  // Identity submit — smart-detect email vs phone
   const handleIdentitySubmit = async () => {
     const detected = classifyIdentity(identity, defaultCountry);
     if (!detected) {
@@ -157,10 +97,7 @@ export function AuthModalV2({
       if (detected.channel === 'email') {
         const { error } = await supabase.auth.signInWithOtp({
           email: detected.value,
-          options: {
-            shouldCreateUser: mode === 'signup',
-            data: role ? { intended_role: role } : undefined,
-          },
+          options: { shouldCreateUser: mode === 'signup' },
         });
         if (error) throw error;
         setEmail(detected.value);
@@ -187,27 +124,21 @@ export function AuthModalV2({
     }
   };
 
-  // Step 4: Verify (channel-aware)
+  // Verify (channel-aware)
   const handleVerify = async (token: string) => {
     if (token.length !== 6) return;
     setLoading(true);
     try {
-      let userId: string | undefined;
-      let userEmail: string | undefined;
-
       if (channel === 'email') {
-        const { data, error } = await supabase.auth.verifyOtp({
+        const { error } = await supabase.auth.verifyOtp({
           email,
           token,
           type: 'email',
         });
         if (error) throw error;
-        userId = data.user?.id;
-        userEmail = data.user?.email ?? email;
       } else {
-        // SMS: ask edge fn to verify + mint a magic link, then exchange via verifyOtp.
         const { data, error } = await supabase.functions.invoke('verify-sms-otp', {
-          body: { phone, code: token, intended_role: role },
+          body: { phone, code: token },
         });
         if (error) throw error;
         const payload = data as any;
@@ -215,29 +146,12 @@ export function AuthModalV2({
         const hashed = payload?.hashed_token as string | undefined;
         const linkEmail = payload?.email as string | undefined;
         if (!hashed || !linkEmail) throw new Error('Verification did not return a session token.');
-        const { data: verified, error: vErr } = await supabase.auth.verifyOtp({
+        const { error: vErr } = await supabase.auth.verifyOtp({
           email: linkEmail,
           token_hash: hashed,
           type: 'magiclink',
         });
         if (vErr) throw vErr;
-        userId = verified.user?.id ?? payload?.user_id;
-        userEmail = linkEmail;
-      }
-
-      if (userId && role) {
-        await supabase.from('user_roles').upsert(
-          { user_id: userId, role },
-          { onConflict: 'user_id,role', ignoreDuplicates: true },
-        );
-        await supabase.from('profiles').update({ user_type: role }).eq('user_id', userId);
-      }
-      if (validatedCode && userId) {
-        await supabase.rpc('redeem_access_code', {
-          p_code: code.trim().toUpperCase(),
-          p_user_id: userId,
-          p_email: userEmail ?? email,
-        });
       }
       toast.success('Welcome to Barber Hub.');
       closeAndReset();
@@ -283,17 +197,15 @@ export function AuthModalV2({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
             <ShieldCheck className="h-5 w-5 text-orange-500" />
-            {mode === 'signin' ? 'Welcome back' : 'Redeem your invite'}
+            {mode === 'signin' ? 'Welcome back' : 'Enter Barber Hub'}
           </DialogTitle>
           <DialogDescription className="text-white/50">
-            {step === 'gate' && (vipMode ? 'A VIP invite code is required to enter.' : 'Enter a promo or referral code, or continue without one.')}
-            {step === 'role' && 'Choose how you’ll experience Barber Hub.'}
-            {step === 'identity' && (mode === 'signin' ? 'Enter your email or phone — we’ll send a 6-digit code.' : 'We’ll send a 6-digit code to your email or phone — no password needed.')}
+            {step === 'identity' && 'Enter your email or phone — we’ll send a 6-digit code. No password needed.'}
             {step === 'verify' && `Enter the code we sent to ${channel === 'sms' ? phone : email}.`}
           </DialogDescription>
         </DialogHeader>
 
-        {previewBarber && (
+        {previewBarber && step === 'identity' && (
           <div className="rounded-xl border border-orange-500/40 bg-gradient-to-br from-orange-500/10 to-cyan-400/10 p-3 flex items-center gap-3">
             {previewBarber.avatar_url ? (
               <img
@@ -311,64 +223,9 @@ export function AuthModalV2({
                 {previewBarber.display_name ?? 'Barber'} {countryFlag(previewBarber.country_code)}
               </div>
               <div className="text-[11px] text-white/60 leading-tight mt-0.5">
-                Sign up or redeem a VIP invite to book, follow & throw down.
+                Sign up to book, follow & throw down.
               </div>
             </div>
-          </div>
-        )}
-
-
-        {step === 'gate' && (
-          <div className="space-y-4">
-            <div>
-              <Label className="text-white/70">{vipMode ? 'VIP Invite Code' : 'Promo / Referral Code (optional)'}</Label>
-              <Input
-                value={code}
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
-                placeholder="VIP-XXXXX"
-                className="mt-1 bg-white/5 border-white/10 text-white uppercase tracking-widest"
-                autoFocus
-              />
-            </div>
-            <Button onClick={handleGateSubmit} disabled={loading} className="w-full bg-orange-500 hover:bg-orange-600">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Continue'}
-            </Button>
-          </div>
-        )}
-
-        {step === 'role' && (
-          <div className="space-y-3">
-            <button
-              onClick={() => pickRole('barber')}
-              className="w-full text-left rounded-xl border border-white/10 hover:border-orange-500/60 hover:bg-orange-500/5 transition p-4"
-            >
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-orange-500/15 flex items-center justify-center">
-                  <Scissors className="h-5 w-5 text-orange-500" />
-                </div>
-                <div>
-                  <div className="font-semibold">I’m a Barber</div>
-                  <div className="text-xs text-white/50">Compete, stream, educate, earn BB.</div>
-                </div>
-              </div>
-            </button>
-            <button
-              onClick={() => pickRole('fan')}
-              className="w-full text-left rounded-xl border border-white/10 hover:border-cyan-400/60 hover:bg-cyan-400/5 transition p-4"
-            >
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-cyan-400/15 flex items-center justify-center">
-                  <Users className="h-5 w-5 text-cyan-400" />
-                </div>
-                <div>
-                  <div className="font-semibold">I’m a Fan</div>
-                  <div className="text-xs text-white/50">Vote, sponsor, watch live battles.</div>
-                </div>
-              </div>
-            </button>
-            <Button variant="ghost" size="sm" onClick={() => setStep('gate')} className="text-white/50">
-              <ArrowLeft className="h-3 w-3 mr-1" /> Back
-            </Button>
           </div>
         )}
 
@@ -401,11 +258,9 @@ export function AuthModalV2({
               <Button onClick={handleIdentitySubmit} disabled={loading} className="w-full bg-orange-500 hover:bg-orange-600">
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send 6-digit code'}
               </Button>
-              {mode === 'signup' && !intendedRole && (
-                <Button variant="ghost" size="sm" onClick={() => setStep('role')} className="text-white/50">
-                  <ArrowLeft className="h-3 w-3 mr-1" /> Change role
-                </Button>
-              )}
+              <p className="text-[10px] text-center text-white/40">
+                By continuing you agree to our Terms &amp; Privacy Policy.
+              </p>
             </div>
           );
         })()}

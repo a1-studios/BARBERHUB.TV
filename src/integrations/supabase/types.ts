@@ -3803,6 +3803,7 @@ export type Database = {
           user_id: string
           user_type: string | null
           username: string | null
+          welcome_bonus_state: string
         }
         Insert: {
           avatar_url?: string | null
@@ -3831,6 +3832,7 @@ export type Database = {
           user_id: string
           user_type?: string | null
           username?: string | null
+          welcome_bonus_state?: string
         }
         Update: {
           avatar_url?: string | null
@@ -3859,6 +3861,7 @@ export type Database = {
           user_id?: string
           user_type?: string | null
           username?: string | null
+          welcome_bonus_state?: string
         }
         Relationships: [
           {
@@ -5272,6 +5275,7 @@ export type Database = {
         Args: { battle_id_param: string; creation_id_param: string }
         Returns: boolean
       }
+      claim_welcome_bonus: { Args: never; Returns: Json }
       cleanup_completed_challenges: { Args: never; Returns: undefined }
       cleanup_old_community_notes: { Args: never; Returns: Json }
       complete_qualification_phase: {

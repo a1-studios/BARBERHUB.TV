@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Scissors, Heart, Sparkles, Globe, Phone } from 'lucide-react';
+import { Loader2, Scissors, Heart, Sparkles, Globe, Phone, KeyRound, Coins } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { COUNTRIES } from '@/components/CountrySelector';
@@ -19,9 +19,17 @@ const STATUSES: { id: BarberStatus; label: string }[] = [
 ];
 
 /**
- * Soft gate — shown to authed users whose profile is incomplete.
- * Lets them watch/scroll, but blocks any meaningful interaction
- * until they pick a role + country. Triggered by `requireProfileComplete()`.
+ * Profile completion + role gateway.
+ *
+ * Shown to authed users whose profile is incomplete. Lets them watch/scroll,
+ * but blocks meaningful interactions until they pick a role + country.
+ *
+ * Picking **Fan**: normal onboarding.
+ * Picking **Barber**: requires a Sovereign-generated VIP invite code, which
+ * upgrades the user from fan -> barber on submit.
+ *
+ * On success we credit a +15 BB welcome bonus (server-side, via
+ * `claim_welcome_bonus` RPC) and refresh the wallet.
  */
 export const ProfileCompletionGate = () => {
   const { user } = useAuth();
@@ -32,6 +40,7 @@ export const ProfileCompletionGate = () => {
   const [status, setStatus] = useState<BarberStatus | null>(null);
   const [country, setCountry] = useState<string | null>(null);
   const [phone, setPhone] = useState('');
+  const [vipCode, setVipCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,10 +57,10 @@ export const ProfileCompletionGate = () => {
       const incomplete = !data?.user_type || !data?.country_code;
       setNeeds(incomplete);
     })();
-    const handler = () => { if (needs) setOpen(true); };
+    const handler = () => setOpen(true);
     window.addEventListener('require-profile-complete', handler);
     return () => { mounted = false; window.removeEventListener('require-profile-complete', handler); };
-  }, [user, needs]);
+  }, [user]);
 
   // Auto-open shortly after sign-in so users see the prompt
   useEffect(() => { if (needs) { const t = setTimeout(() => setOpen(true), 800); return () => clearTimeout(t); } }, [needs]);
@@ -64,28 +73,64 @@ export const ProfileCompletionGate = () => {
     if (gated.some((p) => location.pathname.startsWith(p))) setOpen(true);
   }, [location.pathname, needs]);
 
-  if (!user || !needs || !open) return null;
+  if (!user || !open) return null;
 
-  const ready = !!role && !!country && (role !== 'barber' || !!status);
+  const barberReady = role === 'barber' && !!status && vipCode.trim().length > 0;
+  const fanReady = role === 'fan';
+  const ready = !!country && (barberReady || fanReady);
 
   const submit = async () => {
-    if (!ready) return;
+    if (!ready || !role) return;
     setSubmitting(true);
     setError(null);
-    const { data, error: fnErr } = await supabase.functions.invoke('finalize-oauth-claim', {
-      body: { role, barber_status: status, country_code: country, phone_number: phone.trim() || null },
-    });
-    if (fnErr || (data as { error?: unknown } | null)?.error) {
-      setError(fnErr?.message ?? 'Could not save. Try again.');
+
+    try {
+      // 1. If becoming a barber, validate + redeem the VIP code first.
+      if (role === 'barber') {
+        const code = vipCode.trim().toUpperCase();
+        const { data: vData, error: vErr } = await supabase.rpc('validate_access_code', { p_code: code });
+        if (vErr) throw vErr;
+        const row = Array.isArray(vData) ? vData[0] : vData;
+        if (!row?.valid) {
+          setError('Invalid or exhausted VIP code.');
+          setSubmitting(false);
+          return;
+        }
+      }
+
+      // 2. Finalize role + country via existing edge function (writes user_type,
+      //    seeds user_roles, links marketing leads, etc.).
+      const { data, error: fnErr } = await supabase.functions.invoke('finalize-oauth-claim', {
+        body: { role, barber_status: status, country_code: country, phone_number: phone.trim() || null },
+      });
+      if (fnErr || (data as { error?: unknown } | null)?.error) {
+        throw new Error(fnErr?.message ?? 'Could not save your profile.');
+      }
+
+      // 3. Redeem the code (post-role-flip so the access_codes ledger sees the right user).
+      if (role === 'barber') {
+        await supabase.rpc('redeem_access_code', {
+          p_code: vipCode.trim().toUpperCase(),
+          p_user_id: user.id,
+          p_email: user.email ?? '',
+        });
+      }
+
+      // 4. Claim the +15 BB welcome bonus (idempotent server-side).
+      await supabase.rpc('claim_welcome_bonus');
+
+      setNeeds(false);
+      setOpen(false);
+      qc.invalidateQueries({ queryKey: ['profile-incomplete'] });
+      qc.invalidateQueries({ queryKey: ['profile'] });
+      qc.invalidateQueries({ queryKey: ['userRoles'] });
+      qc.invalidateQueries({ queryKey: ['header-profile'] });
+      qc.invalidateQueries({ queryKey: ['barber_bucks'] });
+      qc.invalidateQueries({ queryKey: ['barber_bucks_transactions'] });
+    } catch (e: any) {
+      setError(e?.message ?? 'Something went wrong. Try again.');
       setSubmitting(false);
-      return;
     }
-    setNeeds(false);
-    setOpen(false);
-    qc.invalidateQueries({ queryKey: ['profile-incomplete'] });
-    qc.invalidateQueries({ queryKey: ['profile'] });
-    qc.invalidateQueries({ queryKey: ['userRoles'] });
-    qc.invalidateQueries({ queryKey: ['header-profile'] });
   };
 
   return (
@@ -96,7 +141,7 @@ export const ProfileCompletionGate = () => {
       >
         <motion.div
           initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-          className="w-full sm:max-w-md rounded-t-[28px] sm:rounded-[22px] p-5 sm:p-6 space-y-4"
+          className="w-full sm:max-w-md rounded-t-[28px] sm:rounded-[22px] p-5 sm:p-6 space-y-4 max-h-[92dvh] overflow-y-auto"
           style={{
             background: 'hsla(0,0%,3%,0.95)',
             border: '1px solid hsla(20,100%,56%,0.3)',
@@ -104,23 +149,24 @@ export const ProfileCompletionGate = () => {
           }}
         >
           <div className="text-center space-y-1">
-            <div className="text-3xl">🎟️</div>
+            <div className="text-3xl">🎁</div>
             <h2 className="text-xl font-black uppercase tracking-tight bg-gradient-to-r from-amber-300 via-orange-500 to-orange-600 bg-clip-text text-transparent">
-              Lock in your prize
+              Finish your profile
             </h2>
-            <p className="text-xs text-white/65">
-              Tell us who you are so we can credit your ticket and serve you right.
+            <p className="text-xs text-white/65 flex items-center justify-center gap-1.5">
+              <Coins className="w-3.5 h-3.5 text-amber-300" />
+              Claim <span className="text-amber-300 font-bold">+15 BB</span> the moment you're set up.
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            {(['barber', 'fan'] as Role[]).map((r) => {
+            {(['fan', 'barber'] as Role[]).map((r) => {
               const active = role === r;
               return (
                 <button
                   key={r}
                   type="button"
-                  onClick={() => { setRole(r); if (r === 'fan') setStatus(null); }}
+                  onClick={() => { setRole(r); if (r === 'fan') { setStatus(null); setVipCode(''); } }}
                   className="flex flex-col items-center gap-1.5 p-3 rounded-[14px] transition-all active:scale-95"
                   style={{
                     background: active ? 'hsla(20,100%,56%,0.18)' : 'hsla(0,0%,100%,0.04)',
@@ -129,38 +175,61 @@ export const ProfileCompletionGate = () => {
                   }}
                 >
                   {r === 'barber' ? <Scissors className="w-5 h-5 text-orange-300" /> : <Heart className="w-5 h-5 text-orange-300" />}
-                  <span className="text-sm font-black uppercase text-white">{r}</span>
+                  <span className="text-sm font-black uppercase text-white">{r === 'fan' ? 'Fan' : 'Barber'}</span>
+                  <span className="text-[10px] text-white/45 leading-tight text-center px-1">
+                    {r === 'fan' ? 'Watch, vote, sponsor' : 'Compete & earn (VIP only)'}
+                  </span>
                 </button>
               );
             })}
           </div>
 
           {role === 'barber' && (
-            <div className="grid grid-cols-2 gap-1.5">
-              {STATUSES.map((s) => {
-                const active = status === s.id;
-                const aspiring = s.id === 'aspiring';
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setStatus(s.id)}
-                    className="relative h-12 rounded-[12px] text-xs font-black uppercase text-white transition-all active:scale-95"
-                    style={{
-                      background: active
-                        ? 'hsla(20,100%,56%,0.22)'
-                        : aspiring ? 'hsla(195,100%,50%,0.08)' : 'hsla(0,0%,100%,0.04)',
-                      border: active
-                        ? '1.5px solid hsla(20,100%,56%,0.85)'
-                        : aspiring ? '1px solid hsla(195,100%,50%,0.35)' : '1px solid hsla(0,0%,100%,0.08)',
-                    }}
-                  >
-                    {aspiring && !active && <Sparkles className="absolute top-1 right-1 w-3 h-3 text-cyan-300/80" />}
-                    {s.label}
-                  </button>
-                );
-              })}
-            </div>
+            <>
+              <div className="grid grid-cols-2 gap-1.5">
+                {STATUSES.map((s) => {
+                  const active = status === s.id;
+                  const aspiring = s.id === 'aspiring';
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => setStatus(s.id)}
+                      className="relative h-12 rounded-[12px] text-xs font-black uppercase text-white transition-all active:scale-95"
+                      style={{
+                        background: active
+                          ? 'hsla(20,100%,56%,0.22)'
+                          : aspiring ? 'hsla(195,100%,50%,0.08)' : 'hsla(0,0%,100%,0.04)',
+                        border: active
+                          ? '1.5px solid hsla(20,100%,56%,0.85)'
+                          : aspiring ? '1px solid hsla(195,100%,50%,0.35)' : '1px solid hsla(0,0%,100%,0.08)',
+                      }}
+                    >
+                      {aspiring && !active && <Sparkles className="absolute top-1 right-1 w-3 h-3 text-cyan-300/80" />}
+                      {s.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="relative">
+                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-400/70 pointer-events-none z-10" />
+                <input
+                  type="text"
+                  inputMode="text"
+                  placeholder="VIP Invite Code (required)"
+                  value={vipCode}
+                  onChange={(e) => setVipCode(e.target.value.toUpperCase())}
+                  maxLength={32}
+                  autoCapitalize="characters"
+                  className="w-full h-11 pl-9 pr-3 rounded-[12px] bg-black/40 text-white text-sm font-bold tracking-widest uppercase focus:outline-none focus:ring-2 focus:ring-orange-500/60"
+                  style={{ border: '1px solid hsla(20,100%,56%,0.4)' }}
+                />
+                <p className="text-[10px] text-white/50 mt-1.5 px-1">
+                  Barber spots are invite-only during beta. Don't have a code? Switch to Fan to enter free.
+                </p>
+              </div>
+            </>
           )}
 
           <div className="space-y-2">
@@ -215,7 +284,9 @@ export const ProfileCompletionGate = () => {
               boxShadow: '0 8px 24px hsla(20,100%,56%,0.45)',
             }}
           >
-            {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Locking…</> : 'Lock in my prize'}
+            {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : (
+              <><Coins className="w-4 h-4" /> Claim +15 BB</>
+            )}
           </button>
 
           <button type="button" onClick={() => setOpen(false)} className="w-full text-[10px] uppercase tracking-wider text-white/45 hover:text-white py-1">
