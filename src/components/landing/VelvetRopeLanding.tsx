@@ -60,11 +60,8 @@ export const VelvetRopeLanding = () => {
         </div>
 
         {/* Rotating CTA */}
-        <section className="flex-none px-3 pt-2 flex flex-col items-center gap-1.5">
+        <section className="flex-none px-3 pt-2 flex flex-col items-center">
           <RotatingJoinCTA onClick={() => setSpinOpen(true)} />
-          <p className="text-[10px] text-white/45">
-            New here? <span className="text-orange-300 font-bold">+15 BB</span> on signup
-          </p>
         </section>
 
         {/* Inline OTP — orange glow, under CTA */}
