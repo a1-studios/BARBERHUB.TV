@@ -60,6 +60,7 @@
     "hls.js": "^1.6.16",
     "howler": "^2.2.4",
     "input-otp": "^1.4.2",
+    "libphonenumber-js": "^1.13.3",
     "livekit-client": "^2.18.0",
     "lucide-react": "^0.462.0",
     "mapbox-gl": "^3.24.0",
