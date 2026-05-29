@@ -86,12 +86,6 @@ export const VelvetRopeLanding = () => {
         </footer>
       </div>
 
-      <AuthModalV2
-        open={authOpen}
-        onClose={() => setAuthOpen(false)}
-        mode="signin"
-        previewBarber={previewBarber}
-      />
 
       {spinOpen && <LaunchWizard onClose={() => setSpinOpen(false)} />}
     </div>
