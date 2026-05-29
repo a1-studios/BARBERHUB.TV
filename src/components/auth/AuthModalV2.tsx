@@ -63,7 +63,11 @@ export function AuthModalV2({
   const [validatedCode, setValidatedCode] = useState<{ id: string; type: string } | null>(null);
   const [role, setRole] = useState<Role | null>(intendedRole);
   const [identity, setIdentity] = useState('');
+  const [defaultCountry, setDefaultCountry] = useState<CountryCode>('US');
+  // Verified target after identity submit
+  const [channel, setChannel] = useState<Channel>('email');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [pin, setPin] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendIn, setResendIn] = useState(0);
@@ -77,7 +81,9 @@ export function AuthModalV2({
       setValidatedCode(null);
       setRole(intendedRole ?? null);
       setIdentity('');
+      setChannel('email');
       setEmail('');
+      setPhone('');
       setPin('');
       setLoading(false);
       setResendIn(0);
