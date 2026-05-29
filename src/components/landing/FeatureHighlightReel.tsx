@@ -51,7 +51,7 @@ const slides: Slide[] = [
     id: 'global',
     label: 'Global',
     render: () => (
-      <div className="absolute inset-0 bg-black flex items-center justify-center">
+      <div className="absolute inset-0 flex items-center justify-center">
         <GlobePulse />
         <OrbitingSlogan />
       </div>
@@ -212,10 +212,16 @@ export const FeatureHighlightReel = () => {
     touchStartX.current = null;
   };
 
+  const isGlobe = slides[idx]?.id === 'global';
+
   return (
     <div className="w-full h-full min-h-[180px] flex flex-col">
       <div
-        className="relative flex-1 rounded-xl overflow-hidden border border-orange-500/30 bg-black/60 shadow-[0_0_24px_rgba(249,115,22,0.25)]"
+        className={`relative flex-1 rounded-xl overflow-visible ${
+          isGlobe
+            ? 'border border-transparent bg-transparent shadow-none'
+            : 'border border-orange-500/30 bg-black/60 shadow-[0_0_24px_rgba(249,115,22,0.25)] overflow-hidden'
+        }`}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
