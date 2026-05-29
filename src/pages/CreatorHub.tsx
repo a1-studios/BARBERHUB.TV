@@ -34,10 +34,12 @@ export default function CreatorHub() {
   const [showSignup, setShowSignup] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<AcademyCourse | null>(null);
 
-  // Redirect non-barbers
+  // Non-barbers: bounce home and open the profile gate so they can enter a
+  // VIP invite code and upgrade their role.
   if (!loading && !rolesLoading && user && !isBarber) {
     navigate('/', { replace: true });
-    toast.error('Creator Hub is only accessible to barbers');
+    toast.info('Enter a VIP invite code to unlock Creator Hub.');
+    setTimeout(() => window.dispatchEvent(new Event('require-profile-complete')), 300);
     return null;
   }
 
