@@ -67,11 +67,6 @@ export const VelvetRopeLanding = () => {
           <LegendsHeadline />
         </section>
 
-        {/* Stats */}
-        <section className="flex-none px-3 pt-2">
-          <LiveStatsRow />
-        </section>
-
         {/* Watch feed teaser — takes available slack */}
         <div className="flex-1 min-h-0 flex flex-col justify-center px-3 py-2 overflow-hidden">
           <WatchFeedStrip />
