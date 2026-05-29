@@ -9,7 +9,6 @@ import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
  * live battles, earn BB.
  */
 
-const FLAGS = ['🇺🇸', '🇨🇦', '🇲🇽', '🇧🇷', '🇬🇧', '🇫🇷', '🇪🇸', '🇮🇹', '🇩🇪', '🇳🇬', '🇿🇦', '🇪🇬', '🇮🇳', '🇯🇵', '🇰🇷', '🇨🇳', '🇦🇺', '🇦🇪', '🇸🇦', '🇹🇷', '🇦🇷', '🇨🇴', '🇩🇴', '🇯🇲', '🇵🇭'];
 
 type Slide = { id: string; label: string; render: () => React.ReactNode };
 
