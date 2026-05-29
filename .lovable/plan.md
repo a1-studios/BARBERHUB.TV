@@ -1,51 +1,130 @@
-## 1. Fullscreen swipeable image gallery
+## Goals
+Holistic update: web diagnostics, Dual-Channel (Email + SMS via Twilio) OTP signup additive to existing auth, and legal compliance for Twilio/Stripe approval. Legacy `AuthDialog` (password sign-in) stays untouched.
 
-**New component** `src/components/GearImageLightbox.tsx`
-- Portal-rendered fullscreen overlay (black backdrop, z-50)
-- Receives `images: string[]`, `startIndex`, `productName`, `onClose`
-- Swipe left/right via framer-motion `drag="x"` with snap on threshold (>60px or velocity)
-- Tap-arrow buttons on desktop, dot indicators at bottom
-- Pinch/double-tap zoom skipped to keep scope tight; close on X or backdrop tap
-- Counter "2 / 5" top-left, product name top-center
+## Phase 1 — Diagnostic Sanitization
 
-**Edit** `src/components/ProductShelf.tsx`
-- Replace current `handleTap` behavior: tapping the image opens the lightbox instead of the purchase modal
-- Add a small "Buy" pill overlay on the card (or keep price area tappable) that opens `GearPurchaseModal` — so purchasing still works
-- State: `lightboxProduct` separate from `selectedProduct`
+### 1.1 Duplicate `</body>` in `index.html`
+`index.html` currently ends with `</body></body></html>`. Remove the duplicate closing `</body>` tag — keeps iOS WebView parsers happy.
 
-## 2. Shopify integration (connect existing store)
+### 1.2 Canonical URL → `https://barberhub.tv`
+- `index.html`: change `<link rel="canonical" href="https://barberhub-tv.lovable.app/">` → `https://barberhub.tv/`. Also update `og:url`.
+- Audit and update any hardcoded `barberhub-tv.lovable.app` strings in app/page-level `<Helmet>` blocks (e.g. `VelvetRopeLanding.tsx`, legal pages, SEO helpers in `src/lib/` and `docs/seo/`) — replace with `https://barberhub.tv`.
+- Leave `vite.config.ts` / `.env` / Supabase project URL untouched.
 
-The Lovable Shopify enable tool requires Lovable Cloud, but this project uses an external Supabase. So we'll wire Shopify directly using the **Shopify Admin GraphQL API** with a Custom App access token — same pattern already hinted at by `shopify_product_id` / `shopify_variant_id` columns on `products`.
+### 1.3 Bundle audit (conservative)
+- Run `bun run build` and read the Vite chunk report.
+- Strip only confirmed-unused deps (typical candidates to verify: any leftover map/chart libs not referenced via `rg`). Anything ambiguous is left alone per instructions.
+- No dynamic-import refactors in this pass — just dead-weight removal.
 
-### Secrets to add
-- `SHOPIFY_STORE_DOMAIN` (e.g. `barberhub.myshopify.com`)
-- `SHOPIFY_ADMIN_TOKEN` (Admin API access token from a Custom App with `read_products, write_products, read_inventory, write_inventory` scopes)
+## Phase 2 — Safe Auth Expansion (Additive Only)
 
-### New edge function `supabase/functions/shopify-sync-product/index.ts`
-Actions:
-- `push` — given a local `product_id`, create or update the matching Shopify product (title, body_html=description, price from `price_bb` converted to USD by `price_bb/5`, images from `image_urls`, sku, inventory). Stores returned `shopify_product_id` + first `shopify_variant_id` back on the row.
-- `pull` — given a `shopify_product_id`, refresh title/price/images/stock back into local row.
-- `list_shop_products` — proxy to fetch existing Shopify products so admin can map an existing Shopify item to a local row.
+### 2.1 Preserve legacy
+`src/components/auth/AuthDialog.tsx` and `src/hooks/useAuth.ts` `signIn(email, password)` path remain unchanged. No callers of `AuthDialog` are removed.
 
-Sovereign-only (verify caller via existing `has_role` admin check used by `admin-upsert-gear`).
+### 2.2 Twilio connector
+- Link the **Twilio** connector via `standard_connectors--connect` (gateway-enabled; sets `TWILIO_API_KEY` + uses `LOVABLE_API_KEY`).
+- Recommend the user enable Twilio's **SMS Pumping Protection** and tighten **Geo Permissions** to launch countries.
 
-### Admin UI changes in `src/components/sovereign/GearControlPanel.tsx`
-- Add a "Sync to Shopify" button on each row (calls `shopify-sync-product` with `push`)
-- Add a "Pull from Shopify" button when `shopify_product_id` is set
-- Add an "Import from Shopify…" dropdown in the Add Gear form populated by `list_shop_products`, that pre-fills name/price/images and stores the IDs
+### 2.3 New Edge Function: `send-sms-otp`
+Replaces Supabase's built-in SMS provider so we don't have to wire Twilio into Supabase Auth itself.
 
-### Checkout wiring (purchase flow)
-- `GearPurchaseModal` stays the BB-based purchase. If a product has `shopify_product_id` AND `requires_shipping=true`, after BB deduction the existing `purchase-product-bb` edge function should also call Shopify's `draftOrderCreate` to fulfill the physical order. Add this step inside `purchase-product-bb` (uses same secrets); creates a draft order tagged with the buyer's email and shipping address, marked paid. Out of scope for this plan to redesign checkout UX — just plumb the fulfillment hand-off.
+- Input: `{ phone: E.164 }`. Validates with Zod.
+- Generates a 6-digit code, hashes it, stores in a new `phone_otp_codes` table with `expires_at = now() + 5 min`, `attempts = 0`, single active row per phone.
+- Sends SMS through Twilio gateway (`POST https://connector-gateway.lovable.dev/twilio/Messages.json`, form-encoded) with body: *"Your Barber-Hub code is {code}. Reply STOP to opt out, HELP for help. Msg&data rates may apply."*
+- Rate-limit: max 1 send / 60s / phone, 5 / hour / phone, in-memory + DB-backed.
 
-### Database
-No schema changes needed — `shopify_product_id`, `shopify_variant_id`, `requires_shipping` already exist.
+### 2.4 New Edge Function: `verify-sms-otp`
+- Input: `{ phone, code }`.
+- Validates hash, `attempts < 5`, not expired.
+- On success: looks up or creates a Supabase auth user via Admin API using a deterministic synthetic email `phone+<digits>@sms.barberhub.tv` (since the project rule for Mandatory Country/Email collection still applies; the user will be prompted to add a real email in the post-signup ceremony — same flow barbers already go through).
+- Returns a one-time `action_link` (via `generateLink({ type: 'magiclink' })`) that the client exchanges for a session — or, simpler, returns a short-lived custom JWT signed with service role and the client calls `setSession`.
+- Honors `global_vip_mode` via the same `validate_access_code` RPC the email path uses; the SMS path takes the same VIP-code gate step.
 
-## 3. What I will NOT change
-- BB economy, prices, tax splits
-- Existing purchase-product-bb business logic (only adds Shopify draft order call when applicable)
-- Card layout/typography of the gear shelf
+### 2.5 `AuthModalV2` smart-detect input
+- Replace the dedicated email input on the Identity step with a single field.
+- Detection (client-side):
+  - `EMAIL_RE = /^\S+@\S+\.\S+$/` → email branch.
+  - Otherwise strip non-digits; if `>= 8` digits, normalize to E.164 using `libphonenumber-js` (already small, ~70KB; add as new dep) with a default-country picker (defaults to `US`, overridable by a small country-code dropdown next to the input).
+  - Neither → inline validation error.
+- Branches:
+  - Email → existing `supabase.auth.signInWithOtp({ email })` flow (unchanged).
+  - Phone → `supabase.functions.invoke('send-sms-otp', { body: { phone }})`, then verify step calls `verify-sms-otp` instead of `verifyOtp`.
+- OTP verify UI is shared (6-digit `InputOTP`). Resend respects channel.
+- Keeps VIP-code gate, role pick, and post-verify role/profile writes as-is.
 
-## Technical notes
-- Shopify Admin REST/GraphQL is called server-side from the edge function with `X-Shopify-Access-Token` header
-- Price conversion: `price_usd = price_bb / 5` (per project economy memory)
-- Inventory not decremented on Shopify side until the draft order is completed — acceptable for v1
+### 2.6 Targeted "Sign Up" CTA redirection
+- `src/pages/CreatorHub.tsx` and `src/components/creator/CreatorHub.tsx`: the **"Sign Up" / "Join Creator Hub" CTA** opens a new `<AuthModalV2 mode="signup" />`. The existing `<AuthDialog>` wrapper is left in place for the password "Login" flow.
+- Audit other explicit signup CTAs with `rg "Sign up|Create account|Join"` and route only those to `AuthModalV2`. Standard "Login" / "Sign in" triggers stay on `AuthDialog`.
+
+## Phase 3 — Legal Framework Injection (additive)
+
+For each file, prepend a new `<Section>` without touching existing boilerplate.
+
+### 3.1 `src/pages/legal/Privacy.tsx`
+Insert a new section after the current "Data Collected" section: **"SMS Consent and Phone Numbers"** with the verbatim copy from the brief.
+
+### 3.2 `src/pages/legal/Terms.tsx`
+Insert two new top-level sections:
+- **"Mobile Messaging (SMS)"** — verbatim opt-in/STOP/HELP language.
+- **"Virtual Currency (Barber Bucks)"** — non-transferable utility, no cash value off-platform, Stripe-mediated fiat payouts, 18+/KYC gated.
+
+### 3.3 `src/pages/legal/DMCA.tsx`
+Change the "Designated Copyright Agent" block to:
+```
+A1Studios Film LLC — Copyright Agent
+175 East Shore Road, Great Neck, NY
+Email: dmca@barberhub.tv
+```
+
+### 3.4 `src/pages/legal/AUP.tsx`
+Add an explicit clause under "Live Streaming Rules" (or a new "Copyrighted Material" sub-section): zero tolerance for broadcasting unauthorized copyrighted music, films, TV, or other IP during live streams; immediate stream termination + DMCA strike.
+
+## Database changes (Phase 2 only)
+
+One migration:
+
+```sql
+CREATE TABLE public.phone_otp_codes (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  phone text NOT NULL UNIQUE,
+  code_hash text NOT NULL,
+  attempts int NOT NULL DEFAULT 0,
+  expires_at timestamptz NOT NULL,
+  last_sent_at timestamptz NOT NULL DEFAULT now(),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+GRANT ALL ON public.phone_otp_codes TO service_role;
+ALTER TABLE public.phone_otp_codes ENABLE ROW LEVEL SECURITY;
+-- no anon/authenticated policies: edge functions use service role only
+```
+
+No changes to `access_codes` schema or RPCs.
+
+## Memory update
+Update `mem://index.md` Core rules: remove **Twilio** from the "permanently forbidden" list and add a new memory `mem://integrations/twilio-sms-otp` documenting the new SMS OTP path, the `phone_otp_codes` table, and the two edge functions. `mem://features/feature-removals` also gets a note that Twilio was re-enabled specifically for auth OTP.
+
+## Files touched
+
+**Edited**
+- `index.html` (duplicate body, canonical, og:url)
+- `src/components/landing/VelvetRopeLanding.tsx` (canonical Helmet)
+- `src/components/auth/AuthModalV2.tsx` (smart-detect input, SMS branch)
+- `src/pages/CreatorHub.tsx`, `src/components/creator/CreatorHub.tsx` (Sign-Up CTA → AuthModalV2)
+- `src/pages/legal/Privacy.tsx`, `Terms.tsx`, `DMCA.tsx`, `AUP.tsx`
+- `mem://index.md`
+
+**Created**
+- `supabase/functions/send-sms-otp/index.ts`
+- `supabase/functions/verify-sms-otp/index.ts`
+- Migration for `phone_otp_codes`
+- `mem://integrations/twilio-sms-otp`
+
+**Untouched**
+- `src/components/auth/AuthDialog.tsx`, `src/hooks/useAuth.tsx` password path
+- `access_codes` table and RPCs
+- All BB economy / Stripe edge functions
+
+## Out of scope
+- Local `vitest` / `playwright` env fixes.
+- iOS Capacitor conversion (this PR only sanitizes for it).
+- Replacing Supabase Auth's built-in SMS — we side-channel via our own edge functions to avoid touching Auth provider config.
