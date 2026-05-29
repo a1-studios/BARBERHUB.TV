@@ -1,18 +1,14 @@
 import { useState } from 'react';
 import { Helmet } from 'react-helmet';
-import AuthModalV2 from '@/components/auth/AuthModalV2';
 import { LaunchWizard } from '@/components/coming-soon/LaunchWizard';
 import { LegendsHeadline } from './LegendsHeadline';
 import { LiveStatsRow } from './LiveStatsRow';
 import { FeatureHighlightReel } from './FeatureHighlightReel';
 import { RotatingJoinCTA } from './RotatingJoinCTA';
 import { InlineOtpBox } from './InlineOtpBox';
-import { PublicBarber } from './teasers/useLandingData';
 import barberPole from '@/assets/barber-pole.png';
 
 export const VelvetRopeLanding = () => {
-  const [authOpen, setAuthOpen] = useState(false);
-  const [previewBarber] = useState<PublicBarber | null>(null);
   const [spinOpen, setSpinOpen] = useState(false);
 
   return (
