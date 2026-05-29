@@ -3530,6 +3530,36 @@ export type Database = {
           },
         ]
       }
+      phone_otp_codes: {
+        Row: {
+          attempts: number
+          code_hash: string
+          created_at: string
+          expires_at: string
+          id: string
+          last_sent_at: string
+          phone: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          last_sent_at?: string
+          phone: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          last_sent_at?: string
+          phone?: string
+        }
+        Relationships: []
+      }
       platform_config: {
         Row: {
           created_at: string | null
