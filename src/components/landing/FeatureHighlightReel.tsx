@@ -2,7 +2,6 @@ import { useRef, useState } from 'react';
 import { MapPin, Search, Radio, Coins } from 'lucide-react';
 import { GlobePulse } from '@/components/ui/cobe-globe-pulse';
 import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
-import { OrbitingSlogan } from './OrbitingSlogan';
 
 /**
  * Manually-controlled highlight reel. User swipes or taps dots to navigate.
@@ -53,7 +52,6 @@ const slides: Slide[] = [
     render: () => (
       <div className="absolute inset-0 flex items-center justify-center">
         <GlobePulse />
-        <OrbitingSlogan />
       </div>
     ),
   },
