@@ -47,9 +47,20 @@ const SlideShell = ({
 
 const slides: Slide[] = [
   {
-    id: 'map',
-    label: 'Global Map',
+    id: 'global',
+    label: 'Global',
+    durationMs: 7000,
     render: () => (
+      <SlideShell tag="Worldwide" title="Barbers in 60+ Countries" sub="Drag the globe — one global championship">
+        <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(ellipse_at_center,#1a1a2e_0%,#000_75%)]">
+          <div className="h-full aspect-square max-h-full">
+            <GlobePulse />
+          </div>
+        </div>
+      </SlideShell>
+    ),
+  },
+  {
       <SlideShell tag="Global Map" title="Find Barbers Anywhere" sub="Live map of barbers worldwide">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,#0c2340_0%,#000_70%)]">
           {/* fake lat/long grid */}
