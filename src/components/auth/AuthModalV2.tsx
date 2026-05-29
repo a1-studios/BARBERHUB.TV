@@ -372,33 +372,43 @@ export function AuthModalV2({
           </div>
         )}
 
-        {step === 'identity' && (
-          <div className="space-y-4">
-            <div>
-              <Label className="text-white/70">Email or Phone Number</Label>
-              <div className="relative mt-1">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
-                <Input
-                  value={identity}
-                  onChange={(e) => setIdentity(e.target.value)}
-                  placeholder="you@example.com"
-                  className="pl-9 bg-white/5 border-white/10 text-white"
-                  autoFocus
-                  onKeyDown={(e) => e.key === 'Enter' && handleIdentitySubmit()}
-                />
+        {step === 'identity' && (() => {
+          const detected = classifyIdentity(identity, defaultCountry);
+          const Icon = detected?.channel === 'sms' ? Phone : Mail;
+          return (
+            <div className="space-y-4">
+              <div>
+                <Label className="text-white/70">Email or Phone Number</Label>
+                <div className="relative mt-1">
+                  <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                  <Input
+                    value={identity}
+                    onChange={(e) => setIdentity(e.target.value)}
+                    placeholder="you@example.com  or  +1 555 123 4567"
+                    className="pl-9 bg-white/5 border-white/10 text-white"
+                    autoFocus
+                    inputMode={detected?.channel === 'sms' ? 'tel' : 'email'}
+                    autoComplete={detected?.channel === 'sms' ? 'tel' : 'email'}
+                    onKeyDown={(e) => e.key === 'Enter' && handleIdentitySubmit()}
+                  />
+                </div>
+                <p className="mt-2 text-[11px] text-white/40">
+                  {detected?.channel === 'sms'
+                    ? `We’ll text a code to ${detected.value}. Msg & data rates may apply. Reply STOP to opt out.`
+                    : 'Use the email or phone tied to your account. SMS uses standard message rates.'}
+                </p>
               </div>
-              <p className="mt-2 text-[11px] text-white/40">SMS login is in beta — email only for now.</p>
-            </div>
-            <Button onClick={handleIdentitySubmit} disabled={loading} className="w-full bg-orange-500 hover:bg-orange-600">
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send 6-digit code'}
-            </Button>
-            {mode === 'signup' && !intendedRole && (
-              <Button variant="ghost" size="sm" onClick={() => setStep('role')} className="text-white/50">
-                <ArrowLeft className="h-3 w-3 mr-1" /> Change role
+              <Button onClick={handleIdentitySubmit} disabled={loading} className="w-full bg-orange-500 hover:bg-orange-600">
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send 6-digit code'}
               </Button>
-            )}
-          </div>
-        )}
+              {mode === 'signup' && !intendedRole && (
+                <Button variant="ghost" size="sm" onClick={() => setStep('role')} className="text-white/50">
+                  <ArrowLeft className="h-3 w-3 mr-1" /> Change role
+                </Button>
+              )}
+            </div>
+          );
+        })()}
 
         {step === 'verify' && (
           <div className="space-y-4">
