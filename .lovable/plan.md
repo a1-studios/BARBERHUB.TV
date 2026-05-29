@@ -1,130 +1,71 @@
-## Goals
-Holistic update: web diagnostics, Dual-Channel (Email + SMS via Twilio) OTP signup additive to existing auth, and legal compliance for Twilio/Stripe approval. Legacy `AuthDialog` (password sign-in) stays untouched.
+# Revised Plan — Frictionless OTP + Profile-Gate VIP Upgrade
 
-## Phase 1 — Diagnostic Sanitization
+## Flow (single source of truth)
+1. Landing → one CTA → `AuthModalV2` (identity → verify only).
+2. New user lands logged in as **fan** by default, with **+15 BB welcome bonus** credited and visible in the wallet (locked/claimable until profile complete).
+3. `ProfileCompletionGate` auto-opens:
+   - Pick **Fan** → enter name + country → profile complete → 15 BB unlocked.
+   - Pick **Barber** → a VIP invite code field appears in the same modal → validate + redeem → role flips to barber → profile complete → 15 BB unlocked.
+4. No separate "Become a Barber" dialog. The gate **is** the gateway.
 
-### 1.1 Duplicate `</body>` in `index.html`
-`index.html` currently ends with `</body></body></html>`. Remove the duplicate closing `</body>` tag — keeps iOS WebView parsers happy.
+---
 
-### 1.2 Canonical URL → `https://barberhub.tv`
-- `index.html`: change `<link rel="canonical" href="https://barberhub-tv.lovable.app/">` → `https://barberhub.tv/`. Also update `og:url`.
-- Audit and update any hardcoded `barberhub-tv.lovable.app` strings in app/page-level `<Helmet>` blocks (e.g. `VelvetRopeLanding.tsx`, legal pages, SEO helpers in `src/lib/` and `docs/seo/`) — replace with `https://barberhub.tv`.
-- Leave `vite.config.ts` / `.env` / Supabase project URL untouched.
+## Step 1 — Strip the Velvet Rope from the landing
+`src/components/landing/VelvetRopeLanding.tsx`
+- Remove role pills + VIP code panel + "Redeem VIP Invite" CTA.
+- Replace with one primary CTA "Enter Barber Hub" that opens `AuthModalV2` with `mode='signup'` and no `intendedRole`.
+- Keep the "Already a member? Sign in" footer.
 
-### 1.3 Bundle audit (conservative)
-- Run `bun run build` and read the Vite chunk report.
-- Strip only confirmed-unused deps (typical candidates to verify: any leftover map/chart libs not referenced via `rg`). Anything ambiguous is left alone per instructions.
-- No dynamic-import refactors in this pass — just dead-weight removal.
+## Step 2 — Collapse `AuthModalV2` to identity → verify
+`src/components/auth/AuthModalV2.tsx`
+- Delete `'gate'` and `'role'` steps; initial step = `'identity'` for both modes.
+- Remove `usePlatformState('global_vip_mode')`, `code`, `validatedCode`, and all `validate_access_code` / `redeem_access_code` calls.
+- Drop `intendedRole` prop usage. Stop sending `intended_role` to `signInWithOtp` and to `send-sms-otp` / `verify-sms-otp`.
+- In `handleVerify`, remove the `user_roles` upsert and `profiles.user_type` write. The DB trigger already defaults `user_type = 'fan'`.
+- Update copy ("Sign in with a 6-digit code").
 
-## Phase 2 — Safe Auth Expansion (Additive Only)
+## Step 3 — Default-fan guarantees on the backend
+- `supabase/functions/verify-sms-otp/index.ts`: stop forcing role; idempotently ensure a `user_roles` row with `role='fan'` after admin-create. Remove `intended_role` from the body.
+- New migration: update `handle_new_user()` trigger to also `INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'fan') ON CONFLICT DO NOTHING`, so role-gated UI works immediately for new fans (email and SMS paths).
 
-### 2.1 Preserve legacy
-`src/components/auth/AuthDialog.tsx` and `src/hooks/useAuth.ts` `signIn(email, password)` path remain unchanged. No callers of `AuthDialog` are removed.
+## Step 4 — Welcome bonus (+15 BB, locked until profile complete)
+DB (new migration):
+- Add `profiles.welcome_bonus_state TEXT DEFAULT 'pending'` (values: `pending` | `claimed` | `forfeited`).
+- Extend `handle_new_user()`: on insert, also credit `profiles.barber_bucks += 15` and insert a `barber_bucks_transactions` row tagged `type='welcome_bonus'`, `state='locked'`, `amount=15`. (Or store as a pending entry — see "wallet display" below.)
+- New RPC `claim_welcome_bonus(_user_id uuid)` (SECURITY DEFINER, FOR UPDATE locked):
+  - Requires `profiles.user_type IS NOT NULL` AND `profiles.country_code IS NOT NULL`.
+  - Flips the locked transaction to `state='available'` and `profiles.welcome_bonus_state='claimed'`.
+  - Idempotent.
 
-### 2.2 Twilio connector
-- Link the **Twilio** connector via `standard_connectors--connect` (gateway-enabled; sets `TWILIO_API_KEY` + uses `LOVABLE_API_KEY`).
-- Recommend the user enable Twilio's **SMS Pumping Protection** and tighten **Geo Permissions** to launch countries.
+Frontend:
+- `useBarberBucks` already reads `profiles.barber_bucks`. Extend it (or a small new `useWelcomeBonus` hook) to also surface `welcome_bonus_state` so the wallet badge can show a "+15 BB pending — finish profile to claim" pill.
+- BB dropdown / wallet pill: when `welcome_bonus_state='pending'`, show a small "Claim 15 BB" CTA that opens the profile gate.
 
-### 2.3 New Edge Function: `send-sms-otp`
-Replaces Supabase's built-in SMS provider so we don't have to wire Twilio into Supabase Auth itself.
+## Step 5 — Repurpose `ProfileCompletionGate` as the role + VIP gateway
+`src/components/auth/ProfileCompletionGate.tsx`
+- Headline: "Finish your profile — claim **+15 BB**".
+- Keep the existing Barber / Fan toggle and the country selector (required).
+- When `role === 'barber'`, render a new VIP invite code input below the barber-status pills (required for barber role).
+- On submit:
+  1. If `role === 'barber'`: `supabase.rpc('validate_access_code', { p_code })`; reject if invalid.
+  2. Call existing `finalize-oauth-claim` edge function with `{ role, barber_status, country_code, phone_number }` (it already writes `user_type` + seeds `user_roles`).
+  3. If `role === 'barber'`: `supabase.rpc('redeem_access_code', { p_code, p_user_id, p_email })`.
+  4. `supabase.rpc('claim_welcome_bonus')` to unlock the 15 BB.
+  5. Invalidate `['userRoles']`, `['profile']`, `['profile-incomplete']`, `['header-profile']`, `['barber_bucks']`, `['barber_bucks_transactions']`.
+- Auto-open behavior stays as-is (~800ms post sign-in, plus on gated routes). Add a one-time celebratory toast on successful claim.
 
-- Input: `{ phone: E.164 }`. Validates with Zod.
-- Generates a 6-digit code, hashes it, stores in a new `phone_otp_codes` table with `expires_at = now() + 5 min`, `attempts = 0`, single active row per phone.
-- Sends SMS through Twilio gateway (`POST https://connector-gateway.lovable.dev/twilio/Messages.json`, form-encoded) with body: *"Your Barber-Hub code is {code}. Reply STOP to opt out, HELP for help. Msg&data rates may apply."*
-- Rate-limit: max 1 send / 60s / phone, 5 / hour / phone, in-memory + DB-backed.
-
-### 2.4 New Edge Function: `verify-sms-otp`
-- Input: `{ phone, code }`.
-- Validates hash, `attempts < 5`, not expired.
-- On success: looks up or creates a Supabase auth user via Admin API using a deterministic synthetic email `phone+<digits>@sms.barberhub.tv` (since the project rule for Mandatory Country/Email collection still applies; the user will be prompted to add a real email in the post-signup ceremony — same flow barbers already go through).
-- Returns a one-time `action_link` (via `generateLink({ type: 'magiclink' })`) that the client exchanges for a session — or, simpler, returns a short-lived custom JWT signed with service role and the client calls `setSession`.
-- Honors `global_vip_mode` via the same `validate_access_code` RPC the email path uses; the SMS path takes the same VIP-code gate step.
-
-### 2.5 `AuthModalV2` smart-detect input
-- Replace the dedicated email input on the Identity step with a single field.
-- Detection (client-side):
-  - `EMAIL_RE = /^\S+@\S+\.\S+$/` → email branch.
-  - Otherwise strip non-digits; if `>= 8` digits, normalize to E.164 using `libphonenumber-js` (already small, ~70KB; add as new dep) with a default-country picker (defaults to `US`, overridable by a small country-code dropdown next to the input).
-  - Neither → inline validation error.
-- Branches:
-  - Email → existing `supabase.auth.signInWithOtp({ email })` flow (unchanged).
-  - Phone → `supabase.functions.invoke('send-sms-otp', { body: { phone }})`, then verify step calls `verify-sms-otp` instead of `verifyOtp`.
-- OTP verify UI is shared (6-digit `InputOTP`). Resend respects channel.
-- Keeps VIP-code gate, role pick, and post-verify role/profile writes as-is.
-
-### 2.6 Targeted "Sign Up" CTA redirection
-- `src/pages/CreatorHub.tsx` and `src/components/creator/CreatorHub.tsx`: the **"Sign Up" / "Join Creator Hub" CTA** opens a new `<AuthModalV2 mode="signup" />`. The existing `<AuthDialog>` wrapper is left in place for the password "Login" flow.
-- Audit other explicit signup CTAs with `rg "Sign up|Create account|Join"` and route only those to `AuthModalV2`. Standard "Login" / "Sign in" triggers stay on `AuthDialog`.
-
-## Phase 3 — Legal Framework Injection (additive)
-
-For each file, prepend a new `<Section>` without touching existing boilerplate.
-
-### 3.1 `src/pages/legal/Privacy.tsx`
-Insert a new section after the current "Data Collected" section: **"SMS Consent and Phone Numbers"** with the verbatim copy from the brief.
-
-### 3.2 `src/pages/legal/Terms.tsx`
-Insert two new top-level sections:
-- **"Mobile Messaging (SMS)"** — verbatim opt-in/STOP/HELP language.
-- **"Virtual Currency (Barber Bucks)"** — non-transferable utility, no cash value off-platform, Stripe-mediated fiat payouts, 18+/KYC gated.
-
-### 3.3 `src/pages/legal/DMCA.tsx`
-Change the "Designated Copyright Agent" block to:
-```
-A1Studios Film LLC — Copyright Agent
-175 East Shore Road, Great Neck, NY
-Email: dmca@barberhub.tv
-```
-
-### 3.4 `src/pages/legal/AUP.tsx`
-Add an explicit clause under "Live Streaming Rules" (or a new "Copyrighted Material" sub-section): zero tolerance for broadcasting unauthorized copyrighted music, films, TV, or other IP during live streams; immediate stream termination + DMCA strike.
-
-## Database changes (Phase 2 only)
-
-One migration:
-
-```sql
-CREATE TABLE public.phone_otp_codes (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  phone text NOT NULL UNIQUE,
-  code_hash text NOT NULL,
-  attempts int NOT NULL DEFAULT 0,
-  expires_at timestamptz NOT NULL,
-  last_sent_at timestamptz NOT NULL DEFAULT now(),
-  created_at timestamptz NOT NULL DEFAULT now()
-);
-GRANT ALL ON public.phone_otp_codes TO service_role;
-ALTER TABLE public.phone_otp_codes ENABLE ROW LEVEL SECURITY;
--- no anon/authenticated policies: edge functions use service role only
-```
-
-No changes to `access_codes` schema or RPCs.
-
-## Memory update
-Update `mem://index.md` Core rules: remove **Twilio** from the "permanently forbidden" list and add a new memory `mem://integrations/twilio-sms-otp` documenting the new SMS OTP path, the `phone_otp_codes` table, and the two edge functions. `mem://features/feature-removals` also gets a note that Twilio was re-enabled specifically for auth OTP.
-
-## Files touched
-
-**Edited**
-- `index.html` (duplicate body, canonical, og:url)
-- `src/components/landing/VelvetRopeLanding.tsx` (canonical Helmet)
-- `src/components/auth/AuthModalV2.tsx` (smart-detect input, SMS branch)
-- `src/pages/CreatorHub.tsx`, `src/components/creator/CreatorHub.tsx` (Sign-Up CTA → AuthModalV2)
-- `src/pages/legal/Privacy.tsx`, `Terms.tsx`, `DMCA.tsx`, `AUP.tsx`
-- `mem://index.md`
-
-**Created**
-- `supabase/functions/send-sms-otp/index.ts`
-- `supabase/functions/verify-sms-otp/index.ts`
-- Migration for `phone_otp_codes`
-- `mem://integrations/twilio-sms-otp`
-
-**Untouched**
-- `src/components/auth/AuthDialog.tsx`, `src/hooks/useAuth.tsx` password path
-- `access_codes` table and RPCs
-- All BB economy / Stripe edge functions
+## Step 6 — Cleanup
+- Remove the "Become a Barber" upgrade dialog idea (not implemented).
+- Remove `intendedRole` plumbing from `VelvetRopeLanding` ↔ `AuthModalV2`.
+- Keep `AuthDialog` (legacy password flow), Sovereign code generation, and the `access_codes` schema untouched.
 
 ## Out of scope
-- Local `vitest` / `playwright` env fixes.
-- iOS Capacitor conversion (this PR only sanitizes for it).
-- Replacing Supabase Auth's built-in SMS — we side-channel via our own edge functions to avoid touching Auth provider config.
+- `access_codes` table + `validate_access_code` / `redeem_access_code` RPCs — unchanged.
+- Sovereign HQ admin panels — unchanged. `global_vip_mode` becomes inert for public funnel; admins can still toggle it for legacy use.
+- Twilio SMS OTP infra — unchanged, just no longer receives `intended_role`.
+- Pricing, BB economy rules, withdrawal gating.
+
+## Risks & mitigations
+- Existing pending users without `welcome_bonus_state`: backfill in the same migration (set existing rows to `'forfeited'` so they don't retroactively get 15 BB).
+- A fan who later wants to become a barber: re-opens the profile gate from settings (existing "Switch role" affordance — verify the gate can be re-triggered via `requireProfileComplete()`).
+- VIP code reuse: governed entirely by existing `access_codes` row's max-uses logic — no change needed.
