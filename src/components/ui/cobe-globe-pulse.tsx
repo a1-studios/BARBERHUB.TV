@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import createGlobe from "cobe";
 
 interface PulseMarker {
@@ -31,11 +31,15 @@ export function GlobePulse({
   speed = 0.004,
 }: GlobePulseProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
+  const flagRefs = useRef<Array<HTMLDivElement | null>>([]);
   const pointerInteracting = useRef<{ x: number; y: number } | null>(null);
   const dragOffset = useRef({ phi: 0, theta: 0 });
   const phiOffsetRef = useRef(0);
   const thetaOffsetRef = useRef(0);
+  const phiRef = useRef(0);
   const isPausedRef = useRef(false);
+  const [ready, setReady] = useState(false);
 
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     pointerInteracting.current = { x: e.clientX, y: e.clientY };
@@ -78,14 +82,48 @@ export function GlobePulse({
     let animationId: number;
     let phi = 0;
 
+    function projectMarkers() {
+      const overlay = overlayRef.current;
+      if (!overlay) return;
+      const size = overlay.clientWidth;
+      const radius = size / 2;
+      const theta = 0.2 + thetaOffsetRef.current + dragOffset.current.theta;
+      const cosT = Math.cos(theta);
+      const sinT = Math.sin(theta);
+      const currentPhi = phiRef.current;
+
+      markers.forEach((m, i) => {
+        const el = flagRefs.current[i];
+        if (!el) return;
+        const latRad = (m.location[0] * Math.PI) / 180;
+        const lonRad = (m.location[1] * Math.PI) / 180;
+        // cobe rotates around Y; phi increases => globe spins east
+        const lon = lonRad - currentPhi - Math.PI / 2;
+        let x = Math.cos(latRad) * Math.sin(lon);
+        let y = Math.sin(latRad);
+        let z = Math.cos(latRad) * Math.cos(lon);
+        // apply theta (tilt around X)
+        const y2 = y * cosT - z * sinT;
+        const z2 = y * sinT + z * cosT;
+        y = y2;
+        z = z2;
+
+        const px = radius + x * radius * 0.9;
+        const py = radius - y * radius * 0.9;
+        const visible = z > 0.05;
+        el.style.transform = `translate3d(${px}px, ${py}px, 0) translate(-50%, -50%) scale(${0.7 + z * 0.4})`;
+        el.style.opacity = visible ? String(Math.min(1, z * 1.6)) : "0";
+      });
+    }
+
     function init() {
       const width = canvas.offsetWidth;
       if (width === 0 || globe) return;
 
       globe = createGlobe(canvas, {
         devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
-        width,
-        height: width,
+        width: width * 2,
+        height: width * 2,
         phi: 0,
         theta: 0.2,
         dark: 1,
@@ -95,18 +133,21 @@ export function GlobePulse({
         baseColor: [0.35, 0.35, 0.4],
         markerColor: [1, 0.5, 0.1],
         glowColor: [0.6, 0.3, 0.05],
-        markers: markers.map((m) => ({ location: m.location, size: 0.04 })),
+        markers: markers.map((m) => ({ location: m.location, size: 0.05 })),
       });
 
       function animate() {
         if (!isPausedRef.current) phi += speed;
+        phiRef.current = phi + phiOffsetRef.current + dragOffset.current.phi;
         globe!.update({
-          phi: phi + phiOffsetRef.current + dragOffset.current.phi,
+          phi: phiRef.current,
           theta: 0.2 + thetaOffsetRef.current + dragOffset.current.theta,
         });
+        projectMarkers();
         animationId = requestAnimationFrame(animate);
       }
       animate();
+      setReady(true);
       setTimeout(() => canvas && (canvas.style.opacity = "1"));
     }
 
@@ -130,12 +171,6 @@ export function GlobePulse({
 
   return (
     <div className={`relative w-full aspect-square ${className}`}>
-      <style>{`
-        @keyframes globe-pulse-expand {
-          0% { transform: scale(0.3); opacity: 0.8; }
-          100% { transform: scale(1.6); opacity: 0; }
-        }
-      `}</style>
       <canvas
         ref={canvasRef}
         onPointerDown={handlePointerDown}
@@ -147,6 +182,32 @@ export function GlobePulse({
           transition: "opacity 0.8s ease",
         }}
       />
+      <div
+        ref={overlayRef}
+        className="pointer-events-none absolute inset-0"
+        aria-hidden
+      >
+        {markers.map((m, i) => (
+          <div
+            key={m.id}
+            ref={(el) => (flagRefs.current[i] = el)}
+            className="absolute top-0 left-0 will-change-transform"
+            style={{ transition: "opacity 0.25s linear" }}
+          >
+            <div className="relative flex flex-col items-center">
+              <span className="text-[18px] leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                {m.flag}
+              </span>
+              <span className="absolute -bottom-1 h-1.5 w-1.5 rounded-full bg-orange-400 shadow-[0_0_8px_rgba(249,115,22,0.9)]" />
+            </div>
+          </div>
+        ))}
+      </div>
+      {!ready && (
+        <div className="absolute inset-0 flex items-center justify-center text-[10px] text-white/40">
+          loading globe…
+        </div>
+      )}
     </div>
   );
 }
