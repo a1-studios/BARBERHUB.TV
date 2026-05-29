@@ -76,7 +76,6 @@ export default function CreatorHub() {
         <AuthModalV2
           open={showSignup}
           onClose={() => setShowSignup(false)}
-          intendedRole="barber"
           mode="signup"
         />
       </>

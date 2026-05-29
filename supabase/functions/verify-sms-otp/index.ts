@@ -23,9 +23,6 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const phone = String(body?.phone ?? '').trim();
     const code = String(body?.code ?? '').trim();
-    const intendedRole = body?.intended_role === 'barber' || body?.intended_role === 'fan'
-      ? body.intended_role
-      : null;
 
     if (!E164_RE.test(phone) || !CODE_RE.test(code)) {
       return new Response(JSON.stringify({ error: 'Bad request' }), {
@@ -80,19 +77,11 @@ Deno.serve(async (req) => {
         phone,
         email_confirm: true,
         phone_confirm: true,
-        user_metadata: { intended_role: intendedRole, sms_signup: true },
+        user_metadata: { sms_signup: true },
       });
       if (createErr) throw createErr;
       user = created.user;
-
-      // Seed binary role + profile user_type to match the email path
-      if (user && intendedRole) {
-        await admin.from('user_roles').upsert(
-          { user_id: user.id, role: intendedRole },
-          { onConflict: 'user_id,role', ignoreDuplicates: true },
-        );
-        await admin.from('profiles').update({ user_type: intendedRole }).eq('user_id', user.id);
-      }
+      // handle_new_user trigger seeds profiles + user_roles with role='fan' by default.
     }
 
     if (!user) throw new Error('Could not resolve user');
