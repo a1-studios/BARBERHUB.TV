@@ -1,64 +1,59 @@
-## Landing Page Restructure
+# Single-Screen Mobile Landing Redesign
 
-Goal: simplify the public landing to match the reference — signature header, prominent SPIN CTA, an inline email entry, a bold "Where Barbers become legends" headline with live stats, and the WatchFeedStrip teaser at the bottom. Remove the InsideTheHubStage and BottomGlobeSection clutter.
+Restructure `VelvetRopeLanding.tsx` so the entire experience fits within a single 9:16 iPhone viewport (no scroll), with adaptive scaling for iPad/desktop.
 
-### Final structure (top → bottom, mobile-first, no horizontal scroll)
+## New vertical order (top → bottom)
 
-```text
-┌──────────────────────────────────────────┐
-│ Signature header (preserved as-is)       │  ← BARBER-HUB pole + wordmark
-├──────────────────────────────────────────┤
-│  ✨ SPIN TO WIN & JOIN  →                │  ← big orange gradient CTA
-│  "+15 BB on us" microcopy                │
-├── OR SIGN IN ────────────────────────────┤
-│  [ email or phone ___________________ ]  │  ← single inline input
-│  [ Continue ]                            │  ← opens AuthModalV2 prefilled
-│  Forgot? · Already a member? Sign in     │
-├──────────────────────────────────────────┤
-│  where Barbers become legends            │  ← display headline (orange accent)
-│                                          │
-│  500+   1.2k+   5k+    98%               │  ← LIVE counts from DB
-│ Barbers Creators Community Satisfaction  │
-├──────────────────────────────────────────┤
-│  WatchFeedStrip (horizontal teaser)      │  ← only retained teaser
-└──────────────────────────────────────────┘
+```
+┌──────────────────────────────┐
+│  Signature Header (preserved)│
+├──────────────────────────────┤
+│  WHERE BARBERS become        │  ← Headline (smaller, "legends" orange)
+│  LEGENDS                     │
+├──────────────────────────────┤
+│  Live Stats Row (4 tiles)    │
+├──────────────────────────────┤
+│  Watch Feed Strip teaser     │
+├──────────────────────────────┤
+│  Email/phone inline sign-in  │
+├──────────────────────────────┤
+│  [ JOIN ] ← rotating CTA     │  ← Smaller, cyan neon outline
+│  Already a member? Sign in   │
+└──────────────────────────────┘
 ```
 
-### Changes
+## Changes
 
-1. **`src/components/landing/VelvetRopeLanding.tsx`** — rewrite layout:
-   - Keep existing signature header block verbatim.
-   - Replace the single "Enter Barber Hub — Free" button with a two-tier auth block:
-     - Primary: `SPIN TO WIN & JOIN →` gradient pill that opens `LaunchWizard` (existing component, already used on `Index.tsx`) OR falls back to `AuthModalV2` signup. Microcopy: "+15 BB on us".
-     - Divider: `OR SIGN IN`.
-     - Inline `<input>` for email/phone (smart-detect like AuthModalV2's identity step) + `Continue` button. Submitting opens `AuthModalV2` with mode `signin` and pre-fills the identifier (new prop `prefillIdentity?: string`).
-     - Bottom footer link: "Already a member? Sign in" (unchanged behavior).
-   - Replace `InsideTheHubStage` with the headline + stats block.
-   - Remove `BottomGlobeSection`.
-   - Keep `WatchFeedStrip` pinned at the bottom.
+### 1. `LegendsHeadline.tsx`
+- Shrink type scale from `clamp(2rem, 9vw, 3.5rem)` → `clamp(1.5rem, 6.5vw, 2.5rem)` so two-line headline fits without crowding.
+- Apply orange accent to **"legends"** (currently on "Barbers"). "Barbers" returns to white.
+- Tighten line-height + spacing.
 
-2. **New `src/components/landing/LegendsHeadline.tsx`** — `where Barbers become legends` display headline using Bebas Neue / existing display font with orange accent on "Barbers". Centered, generous tracking.
+### 2. `VelvetRopeLanding.tsx` — layout overhaul
+- Convert outer container to a strict single-viewport flex column: `h-[100dvh]`, no scroll, sections sized with `flex-none` and one `flex-1` spacer to absorb slack.
+- Reorder children to match the diagram above.
+- Reduce vertical padding on every section (`py-2` / `py-3`) to guarantee fit on a 390×608 viewport.
+- Move the SPIN CTA from the top auth card to the bottom of the page (above the "Already a member?" footer).
+- Strip the old large gradient CTA styling.
 
-3. **New `src/components/landing/LiveStatsRow.tsx`** — 4-column grid (responsive to 2×2 under 360px):
-   - Barbers — `count(profiles where user_type='barber')`
-   - Creators — `count(barber_profiles where competition_entries.count > 0)` (or simply count of barbers with any submitted video)
-   - Community — `count(profiles)` total users
-   - Satisfaction — derived from reviews avg (`avg(rating)/5*100`) rounded, fallback `98%` if no reviews.
-   - All numbers formatted (`500+`, `1.2k+`) via a small util that floors to the nearest meaningful threshold so display stays clean.
-   - Data loaded via a single React Query hook `useLandingStats` calling a new lightweight SQL view or 4 `head:true` count queries against the **public** schema (no auth required). Uses existing public-readable tables (`profiles`, `barber_profiles`, `reviews` if present).
+### 3. New `RotatingJoinCTA.tsx` (small component)
+- Compact pill button (~ `h-11 px-6`, `text-sm font-black uppercase tracking-[0.25em]`).
+- **Cyan neon outline**: `border border-cyan-400/70`, `shadow-[0_0_14px_rgba(34,211,238,0.55)]`, transparent/very dark background so it reads as outline-only.
+- Inside: a single rotating word, cycling every 3s through: `JOIN → WIN → WATCH → VOTE → CHALLENGE`.
+- Word swap animated with a short fade/slide (`animate-fade-in` + key-based remount).
+- `useEffect` interval, cleared on unmount, paused while tab hidden (visibility check).
+- Click → opens `LaunchWizard` (same `setSpinOpen(true)` behavior as today).
 
-4. **`src/components/auth/AuthModalV2.tsx`** — add optional `prefillIdentity?: string` prop that pre-populates the identity input on open. No flow change.
+### 4. Adaptive scaling
+- Mobile (default, ≤640px): single screen, no scroll, tight spacing per above.
+- Tablet (`md:`): same layout, increase headline & stat type sizes, larger paddings, max-width container `max-w-2xl mx-auto`.
+- Desktop (`lg:`): `max-w-3xl`, more generous gaps; layout remains a single column (no horizontal restructure) so it still feels native-mobile-first.
 
-5. **Cleanup** — `VelvetRopeLanding` no longer imports `InsideTheHubStage` or `BottomGlobeSection`. Leave those files in place (still used elsewhere or available for rollback).
+## Out of scope
+- Auth flow, `LaunchWizard`, stats data source, header internals, routing.
+- No DB / edge function changes.
 
-### Out of scope
-- Auth flow changes (still OTP-only — inline email just pre-fills the modal).
-- `LaunchWizard` internals (reused unchanged).
-- `Index.tsx` (only renders `VelvetRopeLanding` for guests; no change needed).
-- New database tables. Stats query reads existing public-readable tables.
-- Password sign-in (reference's password field is intentionally not implemented — kept OTP-only per your answer).
-
-### Technical notes
-- Public count queries: `supabase.from('profiles').select('*', { count: 'exact', head: true })` etc. Will verify each table is granted to `anon` before relying on it; fall back to a public RPC (`get_landing_stats`) returning a single row of 4 counts if any table is auth-only. Plan B (RPC) requires a tiny migration with SECURITY DEFINER + `GRANT EXECUTE TO anon`.
-- All colors/spacing through existing semantic tokens; no new hex values.
-- Viewport: design fits 360–768 width without horizontal scroll; uses `h-[100dvh] flex-col` layout already in place.
+## Files touched
+- `src/components/landing/VelvetRopeLanding.tsx` (rewrite layout)
+- `src/components/landing/LegendsHeadline.tsx` (size + accent swap)
+- `src/components/landing/RotatingJoinCTA.tsx` (new)
