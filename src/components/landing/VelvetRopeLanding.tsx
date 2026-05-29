@@ -67,11 +67,6 @@ export const VelvetRopeLanding = () => {
           <LegendsHeadline />
         </section>
 
-        {/* Stats */}
-        <section className="flex-none px-3 pt-2">
-          <LiveStatsRow />
-        </section>
-
         {/* Watch feed teaser — takes available slack */}
         <div className="flex-1 min-h-0 flex flex-col justify-center px-3 py-2 overflow-hidden">
           <WatchFeedStrip />
@@ -113,6 +108,11 @@ export const VelvetRopeLanding = () => {
           <p className="text-[10px] text-white/45">
             New here? <span className="text-orange-300 font-bold">+15 BB</span> on signup
           </p>
+        </section>
+
+        {/* Stats */}
+        <section className="flex-none px-3 pt-2 pb-1">
+          <LiveStatsRow />
         </section>
 
         <footer className="flex-none px-3 pb-2 text-center">
