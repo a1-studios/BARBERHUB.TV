@@ -1,59 +1,55 @@
-# Single-Screen Mobile Landing Redesign
+## Landing page revamp
 
-Restructure `VelvetRopeLanding.tsx` so the entire experience fits within a single 9:16 iPhone viewport (no scroll), with adaptive scaling for iPad/desktop.
+### 1. Replace static "Watch Feed" strip with a Feature Highlight Reel
+Repurpose the `WatchFeedStrip` slot into a single, taller "highlight box" that auto-rotates through the platform's killer features instead of fake clip thumbnails.
 
-## New vertical order (top → bottom)
+Slides (auto-advance every ~4s, swipeable):
+- **Global Map** — preview of Mapbox dark style with pulsing pins ("Find barbers anywhere")
+- **Find a Barber Near You** — search bar mock + nearby card snippet
+- **Rotating World Flags** — horizontal flag ticker representing global reach (uses country emoji flags, marquee animation)
+- **Live Battles / Stream** — thumbnail with pulsing LIVE dot
+- **Earn BB** — spinning coin + "+15 BB on signup"
 
-```
-┌──────────────────────────────┐
-│  Signature Header (preserved)│
-├──────────────────────────────┤
-│  WHERE BARBERS become        │  ← Headline (smaller, "legends" orange)
-│  LEGENDS                     │
-├──────────────────────────────┤
-│  Live Stats Row (4 tiles)    │
-├──────────────────────────────┤
-│  Watch Feed Strip teaser     │
-├──────────────────────────────┤
-│  Email/phone inline sign-in  │
-├──────────────────────────────┤
-│  [ JOIN ] ← rotating CTA     │  ← Smaller, cyan neon outline
-│  Already a member? Sign in   │
-└──────────────────────────────┘
-```
+New file: `src/components/landing/FeatureHighlightReel.tsx`. Replaces `<WatchFeedStrip />` in `VelvetRopeLanding.tsx`. Same vertical footprint (`flex-1 min-h-0`).
 
-## Changes
+### 2. Two-color slogan
+Update `LegendsHeadline.tsx`:
+- "WHERE" → orange
+- "BARBERS" → white
+- "BECOME" → orange
+- "LEGENDS" → white (keep current glow, swap to white drop-shadow)
 
-### 1. `LegendsHeadline.tsx`
-- Shrink type scale from `clamp(2rem, 9vw, 3.5rem)` → `clamp(1.5rem, 6.5vw, 2.5rem)` so two-line headline fits without crowding.
-- Apply orange accent to **"legends"** (currently on "Barbers"). "Barbers" returns to white.
-- Tighten line-height + spacing.
+### 3. Rotating CTA button upgrades (`RotatingJoinCTA.tsx`)
+- Add **STREAM** and **EARN-BB** to the rotation list → `JOIN, WIN, WATCH, VOTE, CHALLENGE, STREAM, EARN-BB`
+- For `EARN-BB`, render the spinning BB coin (`RotatingBBCoin`) inline next to the word
+- Text color → signature orange (`text-orange-500`) instead of cyan-100; keep cyan neon outline
+- Increase button size ~10%: `h-11 → h-12`, `px-8 → px-9`, `text-sm → text-[15px]`
 
-### 2. `VelvetRopeLanding.tsx` — layout overhaul
-- Convert outer container to a strict single-viewport flex column: `h-[100dvh]`, no scroll, sections sized with `flex-none` and one `flex-1` spacer to absorb slack.
-- Reorder children to match the diagram above.
-- Reduce vertical padding on every section (`py-2` / `py-3`) to guarantee fit on a 390×608 viewport.
-- Move the SPIN CTA from the top auth card to the bottom of the page (above the "Already a member?" footer).
-- Strip the old large gradient CTA styling.
+### 4. Unified Email/Phone + OTP box, moved under the CTA
+Remove the current inline sign-in form above the CTA. New component `src/components/landing/InlineOtpBox.tsx` placed directly under the rotating CTA.
 
-### 3. New `RotatingJoinCTA.tsx` (small component)
-- Compact pill button (~ `h-11 px-6`, `text-sm font-black uppercase tracking-[0.25em]`).
-- **Cyan neon outline**: `border border-cyan-400/70`, `shadow-[0_0_14px_rgba(34,211,238,0.55)]`, transparent/very dark background so it reads as outline-only.
-- Inside: a single rotating word, cycling every 3s through: `JOIN → WIN → WATCH → VOTE → CHALLENGE`.
-- Word swap animated with a short fade/slide (`animate-fade-in` + key-based remount).
-- `useEffect` interval, cleared on unmount, paused while tab hidden (visibility check).
-- Click → opens `LaunchWizard` (same `setSpinOpen(true)` behavior as today).
+Behavior:
+- Single input with **morphing placeholder** that cycles "Email" ⇄ "Phone" every 2s (pauses when focused/typed)
+- Orange glow outline (`border-orange-500/60 shadow-[0_0_18px_rgba(249,115,22,0.45)]`)
+- "Go" button → on submit, detects email vs phone via regex, calls the existing OTP send path:
+  - Email → `supabase.auth.signInWithOtp({ email })`
+  - Phone → `supabase.auth.signInWithOtp({ phone })` (Twilio SMS OTP, per existing `twilio-sms-otp` integration)
+- After send, swap input for 6-digit code entry (6 boxed cells) and verify via `supabase.auth.verifyOtp`
+- On success, route per role default
 
-### 4. Adaptive scaling
-- Mobile (default, ≤640px): single screen, no scroll, tight spacing per above.
-- Tablet (`md:`): same layout, increase headline & stat type sizes, larger paddings, max-width container `max-w-2xl mx-auto`.
-- Desktop (`lg:`): `max-w-3xl`, more generous gaps; layout remains a single column (no horizontal restructure) so it still feels native-mobile-first.
+### 5. Layout order in `VelvetRopeLanding.tsx`
+1. Header
+2. Two-color headline
+3. Feature Highlight Reel (flex-1)
+4. Rotating CTA + "+15 BB" subtext
+5. Inline OTP box (orange glow)
+6. Stats row
+7. Footer sign-in link (kept for returning users)
 
-## Out of scope
-- Auth flow, `LaunchWizard`, stats data source, header internals, routing.
-- No DB / edge function changes.
-
-## Files touched
-- `src/components/landing/VelvetRopeLanding.tsx` (rewrite layout)
-- `src/components/landing/LegendsHeadline.tsx` (size + accent swap)
-- `src/components/landing/RotatingJoinCTA.tsx` (new)
+### Technical notes
+- Files created: `FeatureHighlightReel.tsx`, `InlineOtpBox.tsx`
+- Files edited: `LegendsHeadline.tsx`, `RotatingJoinCTA.tsx`, `VelvetRopeLanding.tsx`
+- Files removed from landing: inline email/phone form block (logic replaced by `InlineOtpBox`)
+- Reuse `RotatingBBCoin` from `src/components/economy/RotatingBBCoin.tsx`
+- Flags: use unicode regional indicator emojis in a horizontally-scrolling marquee (no extra deps)
+- OTP path uses existing Supabase auth + Twilio SMS OTP edge functions already wired in the project
