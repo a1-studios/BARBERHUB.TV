@@ -1,24 +1,19 @@
-## Issue
-The rotating CTA currently sits below the dots/stats. User wants it placed in the empty space directly under the 3D globe and above the `500+ / 1.2k+ / 5k+ / 98%` stats row.
+## Fix mobile landing layout (bottom section)
 
-## Fix
+Two files touched, presentation-only.
 
-**`src/components/landing/FeatureHighlightReel.tsx`**
-- Remove the `LiveStatsRow` from inside the globe slide's `render`. The globe slide should render only the globe (full-bleed).
-- Add an optional `belowSlide` slot (or simply render `children` after the slide container and dots) so the parent can inject the CTA + stats stack beneath the reel.
-- New flex column order inside the reel wrapper:
-  1. Slide area (`flex-1` — globe gets all available vertical room)
-  2. Dots
-  3. `children` (CTA, then stats — provided by parent)
+### 1. `src/components/landing/FeatureHighlightReel.tsx` — globe slide
+- Restructure the `global` slide from `absolute inset-0` with absolutely-positioned slogan into a flex column: `GlobePulse` centered in a flex-1 wrapper, slogan rendered directly underneath with a tight `mt-1` gap so it visually hugs the globe instead of sticking to the bottom of the expanded reel area.
+- Update slogan markup to alternate word colors (one word orange, next word white, repeating) instead of the current 2+2 split:
+  - "Where" → orange
+  - "Barbers" → white
+  - "Become" → orange
+  - "Legends" → white
+- Keep `whitespace-nowrap`, `font-extrabold`, uppercase tracking, and drop-shadow.
 
-**`src/components/landing/VelvetRopeLanding.tsx`**
-- Pass the CTA and `LiveStatsRow` as children of `<FeatureHighlightReel>` so they render in this order directly under the globe:
-  - `RotatingJoinCTA` (centered, small top margin)
-  - `LiveStatsRow` (existing component)
-- Remove the separate `RotatingJoinCTA` block currently below the reel.
+### 2. `src/components/landing/VelvetRopeLanding.tsx` — vertical rhythm
+- Add breathing space between the reel, rotating CTA, and `LiveStatsRow` by bumping the inner spacers (e.g. `pt-2` → `pt-3 md:pt-4`) and adding a small `gap` / `mt` between the CTA and the stats so the EARN-BB button, 500+/1.2k+/5k+/98% row, and the slogan above no longer feel crammed.
+- No changes to OTP, footer, or any business logic.
 
-## Result
-- Globe stays full-bleed and gets more height.
-- CTA sits in the previously empty zone immediately under the globe.
-- Stats row sits just under the CTA, above the OTP input.
-- No business-logic changes — layout only.
+### Out of scope
+- No changes to GlobePulse internals, CTA component, stats component, routing, or data.
