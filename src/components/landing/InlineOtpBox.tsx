@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
@@ -21,7 +21,7 @@ export const InlineOtpBox = () => {
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [focused, setFocused] = useState(false);
 
-  const placeholders = useMemo(() => ['Email', 'Phone', 'Email or phone'], []);
+  const placeholders = useMemo(() => ['Sign in', 'Phone', 'Email'], []);
 
   useEffect(() => {
     if (focused || identity.length > 0) return;
@@ -156,9 +156,9 @@ export const InlineOtpBox = () => {
         e.preventDefault();
         sendCode();
       }}
-      className="w-full flex items-center gap-2"
+      className="w-full"
     >
-      <div className="relative flex-1">
+      <div className="relative w-full">
         <input
           type="text"
           value={identity}
@@ -167,16 +167,17 @@ export const InlineOtpBox = () => {
           onBlur={() => setFocused(false)}
           placeholder={placeholders[placeholderIdx]}
           autoComplete="email"
-          className="w-full rounded-lg bg-black/40 border border-orange-500/60 px-4 py-2.5 text-sm text-white placeholder:text-white/40 placeholder:transition-all focus:outline-none focus:border-orange-500 focus:shadow-[0_0_24px_rgba(249,115,22,0.65)] shadow-[0_0_18px_rgba(249,115,22,0.45)] transition-shadow"
+          className="w-full rounded-lg bg-black/40 border border-orange-500/60 pl-4 pr-12 py-2.5 text-sm text-white placeholder:text-white/40 placeholder:transition-all focus:outline-none focus:border-orange-500 focus:shadow-[0_0_24px_rgba(249,115,22,0.65)] shadow-[0_0_18px_rgba(249,115,22,0.45)] transition-shadow"
         />
+        <button
+          type="submit"
+          disabled={loading}
+          aria-label="Continue"
+          className="absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 rounded-md bg-orange-500/90 hover:bg-orange-500 border border-orange-400 inline-flex items-center justify-center text-white transition disabled:opacity-60"
+        >
+          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+        </button>
       </div>
-      <button
-        type="submit"
-        disabled={loading}
-        className="rounded-lg bg-orange-500/90 hover:bg-orange-500 border border-orange-400 px-5 py-2.5 text-sm font-black text-white uppercase tracking-wider transition disabled:opacity-60 inline-flex items-center gap-1.5"
-      >
-        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Go'}
-      </button>
     </form>
   );
 };
