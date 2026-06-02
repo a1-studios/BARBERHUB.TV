@@ -1,57 +1,54 @@
-## Root cause
+# Fix live challenge disconnects and auto-rejoin
 
-There are two separate role-gates hiding live content from non-fans:
+## Goal
+Stop barber-vs-barber live challenge sessions from breaking when a viewer leaves, and let a disconnected barber automatically rejoin the same live invitation room while the other barber is still there.
 
-1. **`src/pages/Index.tsx` (line 265)** branches the entire homepage on `isFan`:
-   - **Fans** → `<FanArenaView />`, which renders `LiveBattleFeed` ("🔥 Live Battles" section) and the `ArenaTicker` for challenges.
-   - **Everyone else (barbers, admins)** → a different layout (`DynamicBattleHero` + shelves + factions + `LiveBarberStreams`) that does **not** include `LiveBattleFeed` or the ArenaTicker challenge surface, so non-fans literally have no entry point for live battles/challenges on the home screen.
+## What I’ll change
 
-2. **`src/components/LiveBattleFeed.tsx`** imports `isBarber` but never uses it to gate the list — that's fine. The real gate is just the parent-component branching above.
+1. **Harden the contender room hook**
+   - Update `src/hooks/useBattleVideoRoom.tsx` so remote participant handling is keyed strictly to the opponent barber identity and never lets viewer churn affect the barber feed state.
+   - Add proper room lifecycle handling for temporary network drops vs intentional exits.
+   - Keep the local room session alive unless the barber explicitly ends the stream.
 
-The LiveKit viewer-token edge function (`get-livekit-viewer-token`) already accepts any authenticated user regardless of role, and routes like `/battle/:id/theater`, `/watch`, and `/broadcast/:barberId` are wrapped only in `AuthGuard` (no `BarberGuard`/`FanGuard`). So once we fix the homepage gate, all roles can already reach and watch the streams.
+2. **Add automatic rejoin logic**
+   - Add reconnect/rejoin behavior in `src/hooks/useBattleVideoRoom.tsx` with bounded retries and cleanup protection.
+   - Reuse token fetch logic so a barber can reconnect to the same `battle-{id}` room if the connection drops but the battle is still live.
+   - Preserve the current theater instead of kicking the barber back to `/watch` on transient disconnects.
 
-## Plan
+3. **Fix contender theater disconnect behavior**
+   - Update `src/pages/ContenderTheater.tsx` so room disconnects do not immediately navigate away during live mode.
+   - Show reconnecting/waiting states while retrying, and only exit on an intentional end or a confirmed unrecoverable failure.
 
-### 1. Show the same live + challenges surface to every signed-in role
+4. **Fix backend stream status updates**
+   - Correct the contract mismatch between `useBattleVideoRoom` and `supabase/functions/update-stream-status/index.ts`.
+   - The client is currently calling the function without the required `barberPosition`/`status` payload shape, and recent logs show `Not authorized` failures. I’ll align both sides so stream state updates are accurate and do not interfere with live room state.
 
-In `src/pages/Index.tsx`:
+5. **Validate the battle room/token flow**
+   - Review `supabase/functions/generate-livekit-token/index.ts` to make sure rejoin remains allowed while the battle is live and the barber is one of the two participants.
+   - Keep the invitation room stable for both barbers throughout reconnect attempts.
 
-- Remove the `isFan ? <FanArenaView /> : <main>…</main>` split.
-- Render a single unified `<main>` for all authenticated users containing, in order:
-  1. `DynamicBattleHero` (already role-aware internally — barbers get challenge CTAs, fans get watch CTAs)
-  2. `ProductShelf`
-  3. **`ArenaTicker`** (challenges / prize pools) — currently fan-only via FanArenaView, promote it to everyone
-  4. **`LiveBattleFeed`** ("🔥 Live Battles") — currently fan-only, promote it to everyone
-  5. `ImmersiveFactionBanners`
-  6. `GlobalLeagueDashboard`
-  7. `LiveBarberStreams`
-  8. `CommunitySection` / `GrantsSection` behind their existing feature flags
-- Keep the `FanIntroSequence` gated to fans (it's a one-time fan onboarding, not a content surface).
-- Delete the now-unused `FanArenaView` import; leave the file in place for now (no functional callers).
+## Why this should fix it
+The current flow treats disconnects too aggressively:
+- the contender page sends barbers away on disconnect instead of recovering,
+- the room hook does not implement a robust auto-rejoin path,
+- and stream-status writes are failing in the backend, which can leave battle/session state inconsistent.
 
-### 2. Make `LiveBattleFeed` role-agnostic
+## Technical details
+- Files to update:
+  - `src/hooks/useBattleVideoRoom.tsx`
+  - `src/pages/ContenderTheater.tsx`
+  - `supabase/functions/update-stream-status/index.ts`
+  - possibly `supabase/functions/generate-livekit-token/index.ts` if rejoin permissions need a small adjustment
+- Validation after changes:
+  - confirm no viewer leave triggers opponent-loss teardown
+  - confirm transient disconnect retries reconnect into the same room
+  - confirm barbers stay in theater during retry
+  - confirm stream status writes succeed instead of returning `Not authorized`
 
-- Remove the unused `const { isBarber } = useUserRole();` from `src/components/LiveBattleFeed.tsx` (dead code, was the leftover gate hook).
-- No other logic change — `navigate(\`/battles/${id}\`)` already works for all signed-in roles via `AuthGuard`.
+## Evidence from the audit
+- `ContenderTheater` currently navigates to `/watch` on disconnect during live mode.
+- `useBattleVideoRoom` handles `RoomEvent.Disconnected`, but it does not implement a durable auto-rejoin path.
+- Recent Supabase logs show `update-stream-status` failing with `Not authorized`.
+- Recent `stream_sessions` rows are stuck in `connecting`, which matches the broken status update path.
 
-### 3. Verify there are no other role walls on the live path
-
-Confirmed read-only (no changes needed, just listing so we don't regress):
-- `App.tsx` routes `/battles/:id`, `/battle/:id/theater`, `/watch`, `/broadcast/:barberId` are `AuthGuard`-only (all signed-in users pass).
-- `/battle/:id/contender` stays behind `BarberGuard` (barbers only — correct, that's the perform side).
-- `get-livekit-viewer-token` edge function requires only a valid Supabase JWT, no role check.
-- `BattleTheater` viewer-token fetch already runs whenever `user` exists, no `isFan` condition.
-
-### 4. QA after build
-
-- Sign in as a barber → home screen shows "🔥 Live Battles" and ArenaTicker; tapping a live battle opens `/battles/:id` and `/battle/:id/theater` and connects to LiveKit as a viewer.
-- Sign in as a fan → same surfaces visible (no regression).
-- Sign in as an admin → same surfaces visible.
-- Signed-out → unchanged `VelvetRopeLanding`.
-
-## Files to edit
-
-- `src/pages/Index.tsx` — collapse the `isFan` branch into one unified authenticated layout that includes `LiveBattleFeed` + `ArenaTicker`.
-- `src/components/LiveBattleFeed.tsx` — remove the unused `useUserRole`/`isBarber` import.
-
-No DB migrations, no edge-function changes, no new components.
+If you approve, I’ll implement and validate this fix next.
