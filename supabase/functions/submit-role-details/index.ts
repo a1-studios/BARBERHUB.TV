@@ -22,6 +22,7 @@ const BarberBody = z.object({
   phone_number: z.string().max(40).optional().nullable(),
   zip_code: z.string().trim().min(2).max(20).optional().nullable(),
   specialties: z.array(z.string().max(40)).max(3).optional(),
+  vip_code: z.string().trim().min(1).max(64).optional().nullable(),
 });
 
 const Body = z.union([FanBody, BarberBody]);
