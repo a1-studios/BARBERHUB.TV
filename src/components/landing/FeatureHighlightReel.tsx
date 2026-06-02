@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { MapPin, Search, Radio, Coins } from 'lucide-react';
 import { GlobePulse } from '@/components/ui/cobe-globe-pulse';
 import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
+import { LiveStatsRow } from './LiveStatsRow';
 
 /**
  * Manually-controlled highlight reel. User swipes or taps dots to navigate.
@@ -50,8 +51,13 @@ const slides: Slide[] = [
     id: 'global',
     label: 'Global',
     render: () => (
-      <div className="absolute inset-0 flex items-center justify-center">
-        <GlobePulse />
+      <div className="absolute inset-0 flex flex-col">
+        <div className="flex-1 relative">
+          <GlobePulse />
+        </div>
+        <div className="flex-none pb-2">
+          <LiveStatsRow />
+        </div>
       </div>
     ),
   },
