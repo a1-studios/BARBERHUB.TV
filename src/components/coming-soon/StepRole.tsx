@@ -1,30 +1,24 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Scissors, Heart, ArrowLeft, ArrowRight, Loader2, AlertCircle, Globe, Phone, Sparkles } from 'lucide-react';
+import { Scissors, Heart, ArrowLeft, ArrowRight, Loader2, AlertCircle, Globe, Phone, Sparkles, KeyRound, Check } from 'lucide-react';
 import { CountrySelector } from '@/components/CountrySelector';
 import { supabase } from '@/integrations/supabase/client';
 import { SwipeableStep } from './SwipeableStep';
 import { useStepDirection } from './LaunchWizard';
 import type { LaunchRole, BarberStatus } from './LaunchWizard';
+import { BARBER_STATUSES as STATUSES } from '@/lib/barberStatuses';
 
 interface Props {
   email: string;
   initialRole: LaunchRole | null;
   initialCountry: string | null;
   initialPhone: string;
-  onContinue: (data: { role: LaunchRole; barberStatus: BarberStatus | null; country: string | null; phone: string }) => void;
+  initialVipCode?: string;
+  onContinue: (data: { role: LaunchRole; barberStatus: BarberStatus | null; country: string | null; phone: string; vipCode: string }) => void;
   onBack: () => void;
 }
 
 const haptic = () => { try { navigator.vibrate?.(10); } catch { /* */ } };
-
-const STATUSES: { id: BarberStatus; label: string; desc: string; aspiring?: boolean }[] = [
-  { id: 'licensed',   label: 'Licensed Pro',   desc: 'Active license' },
-  { id: 'unlicensed', label: 'Unlicensed Pro', desc: 'Cuts professionally' },
-  { id: 'student',    label: 'Student',        desc: 'In barber school' },
-  { id: 'beginner',   label: 'Beginner',       desc: 'Just getting started' },
-  { id: 'aspiring',   label: 'Aspiring',       desc: 'Thinking about it', aspiring: true },
-];
 
 export const StepRole = ({ email, initialRole, initialCountry, initialPhone, onContinue, onBack }: Props) => {
   const direction = useStepDirection();
