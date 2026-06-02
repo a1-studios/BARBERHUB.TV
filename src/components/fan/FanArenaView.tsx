@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { DynamicBattleHero } from '@/components/DynamicBattleHero';
-import { LiveBattleFeed } from '@/components/LiveBattleFeed';
 import { GlobalLeagueDashboard } from '@/components/GlobalLeagueDashboard';
 import { ArenaTicker } from '@/components/factions/ArenaTicker';
 import { useCategoryPrizePools } from '@/hooks/useCategoryPrizePools';
 import { ProductShelf } from '@/components/ProductShelf';
+import { LiveBarberStreams } from '@/components/battles/LiveBarberStreams';
 
 export const FanArenaView = () => {
   const navigate = useNavigate();
@@ -14,6 +14,9 @@ export const FanArenaView = () => {
     <main className="space-y-4 pb-24">
       {/* Featured Battle Hero */}
       <DynamicBattleHero />
+
+      {/* Lives — auto-hides when no barbers are live */}
+      <LiveBarberStreams />
 
       {/* Official Gear Shelf */}
       <ProductShelf />
@@ -25,14 +28,6 @@ export const FanArenaView = () => {
           isBarber={false}
           onNavigate={(path) => navigate(path)}
         />
-      </section>
-
-      {/* Live Battle Feed — the core fan experience */}
-      <section className="px-3 sm:px-6">
-        <h2 className="text-lg font-bold text-foreground mb-3">
-          🔥 Live Battles
-        </h2>
-        <LiveBattleFeed />
       </section>
 
       {/* Global League */}
