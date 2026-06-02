@@ -1,7 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import createGlobe from "cobe";
 import { useNavigate } from "react-router-dom";
 import { MapPin, Calendar } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { BarberTeaserModal, type TeaserAction } from "@/components/landing/BarberTeaserModal";
 
 interface PulseMarker {
   id: string;
