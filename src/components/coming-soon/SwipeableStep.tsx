@@ -1,4 +1,4 @@
-import { motion, type PanInfo } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { ReactNode } from 'react';
 
 interface SwipeableStepProps {
