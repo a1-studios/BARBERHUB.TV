@@ -424,6 +424,10 @@ export function GlobePulse({
     let mode: "idle" | "pan" = "idle";
     let panLastX = 0;
     let panLastY = 0;
+    let panStartX = 0;
+    let pinchStartDist = 0;
+    let pinchStartZoom = 1;
+    void pinchStartDist; void pinchStartZoom;
     let panStartY = 0;
     let panStartTime = 0;
     let pinchStartDist = 0;
