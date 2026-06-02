@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const { role, barber_status, country_code, phone_number } = parsed.data;
+    const { role, barber_status, country_code, phone_number, vip_code } = parsed.data;
     if (role === 'barber' && !barber_status) {
       return new Response(JSON.stringify({ error: 'barber_status_required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -65,13 +65,35 @@ Deno.serve(async (req) => {
     const admin = createClient(supabaseUrl, serviceKey);
     const email = (user.email ?? '').toLowerCase();
 
-    // 1. Update country_code on profiles up front (sync function preserves it)
-    await admin.from('profiles').update({ country_code }).eq('user_id', user.id);
+    // VIP-gate barber promotion BEFORE any mutation
+    let vipCodeNorm: string | null = null;
+    if (role === 'barber') {
+      const { data: vipModeOn } = await admin.rpc('is_global_vip_mode');
+      vipCodeNorm = vip_code?.trim().toUpperCase() ?? null;
+      if (vipModeOn) {
+        if (!vipCodeNorm) {
+          return new Response(JSON.stringify({ error: 'vip_code_required' }), {
+            status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        const { data: vData, error: vErr } = await admin.rpc('validate_access_code', { p_code: vipCodeNorm });
+        const row = Array.isArray(vData) ? vData[0] : vData;
+        if (vErr || !row?.valid) {
+          return new Response(JSON.stringify({ error: 'invalid_vip_code' }), {
+            status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+    }
 
-    // 2. Enforce binary role — but skip the sync RPC if the user is already
-    //    locked into this exact role. Roles are permanent post-signup, so
-    //    re-firing the RPC on a returning user is a no-op at best and a
-    //    silent role flip at worst (which used to wipe their barber_profile).
+    // 1. Update country_code + sub_category on profiles up front
+    const profileUpdate: Record<string, unknown> = { country_code };
+    if (role === 'barber' && barber_status) {
+      profileUpdate.sub_category = STATUS_TO_SUB_CATEGORY[barber_status] ?? barber_status;
+    }
+    await admin.from('profiles').update(profileUpdate).eq('user_id', user.id);
+
+    // 2. Enforce binary role — skip the sync RPC if user is already in this role
     const { data: currentProfile } = await admin
       .from('profiles')
       .select('user_type')
@@ -88,6 +110,15 @@ Deno.serve(async (req) => {
           status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+    }
+
+    // 2b. Redeem VIP code post-role-flip
+    if (role === 'barber' && vipCodeNorm) {
+      await admin.rpc('redeem_access_code', {
+        p_code: vipCodeNorm,
+        p_user_id: user.id,
+        p_email: email,
+      });
     }
 
     // 3. Link the marketing lead and credit BB if not already claimed
