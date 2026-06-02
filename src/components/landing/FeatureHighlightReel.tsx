@@ -1,7 +1,13 @@
 import { useRef, useState } from 'react';
 import { MapPin, Search, Radio, Coins } from 'lucide-react';
 import { GlobePulse } from '@/components/ui/cobe-globe-pulse';
+import { useLiveBarberMarkers } from '@/hooks/useLiveBarberMarkers';
 import { RotatingBBCoin } from '@/components/economy/RotatingBBCoin';
+
+const LiveGlobe = () => {
+  const markers = useLiveBarberMarkers();
+  return <GlobePulse markers={markers ?? undefined} />;
+};
 
 
 /**
@@ -53,7 +59,7 @@ const slides: Slide[] = [
     render: () => (
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <div className="w-full max-w-[360px] md:max-w-[300px] lg:max-w-[320px] relative mx-auto">
-          <GlobePulse />
+          <LiveGlobe />
         </div>
         <div className="mt-2 flex justify-center pointer-events-none">
           <p className="whitespace-nowrap text-[12px] md:text-sm font-extrabold uppercase tracking-[0.22em] drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">

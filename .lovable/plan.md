@@ -1,62 +1,59 @@
+# Live Cyan Globe — Velvet Rope Landing
 
-# Architectural Audit & Cleanup Plan
+Upgrade `src/components/ui/cobe-globe-pulse.tsx` (used inside `FeatureHighlightReel` on `VelvetRopeLanding`) from a static decorative globe into a brand-tinted, data-driven, lightly interactive globe — without re-introducing the mobile drag lag we just fixed.
 
-Goal: shrink the bundle and codebase by removing genuinely dead frontend code and stale fragments, **without breaking anything currently in use**. We work in safe, reviewable phases with a strict "verify before delete" rule.
+## 1. Cyan-tinted cobe palette
 
-## Guiding rules (non-negotiable)
+In the existing `createGlobe(...)` call, override the color stops only — geometry, map sample density, mobile DPR scaling, and the auto-rotation loop stay identical:
 
-1. Never delete edge functions. Knip reports them as "unused" because they're invoked dynamically via `supabase.functions.invoke(...)` and cron — they are live infrastructure. Edge-function cleanup is OUT OF SCOPE of this pass.
-2. Never delete DB tables, RLS policies, migrations, or anything under `supabase/` other than truly orphaned frontend helpers.
-3. For every file proposed for deletion: confirm zero `import` references via `rg` AND no dynamic `lazy(() => import(...))` / string-literal reference before removing.
-4. Keep all shadcn/ui primitives even if currently unused — they are a design-system library, not app code. (Exception in Phase 4 below, only if explicitly approved.)
-5. No behavior changes. No refactors that alter UX, routes, auth, economy, or realtime logic.
-6. Work in small commits per phase so anything can be reverted cleanly.
+- `baseColor` → cyan-leaning slate (approx `[0.05, 0.18, 0.28]`) so the procedural dot map reads as ocean.
+- `glowColor` → soft Zion-blue atmosphere (approx `[0.12, 0.55, 0.75]`).
+- `markerColor` → keep neon orange (`[1, 0.45, 0.1]`).
+- `dark: 1`, `diffuse` slightly lowered to let the cyan glow show.
+- Overlay flag pins (orange dot + flag emoji) remain unchanged so brand orange still pops over the cyan field.
 
-## Phase 1 — Confirmed dead legacy (safe deletes)
+Note: cobe renders its land/water as a single procedural dot field, so this is the "tint base+glow cyan, markers orange" approach you picked — no texture swap, no bundle weight added.
 
-These are already neutralized in routing or replaced by newer components. Verified via grep:
+## 2. Live data wiring (60s refresh)
 
-- `src/pages/BattlesPage.tsx` — route was replaced with `<Navigate to="/watch" />` in `App.tsx`; file has no importers.
-- `src/pages/CreateBattle.tsx` — `/battles/create` now redirects to `/creator-hub`; replaced by `components/creator/CreateBattleDrawer.tsx`. No importers.
-- `src/components/BattlesSection.tsx` — empty placeholder returning `null`, still rendered in `Index.tsx`. Remove import + JSX usage in `Index.tsx` and delete the file.
-- `src/components/coming-soon/StepBarberDetails.tsx`, `StepFanDetails.tsx`, `StepClaimAccount.tsx`, `StepProfileBoost.tsx` — superseded by current `LaunchWizard` flow (StepRole → StepAuth → StepBucksReward → StepRaffleSpin → StepTicketReveal). Verify zero importers, then delete.
+New hook `src/hooks/useLiveBarberMarkers.tsx`:
 
-Verification step before each delete: `rg -n "<Filename>" src supabase` returns only the file itself.
+- Query `barber_profiles` for rows where `location_sharing_enabled = true` AND `latitude IS NOT NULL` AND `longitude IS NOT NULL`.
+- Select only public-safe fields: `id, latitude, longitude, shop_city`, plus a join to `public_user_profiles` (the safe view) for `country_code` so we can show the flag emoji.
+- Cap at ~60 markers (cobe perf ceiling) — random sample if over.
+- Refetch every 60s via `setInterval`; pause when `document.hidden`.
+- Returns `PulseMarker[]` shaped exactly like the current `defaultMarkers`, so `GlobePulse` consumes it with no signature change.
 
-## Phase 2 — Frontend dead modules flagged by knip (verify each)
+`VelvetRopeLanding` passes the live markers in; falls back to the existing curated demo markers when the query is empty or still loading, so the hero never renders an empty globe.
 
-Knip flagged ~90 frontend files. We will **not** bulk-delete. Process: for each candidate, run `rg` for the symbol AND filename across `src/`. Delete only when both return zero hits outside the file itself. High-confidence batches to review (each individually verified):
+## 3. Interactivity — tap-to-focus only
 
-- Legacy battle UI replaced by Watch/Theater flow: `components/battles/BattleResultsView.tsx`, `BattleVotingView.tsx`, `DesktopVoteButtons.tsx`, `FullscreenBattleVideoModal.tsx`, `HeadToHeadBattle.tsx`, `InteractiveVoteSlider.tsx`, `LiveNowBanner.tsx`, `PastHighlight.tsx`, `SubmissionPreview.tsx`, `TaleOfTheTape.tsx`.
-- Orphan landing teasers under `components/landing/teasers/*` and `InsideTheHubStage`, `LeaguePulseStrip`, `LegendsHeadline`, `LockedTeaser`, `OrbitingSlogan`, `RotatingTeaserStage`.
-- Stale creator/barber/profile files: `components/creator/CreatorHub.tsx` (page lives in `pages/CreatorHub.tsx`), `EarningSystem.tsx`, `ReferralProgram.tsx`, `barber/BarberDashboard.tsx`, `barber/BarberProfileHeader.tsx`, `barber/BarberBucksPackages.tsx`, `profiles/BarberProfileForm.tsx`, `profiles/BarberSettings.tsx`, `profiles/PortfolioManager.tsx`.
-- Unused hooks: `useBarberLiveStatus`, `useGestureVerification`, `useLiveKitStream`, `useMediaControls`.
-- Misc: `HaircutAdvisorModal.tsx` (AI-Style is permanently forbidden per memory), `VideoPlayer.tsx` (replaced by `BrandedVideoPlayer`/`SmartVideoPlayer`), `WorldCupPrizeCounter.tsx`, `EmptyState.tsx`, `RoleBadge.tsx`, `QuickActionsMenu.tsx` (only if no Header usage), `BarberSearchAutocomplete.tsx`, `FeaturedCreatorCard.tsx`, `PrizePoolCard.tsx`, `utils/countryCelebration.ts`.
+Per your decision, we do NOT re-enable drag or pinch (those caused the mobile lag). Instead:
 
-For anything ambiguous (e.g. `QuickActionsMenu` — memory says it's a core UI piece), default to KEEP and add a note instead.
+- Keep `pointerEvents: "none"` on the `<canvas>` (auto-rotate stays smooth).
+- Set `pointerEvents: "auto"` on the marker overlay `<div>`s only.
+- Tapping a marker animates `phiOffsetRef` / `thetaOffsetRef` toward that marker's `[lat, lon]` over ~800ms using `requestAnimationFrame` easing, then resumes auto-rotation from the new position.
+- Show a small floating chip with `shop_city, country` for ~2s after tap.
 
-## Phase 3 — Light optimization (no behavior change)
+This gives the "real-time interactive" feel without the heavy continuous gesture work that was lagging mobile.
 
-- Add `React.lazy` + `Suspense` for heavy, route-bound pages currently imported eagerly in `src/App.tsx`: `SovereignHQ`, `AdminDashboard`, `admin/*`, `CameraStudio`, `BroadcastStudio`, `ContenderTheater`, `BattleTheater`, `Tournaments`, `TournamentDetails`, `VaultOfHonor`, `Analytics`, legal pages. `BarbersDirectory` is already lazy — mirror that pattern.
-- Remove unused imports inside files we touch (only files we touch — no project-wide reformat).
-- Confirm `vite.config.ts` has `build.chunkSizeWarningLimit` reasonable and no obvious bundler regressions; no plugin changes.
+## 4. Performance guardrails (preserve what we just fixed)
 
-## Phase 4 — OUT OF SCOPE for this pass (require explicit approval later)
+- Keep the existing mobile branch: `mapSamples: 6000`, `devicePixelRatio` capped at 1.5, `renderScale: 1`.
+- IntersectionObserver: pause the RAF loop when the globe is scrolled out of view.
+- Throttle the marker projection loop to every other frame on mobile.
+- No new heavy deps; no three.js, no texture loads.
 
-- Removing unused shadcn primitives (`accordion`, `carousel`, `chart`, `sidebar`, etc.).
-- Touching any `supabase/functions/*`.
-- Refactoring large components for line-count reduction. "Optimum amount of lines" is not a measurable target — we will not rewrite working components just to shrink them. Real wins come from dead-file removal + lazy loading.
-- Any DB migration.
+## 5. Files touched
 
-## Deliverables
+- `src/components/ui/cobe-globe-pulse.tsx` — recolor, add tap-to-focus, accept dynamic markers, IO pause, no drag.
+- `src/hooks/useLiveBarberMarkers.tsx` — new; Supabase query + 60s polling.
+- `src/components/landing/FeatureHighlightReel.tsx` — pass live markers into `<GlobePulse markers={...} />` (fallback to demo).
+- No DB migration, no edge function, no schema change — `barber_profiles.location_sharing_enabled`, `latitude`, `longitude`, `shop_city` already exist and are readable via the public view pattern already used elsewhere.
 
-- A single PR-style change-set per phase with the file list, the `rg` evidence for each deletion, and a one-line "why safe".
-- After Phase 1+2: build must pass and the preview must load `/`, `/watch`, `/creator-hub`, `/portal`, `/sovereign-hq` without console errors.
-- After Phase 3: same routes load, plus initial JS payload measurably smaller (we'll report before/after `dist/assets` sizes).
+## Out of scope
 
-## Confirm before I start
-
-1. Approve Phase 1 (5 files) for immediate deletion?
-2. Approve Phase 2 with the per-file verification gate (I'll list each batch's confirmed-safe files before deleting)?
-3. Approve Phase 3 lazy-loading of admin/heavy routes?
-4. Keep Phase 4 (shadcn pruning, edge functions, big refactors) deferred?
+- True cyan-water / orange-land textured earth (would require swapping cobe for three-globe).
+- Drag / pinch-zoom gestures (explicitly declined to protect mobile perf).
+- Realtime subscriptions (60s polling chosen instead).
+- Clustering — capped sample of 60 markers is enough for a landing hero.
