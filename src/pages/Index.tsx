@@ -12,7 +12,7 @@ import { LaunchWizard } from "@/components/coming-soon/LaunchWizard";
 import GrantsSection from "@/components/GrantsSection";
 import { GlobalLeagueDashboard } from "@/components/GlobalLeagueDashboard";
 
-import { LiveBarberStreams } from "@/components/battles/LiveBarberStreams";
+import { LivesModal } from "@/components/battles/LivesModal";
 import { useAuth } from "@/hooks/useAuth";
 import { FEATURES } from "@/config/features";
 import { ImmersiveFactionBanners } from "@/components/factions/ImmersiveFactionBanners";
@@ -25,35 +25,21 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { FanIntroSequence } from "@/components/fan/FanIntroSequence";
 
-import { ArenaTicker } from "@/components/factions/ArenaTicker";
-import { useCategoryPrizePools } from "@/hooks/useCategoryPrizePools";
-
 import { ProductShelf } from "@/components/ProductShelf";
 
 const UnifiedArena = () => {
-  const navigate = useNavigate();
-  const { prizePools } = useCategoryPrizePools();
   return (
     <main className="space-y-4 pb-24">
       {/* Featured Battle Hero — role-aware internally */}
       <DynamicBattleHero />
 
-      {/* Lives — auto-hides when no barbers are live */}
-      <LiveBarberStreams />
+      {/* Lives — auto-opens as modal when a barber is live, otherwise renders nothing */}
+      <LivesModal />
 
       {/* Official Gear Shelf */}
       <ProductShelf />
 
-      {/* Challenges / Prize Pools ticker — visible to every signed-in role */}
-      <section className="px-3 sm:px-6">
-        <ArenaTicker
-          prizePools={prizePools}
-          isBarber={false}
-          onNavigate={(path) => navigate(path)}
-        />
-      </section>
-
-      {/* Immersive Faction Banners */}
+      {/* Immersive Faction Banners (includes the prize-pool ticker) */}
       <ImmersiveFactionBanners />
 
       {/* Global League Dashboard */}
