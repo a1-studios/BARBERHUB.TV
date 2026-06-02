@@ -114,40 +114,41 @@ const GHOST_FLAGS: Array<{ cc: string; flag: string; loc: [number, number] }> = 
   { cc: "FJ", flag: "🇫🇯", loc: [-18.14, 178.44] },
 ];
 
-function Clippers({ size = 12 }: { size?: number }) {
-  // Hair clipper silhouette: head with comb teeth + body
+function BarberPole({ size = 14 }: { size?: number }) {
+  const w = Math.round(size * 0.36);
   return (
     <svg
-      width={size}
+      width={w}
       height={size}
-      viewBox="0 0 24 24"
-      fill="none"
+      viewBox="0 0 10 28"
       xmlns="http://www.w3.org/2000/svg"
       style={{
         filter:
-          "drop-shadow(0 0 3px rgba(255,115,30,0.95)) drop-shadow(0 0 6px rgba(255,115,30,0.5))",
+          "drop-shadow(0 0 2px rgba(255,115,30,0.9)) drop-shadow(0 0 4px rgba(255,115,30,0.45))",
       }}
     >
-      {/* Comb teeth */}
-      <path
-        d="M3 5 h2 v2 h1 v-2 h2 v2 h1 v-2 h2 v2 h1 v-2 h2 v2 h1 v-2 h2 v3 H3 z"
-        fill="hsl(28, 100%, 60%)"
-      />
-      {/* Head */}
-      <rect x="3" y="8" width="18" height="3" rx="0.6" fill="hsl(28, 100%, 55%)" />
-      {/* Body */}
-      <rect
-        x="6"
-        y="11"
-        width="12"
-        height="9"
-        rx="1.5"
-        fill="hsl(28, 100%, 48%)"
-        stroke="hsl(28, 100%, 68%)"
-        strokeWidth="0.6"
-      />
-      {/* Switch */}
-      <rect x="10" y="14" width="4" height="1.5" rx="0.5" fill="hsl(28, 100%, 75%)" />
+      <defs>
+        <clipPath id="bp-clip">
+          <rect x="1.5" y="5" width="7" height="18" rx="3.5" />
+        </clipPath>
+      </defs>
+      <rect x="0.5" y="2" width="9" height="3.5" rx="1" fill="#e8b84a" stroke="#8a6a1f" strokeWidth="0.4" />
+      <rect x="0.5" y="22.5" width="9" height="3.5" rx="1" fill="#e8b84a" stroke="#8a6a1f" strokeWidth="0.4" />
+      <rect x="1.5" y="5" width="7" height="18" rx="3.5" fill="#1a1a1a" />
+      <g clipPath="url(#bp-clip)">
+        {[-20, -16, -12, -8, -4, 0, 4, 8, 12, 16, 20].map((y, i) => (
+          <rect
+            key={i}
+            x="-4"
+            y={y}
+            width="18"
+            height="2.4"
+            fill={i % 3 === 0 ? "#e53935" : i % 3 === 1 ? "#ffffff" : "#1e88e5"}
+            transform="rotate(35 5 14)"
+          />
+        ))}
+      </g>
+      <rect x="2" y="5.5" width="1.2" height="17" rx="0.6" fill="rgba(255,255,255,0.2)" />
     </svg>
   );
 }
@@ -248,7 +249,8 @@ export function GlobePulse({
         const py = radius - y * radius * 0.9;
         const visible = z > 0.05;
         const scale = ghost ? 0.5 + z * 0.22 : 0.7 + z * 0.4;
-        el.style.transform = `translate3d(${px}px, ${py}px, 0) translate(-50%, -50%) scale(${scale})`;
+        // Anchor is zero-size at projected point; child handles centering.
+        el.style.transform = `translate3d(${px}px, ${py}px, 0) scale(${scale})`;
         const maxOpacity = ghost ? 0.45 : 1;
         el.style.opacity = visible
           ? String(Math.min(maxOpacity, z * (ghost ? 0.9 : 1.6)))
@@ -279,7 +281,7 @@ export function GlobePulse({
         baseColor: [0.06, 0.22, 0.32],
         markerColor: [1, 0.45, 0.1],
         glowColor: [1, 0.45, 0.1],
-        markers: liveMarkers.map((m) => ({ location: m.location, size: 0.05 })),
+        markers: [],
       });
 
       function animate() {
@@ -380,37 +382,41 @@ export function GlobePulse({
         style={{ pointerEvents: "none" }}
         aria-hidden
       >
-        {/* Ghost flags — capital cities, anchored on flag center */}
+        {/* Ghost flags — zero-size anchor at geo point, flag centered via inner translate */}
         {ghosts.map((g, i) => (
           <div
             key={`ghost-${g.cc}`}
             ref={(el) => (ghostRefs.current[i] = el)}
-            className="absolute top-0 left-0 will-change-transform"
+            className="absolute top-0 left-0 w-0 h-0 will-change-transform"
             style={{ transition: "opacity 0.25s linear", pointerEvents: "none" }}
           >
-            {/* Flag emoji center == projected lat/lon */}
-            <span className="block text-[12px] leading-none">{g.flag}</span>
+            <span className="absolute block text-[12px] leading-none -translate-x-1/2 -translate-y-1/2 whitespace-nowrap">
+              {g.flag}
+            </span>
           </div>
         ))}
 
-        {/* Live markers — flag center on exact geo, clippers hang just below */}
+        {/* Live markers — flag center on exact geo, barber pole hangs below */}
         {liveMarkers.map((m, i) => (
           <div
             key={m.id}
             ref={(el) => (flagRefs.current[i] = el)}
-            className="absolute top-0 left-0 will-change-transform cursor-pointer"
+            className="absolute top-0 left-0 w-0 h-0 will-change-transform"
             style={{ transition: "opacity 0.25s linear", pointerEvents: "none" }}
-            onClick={() => focusMarker(m)}
-            onTouchStart={() => focusMarker(m)}
           >
-            {/* This span is the centered element: its midpoint == projected lat/lon */}
-            <span className="relative block text-[18px] leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-              {m.flag}
-              {/* Clippers float just below the flag, not part of the anchor box */}
-              <span className="absolute left-1/2 top-full -translate-x-1/2 mt-[2px] pointer-events-none">
-                <Clippers size={12} />
+            <div
+              className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer"
+              style={{ pointerEvents: "auto" }}
+              onClick={() => focusMarker(m)}
+              onTouchStart={() => focusMarker(m)}
+            >
+              <span className="block text-[18px] leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] whitespace-nowrap">
+                {m.flag}
               </span>
-            </span>
+              <span className="mt-[1px] pointer-events-none">
+                <BarberPole size={14} />
+              </span>
+            </div>
           </div>
         ))}
       </div>
