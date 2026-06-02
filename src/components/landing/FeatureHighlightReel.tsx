@@ -51,8 +51,13 @@ const slides: Slide[] = [
     id: 'global',
     label: 'Global',
     render: () => (
-      <div className="absolute inset-0 flex items-center justify-center">
-        <GlobePulse />
+      <div className="absolute inset-0 flex flex-col">
+        <div className="flex-1 relative">
+          <GlobePulse />
+        </div>
+        <div className="flex-none pb-2">
+          <LiveStatsRow />
+        </div>
       </div>
     ),
   },
