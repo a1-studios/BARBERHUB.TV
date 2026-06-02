@@ -285,7 +285,7 @@ export function GlobePulse({
         theta: 0.2,
         dark: 1,
         diffuse: 0.8,
-        mapSamples: isMobile ? 6000 : 16000,
+        mapSamples: isMobile ? 5000 : 16000,
         mapBrightness: 4,
         baseColor: [0.06, 0.22, 0.32],
         markerColor: [1, 0.45, 0.1],
