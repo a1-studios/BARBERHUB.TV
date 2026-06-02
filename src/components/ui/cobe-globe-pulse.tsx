@@ -421,10 +421,9 @@ export function GlobePulse({
     };
 
     // Shared gesture state
-    let mode: "idle" | "pan" | "pinch" = "idle";
+    let mode: "idle" | "pan" = "idle";
     let panLastX = 0;
     let panLastY = 0;
-    let panStartX = 0;
     let panStartY = 0;
     let panStartTime = 0;
     let pinchStartDist = 0;
