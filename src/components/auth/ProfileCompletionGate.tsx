@@ -202,23 +202,25 @@ export const ProfileCompletionGate = () => {
                 })}
               </div>
 
-              <div className="relative">
-                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-400/70 pointer-events-none z-10" />
-                <input
-                  type="text"
-                  inputMode="text"
-                  placeholder="VIP Invite Code (required)"
-                  value={vipCode}
-                  onChange={(e) => setVipCode(e.target.value.toUpperCase())}
-                  maxLength={32}
-                  autoCapitalize="characters"
-                  className="w-full h-11 pl-9 pr-3 rounded-[12px] bg-black/40 text-white text-sm font-bold tracking-widest uppercase focus:outline-none focus:ring-2 focus:ring-orange-500/60"
-                  style={{ border: '1px solid hsla(20,100%,56%,0.4)' }}
-                />
-                <p className="text-[10px] text-white/50 mt-1.5 px-1">
-                  Barber spots are invite-only during beta. Don't have a code? Switch to Fan to enter free.
-                </p>
-              </div>
+              {vipMode && (
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-400/70 pointer-events-none z-10" />
+                  <input
+                    type="text"
+                    inputMode="text"
+                    placeholder="VIP Invite Code (required)"
+                    value={vipCode}
+                    onChange={(e) => setVipCode(e.target.value.toUpperCase())}
+                    maxLength={32}
+                    autoCapitalize="characters"
+                    className="w-full h-11 pl-9 pr-3 rounded-[12px] bg-black/40 text-white text-sm font-bold tracking-widest uppercase focus:outline-none focus:ring-2 focus:ring-orange-500/60"
+                    style={{ border: '1px solid hsla(20,100%,56%,0.4)' }}
+                  />
+                  <p className="text-[10px] text-white/50 mt-1.5 px-1">
+                    Barber spots are invite-only during beta. Don't have a code? Switch to Fan to enter free.
+                  </p>
+                </div>
+              )}
             </>
           )}
 
