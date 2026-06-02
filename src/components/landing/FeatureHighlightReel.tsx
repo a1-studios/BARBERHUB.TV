@@ -235,6 +235,7 @@ export const FeatureHighlightReel = ({ children }: { children?: React.ReactNode 
           </div>
         ))}
       </div>
+      {children}
       {/* dots */}
       <div className="flex items-center justify-center gap-2 pt-2">
         {slides.map((s, i) => (
