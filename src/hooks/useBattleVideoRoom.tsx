@@ -48,6 +48,7 @@ interface BattleVideoState {
 
 export const useBattleVideoRoom = ({
   battleId,
+  opponentIdentity: expectedOpponentIdentity,
   onOpponentJoin,
   onOpponentLeave,
   onDisconnect,
@@ -68,41 +69,64 @@ export const useBattleVideoRoom = ({
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<Date | null>(null);
   const connectingRef = useRef(false);
+  const expectedOpponentRef = useRef<string | null | undefined>(expectedOpponentIdentity);
+
+  useEffect(() => {
+    expectedOpponentRef.current = expectedOpponentIdentity;
+  }, [expectedOpponentIdentity]);
+
+  /** Match only the opponent barber when an expected identity is provided. */
+  const isOpponent = useCallback((identity: string) => {
+    const expected = expectedOpponentRef.current;
+    if (!expected) return true; // legacy: treat any remote as opponent
+    return identity === expected;
+  }, []);
 
   const handleTrackSubscribed = useCallback(
-    (track: RemoteTrack, _pub: RemoteTrackPublication, _participant: RemoteParticipant) => {
+    (track: RemoteTrack, _pub: RemoteTrackPublication, participant: RemoteParticipant) => {
+      // Ignore viewer/spectator tracks — only the opponent barber drives the remote feed.
+      if (!isOpponent(participant.identity)) return;
       if (track.kind === Track.Kind.Video) {
         setState((prev) => ({ ...prev, remoteVideoTrack: track as unknown as AttachableTrack }));
       } else if (track.kind === Track.Kind.Audio) {
         setState((prev) => ({ ...prev, remoteAudioTrack: track as unknown as AttachableTrack }));
       }
     },
-    []
+    [isOpponent]
   );
 
   const handleTrackUnsubscribed = useCallback(
-    (track: RemoteTrack) => {
+    (track: RemoteTrack, _pub: RemoteTrackPublication, participant: RemoteParticipant) => {
+      if (!isOpponent(participant.identity)) return;
       if (track.kind === Track.Kind.Video) {
         setState((prev) => ({ ...prev, remoteVideoTrack: null }));
       } else if (track.kind === Track.Kind.Audio) {
         setState((prev) => ({ ...prev, remoteAudioTrack: null }));
       }
     },
-    []
+    [isOpponent]
   );
 
   const handleParticipantConnected = useCallback(
     (participant: RemoteParticipant) => {
+      if (!isOpponent(participant.identity)) {
+        console.log(`Viewer joined: ${participant.identity} (ignored for opponent state)`);
+        return;
+      }
       console.log(`Opponent connected: ${participant.identity}`);
       setState((prev) => ({ ...prev, opponentIdentity: participant.identity }));
       onOpponentJoin?.(participant);
       toast.success('🥊 Opponent has entered the battle!');
     },
-    [onOpponentJoin]
+    [onOpponentJoin, isOpponent]
   );
 
   const handleParticipantDisconnected = useCallback(
     (participant: RemoteParticipant) => {
+      if (!isOpponent(participant.identity)) {
+        console.log(`Viewer left: ${participant.identity} (opponent feed unaffected)`);
+        return;
+      }
       console.log(`Opponent disconnected: ${participant.identity}`);
       setState((prev) => ({
         ...prev,
@@ -111,7 +135,7 @@ export const useBattleVideoRoom = ({
         remoteAudioTrack: null,
       }));
       onOpponentLeave?.();
-      toast.info('Opponent has left the battle');
+      toast.info('Opponent connection lost — waiting for them to rejoin…');
     },
     [onOpponentLeave]
   );
