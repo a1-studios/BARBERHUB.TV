@@ -45,6 +45,20 @@ Deno.serve(async (req) => {
 
     const { user_id, new_role, action }: RoleUpdateRequest = await req.json();
 
+    // Runtime whitelist — TypeScript types are erased at runtime, so we must
+    // explicitly block privilege escalation to 'sovereign' or other roles.
+    const ALLOWED_ROLES = ['admin', 'barber', 'fan'] as const;
+    if (!ALLOWED_ROLES.includes(new_role as typeof ALLOWED_ROLES[number])) {
+      throw new Error('Invalid role');
+    }
+    const ALLOWED_ACTIONS = ['add', 'remove'] as const;
+    if (!ALLOWED_ACTIONS.includes(action as typeof ALLOWED_ACTIONS[number])) {
+      throw new Error('Invalid action');
+    }
+    if (typeof user_id !== 'string' || !/^[0-9a-f-]{36}$/i.test(user_id)) {
+      throw new Error('Invalid user_id');
+    }
+
     if (action === 'add') {
       // Add role
       const { error: insertError } = await supabase

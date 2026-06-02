@@ -175,16 +175,30 @@ export function BarberMapDirectory({
       el.innerHTML = '✂';
       el.addEventListener('mouseenter', () => { el.style.transform = 'scale(1.3)'; });
       el.addEventListener('mouseleave', () => { el.style.transform = 'scale(1)'; });
-      const tierBadge = barber.active_subscription_tier
-        ? `<span style="background:hsla(25,95%,53%,0.15);color:hsl(25,95%,40%);padding:2px 6px;border-radius:4px;font-size:10px;text-transform:uppercase;font-weight:600;">${barber.active_subscription_tier}</span>`
+      // HTML-escape all user-controlled fields before embedding in setHTML()
+      // to prevent stored XSS through barber profile fields.
+      const esc = (s: string) =>
+        String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      const safeName = esc(barber.name ?? '');
+      const safeSpecialty = barber.specialty ? esc(barber.specialty) : '';
+      const safeLocation = barber.location ? esc(barber.location) : '';
+      const safeTier = barber.active_subscription_tier ? esc(barber.active_subscription_tier) : '';
+      const safeUserId = encodeURIComponent(barber.user_id);
+      const tierBadge = safeTier
+        ? `<span style="background:hsla(25,95%,53%,0.15);color:hsl(25,95%,40%);padding:2px 6px;border-radius:4px;font-size:10px;text-transform:uppercase;font-weight:600;">${safeTier}</span>`
         : '';
       const popup = new mapboxgl.Popup({ offset: 20, closeButton: false }).setHTML(`
         <div style="background:#ffffff;color:#0a0a0f;padding:12px;border-radius:10px;min-width:180px;font-family:system-ui;box-shadow:0 6px 20px rgba(0,0,0,0.12);border:1px solid rgba(0,0,0,0.06);">
-          <div style="font-weight:700;font-size:14px;margin-bottom:4px;">${barber.name}</div>
-          ${barber.specialty ? `<div style="font-size:11px;color:#555;margin-bottom:4px;">${barber.specialty}</div>` : ''}
-          ${barber.location ? `<div style="font-size:11px;color:#777;margin-bottom:6px;">📍 ${barber.location}</div>` : ''}
+          <div style="font-weight:700;font-size:14px;margin-bottom:4px;">${safeName}</div>
+          ${safeSpecialty ? `<div style="font-size:11px;color:#555;margin-bottom:4px;">${safeSpecialty}</div>` : ''}
+          ${safeLocation ? `<div style="font-size:11px;color:#777;margin-bottom:6px;">📍 ${safeLocation}</div>` : ''}
           <div style="display:flex;align-items:center;justify-content:space-between;">${tierBadge}<span style="font-size:11px;color:hsl(187,80%,35%);font-weight:600;">${barber.distance_miles.toFixed(1)} mi</span></div>
-          <a href="/barber/${barber.user_id}" style="display:block;margin-top:10px;text-align:center;background:hsl(25,95%,53%);color:white;padding:7px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">View Profile</a>
+          <a href="/barber/${safeUserId}" style="display:block;margin-top:10px;text-align:center;background:hsl(25,95%,53%);color:white;padding:7px;border-radius:6px;font-size:12px;font-weight:700;text-decoration:none;">View Profile</a>
         </div>
       `);
       const marker = new mapboxgl.Marker({ element: el }).setLngLat([barber.longitude, barber.latitude]).setPopup(popup).addTo(mapRef.current!);
