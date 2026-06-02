@@ -572,7 +572,7 @@ export function GlobePulse({
     };
   }, [liveMarkers]);
 
-  function focusMarker(m: PulseMarker) {
+  const focusMarker = useCallback((m: PulseMarker) => {
     const latRad = (m.location[0] * Math.PI) / 180;
     const lonRad = (m.location[1] * Math.PI) / 180;
     const phiNoOffset = phiRef.current - phiOffsetRef.current;
@@ -594,91 +594,84 @@ export function GlobePulse({
       setChip(null);
       setFocusedId(null);
     }, 6000);
-  }
+  }, []);
+
+  const focusMarkerRef = useRef(focusMarker);
+  useEffect(() => {
+    focusMarkerRef.current = focusMarker;
+  }, [focusMarker]);
+
+  const handleCta = (action: TeaserAction) => {
+    if (user) {
+      navigate(action === "book" ? "/book-barber-near-me" : "/barbers");
+      return;
+    }
+    setTeaser({ open: true, action });
+  };
 
   return (
     <div
       ref={containerRef}
       className={`relative w-full aspect-square select-none ${className}`}
-      style={{ touchAction: "none" }}
+      style={{ touchAction: "none", overscrollBehavior: "contain" }}
     >
-      <div
-        className="absolute inset-0"
+      <canvas
+        ref={canvasRef}
         style={{
-          transform: `scale(${zoom})`,
-          transformOrigin: "center center",
-          transition: "transform 0.08s linear",
+          width: "100%",
+          height: "100%",
+          opacity: 0,
+          transition: "opacity 0.8s ease",
+          pointerEvents: "none",
+          touchAction: "none",
         }}
+      />
+      <div
+        ref={overlayRef}
+        className="absolute inset-0"
+        style={{ pointerEvents: "none" }}
+        aria-hidden
       >
-        <canvas
-          ref={canvasRef}
-          style={{
-            width: "100%",
-            height: "100%",
-            opacity: 0,
-            transition: "opacity 0.8s ease",
-            pointerEvents: "none",
-            touchAction: "none",
-          }}
-        />
-        <div
-          ref={overlayRef}
-          className="absolute inset-0"
-          style={{ pointerEvents: "none" }}
-          aria-hidden
-        >
-          {ghosts.map((g, i) => (
+        {ghosts.map((g, i) => (
+          <div
+            key={`ghost-${g.cc}`}
+            ref={(el) => (ghostRefs.current[i] = el)}
+            className="absolute top-0 left-0 w-0 h-0 will-change-transform"
+            style={{ transition: "opacity 0.25s linear", pointerEvents: "none" }}
+          >
+            <span className="absolute block text-[12px] leading-none -translate-x-1/2 -translate-y-1/2 whitespace-nowrap">
+              {g.flag}
+            </span>
+          </div>
+        ))}
+
+        {liveMarkers.map((m, i) => {
+          const isFocused = focusedId === m.id;
+          return (
             <div
-              key={`ghost-${g.cc}`}
-              ref={(el) => (ghostRefs.current[i] = el)}
+              key={m.id}
+              ref={(el) => (flagRefs.current[i] = el)}
               className="absolute top-0 left-0 w-0 h-0 will-change-transform"
               style={{ transition: "opacity 0.25s linear", pointerEvents: "none" }}
             >
-              <span className="absolute block text-[12px] leading-none -translate-x-1/2 -translate-y-1/2 whitespace-nowrap">
-                {g.flag}
+              {m.flag && (
+                <span
+                  className={`absolute block text-[18px] leading-none -translate-x-1/2 -translate-y-1/2 whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] ${
+                    isFocused ? "ring-2 ring-orange-400/80 rounded-full px-0.5" : ""
+                  }`}
+                >
+                  {m.flag}
+                </span>
+              )}
+              <span
+                className="absolute left-1/2 -translate-x-1/2 pointer-events-none pole-glow"
+                style={{ top: m.flag ? 8 : -7 }}
+              >
+                <BarberPole size={14} />
               </span>
             </div>
-          ))}
-
-          {liveMarkers.map((m, i) => {
-            const isFocused = focusedId === m.id;
-            return (
-              <div
-                key={m.id}
-                ref={(el) => (flagRefs.current[i] = el)}
-                className="absolute top-0 left-0 w-0 h-0 will-change-transform"
-                style={{ transition: "opacity 0.25s linear", pointerEvents: "none" }}
-              >
-                {m.flag && (
-                  <span
-                    className={`absolute block text-[18px] leading-none -translate-x-1/2 -translate-y-1/2 whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] ${
-                      isFocused ? "ring-2 ring-orange-400/80 rounded-full px-0.5" : ""
-                    }`}
-                  >
-                    {m.flag}
-                  </span>
-                )}
-                <span
-                  className="absolute left-1/2 -translate-x-1/2 pointer-events-none pole-glow"
-                  style={{ top: m.flag ? 8 : -7 }}
-                >
-                  <BarberPole size={14} />
-                </span>
-                <button
-                  type="button"
-                  aria-label={`${m.city ?? "Barber"}${m.country ? ", " + m.country : ""}`}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    focusMarker(m);
-                  }}
-                  className="absolute -translate-x-1/2 -translate-y-1/2 w-10 h-10 md:w-7 md:h-7 rounded-full bg-transparent border-0 cursor-pointer"
-                  style={{ pointerEvents: "auto" }}
-                />
-              </div>
-            );
-          })}
-        </div>
+          );
+        })}
       </div>
 
       <style>{`
@@ -709,14 +702,14 @@ export function GlobePulse({
           <div className="grid grid-cols-2 gap-2 mt-2">
             <button
               type="button"
-              onClick={() => navigate("/barbers")}
+              onClick={() => handleCta("find")}
               className="flex items-center justify-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/15 active:bg-white/20 text-white text-xs font-semibold py-2 px-2 border border-white/15 transition"
             >
               <MapPin className="w-3.5 h-3.5" /> Find Near You
             </button>
             <button
               type="button"
-              onClick={() => navigate("/book-barber-near-me")}
+              onClick={() => handleCta("book")}
               className="flex items-center justify-center gap-1.5 rounded-xl bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-black text-xs font-bold py-2 px-2 transition shadow-[0_0_12px_rgba(255,140,40,0.55)]"
             >
               <Calendar className="w-3.5 h-3.5" /> Book Now
@@ -730,6 +723,15 @@ export function GlobePulse({
           loading globe…
         </div>
       )}
+
+      <BarberTeaserModal
+        open={teaser.open}
+        onOpenChange={(open) => setTeaser((s) => ({ ...s, open }))}
+        action={teaser.action}
+        city={chip?.city}
+        country={chip?.country}
+        flag={chip?.flag}
+      />
     </div>
   );
 }
