@@ -171,9 +171,16 @@ export default function ContenderTheater() {
     hasOpponent,
   } = useBattleVideoRoom({
     battleId: battleId || '',
-    // Only treat the OPPONENT barber as the remote feed — viewer joins/leaves
-    // must never tear down the barber-vs-barber connection.
-    opponentIdentity: opponentBarber?.id ?? null,
+    // Derive opponent identity DIRECTLY from the battle record (barber_profile
+    // ids) — never from the optional barber_profiles query, which can be
+    // momentarily null during refetches and would otherwise widen the matcher
+    // to "any remote participant" and let viewer churn fire opponent-left.
+    opponentIdentity:
+      barberPosition === 1
+        ? battle?.barber2_id ?? null
+        : barberPosition === 2
+          ? battle?.barber1_id ?? null
+          : null,
     barberPosition: barberPosition ?? null,
     onOpponentJoin: (participant) => {
       console.log('Opponent joined:', participant.identity);
