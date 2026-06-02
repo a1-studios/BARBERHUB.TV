@@ -1,66 +1,58 @@
 ## Goal
 
-Two things:
-1. Make pinch/zoom/drag on the globe feel native on mobile — no drift, no jump, no fighting the page.
-2. When a user taps a marker and hits "Find Near You" or "Book Now", show a teaser modal with 3 sample barber profiles and prompt them to sign up to continue.
+Three small, focused fixes to the landing-page globe (`GlobePulse`):
+
+1. Disable pinch-zoom entirely (and wheel-zoom) so the globe stays at a fixed scale at every aspect ratio.
+2. Make the globe 20% bigger on tablet (md) and desktop (lg) breakpoints — mobile size unchanged.
+3. Make sure the emoji flags stay glued to their real lat/lng on the globe as it rotates (no drift, no lag).
 
 ---
 
-## Part 1 — Mobile-native gestures (`src/components/ui/cobe-globe-pulse.tsx`)
+## Changes
 
-Current bugs causing drift/jump:
-- Pointer events AND touch events both fire on iOS, so a single finger triggers `pointerdown` drag AND the touch handler — values race.
-- Pinch start doesn't cancel the in-flight pointer drag, so when a second finger lands the globe lurches.
-- `touchAction: "none"` on container blocks page scroll always, but our pointer handler still uses raw deltas without DPR/zoom compensation, causing "drift" feel.
-- `transform: scale(zoom)` on the wrapper scales the canvas pixels (blurry on zoom) and the math uses `zoomRef` again in projection → double-applied scaling.
+### 1. `src/components/ui/cobe-globe-pulse.tsx` — disable zoom
 
-Fix:
-- Drive everything from a single source: `touch` events on mobile (detected once), `pointer` events on desktop. No mixing.
-- Track gesture state machine: `idle | pan | pinch`. Transition cleanly:
-  - 1 touch → `pan`, record start position.
-  - 2 touches → `pinch`, snapshot midpoint + distance + current phi/theta/zoom; ignore pan deltas until back to ≤1 touch.
-  - touchend with 1 finger remaining after pinch → re-seed pan baseline (prevents jump).
-- Replace `transform: scale(zoom)` wrapper with projection-only zoom (already in `projectGroup` via `zoomRef`). Remove the CSS transform so canvas stays crisp and there's no double-scale.
-- Drag sensitivity normalized to `rect.width` (not `clientWidth` which can be 0 mid-mount), divided by current zoom so panning feels consistent when zoomed in.
-- Clamp theta to ±0.55 (was 0.7) to stop the globe flipping upside-down on aggressive swipes.
-- `touch-action: none` only on the globe container, with `overscroll-behavior: contain` to stop iOS rubber-band leaking.
-- Tap-vs-drag detection: if pointer/touch moved <8px and lasted <300ms, treat as tap → fire `focusMarker`. Otherwise swallow.
-- Remove the marker `<button>` hit area in favor of hit-testing in the container's tap handler (projects tap coordinates to nearest marker within 22px). This eliminates the "tap goes through to drag" race entirely.
+- Remove the pinch branch from `onTouchStart` / `onTouchMove` / `onTouchEnd` (no `mode = "pinch"`, no `pinchStartDist`/`pinchStartZoom`). Two-finger touches are ignored; one-finger touch still drags-to-rotate.
+- Remove the `onWheel` handler and its `addEventListener("wheel", ...)` registration. Desktop wheel no longer changes zoom (and page scroll is no longer blocked over the globe).
+- Keep `zoomRef.current = 1` permanently. Remove the `setZoom` state and the unused `[, setZoom]` hook.
+- Projection math in `projectGroup` and `hitTest` stays as-is (it already multiplies by `zoomRef.current`, which will now always be 1).
 
----
+### 2. Fix flag-to-location sync (same file)
 
-## Part 2 — Sign-up teaser with sample barbers
+Right now, on mobile the projection is throttled to `frame % 3 === 0`, but the globe itself updates every frame. While the globe auto-spins (or the user drags), flags lag behind the surface and visibly "float" off their cities. Fix:
 
-New component `src/components/landing/BarberTeaserModal.tsx`:
-- Trigger: opening from the globe info card's "Find Near You" or "Book Now" buttons when the user is NOT authenticated.
-- If user IS authenticated, keep current behavior (navigate to `/barbers` or `/book-barber-near-me`).
-- Modal content:
-  - Heading tied to action: "Find barbers in {city}" or "Book a barber in {city}".
-  - 3 sample barber cards (avatar, name, city/country flag, tier badge, 1-line specialty). Use the small `BarberProfileCard` look but simplified, hard-coded to 3 curated featured barbers (or pull from `useLiveBarberMarkers` if extra profile fields are available — we'll fall back to a `featuredBarbersTeaser` const).
-  - Primary CTA: "Create free account" → routes to `/auth?mode=signup&redirect=<original-destination>`.
-  - Secondary CTA: "I already have an account" → `/auth?mode=signin&redirect=...`.
-  - Small footer: "Free to join. Pay only when you book."
+- Project flag overlays on **every** frame (remove the `frame % 3` throttle). This keeps emoji flags locked to their lat/lng at all times.
+- Keep `mapSamples: isMobile ? 5000 : 16000` to maintain mobile render perf.
+- The ghost-flag layer can keep a lighter throttle (project every 2nd frame on mobile) since ghosts are decorative; this preserves perf budget for the live markers.
 
-Wire-up in `cobe-globe-pulse.tsx`:
-- Replace inline `navigate(...)` in the chip CTAs with a single handler `handleTeaser(action: 'find' | 'book')` that:
-  - Reads auth via `useAuth()` (`user` presence).
-  - If logged in → navigate as today.
-  - If anonymous → open `BarberTeaserModal` with `{ city, country, flag, action }`.
+Sanity check: the projection already uses the canonical cobe convention — `lon = lonRad - currentPhi - Math.PI/2`, theta rotation `(cosT, sinT)`, with `r = radius * 0.9`. That math is correct; the visible "drift" was the throttle, not the formula.
+
+### 3. `src/components/landing/FeatureHighlightReel.tsx` — +20% on md/lg
+
+Change the globe container's max-width breakpoints:
+
+```tsx
+// before
+className="w-full max-w-[360px] md:max-w-[300px] lg:max-w-[320px] relative mx-auto"
+// after
+className="w-full max-w-[360px] md:max-w-[360px] lg:max-w-[384px] relative mx-auto"
+```
+
+Mobile (`max-w-[360px]`) is unchanged. `md:` goes 300→360 (+20%). `lg:` goes 320→384 (+20%).
 
 ---
 
 ## Files
 
-- Edit `src/components/ui/cobe-globe-pulse.tsx` — gesture rewrite, remove wrapper scale, hit-test tap, teaser hook-up.
-- Create `src/components/landing/BarberTeaserModal.tsx` — Dialog with 3 sample profiles + sign-up CTAs.
-- Create `src/data/featuredBarbersTeaser.ts` — 3 sample barbers (name, city, country, flag, specialty, avatar placeholder).
+- `src/components/ui/cobe-globe-pulse.tsx` — remove pinch + wheel zoom; remove mobile throttle on live flag projection.
+- `src/components/landing/FeatureHighlightReel.tsx` — bump md/lg globe size by 20%.
 
-No backend, route, or schema changes.
+No other files, no backend, no schema changes.
 
 ---
 
 ## Verification
 
-- Mobile viewport 390×844: one-finger drag rotates without canvas blurring; two-finger pinch zooms smoothly; lifting one finger after pinch does not jump; page does not scroll while interacting on globe; tapping a flag marker opens the info card.
-- Logged out: tap "Find Near You" → teaser modal with 3 barbers + Sign-Up CTA. Tap "Create free account" → `/auth?mode=signup&redirect=/barbers`.
-- Logged in: same buttons navigate straight to `/barbers` and `/book-barber-near-me` (no modal).
+- Mobile 390×844: two-finger pinch does nothing; one-finger drag still rotates; flags stay glued to their cities while the globe spins.
+- iPad 820×1180: globe visibly ~20% larger than before; pinch does nothing.
+- Desktop ≥1024: globe ~20% larger; mouse wheel scrolls the page (no longer hijacked); drag-to-rotate works; flags stay on their cities.

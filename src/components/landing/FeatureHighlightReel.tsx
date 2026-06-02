@@ -58,7 +58,7 @@ const slides: Slide[] = [
     label: 'Global',
     render: () => (
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="w-full max-w-[360px] md:max-w-[300px] lg:max-w-[320px] relative mx-auto">
+        <div className="w-full max-w-[360px] md:max-w-[360px] lg:max-w-[384px] relative mx-auto">
           <LiveGlobe />
         </div>
         <div className="mt-2 flex justify-center pointer-events-none">
