@@ -91,7 +91,7 @@ export const StepAuth = ({ initialEmail, role, barberStatus, country, phone, vip
           role,
           country_code: country,
           phone_number: phone || null,
-          ...(role === 'barber' ? { barber_status: barberStatus ?? 'beginner' } : {}),
+          ...(role === 'barber' ? { barber_status: barberStatus ?? 'beginner', vip_code: vipCode || undefined } : {}),
         },
       });
 
@@ -106,6 +106,7 @@ export const StepAuth = ({ initialEmail, role, barberStatus, country, phone, vip
             country_code: country,
             barber_status: role === 'barber' ? (barberStatus ?? 'beginner') : null,
             phone_number: phone || null,
+            vip_code: role === 'barber' ? (vipCode || null) : null,
             tos_accepted_at: new Date().toISOString(),
           },
         },
