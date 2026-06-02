@@ -20,36 +20,21 @@ import { IS_COMING_SOON } from "@/config/launchMode";
 import Index from "./pages/Index";
 import ComingSoon from "./pages/ComingSoon";
 import Profile from "./pages/Profile";
-// BattlesPage removed — /battles redirects to /watch
+
 import BattleDetails from "./pages/BattleDetails";
 
-import Analytics from "./pages/Analytics";
 import Portal from "./pages/Portal";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import PaymentCanceled from "./pages/PaymentCanceled";
 import Grants from "./pages/Grants";
 import CreatorHub from "./pages/CreatorHub";
-import Tournaments from "@/pages/Tournaments";
-import TournamentDetails from "@/pages/TournamentDetails";
 import NotFound from "./pages/NotFound";
 import WatchFeed from "./pages/WatchFeed";
 import BarberPublicProfile from "./pages/BarberPublicProfile";
-const BarbersDirectory = lazy(() => import("./pages/BarbersDirectory"));
 import BookBarberLanding from "./pages/seo/BookBarberLanding";
-import AdminDashboard from "./pages/AdminDashboard";
-import UserManagement from "./pages/admin/UserManagement";
-import BattleManagement from "./pages/admin/BattleManagement";
-import AdminAnalytics from "./pages/admin/AdminAnalytics";
-import BattleTheater from "./pages/BattleTheater";
-import ContenderTheater from "./pages/ContenderTheater";
-import SovereignHQ from "./pages/SovereignHQ";
-import SponsorAdsPage from "./pages/admin/SponsorAdsPage";
-import VaultOfHonor from "./pages/VaultOfHonor";
 import M4MVerify from "./pages/M4MVerify";
-import CameraStudio from "./pages/CameraStudio";
 import Rankings from "./pages/Rankings";
 import BroadcastViewer from "./pages/BroadcastViewer";
-import BroadcastStudio from "./pages/BroadcastStudio";
 import ResetPassword from "./pages/ResetPassword";
 import AuthCallback from "./pages/AuthCallback";
 import { AuthHashHandler } from "./components/auth/AuthHashHandler";
@@ -58,12 +43,29 @@ import { CookieConsentBanner } from "./components/legal/CookieConsentBanner";
 import IOSInstallPrompt from "./components/pwa/IOSInstallPrompt";
 import { IncomingChallengeTakeover } from "./components/battles/IncomingChallengeTakeover";
 import { initPixelGate } from "./lib/metaPixelGate";
-import Terms from "./pages/legal/Terms";
-import Privacy from "./pages/legal/Privacy";
-import AUP from "./pages/legal/AUP";
-import Cookies from "./pages/legal/Cookies";
-import DMCA from "./pages/legal/DMCA";
-import ModerationDashboard from "./pages/admin/ModerationDashboard";
+
+// Lazy-loaded heavy / rarely-visited routes
+const BarbersDirectory = lazy(() => import("./pages/BarbersDirectory"));
+const Analytics = lazy(() => import("./pages/Analytics"));
+const Tournaments = lazy(() => import("@/pages/Tournaments"));
+const TournamentDetails = lazy(() => import("@/pages/TournamentDetails"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const UserManagement = lazy(() => import("./pages/admin/UserManagement"));
+const BattleManagement = lazy(() => import("./pages/admin/BattleManagement"));
+const AdminAnalytics = lazy(() => import("./pages/admin/AdminAnalytics"));
+const BattleTheater = lazy(() => import("./pages/BattleTheater"));
+const ContenderTheater = lazy(() => import("./pages/ContenderTheater"));
+const SovereignHQ = lazy(() => import("./pages/SovereignHQ"));
+const SponsorAdsPage = lazy(() => import("./pages/admin/SponsorAdsPage"));
+const VaultOfHonor = lazy(() => import("./pages/VaultOfHonor"));
+const CameraStudio = lazy(() => import("./pages/CameraStudio"));
+const BroadcastStudio = lazy(() => import("./pages/BroadcastStudio"));
+const ModerationDashboard = lazy(() => import("./pages/admin/ModerationDashboard"));
+const Terms = lazy(() => import("./pages/legal/Terms"));
+const Privacy = lazy(() => import("./pages/legal/Privacy"));
+const AUP = lazy(() => import("./pages/legal/AUP"));
+const Cookies = lazy(() => import("./pages/legal/Cookies"));
+const DMCA = lazy(() => import("./pages/legal/DMCA"));
 
 
 const queryClient = new QueryClient();
@@ -86,6 +88,7 @@ const AppContent = () => {
       <CookieConsentBanner />
       <IOSInstallPrompt />
       <IncomingChallengeTakeover />
+      <Suspense fallback={<div className="min-h-screen bg-background" />}>
       <Routes>
             <Route path="/" element={IS_COMING_SOON ? <ComingSoon /> : <Index />} />
             <Route path="/coming-soon" element={<ComingSoon />} />
@@ -278,6 +281,7 @@ const AppContent = () => {
             />
             <Route path="*" element={<NotFound />} />
           </Routes>
+      </Suspense>
     </>
   );
 };

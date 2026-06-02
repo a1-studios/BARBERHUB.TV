@@ -4,7 +4,7 @@ import Header from "@/components/Header";
 import LandingHero from "@/components/LandingHero";
 import CommunitySection from "@/components/CommunitySection";
 import { DynamicBattleHero } from "@/components/DynamicBattleHero";
-import BattlesSection from "@/components/BattlesSection";
+
 import Footer from "@/components/Footer";
 import { LaunchWizard } from "@/components/coming-soon/LaunchWizard";
 
@@ -276,8 +276,6 @@ const Index = () => {
               {/* Live Streaming Barbers - Watch active streams */}
               <LiveBarberStreams />
               
-              {/* Main Battles Section with all navigation and features */}
-              <BattlesSection />
 
               {/* Community Leaderboard */}
               {FEATURES.COMMUNITY_LEADERBOARD && (
