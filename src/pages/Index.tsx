@@ -264,37 +264,8 @@ const Index = () => {
             }} />
           )}
 
-          {isFan ? (
-            <FanArenaView />
-          ) : (
-              <main>
-                {/* Head-to-Head Battle Hero */}
-              <DynamicBattleHero />
+          <UnifiedArena />
 
-              {/* Official Gear Shelf */}
-              <ProductShelf />
-              
-              {/* Immersive Faction Banners - Full Screen Selection */}
-              <ImmersiveFactionBanners />
-              
-              {/* Global League Dashboard */}
-              <GlobalLeagueDashboard />
-              
-              {/* Live Streaming Barbers - Watch active streams */}
-              <LiveBarberStreams />
-              
-
-              {/* Community Leaderboard */}
-              {FEATURES.COMMUNITY_LEADERBOARD && (
-                <CommunitySection />
-              )}
-              
-              {/* Grants Section */}
-              {FEATURES.GRANTS_SECTION && (
-                <GrantsSection />
-              )}
-            </main>
-          )}
         </>
       ) : (
         <>
