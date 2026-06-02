@@ -39,6 +39,7 @@ interface State {
   barberStatus: BarberStatus | null;
   country: string | null;
   phone: string;
+  vipCode: string;
   ticketCode: string | null;
   tierColor: TierColor;
   isAuthed: boolean;
@@ -55,6 +56,7 @@ const readPending = (): Partial<State> => {
       barberStatus: p.barberStatus ?? undefined,
       country: p.country ?? undefined,
       phone: p.phone ?? undefined,
+      vipCode: typeof p.vipCode === 'string' ? p.vipCode : undefined,
     };
   } catch { return {}; }
 };
