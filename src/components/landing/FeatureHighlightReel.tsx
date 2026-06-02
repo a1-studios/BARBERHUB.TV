@@ -52,7 +52,7 @@ const slides: Slide[] = [
     label: 'Global',
     render: () => (
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="w-full relative">
+        <div className="w-full max-w-[260px] md:max-w-[300px] relative mx-auto">
           <GlobePulse />
         </div>
         <div className="mt-2 flex justify-center pointer-events-none">
