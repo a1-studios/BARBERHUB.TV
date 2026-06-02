@@ -424,10 +424,18 @@ export const useBattleVideoRoom = ({
   }, [state.duration]);
 
   useEffect(() => {
-    const onBeforeUnload = () => roomRef.current?.disconnect();
+    const onBeforeUnload = () => {
+      intentionalDisconnectRef.current = true;
+      roomRef.current?.disconnect();
+    };
     window.addEventListener('beforeunload', onBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', onBeforeUnload);
+      intentionalDisconnectRef.current = true;
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       roomRef.current?.disconnect();
       if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
     };
