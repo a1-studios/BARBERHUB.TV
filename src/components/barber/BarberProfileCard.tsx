@@ -16,6 +16,8 @@ import { TierRing } from '../TierRing';
 import { SubCategoryBadge } from '../SubCategoryBadge';
 import { M4MAvatarBadge } from '../m4m/M4MAvatarBadge';
 import { parseSpecialties, getSpecialtyDisplay } from '@/config/specialtyTags';
+import { LiveAvatar } from './LiveAvatar';
+import { useBarberLiveState } from '@/hooks/useBarberLiveState';
 
 interface BarberProfileCardProps {
   barberId: string;
