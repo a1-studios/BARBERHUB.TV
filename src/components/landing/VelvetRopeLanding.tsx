@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet';
+import { useSearchParams } from 'react-router-dom';
 import { LaunchWizard } from '@/components/coming-soon/LaunchWizard';
 
 import { FeatureHighlightReel } from './FeatureHighlightReel';
@@ -10,6 +11,19 @@ import barberPole from '@/assets/barber-pole.png';
 
 export const VelvetRopeLanding = () => {
   const [spinOpen, setSpinOpen] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Auto-open the signup wizard when navigated here from a teaser CTA
+  // (e.g. globe "Find Near You" / "Book Now" routes guests to /?tab=signup).
+  useEffect(() => {
+    if (searchParams.get('tab') === 'signup') {
+      setSpinOpen(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete('tab');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
 
   return (
     <div className="h-[100dvh] w-full max-w-full overflow-hidden bg-[#0a0a0f] text-white flex flex-col">
