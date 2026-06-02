@@ -359,15 +359,15 @@ export function GlobePulse({
     };
   }, [liveMarkers, liveLocs, ghostLocs, speed]);
 
-  // Drag-to-rotate + pinch-to-zoom + wheel-zoom
+  // Unified gesture handler: native touch on mobile, pointer on desktop.
+  // State machine: idle -> pan | pinch. Re-seeds pan baseline after pinch to avoid jump.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    let lastX = 0;
-    let lastY = 0;
-    let dragging = false;
-    let pinchStartDist = 0;
-    let pinchStartZoom = 1;
+
+    const isTouchDevice =
+      typeof window !== "undefined" &&
+      ("ontouchstart" in window || (navigator.maxTouchPoints ?? 0) > 0);
 
     const markInteract = () => {
       isInteractingRef.current = true;
@@ -380,42 +380,105 @@ export function GlobePulse({
       lastInteractAtRef.current = performance.now();
     };
 
-    const onPointerDown = (e: PointerEvent) => {
-      if ((e.target as HTMLElement)?.tagName === "BUTTON") return;
-      dragging = true;
-      lastX = e.clientX;
-      lastY = e.clientY;
-      markInteract();
-      el.setPointerCapture?.(e.pointerId);
-    };
-    const onPointerMove = (e: PointerEvent) => {
-      if (!dragging) return;
-      const dx = e.clientX - lastX;
-      const dy = e.clientY - lastY;
-      lastX = e.clientX;
-      lastY = e.clientY;
-      const w = el.clientWidth || 1;
-      phiOffsetRef.current -= (dx / w) * Math.PI * 1.2;
-      const next = thetaOffsetRef.current + (dy / w) * Math.PI * 1.2;
-      thetaOffsetRef.current = Math.max(-0.7, Math.min(0.7, next));
-      lastInteractAtRef.current = performance.now();
-    };
-    const onPointerUp = () => {
-      dragging = false;
-      endInteract();
+    // Marker hit-test: project all live markers, return nearest within threshold.
+    const hitTest = (clientX: number, clientY: number): PulseMarker | null => {
+      const rect = el.getBoundingClientRect();
+      const localX = clientX - rect.left;
+      const localY = clientY - rect.top;
+      const size = rect.width;
+      const radius = size / 2;
+      const theta = 0.2 + thetaOffsetRef.current;
+      const cosT = Math.cos(theta);
+      const sinT = Math.sin(theta);
+      const currentPhi = phiRef.current;
+      const r = radius * 0.9 * zoomRef.current;
+
+      let best: PulseMarker | null = null;
+      let bestDist = 28; // px
+      for (const m of liveMarkers) {
+        const latRad = (m.location[0] * Math.PI) / 180;
+        const lonRad = (m.location[1] * Math.PI) / 180;
+        const lon = lonRad - currentPhi - Math.PI / 2;
+        let x = Math.cos(latRad) * Math.sin(lon);
+        let y = Math.sin(latRad);
+        let z = Math.cos(latRad) * Math.cos(lon);
+        const y2 = y * cosT - z * sinT;
+        const z2 = y * sinT + z * cosT;
+        y = y2;
+        z = z2;
+        if (z <= 0.05) continue;
+        const px = radius + x * r;
+        const py = radius - y * r;
+        const d = Math.hypot(px - localX, py - localY);
+        if (d < bestDist) {
+          bestDist = d;
+          best = m;
+        }
+      }
+      return best;
     };
 
+    // Shared gesture state
+    let mode: "idle" | "pan" | "pinch" = "idle";
+    let panLastX = 0;
+    let panLastY = 0;
+    let panStartX = 0;
+    let panStartY = 0;
+    let panStartTime = 0;
+    let pinchStartDist = 0;
+    let pinchStartZoom = 1;
+
+    const TAP_MAX_MOVE = 8;
+    const TAP_MAX_MS = 300;
+
+    const beginPan = (x: number, y: number) => {
+      mode = "pan";
+      panLastX = x;
+      panLastY = y;
+      panStartX = x;
+      panStartY = y;
+      panStartTime = performance.now();
+      markInteract();
+    };
+
+    const updatePan = (x: number, y: number) => {
+      const dx = x - panLastX;
+      const dy = y - panLastY;
+      panLastX = x;
+      panLastY = y;
+      const rect = el.getBoundingClientRect();
+      const w = rect.width || 1;
+      const z = Math.max(0.85, zoomRef.current);
+      phiOffsetRef.current -= (dx / w) * Math.PI * 1.2 / z;
+      const nextTheta = thetaOffsetRef.current + (dy / w) * Math.PI * 1.2 / z;
+      thetaOffsetRef.current = Math.max(-0.55, Math.min(0.55, nextTheta));
+      lastInteractAtRef.current = performance.now();
+    };
+
+    const finishPanMaybeTap = (x: number, y: number) => {
+      const moved = Math.hypot(x - panStartX, y - panStartY);
+      const elapsed = performance.now() - panStartTime;
+      if (moved < TAP_MAX_MOVE && elapsed < TAP_MAX_MS) {
+        const hit = hitTest(x, y);
+        if (hit) focusMarkerRef.current?.(hit);
+      }
+    };
+
+    // ---------- Touch (mobile) ----------
     const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 2) {
+      if (e.touches.length === 1) {
+        const t = e.touches[0];
+        beginPan(t.clientX, t.clientY);
+      } else if (e.touches.length >= 2) {
+        mode = "pinch";
         const [a, b] = [e.touches[0], e.touches[1]];
-        pinchStartDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        pinchStartDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1;
         pinchStartZoom = zoomRef.current;
-        dragging = false;
         markInteract();
       }
     };
     const onTouchMove = (e: TouchEvent) => {
-      if (e.touches.length === 2 && pinchStartDist > 0) {
+      if (mode === "pinch" && e.touches.length >= 2) {
         e.preventDefault();
         const [a, b] = [e.touches[0], e.touches[1]];
         const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
@@ -423,11 +486,55 @@ export function GlobePulse({
         zoomRef.current = next;
         setZoom(next);
         lastInteractAtRef.current = performance.now();
+      } else if (mode === "pan" && e.touches.length === 1) {
+        e.preventDefault();
+        const t = e.touches[0];
+        updatePan(t.clientX, t.clientY);
       }
     };
     const onTouchEnd = (e: TouchEvent) => {
-      if (e.touches.length < 2) pinchStartDist = 0;
-      if (e.touches.length === 0) endInteract();
+      if (mode === "pinch") {
+        if (e.touches.length === 1) {
+          // Re-seed pan baseline from remaining finger so we don't jump.
+          const t = e.touches[0];
+          beginPan(t.clientX, t.clientY);
+          return;
+        }
+        if (e.touches.length === 0) {
+          mode = "idle";
+          endInteract();
+        }
+        return;
+      }
+      if (mode === "pan" && e.touches.length === 0) {
+        const ct = e.changedTouches[0];
+        if (ct) finishPanMaybeTap(ct.clientX, ct.clientY);
+        mode = "idle";
+        endInteract();
+      }
+    };
+    const onTouchCancel = () => {
+      mode = "idle";
+      pinchStartDist = 0;
+      endInteract();
+    };
+
+    // ---------- Pointer (desktop / non-touch) ----------
+    const onPointerDown = (e: PointerEvent) => {
+      if (isTouchDevice) return; // touch handlers own mobile
+      if (e.pointerType === "touch") return;
+      beginPan(e.clientX, e.clientY);
+      el.setPointerCapture?.(e.pointerId);
+    };
+    const onPointerMove = (e: PointerEvent) => {
+      if (isTouchDevice || mode !== "pan") return;
+      updatePan(e.clientX, e.clientY);
+    };
+    const onPointerUp = (e: PointerEvent) => {
+      if (isTouchDevice || mode !== "pan") return;
+      finishPanMaybeTap(e.clientX, e.clientY);
+      mode = "idle";
+      endInteract();
     };
 
     const onWheel = (e: WheelEvent) => {
@@ -439,25 +546,31 @@ export function GlobePulse({
       window.setTimeout(endInteract, 150);
     };
 
-    el.addEventListener("pointerdown", onPointerDown);
-    el.addEventListener("pointermove", onPointerMove);
-    el.addEventListener("pointerup", onPointerUp);
-    el.addEventListener("pointercancel", onPointerUp);
-    el.addEventListener("touchstart", onTouchStart, { passive: true });
-    el.addEventListener("touchmove", onTouchMove, { passive: false });
-    el.addEventListener("touchend", onTouchEnd);
+    if (isTouchDevice) {
+      el.addEventListener("touchstart", onTouchStart, { passive: false });
+      el.addEventListener("touchmove", onTouchMove, { passive: false });
+      el.addEventListener("touchend", onTouchEnd);
+      el.addEventListener("touchcancel", onTouchCancel);
+    } else {
+      el.addEventListener("pointerdown", onPointerDown);
+      el.addEventListener("pointermove", onPointerMove);
+      el.addEventListener("pointerup", onPointerUp);
+      el.addEventListener("pointercancel", onPointerUp);
+    }
     el.addEventListener("wheel", onWheel, { passive: false });
+
     return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchCancel);
       el.removeEventListener("pointerdown", onPointerDown);
       el.removeEventListener("pointermove", onPointerMove);
       el.removeEventListener("pointerup", onPointerUp);
       el.removeEventListener("pointercancel", onPointerUp);
-      el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove", onTouchMove);
-      el.removeEventListener("touchend", onTouchEnd);
       el.removeEventListener("wheel", onWheel);
     };
-  }, []);
+  }, [liveMarkers]);
 
   function focusMarker(m: PulseMarker) {
     const latRad = (m.location[0] * Math.PI) / 180;
