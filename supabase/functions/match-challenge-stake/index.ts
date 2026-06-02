@@ -208,11 +208,21 @@ serve(async (req) => {
     // Wire the battle: set barber2 to acceptor + flip to live so both clients
     // routed through ContenderTheater can join the same room.
     if (challenge.battle_id) {
-      const { data: acceptorBarberProfile } = await supabase
+      let { data: acceptorBarberProfile } = await supabase
         .from('barber_profiles')
         .select('id')
         .eq('user_id', user.id)
         .maybeSingle();
+
+      // Guarantee a barber_profiles row so ContenderTheater can position the acceptor.
+      if (!acceptorBarberProfile?.id) {
+        const { data: created } = await supabase
+          .from('barber_profiles')
+          .insert({ user_id: user.id, name: profile.display_name || profile.username || 'Barber' })
+          .select('id')
+          .single();
+        acceptorBarberProfile = created ?? null;
+      }
 
       await supabase
         .from('battles')
