@@ -253,8 +253,9 @@ export function GlobePulse({
         y = y2;
         z = z2;
 
-        const px = radius + x * radius * 0.9;
-        const py = radius - y * radius * 0.9;
+        const r = radius * 0.9 * zoomRef.current;
+        const px = radius + x * r;
+        const py = radius - y * r;
         const visible = z > 0.05;
         const scale = ghost ? 0.5 + z * 0.22 : 0.7 + z * 0.4;
         // Anchor is zero-size at projected point; child handles centering.
