@@ -20,7 +20,7 @@ import { IS_COMING_SOON } from "@/config/launchMode";
 import Index from "./pages/Index";
 import ComingSoon from "./pages/ComingSoon";
 import Profile from "./pages/Profile";
-// BattlesPage removed — /battles redirects to /watch
+
 import BattleDetails from "./pages/BattleDetails";
 
 import Portal from "./pages/Portal";
