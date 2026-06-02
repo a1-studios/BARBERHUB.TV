@@ -326,7 +326,7 @@ export function GlobePulse({
         });
 
         frame++;
-        if (!isMobile || frame % 2 === 0) {
+        if (!isMobile || frame % 3 === 0) {
           projectGroup(liveLocs, flagRefs.current, false);
           projectGroup(ghostLocs, ghostRefs.current, true);
         }
