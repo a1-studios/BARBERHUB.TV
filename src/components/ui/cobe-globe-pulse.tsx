@@ -181,13 +181,13 @@ export function GlobePulse({
     <div className={`relative w-full aspect-square ${className}`}>
       <canvas
         ref={canvasRef}
-        onPointerDown={handlePointerDown}
         style={{
           width: "100%",
           height: "100%",
-          cursor: "grab",
           opacity: 0,
           transition: "opacity 0.8s ease",
+          pointerEvents: "none",
+          touchAction: "none",
         }}
       />
       <div
