@@ -480,79 +480,90 @@ export function GlobePulse({
   }
 
   return (
-    <div ref={containerRef} className={`relative w-full aspect-square ${className}`}>
-      <canvas
-        ref={canvasRef}
-        style={{
-          width: "100%",
-          height: "100%",
-          opacity: 0,
-          transition: "opacity 0.8s ease",
-          pointerEvents: "none",
-          touchAction: "none",
-        }}
-      />
+    <div
+      ref={containerRef}
+      className={`relative w-full aspect-square select-none ${className}`}
+      style={{ touchAction: "none" }}
+    >
       <div
-        ref={overlayRef}
         className="absolute inset-0"
-        style={{ pointerEvents: "none" }}
-        aria-hidden
+        style={{
+          transform: `scale(${zoom})`,
+          transformOrigin: "center center",
+          transition: "transform 0.08s linear",
+        }}
       >
-        {/* Ghost flags — zero-size anchor at geo point, flag centered via inner translate */}
-        {ghosts.map((g, i) => (
-          <div
-            key={`ghost-${g.cc}`}
-            ref={(el) => (ghostRefs.current[i] = el)}
-            className="absolute top-0 left-0 w-0 h-0 will-change-transform"
-            style={{ transition: "opacity 0.25s linear", pointerEvents: "none" }}
-          >
-            <span className="absolute block text-[12px] leading-none -translate-x-1/2 -translate-y-1/2 whitespace-nowrap">
-              {g.flag}
-            </span>
-          </div>
-        ))}
-
-        {/* Live markers — flag emoji center sits exactly on geo, barber pole hangs beneath */}
-        {liveMarkers.map((m, i) => {
-          const isFocused = focusedId === m.id;
-          return (
+        <canvas
+          ref={canvasRef}
+          style={{
+            width: "100%",
+            height: "100%",
+            opacity: 0,
+            transition: "opacity 0.8s ease",
+            pointerEvents: "none",
+            touchAction: "none",
+          }}
+        />
+        <div
+          ref={overlayRef}
+          className="absolute inset-0"
+          style={{ pointerEvents: "none" }}
+          aria-hidden
+        >
+          {ghosts.map((g, i) => (
             <div
-              key={m.id}
-              ref={(el) => (flagRefs.current[i] = el)}
+              key={`ghost-${g.cc}`}
+              ref={(el) => (ghostRefs.current[i] = el)}
               className="absolute top-0 left-0 w-0 h-0 will-change-transform"
               style={{ transition: "opacity 0.25s linear", pointerEvents: "none" }}
             >
-              {/* Flag emoji — anchor center on (px,py) */}
-              {m.flag && (
-                <span
-                  className={`absolute block text-[18px] leading-none -translate-x-1/2 -translate-y-1/2 whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] ${
-                    isFocused ? "ring-2 ring-orange-400/80 rounded-full px-0.5" : ""
-                  }`}
-                >
-                  {m.flag}
-                </span>
-              )}
-              {/* Animated barber pole — sits just below the flag (or on the point if no flag) */}
-              <span
-                className="absolute left-1/2 -translate-x-1/2 pointer-events-none pole-glow"
-                style={{ top: m.flag ? 8 : -7 }}
-              >
-                <BarberPole size={14} />
+              <span className="absolute block text-[12px] leading-none -translate-x-1/2 -translate-y-1/2 whitespace-nowrap">
+                {g.flag}
               </span>
-              {/* Invisible tap hit-area centered on the geo point */}
-              <button
-                type="button"
-                aria-label={`${m.city ?? "Barber"}${m.country ? ", " + m.country : ""}`}
-                onClick={() => focusMarker(m)}
-                onTouchStart={() => focusMarker(m)}
-                className="absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-transparent border-0 cursor-pointer"
-                style={{ pointerEvents: "auto" }}
-              />
             </div>
-          );
-        })}
+          ))}
+
+          {liveMarkers.map((m, i) => {
+            const isFocused = focusedId === m.id;
+            return (
+              <div
+                key={m.id}
+                ref={(el) => (flagRefs.current[i] = el)}
+                className="absolute top-0 left-0 w-0 h-0 will-change-transform"
+                style={{ transition: "opacity 0.25s linear", pointerEvents: "none" }}
+              >
+                {m.flag && (
+                  <span
+                    className={`absolute block text-[18px] leading-none -translate-x-1/2 -translate-y-1/2 whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] ${
+                      isFocused ? "ring-2 ring-orange-400/80 rounded-full px-0.5" : ""
+                    }`}
+                  >
+                    {m.flag}
+                  </span>
+                )}
+                <span
+                  className="absolute left-1/2 -translate-x-1/2 pointer-events-none pole-glow"
+                  style={{ top: m.flag ? 8 : -7 }}
+                >
+                  <BarberPole size={14} />
+                </span>
+                <button
+                  type="button"
+                  aria-label={`${m.city ?? "Barber"}${m.country ? ", " + m.country : ""}`}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    focusMarker(m);
+                  }}
+                  className="absolute -translate-x-1/2 -translate-y-1/2 w-10 h-10 md:w-7 md:h-7 rounded-full bg-transparent border-0 cursor-pointer"
+                  style={{ pointerEvents: "auto" }}
+                />
+              </div>
+            );
+          })}
+        </div>
       </div>
-      {/* Pole pulse keyframes (component-scoped) */}
+
       <style>{`
         @keyframes pole-pulse {
           0%, 100% { filter: drop-shadow(0 0 2px rgba(255,140,40,0.55)) drop-shadow(0 0 4px rgba(255,140,40,0.3)); }
@@ -560,11 +571,43 @@ export function GlobePulse({
         }
         .pole-glow { animation: pole-pulse 1.8s ease-in-out infinite; }
       `}</style>
+
       {chip && (
-        <div className="pointer-events-none absolute left-1/2 bottom-3 -translate-x-1/2 rounded-full bg-black/70 backdrop-blur px-3 py-1 text-[11px] font-semibold text-white border border-orange-400/40 shadow-[0_0_12px_rgba(255,115,30,0.45)]">
-          {[chip.city, chip.country].filter(Boolean).join(", ") || "Live"}
+        <div
+          className="absolute left-1/2 -translate-x-1/2 bottom-3 z-20 w-[min(92%,320px)] rounded-2xl border border-orange-400/40 bg-black/85 backdrop-blur-md p-3 shadow-[0_8px_28px_rgba(255,115,30,0.35)] animate-in fade-in slide-in-from-bottom-2"
+          style={{ pointerEvents: "auto" }}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            {chip.flag && <span className="text-xl leading-none">{chip.flag}</span>}
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold text-white truncate">
+                {chip.city ?? "Live barber"}
+                {chip.country ? <span className="text-white/60 font-medium">, {chip.country}</span> : null}
+              </div>
+              <div className="text-[10px] uppercase tracking-wider text-orange-400/90 font-semibold">
+                Live barbers nearby
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <button
+              type="button"
+              onClick={() => navigate("/barbers")}
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/15 active:bg-white/20 text-white text-xs font-semibold py-2 px-2 border border-white/15 transition"
+            >
+              <MapPin className="w-3.5 h-3.5" /> Find Near You
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/book-barber-near-me")}
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-black text-xs font-bold py-2 px-2 transition shadow-[0_0_12px_rgba(255,140,40,0.55)]"
+            >
+              <Calendar className="w-3.5 h-3.5" /> Book Now
+            </button>
+          </div>
         </div>
       )}
+
       {!ready && (
         <div className="absolute inset-0 flex items-center justify-center text-[10px] text-white/40">
           loading globe…
