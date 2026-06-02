@@ -120,21 +120,29 @@ export function GlobePulse({
       const width = canvas.offsetWidth;
       if (width === 0 || globe) return;
 
+      const isMobile =
+        typeof window !== "undefined" &&
+        (window.matchMedia?.("(max-width: 768px)").matches ||
+          /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent));
+      const dpr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2);
+      const renderScale = isMobile ? 1 : 2;
+
       globe = createGlobe(canvas, {
-        devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
-        width: width * 2,
-        height: width * 2,
+        devicePixelRatio: dpr,
+        width: width * renderScale,
+        height: width * renderScale,
         phi: 0,
         theta: 0.2,
         dark: 1,
         diffuse: 1.4,
-        mapSamples: 16000,
+        mapSamples: isMobile ? 6000 : 16000,
         mapBrightness: 8,
         baseColor: [0.35, 0.35, 0.4],
         markerColor: [1, 0.5, 0.1],
         glowColor: [0.6, 0.3, 0.05],
         markers: markers.map((m) => ({ location: m.location, size: 0.05 })),
       });
+
 
       function animate() {
         if (!isPausedRef.current) phi += speed;
