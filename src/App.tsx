@@ -66,6 +66,8 @@ const Privacy = lazy(() => import("./pages/legal/Privacy"));
 const AUP = lazy(() => import("./pages/legal/AUP"));
 const Cookies = lazy(() => import("./pages/legal/Cookies"));
 const DMCA = lazy(() => import("./pages/legal/DMCA"));
+const ChairSwapPage = lazy(() => import("./features/chair-swap/ChairSwapPage"));
+const HubCalendarPage = lazy(() => import("./features/hub-calendar/HubCalendarPage"));
 
 
 const queryClient = new QueryClient();
