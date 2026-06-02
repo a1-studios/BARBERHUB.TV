@@ -471,43 +471,17 @@ export function GlobePulse({
       if (e.touches.length === 1) {
         const t = e.touches[0];
         beginPan(t.clientX, t.clientY);
-      } else if (e.touches.length >= 2) {
-        mode = "pinch";
-        const [a, b] = [e.touches[0], e.touches[1]];
-        pinchStartDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1;
-        pinchStartZoom = zoomRef.current;
-        markInteract();
       }
+      // Pinch (>=2 touches) is intentionally ignored — zoom disabled.
     };
     const onTouchMove = (e: TouchEvent) => {
-      if (mode === "pinch" && e.touches.length >= 2) {
-        e.preventDefault();
-        const [a, b] = [e.touches[0], e.touches[1]];
-        const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-        const next = Math.max(0.85, Math.min(2.4, pinchStartZoom * (d / pinchStartDist)));
-        zoomRef.current = next;
-        setZoom(next);
-        lastInteractAtRef.current = performance.now();
-      } else if (mode === "pan" && e.touches.length === 1) {
+      if (mode === "pan" && e.touches.length === 1) {
         e.preventDefault();
         const t = e.touches[0];
         updatePan(t.clientX, t.clientY);
       }
     };
     const onTouchEnd = (e: TouchEvent) => {
-      if (mode === "pinch") {
-        if (e.touches.length === 1) {
-          // Re-seed pan baseline from remaining finger so we don't jump.
-          const t = e.touches[0];
-          beginPan(t.clientX, t.clientY);
-          return;
-        }
-        if (e.touches.length === 0) {
-          mode = "idle";
-          endInteract();
-        }
-        return;
-      }
       if (mode === "pan" && e.touches.length === 0) {
         const ct = e.changedTouches[0];
         if (ct) finishPanMaybeTap(ct.clientX, ct.clientY);
@@ -517,7 +491,6 @@ export function GlobePulse({
     };
     const onTouchCancel = () => {
       mode = "idle";
-      pinchStartDist = 0;
       endInteract();
     };
 
@@ -539,15 +512,6 @@ export function GlobePulse({
       endInteract();
     };
 
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const next = Math.max(0.85, Math.min(2.4, zoomRef.current * (1 - e.deltaY * 0.0015)));
-      zoomRef.current = next;
-      setZoom(next);
-      markInteract();
-      window.setTimeout(endInteract, 150);
-    };
-
     if (isTouchDevice) {
       el.addEventListener("touchstart", onTouchStart, { passive: false });
       el.addEventListener("touchmove", onTouchMove, { passive: false });
@@ -559,7 +523,6 @@ export function GlobePulse({
       el.addEventListener("pointerup", onPointerUp);
       el.addEventListener("pointercancel", onPointerUp);
     }
-    el.addEventListener("wheel", onWheel, { passive: false });
 
     return () => {
       el.removeEventListener("touchstart", onTouchStart);
@@ -570,7 +533,6 @@ export function GlobePulse({
       el.removeEventListener("pointermove", onPointerMove);
       el.removeEventListener("pointerup", onPointerUp);
       el.removeEventListener("pointercancel", onPointerUp);
-      el.removeEventListener("wheel", onWheel);
     };
   }, [liveMarkers]);
 
