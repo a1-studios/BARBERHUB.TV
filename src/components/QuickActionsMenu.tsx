@@ -15,8 +15,11 @@ import {
   Loader2,
   Shield,
   Trophy,
-  Camera
+  Camera,
+  Calendar,
+  Armchair
 } from 'lucide-react';
+import { FEATURES } from '@/config/features';
 import { cn } from '@/lib/utils';
 
 interface QuickAction {
