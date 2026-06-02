@@ -21,7 +21,7 @@ export const LiveMatchCounter = () => {
   if (liveCount === 0) return null;
 
   return (
-    <Link to="/creator-hub">
+    <Link to="/live">
       <Badge variant="destructive" className="animate-pulse">
         🔴 LIVE: {liveCount} battle{liveCount !== 1 ? "s" : ""} streaming now
       </Badge>

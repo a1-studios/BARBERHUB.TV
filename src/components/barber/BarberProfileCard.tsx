@@ -16,6 +16,8 @@ import { TierRing } from '../TierRing';
 import { SubCategoryBadge } from '../SubCategoryBadge';
 import { M4MAvatarBadge } from '../m4m/M4MAvatarBadge';
 import { parseSpecialties, getSpecialtyDisplay } from '@/config/specialtyTags';
+import { LiveAvatar } from './LiveAvatar';
+import { useBarberLiveState } from '@/hooks/useBarberLiveState';
 
 interface BarberProfileCardProps {
   barberId: string;
@@ -183,20 +185,24 @@ export const BarberProfileCard = ({
 
   const displayName = barberProfile.display_name || barberProfile.barber_name;
 
+  const liveState = useBarberLiveState(userId);
+
   return (
     <>
       <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover:border-primary/40 transition-all duration-300">
         <CardHeader className="pb-3">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <TierRing tier={extraProfileData?.active_subscription_tier} size="sm">
-                <Avatar className="w-12 h-12">
-                  <AvatarImage src={barberProfile.avatar_url || undefined} />
-                  <AvatarFallback className="bg-primary/20 text-primary font-semibold">
-                    {(displayName || 'B').charAt(0).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-              </TierRing>
+              <LiveAvatar barberUserId={userId} fallbackHref={`/barber/${userId}`}>
+                <TierRing tier={extraProfileData?.active_subscription_tier} size="sm">
+                  <Avatar className="w-12 h-12">
+                    <AvatarImage src={barberProfile.avatar_url || undefined} />
+                    <AvatarFallback className="bg-primary/20 text-primary font-semibold">
+                      {(displayName || 'B').charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </TierRing>
+              </LiveAvatar>
               <M4MAvatarBadge
                 certified={extraProfileData?.m4m_certified ?? false}
                 paid={extraProfileData?.m4m_paid ?? false}
@@ -218,9 +224,13 @@ export const BarberProfileCard = ({
                     {getCountryFlag(barberProfile.country_code)}
                   </span>
                 )}
-                {barberProfile.is_live && (
-                  <Badge variant="destructive" className="animate-pulse">
-                    🔴 LIVE
+                {liveState.isLive && (
+                  <Badge
+                    variant="destructive"
+                    className="animate-pulse cursor-pointer"
+                    onClick={() => liveState.destination && navigate(liveState.destination)}
+                  >
+                    🔴 {liveState.kind === 'battle' ? 'IN BATTLE' : 'LIVE'}
                   </Badge>
                 )}
                 {typeof distanceMiles === 'number' && (

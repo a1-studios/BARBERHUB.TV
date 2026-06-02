@@ -30,6 +30,7 @@ import Grants from "./pages/Grants";
 import CreatorHub from "./pages/CreatorHub";
 import NotFound from "./pages/NotFound";
 import WatchFeed from "./pages/WatchFeed";
+import LiveHub from "./pages/LiveHub";
 import BarberPublicProfile from "./pages/BarberPublicProfile";
 import BookBarberLanding from "./pages/seo/BookBarberLanding";
 import M4MVerify from "./pages/M4MVerify";
@@ -158,6 +159,7 @@ const AppContent = () => {
               } 
             />
           <Route path="/watch" element={<WatchFeed />} />
+          <Route path="/live" element={<LiveHub />} />
           <Route path="/tournaments" element={<Tournaments />} />
           <Route path="/tournaments/:tournamentId" element={<TournamentDetails />} />
             <Route path="/barber/:userId" element={<BarberPublicProfile />} />
