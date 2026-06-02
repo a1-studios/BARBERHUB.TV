@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Helmet } from 'react-helmet';
 import { LaunchWizard } from '@/components/coming-soon/LaunchWizard';
-import { LiveStatsRow } from './LiveStatsRow';
+
 import { FeatureHighlightReel } from './FeatureHighlightReel';
 import { RotatingJoinCTA } from './RotatingJoinCTA';
 import { InlineOtpBox } from './InlineOtpBox';
