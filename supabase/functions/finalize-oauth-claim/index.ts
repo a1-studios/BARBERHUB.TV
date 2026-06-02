@@ -12,7 +12,16 @@ const Body = z.object({
   barber_status: z.enum(['licensed', 'unlicensed', 'student', 'beginner', 'aspiring']).optional().nullable(),
   country_code: z.string().min(2).max(3),
   phone_number: z.string().max(40).optional().nullable(),
+  vip_code: z.string().trim().min(1).max(64).optional().nullable(),
 });
+
+const STATUS_TO_SUB_CATEGORY: Record<string, string> = {
+  licensed: 'licensed_pro',
+  unlicensed: 'unlicensed_pro',
+  student: 'student',
+  beginner: 'beginner',
+  aspiring: 'aspiring',
+};
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
