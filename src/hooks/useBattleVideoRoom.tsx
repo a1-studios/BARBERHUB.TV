@@ -339,7 +339,13 @@ export const useBattleVideoRoom = ({
     onDisconnect,
   ]);
 
-  const disconnect = useCallback(() => {
+  const disconnect = useCallback(async () => {
+    intentionalDisconnectRef.current = true;
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    reconnectAttemptsRef.current = 0;
     roomRef.current?.disconnect();
     roomRef.current = null;
     if (durationIntervalRef.current) {
@@ -356,8 +362,26 @@ export const useBattleVideoRoom = ({
       remoteAudioTrack: null,
       opponentIdentity: null,
     }));
+
+    // Flag stream as ended on the server.
+    const pos = barberPositionRef.current;
+    if (pos === 1 || pos === 2) {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token;
+        if (accessToken) {
+          await supabase.functions.invoke('update-stream-status', {
+            body: { battleId, barberPosition: pos, status: 'ended' },
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+        }
+      } catch (e) {
+        console.warn('Failed to mark stream ended:', e);
+      }
+    }
+
     toast.success('Stream ended');
-  }, []);
+  }, [battleId]);
 
   const toggleVideo = useCallback(() => {
     const room = roomRef.current;
