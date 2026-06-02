@@ -4,7 +4,7 @@ import Header from "@/components/Header";
 import LandingHero from "@/components/LandingHero";
 import CommunitySection from "@/components/CommunitySection";
 import { DynamicBattleHero } from "@/components/DynamicBattleHero";
-import BattlesSection from "@/components/BattlesSection";
+
 import Footer from "@/components/Footer";
 import { LaunchWizard } from "@/components/coming-soon/LaunchWizard";
 
