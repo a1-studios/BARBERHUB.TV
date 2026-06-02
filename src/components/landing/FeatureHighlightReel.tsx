@@ -194,7 +194,7 @@ const slides: Slide[] = [
   },
 ];
 
-export const FeatureHighlightReel = () => {
+export const FeatureHighlightReel = ({ children }: { children?: React.ReactNode }) => {
   const [idx, setIdx] = useState(0);
   const touchStartX = useRef<number | null>(null);
 
