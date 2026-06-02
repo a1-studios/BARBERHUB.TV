@@ -330,8 +330,10 @@ export function GlobePulse({
         });
 
         frame++;
-        if (!isMobile || frame % 3 === 0) {
-          projectGroup(liveLocs, flagRefs.current, false);
+        // Live flags must project every frame to stay glued to lat/lng.
+        projectGroup(liveLocs, flagRefs.current, false);
+        // Ghosts are decorative — throttle on mobile.
+        if (!isMobile || frame % 2 === 0) {
           projectGroup(ghostLocs, ghostRefs.current, true);
         }
         animationId = requestAnimationFrame(animate);
