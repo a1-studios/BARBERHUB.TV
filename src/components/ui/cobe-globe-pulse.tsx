@@ -183,16 +183,21 @@ export function GlobePulse({
   const phiOffsetRef = useRef(0);
   const thetaOffsetRef = useRef(0);
   const phiRef = useRef(0);
+  const zoomRef = useRef(1);
   const targetPhiOffsetRef = useRef<number | null>(null);
   const targetThetaOffsetRef = useRef<number | null>(null);
   const focusStartRef = useRef(0);
   const focusFromPhiRef = useRef(0);
   const focusFromThetaRef = useRef(0);
   const visibleRef = useRef(true);
+  const isInteractingRef = useRef(false);
+  const lastInteractAtRef = useRef(0);
+  const [zoom, setZoom] = useState(1);
   const [ready, setReady] = useState(false);
-  const [chip, setChip] = useState<{ city?: string; country?: string } | null>(null);
+  const [chip, setChip] = useState<PulseMarker | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const chipTimerRef = useRef<number | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!containerRef.current) return;
