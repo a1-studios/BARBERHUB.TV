@@ -194,7 +194,7 @@ export function GlobePulse({
   const visibleRef = useRef(true);
   const isInteractingRef = useRef(false);
   const lastInteractAtRef = useRef(0);
-  const [zoom, setZoom] = useState(1);
+  const [, setZoom] = useState(1);
   const [ready, setReady] = useState(false);
   const [chip, setChip] = useState<PulseMarker | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
