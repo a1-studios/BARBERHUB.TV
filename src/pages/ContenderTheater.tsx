@@ -29,6 +29,7 @@ export default function ContenderTheater() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
   
   const [showChat, setShowChat] = useState(false);
