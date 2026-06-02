@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Plus, BarChart3, User, Play, Scissors } from 'lucide-react';
+import { Home, Plus, BarChart3, User, Play, Scissors, Radio } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useQuery } from '@tanstack/react-query';
@@ -10,7 +10,7 @@ const barberTabs = [
   { icon: Home, label: 'HOME', path: '/' },
   { icon: Play, label: 'WATCH', path: '/watch' },
   { isFab: true },
-  { icon: BarChart3, label: 'RANKS', path: '/rankings' },
+  { icon: Radio, label: 'LIVE', path: '/live' },
   { icon: User, label: 'PROFILE', path: '/profile' },
 ] as const;
 
@@ -18,7 +18,7 @@ const fanTabs = [
   { icon: Home, label: 'HOME', path: '/' },
   { icon: Play, label: 'WATCH', path: '/watch' },
   { isFab: true },
-  { icon: BarChart3, label: 'RANKS', path: '/rankings' },
+  { icon: Radio, label: 'LIVE', path: '/live' },
   { icon: User, label: 'PROFILE', path: '/profile' },
 ] as const;
 
@@ -97,7 +97,7 @@ export function BottomNavBar() {
 
           const { icon: Icon, label, path } = tab as { icon: typeof Home; label: string; path: string };
           const active = isActive(path);
-          const showLiveDot = path === '/' && hasLiveFollowed;
+          const showLiveDot = (path === '/' || path === '/live') && hasLiveFollowed;
 
           return (
             <button
