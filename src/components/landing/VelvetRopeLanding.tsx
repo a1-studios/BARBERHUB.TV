@@ -48,10 +48,10 @@ export const VelvetRopeLanding = () => {
         {/* Feature Highlight Reel — takes available slack */}
         <div className="flex-1 min-h-0 flex flex-col px-3 pt-2 md:pt-4 pb-0 overflow-hidden">
           <FeatureHighlightReel>
-            <div className="flex-none pt-2 flex flex-col items-center">
+            <div className="flex-none pt-4 md:pt-5 flex flex-col items-center">
               <RotatingJoinCTA onClick={() => setSpinOpen(true)} />
             </div>
-            <div className="flex-none pt-2">
+            <div className="flex-none pt-4 md:pt-5">
               <LiveStatsRow />
             </div>
           </FeatureHighlightReel>
