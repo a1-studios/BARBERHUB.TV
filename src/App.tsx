@@ -281,6 +281,24 @@ const AppContent = () => {
                 </AuthGuard>
               }
             />
+            <Route
+              path="/chair-swap"
+              element={
+                <AuthGuard>
+                  <BarberGuard>
+                    <ChairSwapPage />
+                  </BarberGuard>
+                </AuthGuard>
+              }
+            />
+            <Route
+              path="/hub/calendar"
+              element={
+                <AuthGuard>
+                  <HubCalendarPage />
+                </AuthGuard>
+              }
+            />
             <Route path="*" element={<NotFound />} />
           </Routes>
       </Suspense>
