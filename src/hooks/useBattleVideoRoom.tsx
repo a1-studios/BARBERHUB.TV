@@ -299,14 +299,20 @@ export const useBattleVideoRoom = ({
         localAudioTrack: localAudio,
       }));
 
-      // Update streaming flag
-      try {
-        await supabase.functions.invoke('update-stream-status', {
-          body: { battleId, isStreaming: true },
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-      } catch (e) {
-        console.warn('Streaming flag fallback failed:', e);
+      // Successful (re)connection — reset reconnect attempts.
+      reconnectAttemptsRef.current = 0;
+
+      // Update streaming flag (only if we know our position).
+      const pos = barberPositionRef.current;
+      if (pos === 1 || pos === 2) {
+        try {
+          await supabase.functions.invoke('update-stream-status', {
+            body: { battleId, barberPosition: pos, status: 'live' },
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+        } catch (e) {
+          console.warn('Streaming flag fallback failed:', e);
+        }
       }
 
       toast.success('🔴 You are LIVE in the battle!');
