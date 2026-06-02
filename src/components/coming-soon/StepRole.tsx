@@ -69,7 +69,7 @@ export const StepRole = ({ email, initialRole, initialCountry, initialPhone, ini
         return;
       }
     }
-    onContinue({ role, barberStatus, country, phone: phone.trim() });
+    onContinue({ role, barberStatus, country, phone: phone.trim(), vipCode: trimmedVip });
   };
 
   return (
