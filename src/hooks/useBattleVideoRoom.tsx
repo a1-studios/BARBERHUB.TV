@@ -54,6 +54,7 @@ interface BattleVideoState {
 export const useBattleVideoRoom = ({
   battleId,
   opponentIdentity: expectedOpponentIdentity,
+  barberPosition,
   onOpponentJoin,
   onOpponentLeave,
   onDisconnect,
