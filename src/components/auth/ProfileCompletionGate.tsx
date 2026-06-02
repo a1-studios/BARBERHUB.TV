@@ -41,6 +41,7 @@ export const ProfileCompletionGate = () => {
   const [country, setCountry] = useState<string | null>(null);
   const [phone, setPhone] = useState('');
   const [vipCode, setVipCode] = useState('');
+  const [vipMode, setVipMode] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,14 +49,14 @@ export const ProfileCompletionGate = () => {
     if (!user) { setNeeds(false); return; }
     let mounted = true;
     (async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('user_type, country_code')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      const [{ data: profile }, { data: vipOn }] = await Promise.all([
+        supabase.from('profiles').select('user_type, country_code').eq('user_id', user.id).maybeSingle(),
+        supabase.rpc('is_global_vip_mode'),
+      ]);
       if (!mounted) return;
-      const incomplete = !data?.user_type || !data?.country_code;
+      const incomplete = !profile?.user_type || !profile?.country_code;
       setNeeds(incomplete);
+      setVipMode(Boolean(vipOn));
     })();
     const handler = () => setOpen(true);
     window.addEventListener('require-profile-complete', handler);
@@ -75,9 +76,10 @@ export const ProfileCompletionGate = () => {
 
   if (!user || !open) return null;
 
-  const barberReady = role === 'barber' && !!status && vipCode.trim().length > 0;
+  const barberReady = role === 'barber' && !!status && (!vipMode || vipCode.trim().length > 0);
   const fanReady = role === 'fan';
   const ready = !!country && (barberReady || fanReady);
+  const canDismiss = role !== 'barber'; // barbers must satisfy VIP gate, no escape hatch
 
   const submit = async () => {
     if (!ready || !role) return;
@@ -85,38 +87,26 @@ export const ProfileCompletionGate = () => {
     setError(null);
 
     try {
-      // 1. If becoming a barber, validate + redeem the VIP code first.
-      if (role === 'barber') {
-        const code = vipCode.trim().toUpperCase();
-        const { data: vData, error: vErr } = await supabase.rpc('validate_access_code', { p_code: code });
-        if (vErr) throw vErr;
-        const row = Array.isArray(vData) ? vData[0] : vData;
-        if (!row?.valid) {
-          setError('Invalid or exhausted VIP code.');
-          setSubmitting(false);
-          return;
-        }
-      }
-
-      // 2. Finalize role + country via existing edge function (writes user_type,
-      //    seeds user_roles, links marketing leads, etc.).
       const { data, error: fnErr } = await supabase.functions.invoke('finalize-oauth-claim', {
-        body: { role, barber_status: status, country_code: country, phone_number: phone.trim() || null },
+        body: {
+          role,
+          barber_status: status,
+          country_code: country,
+          phone_number: phone.trim() || null,
+          vip_code: role === 'barber' ? vipCode.trim().toUpperCase() : null,
+        },
       });
-      if (fnErr || (data as { error?: unknown } | null)?.error) {
-        throw new Error(fnErr?.message ?? 'Could not save your profile.');
+      const errPayload = (data as { error?: string } | null)?.error;
+      if (fnErr || errPayload) {
+        const msg = errPayload === 'invalid_vip_code' || fnErr?.message?.includes('invalid_vip_code')
+          ? 'Invalid or exhausted VIP code.'
+          : errPayload === 'vip_code_required' || fnErr?.message?.includes('vip_code_required')
+            ? 'VIP code is required to become a barber.'
+            : fnErr?.message ?? errPayload ?? 'Could not save your profile.';
+        throw new Error(msg);
       }
 
-      // 3. Redeem the code (post-role-flip so the access_codes ledger sees the right user).
-      if (role === 'barber') {
-        await supabase.rpc('redeem_access_code', {
-          p_code: vipCode.trim().toUpperCase(),
-          p_user_id: user.id,
-          p_email: user.email ?? '',
-        });
-      }
-
-      // 4. Claim the +15 BB welcome bonus (idempotent server-side).
+      // Claim the +15 BB welcome bonus (idempotent server-side)
       await supabase.rpc('claim_welcome_bonus');
 
       setNeeds(false);
@@ -212,23 +202,25 @@ export const ProfileCompletionGate = () => {
                 })}
               </div>
 
-              <div className="relative">
-                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-400/70 pointer-events-none z-10" />
-                <input
-                  type="text"
-                  inputMode="text"
-                  placeholder="VIP Invite Code (required)"
-                  value={vipCode}
-                  onChange={(e) => setVipCode(e.target.value.toUpperCase())}
-                  maxLength={32}
-                  autoCapitalize="characters"
-                  className="w-full h-11 pl-9 pr-3 rounded-[12px] bg-black/40 text-white text-sm font-bold tracking-widest uppercase focus:outline-none focus:ring-2 focus:ring-orange-500/60"
-                  style={{ border: '1px solid hsla(20,100%,56%,0.4)' }}
-                />
-                <p className="text-[10px] text-white/50 mt-1.5 px-1">
-                  Barber spots are invite-only during beta. Don't have a code? Switch to Fan to enter free.
-                </p>
-              </div>
+              {vipMode && (
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-400/70 pointer-events-none z-10" />
+                  <input
+                    type="text"
+                    inputMode="text"
+                    placeholder="VIP Invite Code (required)"
+                    value={vipCode}
+                    onChange={(e) => setVipCode(e.target.value.toUpperCase())}
+                    maxLength={32}
+                    autoCapitalize="characters"
+                    className="w-full h-11 pl-9 pr-3 rounded-[12px] bg-black/40 text-white text-sm font-bold tracking-widest uppercase focus:outline-none focus:ring-2 focus:ring-orange-500/60"
+                    style={{ border: '1px solid hsla(20,100%,56%,0.4)' }}
+                  />
+                  <p className="text-[10px] text-white/50 mt-1.5 px-1">
+                    Barber spots are invite-only during beta. Don't have a code? Switch to Fan to enter free.
+                  </p>
+                </div>
+              )}
             </>
           )}
 
@@ -289,9 +281,11 @@ export const ProfileCompletionGate = () => {
             )}
           </button>
 
-          <button type="button" onClick={() => setOpen(false)} className="w-full text-[10px] uppercase tracking-wider text-white/45 hover:text-white py-1">
-            Watch first, decide later
-          </button>
+          {canDismiss && (
+            <button type="button" onClick={() => setOpen(false)} className="w-full text-[10px] uppercase tracking-wider text-white/45 hover:text-white py-1">
+              Watch first, decide later
+            </button>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>

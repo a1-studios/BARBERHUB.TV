@@ -19,6 +19,7 @@ interface Props {
   barberStatus: BarberStatus | null;
   country: string | null;
   phone: string;
+  vipCode: string;
   onContinue: (email: string) => void;
   onBack: () => void;
 }
@@ -26,12 +27,12 @@ interface Props {
 const haptic = () => { try { navigator.vibrate?.(10); } catch { /* */ } };
 
 const persistPending = (data: {
-  role: LaunchRole; barberStatus: BarberStatus | null; country: string | null; phone: string; email: string;
+  role: LaunchRole; barberStatus: BarberStatus | null; country: string | null; phone: string; email: string; vipCode: string;
 }) => {
   try { sessionStorage.setItem('bh_pending_role', JSON.stringify(data)); } catch { /* */ }
 };
 
-export const StepAuth = ({ initialEmail, role, barberStatus, country, phone, onContinue, onBack }: Props) => {
+export const StepAuth = ({ initialEmail, role, barberStatus, country, phone, vipCode, onContinue, onBack }: Props) => {
   const direction = useStepDirection();
   const [email, setEmail] = useState(initialEmail);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +50,7 @@ export const StepAuth = ({ initialEmail, role, barberStatus, country, phone, onC
 
   const oauth = async (provider: 'google' | 'apple' | 'facebook') => {
     haptic();
-    persistPending({ role, barberStatus, country, phone, email });
+    persistPending({ role, barberStatus, country, phone, email, vipCode });
     await supabase.auth.signInWithOAuth({
       provider,
       options: {
@@ -69,7 +70,7 @@ export const StepAuth = ({ initialEmail, role, barberStatus, country, phone, onC
     setError(null);
     haptic();
     const lower = parsed.data.email;
-    persistPending({ role, barberStatus, country, phone, email: lower });
+    persistPending({ role, barberStatus, country, phone, email: lower, vipCode });
 
     try {
       // Register lead (idempotent — soft 200 on duplicates)
@@ -90,7 +91,7 @@ export const StepAuth = ({ initialEmail, role, barberStatus, country, phone, onC
           role,
           country_code: country,
           phone_number: phone || null,
-          ...(role === 'barber' ? { barber_status: barberStatus ?? 'beginner' } : {}),
+          ...(role === 'barber' ? { barber_status: barberStatus ?? 'beginner', vip_code: vipCode || undefined } : {}),
         },
       });
 
@@ -105,6 +106,7 @@ export const StepAuth = ({ initialEmail, role, barberStatus, country, phone, onC
             country_code: country,
             barber_status: role === 'barber' ? (barberStatus ?? 'beginner') : null,
             phone_number: phone || null,
+            vip_code: role === 'barber' ? (vipCode || null) : null,
             tos_accepted_at: new Date().toISOString(),
           },
         },

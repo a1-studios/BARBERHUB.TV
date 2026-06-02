@@ -22,6 +22,7 @@ const BarberBody = z.object({
   phone_number: z.string().max(40).optional().nullable(),
   zip_code: z.string().trim().min(2).max(20).optional().nullable(),
   specialties: z.array(z.string().max(40)).max(3).optional(),
+  vip_code: z.string().trim().min(1).max(64).optional().nullable(),
 });
 
 const Body = z.union([FanBody, BarberBody]);
@@ -44,6 +45,27 @@ Deno.serve(async (req) => {
     );
 
     const data = parsed.data;
+
+    // VIP enforcement for barbers
+    if (data.role === 'barber') {
+      const { data: vipModeOn } = await supabase.rpc('is_global_vip_mode');
+      const code = data.vip_code?.trim().toUpperCase() ?? '';
+      if (vipModeOn && !code) {
+        return new Response(JSON.stringify({ error: 'vip_code_required' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (code) {
+        const { data: vData, error: vErr } = await supabase.rpc('validate_access_code', { p_code: code });
+        const row = Array.isArray(vData) ? vData[0] : vData;
+        if (vErr || !row?.valid) {
+          return new Response(JSON.stringify({ error: 'invalid_vip_code' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+    }
+
     const update: Record<string, unknown> = {
       email: data.email,
       role: data.role,
