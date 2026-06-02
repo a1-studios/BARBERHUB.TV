@@ -82,17 +82,27 @@ export const useBattleVideoRoom = ({
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    expectedOpponentRef.current = expectedOpponentIdentity;
+    // Preserve the last known opponent identity across transient prop nulls
+    // (e.g. parent queries refetching). Only overwrite when we get a real id.
+    if (expectedOpponentIdentity) {
+      expectedOpponentRef.current = expectedOpponentIdentity;
+    }
   }, [expectedOpponentIdentity]);
 
   useEffect(() => {
     barberPositionRef.current = barberPosition;
   }, [barberPosition]);
 
-  /** Match only the opponent barber when an expected identity is provided. */
+  /**
+   * Strict opponent matching.
+   * - If we know the expected opponent identity, only that exact identity counts.
+   * - If we DON'T yet know it, return false so viewer joins/leaves can never be
+   *   misclassified as the opponent (no false "Opponent connection lost" toasts,
+   *   no teardown of remote tracks driven by spectator churn).
+   */
   const isOpponent = useCallback((identity: string) => {
     const expected = expectedOpponentRef.current;
-    if (!expected) return true; // legacy: treat any remote as opponent
+    if (!expected) return false;
     return identity === expected;
   }, []);
 
