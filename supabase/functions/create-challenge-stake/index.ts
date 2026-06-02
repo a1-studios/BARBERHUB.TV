@@ -148,12 +148,22 @@ serve(async (req) => {
     const durationMins = Math.min(duration_minutes || MAX_DURATION_MINUTES, MAX_DURATION_MINUTES);
     const expiresAt = new Date(Date.now() + durationMins * 60 * 1000).toISOString();
 
-    // Resolve challenger's barber_profiles.id so we can pre-seat them in the battle
-    const { data: challengerBarberProfile } = await supabase
+    // Resolve challenger's barber_profiles.id so we can pre-seat them in the battle.
+    // Guarantee a row exists so ContenderTheater can position them as barber1.
+    let { data: challengerBarberProfile } = await supabase
       .from('barber_profiles')
       .select('id')
       .eq('user_id', user.id)
       .maybeSingle();
+
+    if (!challengerBarberProfile?.id) {
+      const { data: created } = await supabase
+        .from('barber_profiles')
+        .insert({ user_id: user.id, name: profile.display_name || profile.username || 'Barber' })
+        .select('id')
+        .single();
+      challengerBarberProfile = created ?? null;
+    }
 
     // Pre-create a battle record so complete-open-challenge can link to it.
     // prize_amount starts at 2x stake (or 0 when free) — viewer donations grow it.
