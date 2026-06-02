@@ -276,8 +276,6 @@ const Index = () => {
               {/* Live Streaming Barbers - Watch active streams */}
               <LiveBarberStreams />
               
-              {/* Main Battles Section with all navigation and features */}
-              <BattlesSection />
 
               {/* Community Leaderboard */}
               {FEATURES.COMMUNITY_LEADERBOARD && (
