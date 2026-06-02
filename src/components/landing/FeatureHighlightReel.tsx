@@ -53,6 +53,12 @@ const slides: Slide[] = [
     render: () => (
       <div className="absolute inset-0">
         <GlobePulse />
+        <div className="absolute inset-x-0 top-2 flex justify-center pointer-events-none">
+          <p className="whitespace-nowrap text-[11px] md:text-xs font-black uppercase tracking-[0.22em] drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
+            <span className="text-white">Where Barbers Become </span>
+            <span className="text-orange-400">Legends</span>
+          </p>
+        </div>
       </div>
     ),
   },
