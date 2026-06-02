@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import createGlobe from "cobe";
+import { useNavigate } from "react-router-dom";
+import { MapPin, Calendar } from "lucide-react";
 
 interface PulseMarker {
   id: string;
