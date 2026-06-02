@@ -337,15 +337,26 @@ export const ChallengeFeed = () => {
   });
 
   const { data: challenges = [], isLoading } = useQuery({
-    queryKey: ['open-challenges'],
+    queryKey: ['open-challenges', user?.id ?? 'anon'],
     queryFn: async () => {
       const nowIso = new Date().toISOString();
-      // Only show truly OPEN Quick Play challenges — drop matched/declined/expired rows
-      const { data, error } = await supabase
+      // Only show truly OPEN Quick Play challenges — drop matched/declined/expired rows.
+      // Hide direct (targeted) challenges from everyone except the challenger and target.
+      let query = supabase
         .from('open_challenges')
         .select('*')
         .eq('status', 'waiting_for_opponent')
-        .gt('expires_at', nowIso)
+        .gt('expires_at', nowIso);
+
+      if (user?.id) {
+        query = query.or(
+          `target_barber_id.is.null,target_barber_id.eq.${user.id},challenger_id.eq.${user.id}`,
+        );
+      } else {
+        query = query.is('target_barber_id', null);
+      }
+
+      const { data, error } = await query
         .order('stake_amount', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
 
