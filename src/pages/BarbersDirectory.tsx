@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Helmet } from 'react-helmet';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
