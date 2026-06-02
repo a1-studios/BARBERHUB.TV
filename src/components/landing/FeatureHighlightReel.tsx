@@ -51,11 +51,11 @@ const slides: Slide[] = [
     id: 'global',
     label: 'Global',
     render: () => (
-      <div className="absolute inset-0 flex flex-col">
-        <div className="flex-1 relative">
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <div className="w-full relative">
           <GlobePulse />
         </div>
-        <div className="flex-none -mt-2 pb-1 flex justify-center pointer-events-none">
+        <div className="mt-2 flex justify-center pointer-events-none">
           <p className="whitespace-nowrap text-[12px] md:text-sm font-extrabold uppercase tracking-[0.22em] drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)]">
             <span className="text-orange-400">Where </span>
             <span className="text-white">Barbers </span>
