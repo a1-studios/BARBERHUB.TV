@@ -45,7 +45,7 @@ export const VelvetRopeLanding = () => {
         </div>
 
         {/* Feature Highlight Reel — takes available slack */}
-        <div className="flex-1 min-h-0 flex flex-col justify-center px-3 pt-8 pb-2 overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col justify-center px-3 pt-2 md:pt-6 pb-1 overflow-hidden">
           <FeatureHighlightReel />
         </div>
 

@@ -51,12 +51,12 @@ const slides: Slide[] = [
     id: 'global',
     label: 'Global',
     render: () => (
-      <div className="absolute inset-0 flex flex-col">
-        <div className="flex-1 relative">
-          <GlobePulse />
-        </div>
-        <div className="flex-none pb-2">
-          <LiveStatsRow />
+      <div className="absolute inset-0">
+        <GlobePulse />
+        <div className="absolute inset-x-0 bottom-0 pointer-events-none">
+          <div className="pointer-events-auto">
+            <LiveStatsRow />
+          </div>
         </div>
       </div>
     ),
@@ -226,8 +226,8 @@ export const FeatureHighlightReel = () => {
             ? 'border border-transparent bg-transparent shadow-none'
             : 'border border-orange-500/30 bg-black/60 shadow-[0_0_24px_rgba(249,115,22,0.25)] overflow-hidden'
         }`}
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
+        onTouchStart={isGlobe ? undefined : onTouchStart}
+        onTouchEnd={isGlobe ? undefined : onTouchEnd}
       >
         {slides.map((s, i) => (
           <div
