@@ -4,7 +4,7 @@ import { writeFileSync } from 'fs';
 import { resolve } from 'path';
 import { SEO_CITIES, SEO_SERVICES } from '../src/data/seoCities';
 
-const BASE_URL = 'https://barberhub-tv.lovable.app';
+const BASE_URL = 'https://barberhub.tv';
 
 interface Entry {
   path: string;
