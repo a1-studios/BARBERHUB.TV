@@ -1,44 +1,48 @@
-## Goal
 
-Two issues from the screenshot:
+# Challenge path — audit findings & fix plan
 
-1. The **125,000 BB prize ticker** renders twice on the home page (the duplicate you circled).
-2. The **Lives** block still renders inline as a section; it should instead appear as an **auto-opening modal** that only triggers when there is at least one live barber.
+After tracing the full flow (`ChallengeModal` / `ChallengeFeed` → `create-challenge-stake` → `notifications` → `IncomingChallengeTakeover` → `match-challenge-stake` → `ContenderTheater`), four real bugs are breaking the path. Plan fixes only those.
 
-## Changes
+## Bugs found
 
-### 1. Remove the duplicate prize ticker
-- File: `src/pages/Index.tsx` (in `UnifiedArena`)
-- The `<ArenaTicker />` at lines 48–54 is rendered standalone, and `ImmersiveFactionBanners` (line 57) also renders its own `<ArenaTicker />` internally (line 179). That is the duplicate.
-- Fix: delete the standalone `<ArenaTicker />` block in `Index.tsx` and the now-unused `ArenaTicker` / `useCategoryPrizePools` imports. Keep the ticker that lives inside `ImmersiveFactionBanners` (the lower one you chose to keep).
+1. **Direct (targeted) challenges leak into the public feed.**
+   `ChallengeFeed` queries `open_challenges` with no filter on `target_barber_id`, so a challenge meant for one specific barber shows up in everyone's "Open Challenges" list and any barber can accept it.
 
-### 2. Convert Lives into an auto-opening modal
-- New file: `src/components/battles/LivesModal.tsx`
-  - Wraps the existing live-barbers grid inside a shadcn `Dialog`.
-  - Opens automatically (once per session) whenever `liveStreams.length + soloBroadcasts.length > 0`.
-  - Session flag `lives_modal_seen` prevents it from re-popping on every refetch.
-  - Reopens when the live count transitions from 0 → ≥1 (a new barber goes live).
-  - User can dismiss; while dismissed, a small floating "Lives (n)" pill in the bottom-right reopens it.
-- File: `src/components/battles/LiveBarberStreams.tsx`
-  - Extract the queries into a hook `useLiveContent()` returning `{ liveStreams, soloBroadcasts, hasContent }`.
-  - Keep the existing card markup but render it inside the modal body instead of the page section.
-- File: `src/pages/Index.tsx`
-  - Replace `<LiveBarberStreams />` (line 42) with `<LivesModal />`.
-- File: `src/components/fan/FanArenaView.tsx`
-  - Same swap so both home variants behave the same.
+2. **`match-challenge-stake` doesn't honor `target_barber_id`.**
+   The edge function checks status/expiry/self-acceptance but never verifies the acceptor matches the targeted barber. Combined with bug #1, the wrong barber can hijack a direct challenge.
 
-### 3. Behavior contract
-- When no barbers are live → no modal, no pill, no inline block (nothing rendered).
-- When ≥1 barber is live → modal auto-opens once per session; afterwards the floating pill remains until live count returns to 0.
-- Clicking a card inside the modal navigates to the broadcast/theater route (existing behavior preserved) and closes the modal.
+3. **Challenger stuck waiting — never sees opponent arrive.**
+   `ContenderTheater` fetches `battles` with a single `useQuery` and has no realtime subscription. When the opponent accepts, `battles.barber2_id` + `status='live'` update server-side, but the challenger's client never refetches → `opponentIdentity` stays `null` → LiveKit never matches the new participant, screen stays in standby forever.
 
-## Out of scope
-- No changes to the `LiveBarberStreams` queries themselves (the `is_live` + `isFreshLiveBroadcast` filter already gates accurately).
-- No backend / RLS / edge function changes.
-- No changes to faction banners or product shelf.
+4. **Acceptor with no `barber_profiles` row breaks positioning.**
+   `match-challenge-stake` does `barber2_id: acceptorBarberProfile?.id ?? null`. If the accepter is a barber-role user whose `barber_profiles` row hasn't been created yet, `barber2_id` stays `null`, `ContenderTheater` can't set `barberPosition=2`, and the accepter is silently treated as a viewer.
 
-## Files touched
-- `src/pages/Index.tsx` (remove duplicate ticker, swap Lives for modal)
-- `src/components/fan/FanArenaView.tsx` (swap Lives for modal)
-- `src/components/battles/LiveBarberStreams.tsx` (extract `useLiveContent`)
-- `src/components/battles/LivesModal.tsx` (new)
+## Fix plan
+
+### A. Frontend — `src/components/battles/ChallengeFeed.tsx`
+- Add `useAuth` and filter the `open-challenges` query so each barber sees:
+  - their own challenges, plus
+  - non-targeted challenges (`target_barber_id is null`), plus
+  - challenges targeted at them (`target_barber_id = user.id`).
+- Implementation: `.or('target_barber_id.is.null,target_barber_id.eq.<uid>,challenger_id.eq.<uid>')`.
+
+### B. Frontend — `src/pages/ContenderTheater.tsx`
+- Add a Supabase realtime subscription on `battles` filtered by `id=eq.<battleId>` that calls `queryClient.invalidateQueries(['battle-contender', battleId])` on any UPDATE.
+- This wakes the challenger as soon as `barber2_id` / `status` flip, so `opponentIdentity` resolves and LiveKit pairing fires.
+
+### C. Edge function — `supabase/functions/match-challenge-stake/index.ts`
+- After loading `challenge`, if `challenge.target_barber_id` is set and `target_barber_id !== user.id`, return `403 "This challenge was issued to a different barber"`.
+- Guarantee `barber2_id` is non-null: if `acceptorBarberProfile` is missing, create a minimal `barber_profiles` row for the user, then use that id. Falls back to existing id if found.
+
+### D. Edge function — `supabase/functions/create-challenge-stake/index.ts`
+- Same `barber_profiles` guarantee for the challenger so `barber1_id` is never null when challenger lands in `ContenderTheater`.
+
+## Out of scope (not touched)
+- LiveKit signaling, single-stream solo broadcast (working per user), Lives modal, prize ticker, faction banners, tournament/ranking logic, BB economy splits, notification panel UI.
+
+## Verification
+- Issue direct challenge from A → B: only B sees it in feed; C cannot accept (server rejects).
+- B accepts → challenger A's ContenderTheater leaves standby and pairs with B within ~1s.
+- Repeat with an account that has no `barber_profiles` row → both contenders still get positions 1/2.
+- Open Quick Play preset (no target) still appears for every barber and any can accept.
+

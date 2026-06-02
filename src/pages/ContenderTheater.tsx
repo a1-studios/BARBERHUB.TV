@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useBattleVideoRoom } from '@/hooks/useBattleVideoRoom';
@@ -29,6 +29,7 @@ export default function ContenderTheater() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
   
   const [showChat, setShowChat] = useState(false);
@@ -74,6 +75,24 @@ export default function ContenderTheater() {
     },
     enabled: !!battleId
   });
+
+  // Realtime: refetch battle when barber2_id / status flips (opponent accepted)
+  useEffect(() => {
+    if (!battleId) return;
+    const channel = supabase
+      .channel(`battle-contender-${battleId}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'battles', filter: `id=eq.${battleId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['battle-contender', battleId] });
+          queryClient.invalidateQueries({ queryKey: ['battle-barbers'] });
+        },
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [battleId, queryClient]);
+
 
   // Fetch barber profiles — load whichever barber IDs exist (challenger arrives
   // before opponent accepts, so barber2_id may be null in Quick Play mode).

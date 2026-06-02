@@ -77,6 +77,14 @@ serve(async (req) => {
       throw new Error('You cannot accept your own challenge');
     }
 
+    // Enforce direct (targeted) challenges — only the named barber can accept.
+    if (challenge.target_barber_id && challenge.target_barber_id !== user.id) {
+      return new Response(
+        JSON.stringify({ error: 'This challenge was issued to a different barber.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      );
+    }
+
     const stakeToMatch = challenge.stake_amount || 0;
     const isFreeChallenge = stakeToMatch === 0;
 
@@ -200,11 +208,21 @@ serve(async (req) => {
     // Wire the battle: set barber2 to acceptor + flip to live so both clients
     // routed through ContenderTheater can join the same room.
     if (challenge.battle_id) {
-      const { data: acceptorBarberProfile } = await supabase
+      let { data: acceptorBarberProfile } = await supabase
         .from('barber_profiles')
         .select('id')
         .eq('user_id', user.id)
         .maybeSingle();
+
+      // Guarantee a barber_profiles row so ContenderTheater can position the acceptor.
+      if (!acceptorBarberProfile?.id) {
+        const { data: created } = await supabase
+          .from('barber_profiles')
+          .insert({ user_id: user.id, name: profile.display_name || profile.username || 'Barber' })
+          .select('id')
+          .single();
+        acceptorBarberProfile = created ?? null;
+      }
 
       await supabase
         .from('battles')
