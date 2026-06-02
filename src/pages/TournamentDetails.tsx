@@ -92,8 +92,39 @@ export default function TournamentDetails() {
   return (
     <>
       <Helmet>
-        <title>{tournament.name} | Barber Tournament</title>
-        <meta name="description" content="Elite barber competition" />
+        <title>{tournament.name} | BARBER-HUB Tournament</title>
+        <meta
+          name="description"
+          content={`${tournament.name} — elite barber tournament on BARBER-HUB${
+            tournament.start_date ? `, starting ${format(new Date(tournament.start_date), 'PPP')}` : ''
+          }. View brackets, standings, and prize pool.`}
+        />
+        <link rel="canonical" href={`https://barberhub.tv/tournaments/${tournamentId}`} />
+        <meta property="og:title" content={`${tournament.name} | BARBER-HUB Tournament`} />
+        <meta
+          property="og:description"
+          content={`${tournament.name} — elite barber tournament on BARBER-HUB. View brackets, standings, and prize pool.`}
+        />
+        <meta property="og:url" content={`https://barberhub.tv/tournaments/${tournamentId}`} />
+        <meta property="og:type" content="event" />
+        <script type="application/ld+json">{JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'Event',
+          name: tournament.name,
+          startDate: tournament.start_date ?? undefined,
+          endDate: (tournament as any).end_date ?? undefined,
+          eventStatus: 'https://schema.org/EventScheduled',
+          eventAttendanceMode: 'https://schema.org/OnlineEventAttendanceMode',
+          description:
+            (tournament as any).description ??
+            `${tournament.name} — elite barber tournament on BARBER-HUB.`,
+          url: `https://barberhub.tv/tournaments/${tournamentId}`,
+          organizer: {
+            '@type': 'Organization',
+            name: 'BARBER-HUB',
+            url: 'https://barberhub.tv/',
+          },
+        })}</script>
       </Helmet>
       
       <Header />
