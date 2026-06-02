@@ -154,11 +154,12 @@ export const LaunchWizard = ({ onClose }: LaunchWizardProps) => {
                   initialRole={state.role}
                   initialCountry={state.country}
                   initialPhone={state.phone}
-                  onContinue={({ role, barberStatus, country, phone }) => {
-                    update({ role, barberStatus, country, phone });
+                  initialVipCode={state.vipCode}
+                  onContinue={({ role, barberStatus, country, phone, vipCode }) => {
+                    update({ role, barberStatus, country, phone, vipCode });
                     try {
                       sessionStorage.setItem('bh_pending_role', JSON.stringify({
-                        role, barberStatus, country, phone, email: state.email,
+                        role, barberStatus, country, phone, vipCode, email: state.email,
                       }));
                     } catch { /* */ }
                     goNext();
@@ -175,6 +176,7 @@ export const LaunchWizard = ({ onClose }: LaunchWizardProps) => {
                   barberStatus={state.barberStatus}
                   country={state.country}
                   phone={state.phone}
+                  vipCode={state.vipCode}
                   onContinue={(email) => { update({ email }); /* wait for SIGNED_IN to advance */ }}
                   onBack={goBack}
                 />
