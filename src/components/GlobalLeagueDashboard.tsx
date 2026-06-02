@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { LiveBattleFeed } from '@/components/LiveBattleFeed';
 import { BarberMapDirectory } from '@/components/map/BarberMapDirectory';
 import { BarberLocationSearch } from '@/components/map/BarberLocationSearch';
 
@@ -39,9 +38,6 @@ export const GlobalLeagueDashboard = () => {
             />
           </div>
         </div>
-
-        {/* Live Battles */}
-        <LiveBattleFeed />
       </div>
     </div>
   );

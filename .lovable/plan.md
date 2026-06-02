@@ -1,39 +1,50 @@
 ## Goal
-On the home arena (`src/pages/Index.tsx`), there are currently two live sections that show overlapping content:
-1. `🔥 Live Battles` (via `LiveBattleFeed`) — line 53-57
-2. `LiveBarberStreams` — line 68 (battles + solo broadcasts)
+Remove the duplicate live section from the authenticated home screen and keep exactly one section named `Lives`, shown only when barbers are actually live, positioned immediately above Official Gear.
 
-User wants ONE unified "Lives" section that:
-- Only renders when barbers are actually live (battles or solo broadcasts)
-- Sits immediately above Official Gear (`ProductShelf`)
-- Works on mobile / iPad / desktop
+## What I found
+The previous change only handled `LiveBarberStreams` in `src/pages/Index.tsx`.
+The duplicate still appears because `src/components/GlobalLeagueDashboard.tsx` also renders `LiveBattleFeed`, which creates a second live block lower on the home page.
 
-## Changes
-
-### `src/pages/Index.tsx` (`UnifiedArena`)
-- Remove the standalone `🔥 Live Battles` block (lines 53-57) and the bottom `<LiveBarberStreams />` placement (line 68).
-- Drop the now-unused `LiveBattleFeed` import.
-- Reorder so the new "Lives" section renders **immediately above** `<ProductShelf />` (Official Gear).
-
-New section order in `UnifiedArena`:
+Current home path:
 ```text
-DynamicBattleHero
-Lives (conditional)   ← NEW position
-ProductShelf (Official Gear)
-ArenaTicker
-ImmersiveFactionBanners
-GlobalLeagueDashboard
-CommunitySection / GrantsSection
+Index
+└─ UnifiedArena
+   ├─ DynamicBattleHero
+   ├─ LiveBarberStreams        ← intended single section
+   ├─ ProductShelf
+   ├─ ArenaTicker
+   ├─ ImmersiveFactionBanners
+   └─ GlobalLeagueDashboard
+      └─ LiveBattleFeed        ← actual duplicate still showing
 ```
 
-### `src/components/battles/LiveBarberStreams.tsx`
-- Rename the section heading from its current label to **"Lives"** (keep the small pulsing red dot).
-- Add an early `return null` when both `liveStreams` and `soloBroadcasts` are empty (and not loading) so the entire section — heading included — disappears when nothing is live.
-- Keep all existing realtime invalidation + queries intact (single source of truth for "is anything live").
+## Changes to make
 
-No other files touched. No backend, schema, or business-logic changes.
+### 1) `src/components/GlobalLeagueDashboard.tsx`
+- Remove the embedded `<LiveBattleFeed />` block from this dashboard.
+- Remove the now-unused `LiveBattleFeed` import.
+- Keep the location search and map content unchanged.
 
-## Verification
-- With zero live battles and zero solo broadcasts: section is fully hidden on `/`.
-- With at least one live battle or solo broadcast: single "Lives" section renders directly above Official Gear on mobile (390px), iPad, and desktop.
-- No duplicate live grid lower on the page.
+Result: the dashboard stops reintroducing a second live section on the home page.
+
+### 2) `src/pages/Index.tsx`
+- Keep the single `<LiveBarberStreams />` placement directly above `<ProductShelf />`.
+- Do not add any other live section here.
+
+### 3) `src/components/battles/LiveBarberStreams.tsx`
+- Keep the heading as `Lives`.
+- Keep the existing conditional hide behavior when there are no active live battles or solo broadcasts.
+- No query or backend changes unless inspection shows the visibility condition is wrong.
+
+## Validation
+After implementation I will verify:
+- Mobile, iPad, and desktop home show only one live section.
+- That section is named `Lives`.
+- It sits immediately above Official Gear.
+- When there are no active live battles or solo broadcasts, the section does not render.
+- The lower duplicate from `GlobalLeagueDashboard` is gone.
+
+## Technical notes
+- No database or edge function changes.
+- Frontend-only cleanup.
+- Scope limited to the duplicate live rendering on the home screen.
