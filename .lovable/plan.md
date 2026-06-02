@@ -1,45 +1,57 @@
-## Goal
-Make the homepage CTAs actually respond, send guests straight into signup when they tap them, and remove the mobile interactions that are causing stutter.
+## Root cause
 
-## What I’ll change
+There are two separate role-gates hiding live content from non-fans:
 
-### 1. Fix the broken CTA flow on the homepage globe
-- Update the CTA path used by the homepage globe/reel so tapping **Find Near You** or **Book Now** always does something.
-- For guests: open the existing signup/onboarding flow immediately instead of landing on a dead state.
-- For signed-in users: keep the current route behavior to `/barbers` or `/book-barber-near-me`.
+1. **`src/pages/Index.tsx` (line 265)** branches the entire homepage on `isFan`:
+   - **Fans** → `<FanArenaView />`, which renders `LiveBattleFeed` ("🔥 Live Battles" section) and the `ArenaTicker` for challenges.
+   - **Everyone else (barbers, admins)** → a different layout (`DynamicBattleHero` + shelves + factions + `LiveBarberStreams`) that does **not** include `LiveBattleFeed` or the ArenaTicker challenge surface, so non-fans literally have no entry point for live battles/challenges on the home screen.
 
-### 2. Make the guest landing actually react to `?tab=signup`
-- Wire `VelvetRopeLanding` to read the query param and auto-open `LaunchWizard`.
-- This fixes the current mismatch where the teaser modal navigates to `/?tab=signup` but the guest landing never consumes it.
+2. **`src/components/LiveBattleFeed.tsx`** imports `isBarber` but never uses it to gate the list — that's fine. The real gate is just the parent-component branching above.
 
-### 3. Remove laggy mobile globe interactions
-- Disable mobile drag/pan interaction on the cobe globe.
-- Keep only lightweight tap behavior on visible markers/chips.
-- Remove `touchAction: none` / gesture handling that blocks normal scrolling and causes extra work on mobile.
-- Preserve desktop interaction if it’s still useful, but make mobile tap-only.
+The LiveKit viewer-token edge function (`get-livekit-viewer-token`) already accepts any authenticated user regardless of role, and routes like `/battle/:id/theater`, `/watch`, and `/broadcast/:barberId` are wrapped only in `AuthGuard` (no `BarberGuard`/`FanGuard`). So once we fix the homepage gate, all roles can already reach and watch the streams.
 
-### 4. Remove swipe/drag navigation from the signup wizard on mobile
-- Disable horizontal drag gestures in `SwipeableStep` for mobile so the role chooser and auth steps don’t stutter.
-- Keep tap buttons for forward/back so the flow remains clear and fast.
-- This specifically targets the “choose your role” screen the user called out.
+## Plan
 
-### 5. Reduce extra animation cost on the guest entry flow
-- Trim the heaviest mobile-only motion in the globe / reel path where it impacts responsiveness most.
-- Keep the visual style, but prioritize smooth taps over draggable effects.
+### 1. Show the same live + challenges surface to every signed-in role
 
-## Technical details
-- Files likely involved:
-  - `src/components/ui/cobe-globe-pulse.tsx`
-  - `src/components/landing/BarberTeaserModal.tsx`
-  - `src/components/landing/VelvetRopeLanding.tsx`
-  - `src/components/coming-soon/SwipeableStep.tsx`
-  - potentially `src/components/landing/FeatureHighlightReel.tsx`
-- Root cause already identified:
-  - guest CTA currently navigates to `/?tab=signup`
-  - `LandingHero` listens for that query param, but unauthenticated users now see `VelvetRopeLanding`, not `LandingHero`
-  - so nothing opens
-- Validation after implementation:
-  - tap **Find Near You** as guest -> signup wizard opens
-  - tap **Book Now** as guest -> signup wizard opens
-  - tap marker / CTA on mobile -> no drag/pinch behavior, no dead tap
-  - role chooser remains responsive on mobile without swipe/drag lag
+In `src/pages/Index.tsx`:
+
+- Remove the `isFan ? <FanArenaView /> : <main>…</main>` split.
+- Render a single unified `<main>` for all authenticated users containing, in order:
+  1. `DynamicBattleHero` (already role-aware internally — barbers get challenge CTAs, fans get watch CTAs)
+  2. `ProductShelf`
+  3. **`ArenaTicker`** (challenges / prize pools) — currently fan-only via FanArenaView, promote it to everyone
+  4. **`LiveBattleFeed`** ("🔥 Live Battles") — currently fan-only, promote it to everyone
+  5. `ImmersiveFactionBanners`
+  6. `GlobalLeagueDashboard`
+  7. `LiveBarberStreams`
+  8. `CommunitySection` / `GrantsSection` behind their existing feature flags
+- Keep the `FanIntroSequence` gated to fans (it's a one-time fan onboarding, not a content surface).
+- Delete the now-unused `FanArenaView` import; leave the file in place for now (no functional callers).
+
+### 2. Make `LiveBattleFeed` role-agnostic
+
+- Remove the unused `const { isBarber } = useUserRole();` from `src/components/LiveBattleFeed.tsx` (dead code, was the leftover gate hook).
+- No other logic change — `navigate(\`/battles/${id}\`)` already works for all signed-in roles via `AuthGuard`.
+
+### 3. Verify there are no other role walls on the live path
+
+Confirmed read-only (no changes needed, just listing so we don't regress):
+- `App.tsx` routes `/battles/:id`, `/battle/:id/theater`, `/watch`, `/broadcast/:barberId` are `AuthGuard`-only (all signed-in users pass).
+- `/battle/:id/contender` stays behind `BarberGuard` (barbers only — correct, that's the perform side).
+- `get-livekit-viewer-token` edge function requires only a valid Supabase JWT, no role check.
+- `BattleTheater` viewer-token fetch already runs whenever `user` exists, no `isFan` condition.
+
+### 4. QA after build
+
+- Sign in as a barber → home screen shows "🔥 Live Battles" and ArenaTicker; tapping a live battle opens `/battles/:id` and `/battle/:id/theater` and connects to LiveKit as a viewer.
+- Sign in as a fan → same surfaces visible (no regression).
+- Sign in as an admin → same surfaces visible.
+- Signed-out → unchanged `VelvetRopeLanding`.
+
+## Files to edit
+
+- `src/pages/Index.tsx` — collapse the `isFan` branch into one unified authenticated layout that includes `LiveBattleFeed` + `ArenaTicker`.
+- `src/components/LiveBattleFeed.tsx` — remove the unused `useUserRole`/`isBarber` import.
+
+No DB migrations, no edge-function changes, no new components.

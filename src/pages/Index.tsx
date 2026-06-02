@@ -24,9 +24,54 @@ import { BottomNavBar } from "@/components/BottomNavBar";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { FanIntroSequence } from "@/components/fan/FanIntroSequence";
-import { FanArenaView } from "@/components/fan/FanArenaView";
+import { LiveBattleFeed } from "@/components/LiveBattleFeed";
+import { ArenaTicker } from "@/components/factions/ArenaTicker";
+import { useCategoryPrizePools } from "@/hooks/useCategoryPrizePools";
 
 import { ProductShelf } from "@/components/ProductShelf";
+
+const UnifiedArena = () => {
+  const navigate = useNavigate();
+  const { prizePools } = useCategoryPrizePools();
+  return (
+    <main className="space-y-4 pb-24">
+      {/* Featured Battle Hero — role-aware internally */}
+      <DynamicBattleHero />
+
+      {/* Official Gear Shelf */}
+      <ProductShelf />
+
+      {/* Challenges / Prize Pools ticker — visible to every signed-in role */}
+      <section className="px-3 sm:px-6">
+        <ArenaTicker
+          prizePools={prizePools}
+          isBarber={false}
+          onNavigate={(path) => navigate(path)}
+        />
+      </section>
+
+      {/* Live Battle Feed — visible to every signed-in role */}
+      <section className="px-3 sm:px-6">
+        <h2 className="text-lg font-bold text-foreground mb-3">🔥 Live Battles</h2>
+        <LiveBattleFeed />
+      </section>
+
+      {/* Immersive Faction Banners */}
+      <ImmersiveFactionBanners />
+
+      {/* Global League Dashboard */}
+      <section className="px-3 sm:px-6">
+        <GlobalLeagueDashboard />
+      </section>
+
+      {/* Live Streaming Barbers */}
+      <LiveBarberStreams />
+
+      {FEATURES.COMMUNITY_LEADERBOARD && <CommunitySection />}
+      {FEATURES.GRANTS_SECTION && <GrantsSection />}
+    </main>
+  );
+};
 
 const Index = () => {
   const { user, loading } = useAuth();
@@ -262,37 +307,8 @@ const Index = () => {
             }} />
           )}
 
-          {isFan ? (
-            <FanArenaView />
-          ) : (
-              <main>
-                {/* Head-to-Head Battle Hero */}
-              <DynamicBattleHero />
+          <UnifiedArena />
 
-              {/* Official Gear Shelf */}
-              <ProductShelf />
-              
-              {/* Immersive Faction Banners - Full Screen Selection */}
-              <ImmersiveFactionBanners />
-              
-              {/* Global League Dashboard */}
-              <GlobalLeagueDashboard />
-              
-              {/* Live Streaming Barbers - Watch active streams */}
-              <LiveBarberStreams />
-              
-
-              {/* Community Leaderboard */}
-              {FEATURES.COMMUNITY_LEADERBOARD && (
-                <CommunitySection />
-              )}
-              
-              {/* Grants Section */}
-              {FEATURES.GRANTS_SECTION && (
-                <GrantsSection />
-              )}
-            </main>
-          )}
         </>
       ) : (
         <>

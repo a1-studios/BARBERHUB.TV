@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Calendar, Users, Eye } from 'lucide-react';
-import { useUserRole } from '@/hooks/useUserRole';
+
 import { motion } from 'framer-motion';
 import { AnimatedCounter } from '@/components/battles/AnimatedCounter';
 import { BattleCard } from '@/components/battles/BattleCard';
@@ -30,7 +30,7 @@ const getCountryFlag = (countryCode: string | null): string => {
 
 export const LiveBattleFeed = () => {
   const navigate = useNavigate();
-  const { isBarber } = useUserRole();
+
 
   const { data: liveBattles, refetch } = useQuery({
     queryKey: ['liveBattles'],
