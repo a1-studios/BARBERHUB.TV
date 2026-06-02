@@ -1,50 +1,44 @@
 ## Goal
-Remove the duplicate live section from the authenticated home screen and keep exactly one section named `Lives`, shown only when barbers are actually live, positioned immediately above Official Gear.
 
-## What I found
-The previous change only handled `LiveBarberStreams` in `src/pages/Index.tsx`.
-The duplicate still appears because `src/components/GlobalLeagueDashboard.tsx` also renders `LiveBattleFeed`, which creates a second live block lower on the home page.
+Two issues from the screenshot:
 
-Current home path:
-```text
-Index
-└─ UnifiedArena
-   ├─ DynamicBattleHero
-   ├─ LiveBarberStreams        ← intended single section
-   ├─ ProductShelf
-   ├─ ArenaTicker
-   ├─ ImmersiveFactionBanners
-   └─ GlobalLeagueDashboard
-      └─ LiveBattleFeed        ← actual duplicate still showing
-```
+1. The **125,000 BB prize ticker** renders twice on the home page (the duplicate you circled).
+2. The **Lives** block still renders inline as a section; it should instead appear as an **auto-opening modal** that only triggers when there is at least one live barber.
 
-## Changes to make
+## Changes
 
-### 1) `src/components/GlobalLeagueDashboard.tsx`
-- Remove the embedded `<LiveBattleFeed />` block from this dashboard.
-- Remove the now-unused `LiveBattleFeed` import.
-- Keep the location search and map content unchanged.
+### 1. Remove the duplicate prize ticker
+- File: `src/pages/Index.tsx` (in `UnifiedArena`)
+- The `<ArenaTicker />` at lines 48–54 is rendered standalone, and `ImmersiveFactionBanners` (line 57) also renders its own `<ArenaTicker />` internally (line 179). That is the duplicate.
+- Fix: delete the standalone `<ArenaTicker />` block in `Index.tsx` and the now-unused `ArenaTicker` / `useCategoryPrizePools` imports. Keep the ticker that lives inside `ImmersiveFactionBanners` (the lower one you chose to keep).
 
-Result: the dashboard stops reintroducing a second live section on the home page.
+### 2. Convert Lives into an auto-opening modal
+- New file: `src/components/battles/LivesModal.tsx`
+  - Wraps the existing live-barbers grid inside a shadcn `Dialog`.
+  - Opens automatically (once per session) whenever `liveStreams.length + soloBroadcasts.length > 0`.
+  - Session flag `lives_modal_seen` prevents it from re-popping on every refetch.
+  - Reopens when the live count transitions from 0 → ≥1 (a new barber goes live).
+  - User can dismiss; while dismissed, a small floating "Lives (n)" pill in the bottom-right reopens it.
+- File: `src/components/battles/LiveBarberStreams.tsx`
+  - Extract the queries into a hook `useLiveContent()` returning `{ liveStreams, soloBroadcasts, hasContent }`.
+  - Keep the existing card markup but render it inside the modal body instead of the page section.
+- File: `src/pages/Index.tsx`
+  - Replace `<LiveBarberStreams />` (line 42) with `<LivesModal />`.
+- File: `src/components/fan/FanArenaView.tsx`
+  - Same swap so both home variants behave the same.
 
-### 2) `src/pages/Index.tsx`
-- Keep the single `<LiveBarberStreams />` placement directly above `<ProductShelf />`.
-- Do not add any other live section here.
+### 3. Behavior contract
+- When no barbers are live → no modal, no pill, no inline block (nothing rendered).
+- When ≥1 barber is live → modal auto-opens once per session; afterwards the floating pill remains until live count returns to 0.
+- Clicking a card inside the modal navigates to the broadcast/theater route (existing behavior preserved) and closes the modal.
 
-### 3) `src/components/battles/LiveBarberStreams.tsx`
-- Keep the heading as `Lives`.
-- Keep the existing conditional hide behavior when there are no active live battles or solo broadcasts.
-- No query or backend changes unless inspection shows the visibility condition is wrong.
+## Out of scope
+- No changes to the `LiveBarberStreams` queries themselves (the `is_live` + `isFreshLiveBroadcast` filter already gates accurately).
+- No backend / RLS / edge function changes.
+- No changes to faction banners or product shelf.
 
-## Validation
-After implementation I will verify:
-- Mobile, iPad, and desktop home show only one live section.
-- That section is named `Lives`.
-- It sits immediately above Official Gear.
-- When there are no active live battles or solo broadcasts, the section does not render.
-- The lower duplicate from `GlobalLeagueDashboard` is gone.
-
-## Technical notes
-- No database or edge function changes.
-- Frontend-only cleanup.
-- Scope limited to the duplicate live rendering on the home screen.
+## Files touched
+- `src/pages/Index.tsx` (remove duplicate ticker, swap Lives for modal)
+- `src/components/fan/FanArenaView.tsx` (swap Lives for modal)
+- `src/components/battles/LiveBarberStreams.tsx` (extract `useLiveContent`)
+- `src/components/battles/LivesModal.tsx` (new)

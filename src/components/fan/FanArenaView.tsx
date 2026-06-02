@@ -4,7 +4,7 @@ import { GlobalLeagueDashboard } from '@/components/GlobalLeagueDashboard';
 import { ArenaTicker } from '@/components/factions/ArenaTicker';
 import { useCategoryPrizePools } from '@/hooks/useCategoryPrizePools';
 import { ProductShelf } from '@/components/ProductShelf';
-import { LiveBarberStreams } from '@/components/battles/LiveBarberStreams';
+import { LivesModal } from '@/components/battles/LivesModal';
 
 export const FanArenaView = () => {
   const navigate = useNavigate();
@@ -15,8 +15,8 @@ export const FanArenaView = () => {
       {/* Featured Battle Hero */}
       <DynamicBattleHero />
 
-      {/* Lives — auto-hides when no barbers are live */}
-      <LiveBarberStreams />
+      {/* Lives — auto-opens as modal when a barber is live */}
+      <LivesModal />
 
       {/* Official Gear Shelf */}
       <ProductShelf />
