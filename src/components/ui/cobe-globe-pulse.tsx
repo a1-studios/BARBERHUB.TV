@@ -313,7 +313,10 @@ export function GlobePulse({
             targetThetaOffsetRef.current = null;
           }
         } else {
-          phi += speed;
+          const idleMs = performance.now() - lastInteractAtRef.current;
+          if (!isInteractingRef.current && idleMs > 2500) {
+            phi += speed;
+          }
         }
 
         phiRef.current = phi + phiOffsetRef.current;
