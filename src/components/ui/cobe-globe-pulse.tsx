@@ -570,7 +570,7 @@ export function GlobePulse({
     <div
       ref={containerRef}
       className={`relative w-full aspect-square select-none ${className}`}
-      style={{ touchAction: "none", overscrollBehavior: "contain" }}
+      style={{ touchAction: "manipulation", overscrollBehavior: "contain" }}
     >
       <canvas
         ref={canvasRef}
@@ -580,9 +580,10 @@ export function GlobePulse({
           opacity: 0,
           transition: "opacity 0.8s ease",
           pointerEvents: "none",
-          touchAction: "none",
+          touchAction: "manipulation",
         }}
       />
+
       <div
         ref={overlayRef}
         className="absolute inset-0"
