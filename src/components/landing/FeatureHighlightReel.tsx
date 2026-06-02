@@ -245,9 +245,8 @@ export const FeatureHighlightReel = ({ children }: { children?: React.ReactNode 
           </div>
         ))}
       </div>
-      {children}
-      {/* dots */}
-      <div className="flex items-center justify-center gap-2 pt-2">
+      {/* dots — placed directly under the slogan */}
+      <div className="flex items-center justify-center gap-2 pt-1">
         {slides.map((s, i) => (
           <button
             key={s.id}
@@ -264,6 +263,7 @@ export const FeatureHighlightReel = ({ children }: { children?: React.ReactNode 
           </button>
         ))}
       </div>
+      {children}
     </div>
   );
 };
