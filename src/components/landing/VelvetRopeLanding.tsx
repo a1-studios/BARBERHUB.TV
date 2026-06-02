@@ -5,6 +5,7 @@ import { LaunchWizard } from '@/components/coming-soon/LaunchWizard';
 import { FeatureHighlightReel } from './FeatureHighlightReel';
 import { RotatingJoinCTA } from './RotatingJoinCTA';
 import { InlineOtpBox } from './InlineOtpBox';
+import { LiveStatsRow } from './LiveStatsRow';
 import barberPole from '@/assets/barber-pole.png';
 
 export const VelvetRopeLanding = () => {
@@ -46,11 +47,14 @@ export const VelvetRopeLanding = () => {
 
         {/* Feature Highlight Reel — takes available slack */}
         <div className="flex-1 min-h-0 flex flex-col px-3 pt-2 md:pt-4 pb-0 overflow-hidden">
-          <FeatureHighlightReel />
-          {/* Rotating CTA — directly under the globe/highlight */}
-          <div className="flex-none pt-2 flex flex-col items-center">
-            <RotatingJoinCTA onClick={() => setSpinOpen(true)} />
-          </div>
+          <FeatureHighlightReel>
+            <div className="flex-none pt-2 flex flex-col items-center">
+              <RotatingJoinCTA onClick={() => setSpinOpen(true)} />
+            </div>
+            <div className="flex-none pt-2">
+              <LiveStatsRow />
+            </div>
+          </FeatureHighlightReel>
         </div>
 
         {/* Inline OTP — orange glow, under CTA */}
