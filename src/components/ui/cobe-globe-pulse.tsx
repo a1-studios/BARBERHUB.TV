@@ -464,37 +464,35 @@ export function GlobePulse({
       }
     };
 
-    // ---------- Touch (mobile) ----------
+    // ---------- Touch (mobile) — tap-only, no drag/pan/pinch ----------
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchStartTime = 0;
     const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 1) {
-        const t = e.touches[0];
-        beginPan(t.clientX, t.clientY);
-      }
-      // Pinch (>=2 touches) is intentionally ignored — zoom disabled.
-    };
-    const onTouchMove = (e: TouchEvent) => {
-      if (mode === "pan" && e.touches.length === 1) {
-        e.preventDefault();
-        const t = e.touches[0];
-        updatePan(t.clientX, t.clientY);
-      }
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0];
+      touchStartX = t.clientX;
+      touchStartY = t.clientY;
+      touchStartTime = performance.now();
     };
     const onTouchEnd = (e: TouchEvent) => {
-      if (mode === "pan" && e.touches.length === 0) {
-        const ct = e.changedTouches[0];
-        if (ct) finishPanMaybeTap(ct.clientX, ct.clientY);
-        mode = "idle";
-        endInteract();
+      const ct = e.changedTouches[0];
+      if (!ct) return;
+      const moved = Math.hypot(ct.clientX - touchStartX, ct.clientY - touchStartY);
+      const elapsed = performance.now() - touchStartTime;
+      if (moved < TAP_MAX_MOVE && elapsed < TAP_MAX_MS) {
+        const hit = hitTest(ct.clientX, ct.clientY);
+        if (hit) {
+          markInteract();
+          focusMarkerRef.current?.(hit);
+          endInteract();
+        }
       }
     };
-    const onTouchCancel = () => {
-      mode = "idle";
-      endInteract();
-    };
 
-    // ---------- Pointer (desktop / non-touch) ----------
+    // ---------- Pointer (desktop) — pan + tap ----------
     const onPointerDown = (e: PointerEvent) => {
-      if (isTouchDevice) return; // touch handlers own mobile
+      if (isTouchDevice) return;
       if (e.pointerType === "touch") return;
       beginPan(e.clientX, e.clientY);
       el.setPointerCapture?.(e.pointerId);
@@ -511,10 +509,8 @@ export function GlobePulse({
     };
 
     if (isTouchDevice) {
-      el.addEventListener("touchstart", onTouchStart, { passive: false });
-      el.addEventListener("touchmove", onTouchMove, { passive: false });
-      el.addEventListener("touchend", onTouchEnd);
-      el.addEventListener("touchcancel", onTouchCancel);
+      el.addEventListener("touchstart", onTouchStart, { passive: true });
+      el.addEventListener("touchend", onTouchEnd, { passive: true });
     } else {
       el.addEventListener("pointerdown", onPointerDown);
       el.addEventListener("pointermove", onPointerMove);
@@ -524,15 +520,14 @@ export function GlobePulse({
 
     return () => {
       el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
-      el.removeEventListener("touchcancel", onTouchCancel);
       el.removeEventListener("pointerdown", onPointerDown);
       el.removeEventListener("pointermove", onPointerMove);
       el.removeEventListener("pointerup", onPointerUp);
       el.removeEventListener("pointercancel", onPointerUp);
     };
   }, [liveMarkers]);
+
 
   const focusMarker = useCallback((m: PulseMarker) => {
     const latRad = (m.location[0] * Math.PI) / 180;
