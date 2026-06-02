@@ -174,6 +174,7 @@ export default function ContenderTheater() {
     // Only treat the OPPONENT barber as the remote feed — viewer joins/leaves
     // must never tear down the barber-vs-barber connection.
     opponentIdentity: opponentBarber?.id ?? null,
+    barberPosition: barberPosition ?? null,
     onOpponentJoin: (participant) => {
       console.log('Opponent joined:', participant.identity);
     },
@@ -181,12 +182,11 @@ export default function ContenderTheater() {
       console.log('Opponent left the battle');
     },
     onDisconnect: (error) => {
-      if (error) {
+      // Only navigate away on a confirmed unrecoverable failure.
+      // Transient drops auto-rejoin inside the hook — do NOT leave the theater.
+      if (error && error.message === 'reconnect-failed') {
         toast.error('Connection lost. Returning to feed…');
-      }
-      // If we were already live, contender is leaving the arena → send to /watch
-      if (phase === 'live') {
-        setTimeout(() => navigate('/watch', { replace: true }), 600);
+        setTimeout(() => navigate('/watch', { replace: true }), 800);
       }
     }
   });

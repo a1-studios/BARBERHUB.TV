@@ -21,10 +21,15 @@ interface UseBattleVideoRoomOptions {
    * presence drives `opponentIdentity`, `remoteVideoTrack`, and toasts.
    */
   opponentIdentity?: string | null;
+  /** Position 1 or 2 — required for accurate stream-status updates. */
+  barberPosition?: 1 | 2 | null;
   onOpponentJoin?: (participant: RemoteParticipant) => void;
   onOpponentLeave?: () => void;
   onDisconnect?: (error?: Error) => void;
 }
+
+const MAX_RECONNECT_ATTEMPTS = 6;
+const RECONNECT_BASE_DELAY_MS = 1500;
 
 /** A track-like object that has attach/detach (works for both LiveKit local & remote tracks). */
 export type AttachableTrack = {
@@ -49,6 +54,7 @@ interface BattleVideoState {
 export const useBattleVideoRoom = ({
   battleId,
   opponentIdentity: expectedOpponentIdentity,
+  barberPosition,
   onOpponentJoin,
   onOpponentLeave,
   onDisconnect,
@@ -70,10 +76,18 @@ export const useBattleVideoRoom = ({
   const startTimeRef = useRef<Date | null>(null);
   const connectingRef = useRef(false);
   const expectedOpponentRef = useRef<string | null | undefined>(expectedOpponentIdentity);
+  const barberPositionRef = useRef<1 | 2 | null | undefined>(barberPosition);
+  const intentionalDisconnectRef = useRef(false);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     expectedOpponentRef.current = expectedOpponentIdentity;
   }, [expectedOpponentIdentity]);
+
+  useEffect(() => {
+    barberPositionRef.current = barberPosition;
+  }, [barberPosition]);
 
   /** Match only the opponent barber when an expected identity is provided. */
   const isOpponent = useCallback((identity: string) => {
@@ -152,6 +166,11 @@ export const useBattleVideoRoom = ({
 
   const connect = useCallback(async () => {
     if (connectingRef.current) return;
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    intentionalDisconnectRef.current = false;
     connectingRef.current = true;
 
     try {
@@ -185,16 +204,54 @@ export const useBattleVideoRoom = ({
       room.on(RoomEvent.Disconnected, (reason) => {
         console.log('Disconnected from room', reason);
         if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+        roomRef.current = null;
+
+        // Intentional teardown — end gracefully.
+        if (intentionalDisconnectRef.current) {
+          setState((prev) => ({
+            ...prev,
+            status: 'disconnected',
+            room: null,
+            localVideoTrack: null,
+            localAudioTrack: null,
+            remoteVideoTrack: null,
+            remoteAudioTrack: null,
+            opponentIdentity: null,
+          }));
+          onDisconnect?.();
+          return;
+        }
+
+        // Transient drop — keep the session alive and auto-rejoin.
+        // We deliberately do NOT clear opponentIdentity so the UI keeps
+        // showing "waiting for opponent" instead of tearing down the room.
         setState((prev) => ({
           ...prev,
-          status: 'disconnected',
+          status: 'connecting',
           room: null,
           localVideoTrack: null,
           localAudioTrack: null,
-          remoteVideoTrack: null,
-          remoteAudioTrack: null,
         }));
-        onDisconnect?.();
+
+        if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
+          console.warn('Max reconnect attempts reached — giving up');
+          setState((prev) => ({ ...prev, status: 'failed', error: 'Connection lost' }));
+          toast.error('Connection lost — please rejoin the battle');
+          onDisconnect?.(new Error('reconnect-failed'));
+          return;
+        }
+
+        const attempt = ++reconnectAttemptsRef.current;
+        const delay = RECONNECT_BASE_DELAY_MS * Math.min(attempt, 4);
+        console.log(`Auto-rejoining battle (attempt ${attempt}) in ${delay}ms…`);
+        toast.message('Reconnecting to the battle…');
+        reconnectTimerRef.current = setTimeout(() => {
+          reconnectTimerRef.current = null;
+          // Re-invoke connect; on success the success path resets the counter.
+          connect().catch((err) => {
+            console.error('Reconnect attempt failed:', err);
+          });
+        }, delay);
       });
 
       await room.connect(tokenData.serverUrl, tokenData.token);
@@ -242,14 +299,20 @@ export const useBattleVideoRoom = ({
         localAudioTrack: localAudio,
       }));
 
-      // Update streaming flag
-      try {
-        await supabase.functions.invoke('update-stream-status', {
-          body: { battleId, isStreaming: true },
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-      } catch (e) {
-        console.warn('Streaming flag fallback failed:', e);
+      // Successful (re)connection — reset reconnect attempts.
+      reconnectAttemptsRef.current = 0;
+
+      // Update streaming flag (only if we know our position).
+      const pos = barberPositionRef.current;
+      if (pos === 1 || pos === 2) {
+        try {
+          await supabase.functions.invoke('update-stream-status', {
+            body: { battleId, barberPosition: pos, status: 'live' },
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+        } catch (e) {
+          console.warn('Streaming flag fallback failed:', e);
+        }
       }
 
       toast.success('🔴 You are LIVE in the battle!');
@@ -276,7 +339,13 @@ export const useBattleVideoRoom = ({
     onDisconnect,
   ]);
 
-  const disconnect = useCallback(() => {
+  const disconnect = useCallback(async () => {
+    intentionalDisconnectRef.current = true;
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    reconnectAttemptsRef.current = 0;
     roomRef.current?.disconnect();
     roomRef.current = null;
     if (durationIntervalRef.current) {
@@ -293,8 +362,26 @@ export const useBattleVideoRoom = ({
       remoteAudioTrack: null,
       opponentIdentity: null,
     }));
+
+    // Flag stream as ended on the server.
+    const pos = barberPositionRef.current;
+    if (pos === 1 || pos === 2) {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData.session?.access_token;
+        if (accessToken) {
+          await supabase.functions.invoke('update-stream-status', {
+            body: { battleId, barberPosition: pos, status: 'ended' },
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+        }
+      } catch (e) {
+        console.warn('Failed to mark stream ended:', e);
+      }
+    }
+
     toast.success('Stream ended');
-  }, []);
+  }, [battleId]);
 
   const toggleVideo = useCallback(() => {
     const room = roomRef.current;
@@ -337,10 +424,18 @@ export const useBattleVideoRoom = ({
   }, [state.duration]);
 
   useEffect(() => {
-    const onBeforeUnload = () => roomRef.current?.disconnect();
+    const onBeforeUnload = () => {
+      intentionalDisconnectRef.current = true;
+      roomRef.current?.disconnect();
+    };
     window.addEventListener('beforeunload', onBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', onBeforeUnload);
+      intentionalDisconnectRef.current = true;
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
       roomRef.current?.disconnect();
       if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
     };
