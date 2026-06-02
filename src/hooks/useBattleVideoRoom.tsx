@@ -21,10 +21,15 @@ interface UseBattleVideoRoomOptions {
    * presence drives `opponentIdentity`, `remoteVideoTrack`, and toasts.
    */
   opponentIdentity?: string | null;
+  /** Position 1 or 2 — required for accurate stream-status updates. */
+  barberPosition?: 1 | 2 | null;
   onOpponentJoin?: (participant: RemoteParticipant) => void;
   onOpponentLeave?: () => void;
   onDisconnect?: (error?: Error) => void;
 }
+
+const MAX_RECONNECT_ATTEMPTS = 6;
+const RECONNECT_BASE_DELAY_MS = 1500;
 
 /** A track-like object that has attach/detach (works for both LiveKit local & remote tracks). */
 export type AttachableTrack = {
