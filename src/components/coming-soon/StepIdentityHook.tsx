@@ -19,6 +19,7 @@ interface Props {
   barberStatus: BarberStatus | null;
   country: string | null;
   phone: string;
+  vipCode: string;
   onContinue: (email: string) => void;
   onBack: () => void;
 }
@@ -26,12 +27,12 @@ interface Props {
 const haptic = () => { try { navigator.vibrate?.(10); } catch { /* */ } };
 
 const persistPending = (data: {
-  role: LaunchRole; barberStatus: BarberStatus | null; country: string | null; phone: string; email: string;
+  role: LaunchRole; barberStatus: BarberStatus | null; country: string | null; phone: string; email: string; vipCode: string;
 }) => {
   try { sessionStorage.setItem('bh_pending_role', JSON.stringify(data)); } catch { /* */ }
 };
 
-export const StepAuth = ({ initialEmail, role, barberStatus, country, phone, onContinue, onBack }: Props) => {
+export const StepAuth = ({ initialEmail, role, barberStatus, country, phone, vipCode, onContinue, onBack }: Props) => {
   const direction = useStepDirection();
   const [email, setEmail] = useState(initialEmail);
   const [error, setError] = useState<string | null>(null);
