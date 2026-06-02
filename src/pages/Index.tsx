@@ -24,7 +24,7 @@ import { BottomNavBar } from "@/components/BottomNavBar";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { FanIntroSequence } from "@/components/fan/FanIntroSequence";
-import { LiveBattleFeed } from "@/components/LiveBattleFeed";
+
 import { ArenaTicker } from "@/components/factions/ArenaTicker";
 import { useCategoryPrizePools } from "@/hooks/useCategoryPrizePools";
 
@@ -38,6 +38,9 @@ const UnifiedArena = () => {
       {/* Featured Battle Hero — role-aware internally */}
       <DynamicBattleHero />
 
+      {/* Lives — auto-hides when no barbers are live */}
+      <LiveBarberStreams />
+
       {/* Official Gear Shelf */}
       <ProductShelf />
 
@@ -50,12 +53,6 @@ const UnifiedArena = () => {
         />
       </section>
 
-      {/* Live Battle Feed — visible to every signed-in role */}
-      <section className="px-3 sm:px-6">
-        <h2 className="text-lg font-bold text-foreground mb-3">🔥 Live Battles</h2>
-        <LiveBattleFeed />
-      </section>
-
       {/* Immersive Faction Banners */}
       <ImmersiveFactionBanners />
 
@@ -64,8 +61,6 @@ const UnifiedArena = () => {
         <GlobalLeagueDashboard />
       </section>
 
-      {/* Live Streaming Barbers */}
-      <LiveBarberStreams />
 
       {FEATURES.COMMUNITY_LEADERBOARD && <CommunitySection />}
       {FEATURES.GRANTS_SECTION && <GrantsSection />}

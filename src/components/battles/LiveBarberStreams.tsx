@@ -278,7 +278,7 @@ export const LiveBarberStreams = () => {
         <div className="mb-4">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
-            <h2 className="text-xl font-bold text-foreground">LIVE NOW</h2>
+            <h2 className="text-xl font-bold text-foreground">Lives</h2>
             <Badge variant="destructive" className="text-xs px-2 py-0.5">
               {(liveStreams?.length || 0) + (soloBroadcasts?.length || 0)}
             </Badge>
