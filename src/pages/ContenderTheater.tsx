@@ -171,6 +171,9 @@ export default function ContenderTheater() {
     hasOpponent,
   } = useBattleVideoRoom({
     battleId: battleId || '',
+    // Only treat the OPPONENT barber as the remote feed — viewer joins/leaves
+    // must never tear down the barber-vs-barber connection.
+    opponentIdentity: opponentBarber?.id ?? null,
     onOpponentJoin: (participant) => {
       console.log('Opponent joined:', participant.identity);
     },
