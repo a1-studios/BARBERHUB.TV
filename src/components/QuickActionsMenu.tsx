@@ -15,8 +15,11 @@ import {
   Loader2,
   Shield,
   Trophy,
-  Camera
+  Camera,
+  Calendar,
+  Armchair
 } from 'lucide-react';
+import { FEATURES } from '@/config/features';
 import { cn } from '@/lib/utils';
 
 interface QuickAction {
@@ -93,6 +96,21 @@ export function QuickActionsMenu() {
       requiresAuth: true,
       barberOnly: true
     },
+    ...(FEATURES.HUB_CALENDAR_ENABLED ? [{
+      id: 'hub-calendar',
+      label: 'Calendar',
+      icon: <Calendar className="w-5 h-5 text-[hsl(187,80%,55%)]" />,
+      path: '/hub/calendar',
+      requiresAuth: true,
+    } as QuickAction] : []),
+    ...(FEATURES.CHAIR_SWAP_ENABLED ? [{
+      id: 'chair-swap',
+      label: 'Chair Swap',
+      icon: <Armchair className="w-5 h-5 text-primary" />,
+      path: '/chair-swap',
+      requiresAuth: true,
+      barberOnly: true,
+    } as QuickAction] : []),
     {
       id: 'admin-dashboard',
       label: 'Admin Dashboard',
