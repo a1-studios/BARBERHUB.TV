@@ -77,6 +77,14 @@ serve(async (req) => {
       throw new Error('You cannot accept your own challenge');
     }
 
+    // Enforce direct (targeted) challenges — only the named barber can accept.
+    if (challenge.target_barber_id && challenge.target_barber_id !== user.id) {
+      return new Response(
+        JSON.stringify({ error: 'This challenge was issued to a different barber.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      );
+    }
+
     const stakeToMatch = challenge.stake_amount || 0;
     const isFreeChallenge = stakeToMatch === 0;
 
