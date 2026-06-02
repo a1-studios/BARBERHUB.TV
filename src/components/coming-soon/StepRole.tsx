@@ -20,29 +20,48 @@ interface Props {
 
 const haptic = () => { try { navigator.vibrate?.(10); } catch { /* */ } };
 
-export const StepRole = ({ email, initialRole, initialCountry, initialPhone, onContinue, onBack }: Props) => {
+export const StepRole = ({ email, initialRole, initialCountry, initialPhone, initialVipCode, onContinue, onBack }: Props) => {
   const direction = useStepDirection();
   const [role, setRole] = useState<LaunchRole | null>(initialRole);
   const [barberStatus, setBarberStatus] = useState<BarberStatus | null>(null);
   const [country, setCountry] = useState<string | null>(initialCountry);
   const [phone, setPhone] = useState(initialPhone);
+  const [vipCode, setVipCode] = useState(initialVipCode ?? '');
+  const [vipState, setVipState] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const ready = role === 'fan' || (role === 'barber' && !!barberStatus);
+  // Pre-validate VIP code on debounce (advisory only)
+  useEffect(() => {
+    if (role !== 'barber') { setVipState('idle'); return; }
+    const code = vipCode.trim().toUpperCase();
+    if (!code) { setVipState('idle'); return; }
+    let cancelled = false;
+    setVipState('checking');
+    const t = setTimeout(async () => {
+      const { data, error: rpcErr } = await supabase.rpc('validate_access_code', { p_code: code });
+      if (cancelled) return;
+      const row = Array.isArray(data) ? data[0] : data;
+      setVipState(rpcErr || !row?.valid ? 'invalid' : 'valid');
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [vipCode, role]);
+
+  const vipReady = role === 'barber' ? vipCode.trim().length > 0 && vipState !== 'invalid' : true;
+  const ready = role === 'fan' || (role === 'barber' && !!barberStatus && vipReady);
 
   const submit = async () => {
     if (!role || !ready) return;
     setError(null);
     haptic();
-    // If we already have an email (resumed flow), upsert lead now; otherwise
-    // defer to the auth step which always calls submit-role-details before signin.
+    const trimmedVip = vipCode.trim().toUpperCase();
     if (email) {
       setSubmitting(true);
       const body: Record<string, unknown> = { email, role };
       if (country) body.country_code = country;
       if (phone.trim()) body.phone_number = phone.trim();
       if (role === 'barber' && barberStatus) body.barber_status = barberStatus;
+      if (role === 'barber' && trimmedVip) body.vip_code = trimmedVip;
       const { error: fnErr } = await supabase.functions.invoke('submit-role-details', { body });
       setSubmitting(false);
       if (fnErr) {
