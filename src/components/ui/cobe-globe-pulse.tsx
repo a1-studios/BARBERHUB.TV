@@ -265,7 +265,11 @@ export function GlobePulse({
         frame++;
         if (!isMobile || frame % 2 === 0) {
           projectGroup(liveMarkers, flagRefs.current, false);
-          projectGroup(ghosts, ghostRefs.current, true);
+          projectGroup(
+            ghosts.map((g) => ({ location: g.loc })),
+            ghostRefs.current,
+            true,
+          );
         }
         animationId = requestAnimationFrame(animate);
       }
