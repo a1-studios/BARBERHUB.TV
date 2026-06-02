@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Swords, Coins, AlertCircle, Loader2, Clock, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { invokeAuthedFunction } from '@/lib/invokeAuthed';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { useSubscriptionLimits } from '@/hooks/useSubscriptionLimits';
 import { differenceInSeconds } from 'date-fns';
@@ -49,11 +50,11 @@ export const AcceptChallengeModal = ({ challenge, isOpen, onClose }: AcceptChall
     setIsSubmitting(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('match-challenge-stake', {
-        body: { challenge_id: challenge.id }
+      const { data, error } = await invokeAuthedFunction('match-challenge-stake', {
+        challenge_id: challenge.id,
       });
 
-      if (error) throw error;
+      if (error) { if (error.message !== 'Not signed in' && error.message !== 'Session expired') throw error; setIsSubmitting(false); return; }
       if (data?.error) throw new Error(data.error);
 
       toast({

@@ -1,48 +1,50 @@
+## Goal
 
-# Challenge path — audit findings & fix plan
+Stop the silent "Unauthorized" failures on the challenge edge functions, and make the floating Quick Actions menu visible on iPad and desktop (it currently exists only as a component and is never mounted anywhere).
 
-After tracing the full flow (`ChallengeModal` / `ChallengeFeed` → `create-challenge-stake` → `notifications` → `IncomingChallengeTakeover` → `match-challenge-stake` → `ContenderTheater`), four real bugs are breaking the path. Plan fixes only those.
+---
 
-## Bugs found
+## 1. Fix challenge edge function auth (no more silent 2xx-from-client / 400-from-edge)
 
-1. **Direct (targeted) challenges leak into the public feed.**
-   `ChallengeFeed` queries `open_challenges` with no filter on `target_barber_id`, so a challenge meant for one specific barber shows up in everyone's "Open Challenges" list and any barber can accept it.
+**Root cause:** `supabase.functions.invoke('create-challenge-stake' | 'match-challenge-stake')` only attaches the user's JWT when `auth.getSession()` returns a valid, non-expired session. On stale tabs / signed-out users, the SDK sends only the anon key, the edge function calls `supabase.auth.getUser(token)` with the anon key, that fails, and the edge throws `Unauthorized` → caller sees a generic error. Logs confirm this: repeated `Error: Unauthorized at index.ts:27` and `index.ts:26`.
 
-2. **`match-challenge-stake` doesn't honor `target_barber_id`.**
-   The edge function checks status/expiry/self-acceptance but never verifies the acceptor matches the targeted barber. Combined with bug #1, the wrong barber can hijack a direct challenge.
+**Client-side hardening** — in every caller (`ChallengeModal.tsx`, `ChallengeFeed.tsx` QuickPresets + CustomForm, `IncomingChallengeTakeover.tsx`, `AcceptChallengeModal.tsx`):
+- Before `functions.invoke`, call `await supabase.auth.getSession()`. If no session: toast "Please sign in to issue/accept challenges" and abort.
+- Explicitly pass `headers: { Authorization: \`Bearer ${session.access_token}\` }` on the `invoke` call so the token is never silently dropped.
 
-3. **Challenger stuck waiting — never sees opponent arrive.**
-   `ContenderTheater` fetches `battles` with a single `useQuery` and has no realtime subscription. When the opponent accepts, `battles.barber2_id` + `status='live'` update server-side, but the challenger's client never refetches → `opponentIdentity` stays `null` → LiveKit never matches the new participant, screen stays in standby forever.
+**Edge function hardening** — in `create-challenge-stake/index.ts` and `match-challenge-stake/index.ts`:
+- Return a structured `401` with `{ error: 'Sign in required' }` instead of throwing (which currently returns `400`), so the client toast is accurate.
+- Log the raw `userError?.message` so future failures show *why* the JWT was rejected (expired vs malformed vs anon-key).
 
-4. **Acceptor with no `barber_profiles` row breaks positioning.**
-   `match-challenge-stake` does `barber2_id: acceptorBarberProfile?.id ?? null`. If the accepter is a barber-role user whose `barber_profiles` row hasn't been created yet, `barber2_id` stays `null`, `ContenderTheater` can't set `barberPosition=2`, and the accepter is silently treated as a viewer.
+No DB schema changes. No behavior changes for happy-path stake/match flows.
 
-## Fix plan
+---
 
-### A. Frontend — `src/components/battles/ChallengeFeed.tsx`
-- Add `useAuth` and filter the `open-challenges` query so each barber sees:
-  - their own challenges, plus
-  - non-targeted challenges (`target_barber_id is null`), plus
-  - challenges targeted at them (`target_barber_id = user.id`).
-- Implementation: `.or('target_barber_id.is.null,target_barber_id.eq.<uid>,challenger_id.eq.<uid>')`.
+## 2. Mount QuickActionsMenu on iPad + desktop
 
-### B. Frontend — `src/pages/ContenderTheater.tsx`
-- Add a Supabase realtime subscription on `battles` filtered by `id=eq.<battleId>` that calls `queryClient.invalidateQueries(['battle-contender', battleId])` on any UPDATE.
-- This wakes the challenger as soon as `barber2_id` / `status` flip, so `opponentIdentity` resolves and LiveKit pairing fires.
+`src/components/QuickActionsMenu.tsx` exists fully built (FAB at top-left, expanding action list) but is never imported. `BottomNavBar` is `lg:hidden` so >=1024px viewports have no quick nav.
 
-### C. Edge function — `supabase/functions/match-challenge-stake/index.ts`
-- After loading `challenge`, if `challenge.target_barber_id` is set and `target_barber_id !== user.id`, return `403 "This challenge was issued to a different barber"`.
-- Guarantee `barber2_id` is non-null: if `acceptorBarberProfile` is missing, create a minimal `barber_profiles` row for the user, then use that id. Falls back to existing id if found.
+- Add `<QuickActionsMenu />` to `src/App.tsx` (inside the auth/router shell, alongside the existing global mounts) so it renders on every route.
+- Wrap it in `hidden md:block` so it appears on iPad (>=768px) and desktop, while the existing mobile `BottomNavBar` continues to own <768px.
+- No change to `FloatingActionButton`'s `fixed top-6 left-8 z-50` positioning — confirmed it doesn't collide with the existing `Header`.
 
-### D. Edge function — `supabase/functions/create-challenge-stake/index.ts`
-- Same `barber_profiles` guarantee for the challenger so `barber1_id` is never null when challenger lands in `ContenderTheater`.
+---
 
-## Out of scope (not touched)
-- LiveKit signaling, single-stream solo broadcast (working per user), Lives modal, prize ticker, faction banners, tournament/ranking logic, BB economy splits, notification panel UI.
+## Files touched
 
-## Verification
-- Issue direct challenge from A → B: only B sees it in feed; C cannot accept (server rejects).
-- B accepts → challenger A's ContenderTheater leaves standby and pairs with B within ~1s.
-- Repeat with an account that has no `barber_profiles` row → both contenders still get positions 1/2.
-- Open Quick Play preset (no target) still appears for every barber and any can accept.
+```text
+src/App.tsx                                       (mount QuickActionsMenu, md+ only)
+src/components/QuickActionsMenu.tsx               (wrap root with hidden md:block)
+src/components/battles/ChallengeModal.tsx         (session guard + explicit Bearer)
+src/components/battles/ChallengeFeed.tsx          (session guard + explicit Bearer x2)
+src/components/battles/IncomingChallengeTakeover.tsx (session guard + explicit Bearer)
+src/components/battles/AcceptChallengeModal.tsx   (session guard + explicit Bearer)
+supabase/functions/create-challenge-stake/index.ts  (401 + better log on auth fail)
+supabase/functions/match-challenge-stake/index.ts   (401 + better log on auth fail)
+```
 
+## Out of scope
+
+- Refactoring the broader challenge/battle realtime flow (already addressed last loop).
+- Any DB migrations.
+- Changing the mobile BottomNavBar.

@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
+import { invokeAuthedFunction } from '@/lib/invokeAuthed';
 import { useAuth } from '@/hooks/useAuth';
 import { useBarberBucks } from '@/hooks/useBarberBucks';
 import { useChallengeStakeConfig } from '@/hooks/useChallengeStakeConfig';
@@ -100,15 +101,13 @@ export const ChallengeModal = ({ open, onClose }: ChallengeModalProps) => {
     let battleId: string | undefined;
     let succeeded = false;
     try {
-      const { data, error } = await supabase.functions.invoke('create-challenge-stake', {
-        body: {
-          title: `Challenge to ${selectedBarber.display_name || selectedBarber.barber_name}`,
-          stake_amount: effectiveStake,
-          challenge_message: `Direct challenge to ${selectedBarber.display_name || selectedBarber.barber_name}`,
-          target_barber_id: selectedBarber.user_id,
-        },
+      const { data, error } = await invokeAuthedFunction('create-challenge-stake', {
+        title: `Challenge to ${selectedBarber.display_name || selectedBarber.barber_name}`,
+        stake_amount: effectiveStake,
+        challenge_message: `Direct challenge to ${selectedBarber.display_name || selectedBarber.barber_name}`,
+        target_barber_id: selectedBarber.user_id,
       });
-      if (error) throw error;
+      if (error) { if (error.message !== 'Not signed in' && error.message !== 'Session expired') throw error; setIsIssuing(false); return; }
       if (data?.error) throw new Error(data.error);
       if (data?.success === false) throw new Error(data?.message || 'Failed to issue challenge');
 
