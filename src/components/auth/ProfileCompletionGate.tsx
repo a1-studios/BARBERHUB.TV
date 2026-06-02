@@ -281,9 +281,11 @@ export const ProfileCompletionGate = () => {
             )}
           </button>
 
-          <button type="button" onClick={() => setOpen(false)} className="w-full text-[10px] uppercase tracking-wider text-white/45 hover:text-white py-1">
-            Watch first, decide later
-          </button>
+          {canDismiss && (
+            <button type="button" onClick={() => setOpen(false)} className="w-full text-[10px] uppercase tracking-wider text-white/45 hover:text-white py-1">
+              Watch first, decide later
+            </button>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>
