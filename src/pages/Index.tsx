@@ -24,7 +24,7 @@ import { BottomNavBar } from "@/components/BottomNavBar";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { FanIntroSequence } from "@/components/fan/FanIntroSequence";
-import { LiveBattleFeed } from "@/components/LiveBattleFeed";
+
 import { ArenaTicker } from "@/components/factions/ArenaTicker";
 import { useCategoryPrizePools } from "@/hooks/useCategoryPrizePools";
 
