@@ -33,7 +33,7 @@ export const VelvetRopeLanding = () => {
               <img
                 src={barberPole}
                 alt="BARBER-HUB Logo"
-                className="h-9 w-9 md:h-10 md:w-10 animate-[spin_11s_linear_infinite]"
+                className="h-9 w-9 md:h-10 md:w-10"
               />
               <span className="text-lg md:text-xl font-black tracking-[0.18em] uppercase">
                 <span className="text-white">BARBER</span>
