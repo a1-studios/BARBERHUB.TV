@@ -1,53 +1,62 @@
-# VIP-gated Barber Signup — Logic Fix Plan
 
-The Sovereign VIP code is currently asked for in **one** of two onboarding surfaces (`ProfileCompletionGate`), but the main pre-auth `LaunchWizard` (the screen in your screenshot) lets anyone pick "I'm a Barber" without a code. And neither surface is enforced server-side, so the gate is bypassable.
+# Architectural Audit & Cleanup Plan
 
-## What changes
+Goal: shrink the bundle and codebase by removing genuinely dead frontend code and stale fragments, **without breaking anything currently in use**. We work in safe, reviewable phases with a strict "verify before delete" rule.
 
-### 1. `StepRole.tsx` (LaunchWizard — the screen in your screenshot)
-- When `role === 'barber'`, reveal an **inline VIP Invite Code** field above the country/phone row, with the same orange-glow styling as the rest of the wizard.
-- Pre-validate the code on blur via `validate_access_code` RPC (advisory: shows a green checkmark or "Invalid code" hint, never blocks typing).
-- `ready` becomes: `role === 'fan' || (role === 'barber' && barberStatus && vipCode.trim())`.
-- Pass `vipCode` through `onContinue` and persist it in `sessionStorage`/wizard state so the auth step can forward it.
-- Add an "Don't have a code? Switch to Fan" helper line.
+## Guiding rules (non-negotiable)
 
-### 2. `LaunchWizard.tsx`
-- Extend `State` with `vipCode: string`.
-- Pass `vipCode` to `StepAuth` so the post-OTP/post-OAuth finalize call includes it.
+1. Never delete edge functions. Knip reports them as "unused" because they're invoked dynamically via `supabase.functions.invoke(...)` and cron — they are live infrastructure. Edge-function cleanup is OUT OF SCOPE of this pass.
+2. Never delete DB tables, RLS policies, migrations, or anything under `supabase/` other than truly orphaned frontend helpers.
+3. For every file proposed for deletion: confirm zero `import` references via `rg` AND no dynamic `lazy(() => import(...))` / string-literal reference before removing.
+4. Keep all shadcn/ui primitives even if currently unused — they are a design-system library, not app code. (Exception in Phase 4 below, only if explicitly approved.)
+5. No behavior changes. No refactors that alter UX, routes, auth, economy, or realtime logic.
+6. Work in small commits per phase so anything can be reverted cleanly.
 
-### 3. `submit-role-details/index.ts` (called from StepRole)
-- Add optional `vip_code` to `BarberBody`.
-- When present, call `validate_access_code` and, if invalid, return `400 { error: 'invalid_vip_code' }`. (Don't redeem here — user isn't authed yet; just refuse to mark the lead as barber.)
-- If `role === 'barber'` and `vip_code` is missing **and** `is_global_vip_mode()` is true → return 400.
+## Phase 1 — Confirmed dead legacy (safe deletes)
 
-### 4. `finalize-oauth-claim/index.ts` (the actual role flip)
-- Add optional `vip_code` to schema.
-- If incoming `role === 'barber'`:
-  - Read `is_global_vip_mode()`.
-  - When VIP mode is on, require `vip_code`; call `validate_access_code` server-side; on failure return 403 `{ error: 'invalid_vip_code' }` **before** any profile/role mutation.
-  - After successful `sync_user_binary_role`, call `redeem_access_code(p_code, user.id, email)`.
-  - Map `barber_status` → `profiles.sub_category` (`licensed`→`licensed_pro`, `unlicensed`→`unlicensed_pro`, `student`→`student`, `beginner`→`beginner`, `aspiring`→`aspiring`) so `get_public_league_stats` aggregates finally fill.
-- Fan flow unchanged.
+These are already neutralized in routing or replaced by newer components. Verified via grep:
 
-### 5. `ProfileCompletionGate.tsx`
-- Remove the client-side `validate_access_code` + `redeem_access_code` duplication; just pass `vip_code` through to `finalize-oauth-claim` and let the edge function be the source of truth.
-- Hide "Watch first, decide later" escape hatch when the user has explicitly chosen barber but no valid code yet (so they can't bypass).
-- Honor `is_global_vip_mode()`: hide the VIP field entirely when VIP mode is off.
+- `src/pages/BattlesPage.tsx` — route was replaced with `<Navigate to="/watch" />` in `App.tsx`; file has no importers.
+- `src/pages/CreateBattle.tsx` — `/battles/create` now redirects to `/creator-hub`; replaced by `components/creator/CreateBattleDrawer.tsx`. No importers.
+- `src/components/BattlesSection.tsx` — empty placeholder returning `null`, still rendered in `Index.tsx`. Remove import + JSX usage in `Index.tsx` and delete the file.
+- `src/components/coming-soon/StepBarberDetails.tsx`, `StepFanDetails.tsx`, `StepClaimAccount.tsx`, `StepProfileBoost.tsx` — superseded by current `LaunchWizard` flow (StepRole → StepAuth → StepBucksReward → StepRaffleSpin → StepTicketReveal). Verify zero importers, then delete.
 
-### 6. Shared status constant
-- Extract `BARBER_STATUSES` to `src/lib/barberStatuses.ts` so `StepRole` and `ProfileCompletionGate` can't drift again.
+Verification step before each delete: `rg -n "<Filename>" src supabase` returns only the file itself.
 
-## Out of scope (intentionally)
-- No DB migration. `access_codes`, `validate_access_code`, `redeem_access_code`, `is_global_vip_mode` already exist; `profiles.sub_category` is free-text. No CHECK constraints to touch.
-- OTP edge functions (`send-sms-otp`/`verify-sms-otp`) keep creating users as fans by default — the role flip + VIP check happen in `finalize-oauth-claim` after auth. This preserves the OTP "watch first, decide role later" UX.
-- No changes to Twilio, Stream, or BB economy code.
+## Phase 2 — Frontend dead modules flagged by knip (verify each)
 
-## Verification after build
-1. From wizard, pick **Barber** → VIP field appears; submit empty → blocked client-side.
-2. Submit garbage code → server returns 400, lead stays as fan.
-3. Submit a valid Sovereign-generated code → wizard advances, OTP/OAuth completes, `finalize-oauth-claim` flips role to barber, redemption row created.
-4. Pick **Fan** → no VIP field, normal flow.
-5. Toggle `global_vip_mode = false` in Sovereign HQ → VIP field disappears from both surfaces, barber signup works without a code.
-6. SQL: `select sub_category, count(*) from profiles where user_type='barber' group by 1;` — counts start incrementing for new signups.
+Knip flagged ~90 frontend files. We will **not** bulk-delete. Process: for each candidate, run `rg` for the symbol AND filename across `src/`. Delete only when both return zero hits outside the file itself. High-confidence batches to review (each individually verified):
 
-Approve and I'll implement.
+- Legacy battle UI replaced by Watch/Theater flow: `components/battles/BattleResultsView.tsx`, `BattleVotingView.tsx`, `DesktopVoteButtons.tsx`, `FullscreenBattleVideoModal.tsx`, `HeadToHeadBattle.tsx`, `InteractiveVoteSlider.tsx`, `LiveNowBanner.tsx`, `PastHighlight.tsx`, `SubmissionPreview.tsx`, `TaleOfTheTape.tsx`.
+- Orphan landing teasers under `components/landing/teasers/*` and `InsideTheHubStage`, `LeaguePulseStrip`, `LegendsHeadline`, `LockedTeaser`, `OrbitingSlogan`, `RotatingTeaserStage`.
+- Stale creator/barber/profile files: `components/creator/CreatorHub.tsx` (page lives in `pages/CreatorHub.tsx`), `EarningSystem.tsx`, `ReferralProgram.tsx`, `barber/BarberDashboard.tsx`, `barber/BarberProfileHeader.tsx`, `barber/BarberBucksPackages.tsx`, `profiles/BarberProfileForm.tsx`, `profiles/BarberSettings.tsx`, `profiles/PortfolioManager.tsx`.
+- Unused hooks: `useBarberLiveStatus`, `useGestureVerification`, `useLiveKitStream`, `useMediaControls`.
+- Misc: `HaircutAdvisorModal.tsx` (AI-Style is permanently forbidden per memory), `VideoPlayer.tsx` (replaced by `BrandedVideoPlayer`/`SmartVideoPlayer`), `WorldCupPrizeCounter.tsx`, `EmptyState.tsx`, `RoleBadge.tsx`, `QuickActionsMenu.tsx` (only if no Header usage), `BarberSearchAutocomplete.tsx`, `FeaturedCreatorCard.tsx`, `PrizePoolCard.tsx`, `utils/countryCelebration.ts`.
+
+For anything ambiguous (e.g. `QuickActionsMenu` — memory says it's a core UI piece), default to KEEP and add a note instead.
+
+## Phase 3 — Light optimization (no behavior change)
+
+- Add `React.lazy` + `Suspense` for heavy, route-bound pages currently imported eagerly in `src/App.tsx`: `SovereignHQ`, `AdminDashboard`, `admin/*`, `CameraStudio`, `BroadcastStudio`, `ContenderTheater`, `BattleTheater`, `Tournaments`, `TournamentDetails`, `VaultOfHonor`, `Analytics`, legal pages. `BarbersDirectory` is already lazy — mirror that pattern.
+- Remove unused imports inside files we touch (only files we touch — no project-wide reformat).
+- Confirm `vite.config.ts` has `build.chunkSizeWarningLimit` reasonable and no obvious bundler regressions; no plugin changes.
+
+## Phase 4 — OUT OF SCOPE for this pass (require explicit approval later)
+
+- Removing unused shadcn primitives (`accordion`, `carousel`, `chart`, `sidebar`, etc.).
+- Touching any `supabase/functions/*`.
+- Refactoring large components for line-count reduction. "Optimum amount of lines" is not a measurable target — we will not rewrite working components just to shrink them. Real wins come from dead-file removal + lazy loading.
+- Any DB migration.
+
+## Deliverables
+
+- A single PR-style change-set per phase with the file list, the `rg` evidence for each deletion, and a one-line "why safe".
+- After Phase 1+2: build must pass and the preview must load `/`, `/watch`, `/creator-hub`, `/portal`, `/sovereign-hq` without console errors.
+- After Phase 3: same routes load, plus initial JS payload measurably smaller (we'll report before/after `dist/assets` sizes).
+
+## Confirm before I start
+
+1. Approve Phase 1 (5 files) for immediate deletion?
+2. Approve Phase 2 with the per-file verification gate (I'll list each batch's confirmed-safe files before deleting)?
+3. Approve Phase 3 lazy-loading of admin/heavy routes?
+4. Keep Phase 4 (shadcn pruning, edge functions, big refactors) deferred?
