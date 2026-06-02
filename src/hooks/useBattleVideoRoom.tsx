@@ -204,16 +204,54 @@ export const useBattleVideoRoom = ({
       room.on(RoomEvent.Disconnected, (reason) => {
         console.log('Disconnected from room', reason);
         if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+        roomRef.current = null;
+
+        // Intentional teardown — end gracefully.
+        if (intentionalDisconnectRef.current) {
+          setState((prev) => ({
+            ...prev,
+            status: 'disconnected',
+            room: null,
+            localVideoTrack: null,
+            localAudioTrack: null,
+            remoteVideoTrack: null,
+            remoteAudioTrack: null,
+            opponentIdentity: null,
+          }));
+          onDisconnect?.();
+          return;
+        }
+
+        // Transient drop — keep the session alive and auto-rejoin.
+        // We deliberately do NOT clear opponentIdentity so the UI keeps
+        // showing "waiting for opponent" instead of tearing down the room.
         setState((prev) => ({
           ...prev,
-          status: 'disconnected',
+          status: 'connecting',
           room: null,
           localVideoTrack: null,
           localAudioTrack: null,
-          remoteVideoTrack: null,
-          remoteAudioTrack: null,
         }));
-        onDisconnect?.();
+
+        if (reconnectAttemptsRef.current >= MAX_RECONNECT_ATTEMPTS) {
+          console.warn('Max reconnect attempts reached — giving up');
+          setState((prev) => ({ ...prev, status: 'failed', error: 'Connection lost' }));
+          toast.error('Connection lost — please rejoin the battle');
+          onDisconnect?.(new Error('reconnect-failed'));
+          return;
+        }
+
+        const attempt = ++reconnectAttemptsRef.current;
+        const delay = RECONNECT_BASE_DELAY_MS * Math.min(attempt, 4);
+        console.log(`Auto-rejoining battle (attempt ${attempt}) in ${delay}ms…`);
+        toast.message('Reconnecting to the battle…');
+        reconnectTimerRef.current = setTimeout(() => {
+          reconnectTimerRef.current = null;
+          // Re-invoke connect; on success the success path resets the counter.
+          connect().catch((err) => {
+            console.error('Reconnect attempt failed:', err);
+          });
+        }, delay);
       });
 
       await room.connect(tokenData.serverUrl, tokenData.token);
