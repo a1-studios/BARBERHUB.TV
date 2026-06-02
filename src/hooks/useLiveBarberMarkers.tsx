@@ -61,7 +61,7 @@ export function useLiveBarberMarkers() {
           id: String(r.id),
           location: [Number(r.latitude), Number(r.longitude)],
           delay: (i % 8) * 0.3,
-          flag: ccToFlag(cc) ?? "📍",
+          flag: ccToFlag(cc),
           city: r.shop_city ?? undefined,
           country: cc ?? undefined,
         };

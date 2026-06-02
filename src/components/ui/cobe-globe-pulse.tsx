@@ -189,6 +189,7 @@ export function GlobePulse({
   const visibleRef = useRef(true);
   const [ready, setReady] = useState(false);
   const [chip, setChip] = useState<{ city?: string; country?: string } | null>(null);
+  const [focusedId, setFocusedId] = useState<string | null>(null);
   const chipTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -275,12 +276,12 @@ export function GlobePulse({
         phi: 0,
         theta: 0.2,
         dark: 1,
-        diffuse: 1.1,
+        diffuse: 0.8,
         mapSamples: isMobile ? 6000 : 16000,
         mapBrightness: 4,
         baseColor: [0.06, 0.22, 0.32],
         markerColor: [1, 0.45, 0.1],
-        glowColor: [1, 0.45, 0.1],
+        glowColor: [0.7, 0.32, 0.07],
         markers: [],
       });
 
@@ -359,8 +360,12 @@ export function GlobePulse({
     focusStartRef.current = performance.now();
 
     setChip({ city: m.city, country: m.country });
+    setFocusedId(m.id);
     if (chipTimerRef.current) window.clearTimeout(chipTimerRef.current);
-    chipTimerRef.current = window.setTimeout(() => setChip(null), 2200);
+    chipTimerRef.current = window.setTimeout(() => {
+      setChip(null);
+      setFocusedId(null);
+    }, 2200);
   }
 
   return (
@@ -396,30 +401,54 @@ export function GlobePulse({
           </div>
         ))}
 
-        {/* Live markers — flag center on exact geo, barber pole hangs below */}
-        {liveMarkers.map((m, i) => (
-          <div
-            key={m.id}
-            ref={(el) => (flagRefs.current[i] = el)}
-            className="absolute top-0 left-0 w-0 h-0 will-change-transform"
-            style={{ transition: "opacity 0.25s linear", pointerEvents: "none" }}
-          >
+        {/* Live markers — flag emoji center sits exactly on geo, barber pole hangs beneath */}
+        {liveMarkers.map((m, i) => {
+          const isFocused = focusedId === m.id;
+          return (
             <div
-              className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer"
-              style={{ pointerEvents: "auto" }}
-              onClick={() => focusMarker(m)}
-              onTouchStart={() => focusMarker(m)}
+              key={m.id}
+              ref={(el) => (flagRefs.current[i] = el)}
+              className="absolute top-0 left-0 w-0 h-0 will-change-transform"
+              style={{ transition: "opacity 0.25s linear", pointerEvents: "none" }}
             >
-              <span className="block text-[18px] leading-none drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] whitespace-nowrap">
-                {m.flag}
-              </span>
-              <span className="mt-[1px] pointer-events-none">
+              {/* Flag emoji — anchor center on (px,py) */}
+              {m.flag && (
+                <span
+                  className={`absolute block text-[18px] leading-none -translate-x-1/2 -translate-y-1/2 whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] ${
+                    isFocused ? "ring-2 ring-orange-400/80 rounded-full px-0.5" : ""
+                  }`}
+                >
+                  {m.flag}
+                </span>
+              )}
+              {/* Animated barber pole — sits just below the flag (or on the point if no flag) */}
+              <span
+                className="absolute left-1/2 -translate-x-1/2 pointer-events-none pole-glow"
+                style={{ top: m.flag ? 8 : -7 }}
+              >
                 <BarberPole size={14} />
               </span>
+              {/* Invisible tap hit-area centered on the geo point */}
+              <button
+                type="button"
+                aria-label={`${m.city ?? "Barber"}${m.country ? ", " + m.country : ""}`}
+                onClick={() => focusMarker(m)}
+                onTouchStart={() => focusMarker(m)}
+                className="absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-transparent border-0 cursor-pointer"
+                style={{ pointerEvents: "auto" }}
+              />
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
+      {/* Pole pulse keyframes (component-scoped) */}
+      <style>{`
+        @keyframes pole-pulse {
+          0%, 100% { filter: drop-shadow(0 0 2px rgba(255,140,40,0.55)) drop-shadow(0 0 4px rgba(255,140,40,0.3)); }
+          50%      { filter: drop-shadow(0 0 5px rgba(255,170,60,0.95)) drop-shadow(0 0 10px rgba(255,140,40,0.7)); }
+        }
+        .pole-glow { animation: pole-pulse 1.8s ease-in-out infinite; }
+      `}</style>
       {chip && (
         <div className="pointer-events-none absolute left-1/2 bottom-3 -translate-x-1/2 rounded-full bg-black/70 backdrop-blur px-3 py-1 text-[11px] font-semibold text-white border border-orange-400/40 shadow-[0_0_12px_rgba(255,115,30,0.45)]">
           {[chip.city, chip.country].filter(Boolean).join(", ") || "Live"}
