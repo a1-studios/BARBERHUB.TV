@@ -41,6 +41,7 @@ export const ProfileCompletionGate = () => {
   const [country, setCountry] = useState<string | null>(null);
   const [phone, setPhone] = useState('');
   const [vipCode, setVipCode] = useState('');
+  const [vipMode, setVipMode] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,14 +49,14 @@ export const ProfileCompletionGate = () => {
     if (!user) { setNeeds(false); return; }
     let mounted = true;
     (async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('user_type, country_code')
-        .eq('user_id', user.id)
-        .maybeSingle();
+      const [{ data: profile }, { data: vipOn }] = await Promise.all([
+        supabase.from('profiles').select('user_type, country_code').eq('user_id', user.id).maybeSingle(),
+        supabase.rpc('is_global_vip_mode'),
+      ]);
       if (!mounted) return;
-      const incomplete = !data?.user_type || !data?.country_code;
+      const incomplete = !profile?.user_type || !profile?.country_code;
       setNeeds(incomplete);
+      setVipMode(Boolean(vipOn));
     })();
     const handler = () => setOpen(true);
     window.addEventListener('require-profile-complete', handler);
