@@ -199,7 +199,9 @@ export function GlobePulse({
   const [chip, setChip] = useState<PulseMarker | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const chipTimerRef = useRef<number | null>(null);
+  const [teaser, setTeaser] = useState<{ open: boolean; action: TeaserAction }>({ open: false, action: "find" });
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (!containerRef.current) return;
