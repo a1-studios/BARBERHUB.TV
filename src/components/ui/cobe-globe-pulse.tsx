@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import createGlobe from "cobe";
+import { useNavigate } from "react-router-dom";
+import { MapPin, Calendar } from "lucide-react";
 
 interface PulseMarker {
   id: string;
@@ -181,16 +183,21 @@ export function GlobePulse({
   const phiOffsetRef = useRef(0);
   const thetaOffsetRef = useRef(0);
   const phiRef = useRef(0);
+  const zoomRef = useRef(1);
   const targetPhiOffsetRef = useRef<number | null>(null);
   const targetThetaOffsetRef = useRef<number | null>(null);
   const focusStartRef = useRef(0);
   const focusFromPhiRef = useRef(0);
   const focusFromThetaRef = useRef(0);
   const visibleRef = useRef(true);
+  const isInteractingRef = useRef(false);
+  const lastInteractAtRef = useRef(0);
+  const [zoom, setZoom] = useState(1);
   const [ready, setReady] = useState(false);
-  const [chip, setChip] = useState<{ city?: string; country?: string } | null>(null);
+  const [chip, setChip] = useState<PulseMarker | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const chipTimerRef = useRef<number | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -246,8 +253,9 @@ export function GlobePulse({
         y = y2;
         z = z2;
 
-        const px = radius + x * radius * 0.9;
-        const py = radius - y * radius * 0.9;
+        const r = radius * 0.9 * zoomRef.current;
+        const px = radius + x * r;
+        const py = radius - y * r;
         const visible = z > 0.05;
         const scale = ghost ? 0.5 + z * 0.22 : 0.7 + z * 0.4;
         // Anchor is zero-size at projected point; child handles centering.
@@ -277,7 +285,7 @@ export function GlobePulse({
         theta: 0.2,
         dark: 1,
         diffuse: 0.8,
-        mapSamples: isMobile ? 6000 : 16000,
+        mapSamples: isMobile ? 5000 : 16000,
         mapBrightness: 4,
         baseColor: [0.06, 0.22, 0.32],
         markerColor: [1, 0.45, 0.1],
@@ -305,7 +313,10 @@ export function GlobePulse({
             targetThetaOffsetRef.current = null;
           }
         } else {
-          phi += speed;
+          const idleMs = performance.now() - lastInteractAtRef.current;
+          if (!isInteractingRef.current && idleMs > 2500) {
+            phi += speed;
+          }
         }
 
         phiRef.current = phi + phiOffsetRef.current;
@@ -315,7 +326,7 @@ export function GlobePulse({
         });
 
         frame++;
-        if (!isMobile || frame % 2 === 0) {
+        if (!isMobile || frame % 3 === 0) {
           projectGroup(liveLocs, flagRefs.current, false);
           projectGroup(ghostLocs, ghostRefs.current, true);
         }
@@ -344,6 +355,106 @@ export function GlobePulse({
     };
   }, [liveMarkers, liveLocs, ghostLocs, speed]);
 
+  // Drag-to-rotate + pinch-to-zoom + wheel-zoom
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    let lastX = 0;
+    let lastY = 0;
+    let dragging = false;
+    let pinchStartDist = 0;
+    let pinchStartZoom = 1;
+
+    const markInteract = () => {
+      isInteractingRef.current = true;
+      lastInteractAtRef.current = performance.now();
+      targetPhiOffsetRef.current = null;
+      targetThetaOffsetRef.current = null;
+    };
+    const endInteract = () => {
+      isInteractingRef.current = false;
+      lastInteractAtRef.current = performance.now();
+    };
+
+    const onPointerDown = (e: PointerEvent) => {
+      if ((e.target as HTMLElement)?.tagName === "BUTTON") return;
+      dragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      markInteract();
+      el.setPointerCapture?.(e.pointerId);
+    };
+    const onPointerMove = (e: PointerEvent) => {
+      if (!dragging) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      const w = el.clientWidth || 1;
+      phiOffsetRef.current -= (dx / w) * Math.PI * 1.2;
+      const next = thetaOffsetRef.current + (dy / w) * Math.PI * 1.2;
+      thetaOffsetRef.current = Math.max(-0.7, Math.min(0.7, next));
+      lastInteractAtRef.current = performance.now();
+    };
+    const onPointerUp = () => {
+      dragging = false;
+      endInteract();
+    };
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const [a, b] = [e.touches[0], e.touches[1]];
+        pinchStartDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        pinchStartZoom = zoomRef.current;
+        dragging = false;
+        markInteract();
+      }
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && pinchStartDist > 0) {
+        e.preventDefault();
+        const [a, b] = [e.touches[0], e.touches[1]];
+        const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        const next = Math.max(0.85, Math.min(2.4, pinchStartZoom * (d / pinchStartDist)));
+        zoomRef.current = next;
+        setZoom(next);
+        lastInteractAtRef.current = performance.now();
+      }
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) pinchStartDist = 0;
+      if (e.touches.length === 0) endInteract();
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const next = Math.max(0.85, Math.min(2.4, zoomRef.current * (1 - e.deltaY * 0.0015)));
+      zoomRef.current = next;
+      setZoom(next);
+      markInteract();
+      window.setTimeout(endInteract, 150);
+    };
+
+    el.addEventListener("pointerdown", onPointerDown);
+    el.addEventListener("pointermove", onPointerMove);
+    el.addEventListener("pointerup", onPointerUp);
+    el.addEventListener("pointercancel", onPointerUp);
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd);
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      el.removeEventListener("pointerdown", onPointerDown);
+      el.removeEventListener("pointermove", onPointerMove);
+      el.removeEventListener("pointerup", onPointerUp);
+      el.removeEventListener("pointercancel", onPointerUp);
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("wheel", onWheel);
+    };
+  }, []);
+
   function focusMarker(m: PulseMarker) {
     const latRad = (m.location[0] * Math.PI) / 180;
     const lonRad = (m.location[1] * Math.PI) / 180;
@@ -359,89 +470,100 @@ export function GlobePulse({
     targetThetaOffsetRef.current = desiredTheta - 0.2;
     focusStartRef.current = performance.now();
 
-    setChip({ city: m.city, country: m.country });
+    setChip(m);
     setFocusedId(m.id);
     if (chipTimerRef.current) window.clearTimeout(chipTimerRef.current);
     chipTimerRef.current = window.setTimeout(() => {
       setChip(null);
       setFocusedId(null);
-    }, 2200);
+    }, 6000);
   }
 
   return (
-    <div ref={containerRef} className={`relative w-full aspect-square ${className}`}>
-      <canvas
-        ref={canvasRef}
-        style={{
-          width: "100%",
-          height: "100%",
-          opacity: 0,
-          transition: "opacity 0.8s ease",
-          pointerEvents: "none",
-          touchAction: "none",
-        }}
-      />
+    <div
+      ref={containerRef}
+      className={`relative w-full aspect-square select-none ${className}`}
+      style={{ touchAction: "none" }}
+    >
       <div
-        ref={overlayRef}
         className="absolute inset-0"
-        style={{ pointerEvents: "none" }}
-        aria-hidden
+        style={{
+          transform: `scale(${zoom})`,
+          transformOrigin: "center center",
+          transition: "transform 0.08s linear",
+        }}
       >
-        {/* Ghost flags — zero-size anchor at geo point, flag centered via inner translate */}
-        {ghosts.map((g, i) => (
-          <div
-            key={`ghost-${g.cc}`}
-            ref={(el) => (ghostRefs.current[i] = el)}
-            className="absolute top-0 left-0 w-0 h-0 will-change-transform"
-            style={{ transition: "opacity 0.25s linear", pointerEvents: "none" }}
-          >
-            <span className="absolute block text-[12px] leading-none -translate-x-1/2 -translate-y-1/2 whitespace-nowrap">
-              {g.flag}
-            </span>
-          </div>
-        ))}
-
-        {/* Live markers — flag emoji center sits exactly on geo, barber pole hangs beneath */}
-        {liveMarkers.map((m, i) => {
-          const isFocused = focusedId === m.id;
-          return (
+        <canvas
+          ref={canvasRef}
+          style={{
+            width: "100%",
+            height: "100%",
+            opacity: 0,
+            transition: "opacity 0.8s ease",
+            pointerEvents: "none",
+            touchAction: "none",
+          }}
+        />
+        <div
+          ref={overlayRef}
+          className="absolute inset-0"
+          style={{ pointerEvents: "none" }}
+          aria-hidden
+        >
+          {ghosts.map((g, i) => (
             <div
-              key={m.id}
-              ref={(el) => (flagRefs.current[i] = el)}
+              key={`ghost-${g.cc}`}
+              ref={(el) => (ghostRefs.current[i] = el)}
               className="absolute top-0 left-0 w-0 h-0 will-change-transform"
               style={{ transition: "opacity 0.25s linear", pointerEvents: "none" }}
             >
-              {/* Flag emoji — anchor center on (px,py) */}
-              {m.flag && (
-                <span
-                  className={`absolute block text-[18px] leading-none -translate-x-1/2 -translate-y-1/2 whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] ${
-                    isFocused ? "ring-2 ring-orange-400/80 rounded-full px-0.5" : ""
-                  }`}
-                >
-                  {m.flag}
-                </span>
-              )}
-              {/* Animated barber pole — sits just below the flag (or on the point if no flag) */}
-              <span
-                className="absolute left-1/2 -translate-x-1/2 pointer-events-none pole-glow"
-                style={{ top: m.flag ? 8 : -7 }}
-              >
-                <BarberPole size={14} />
+              <span className="absolute block text-[12px] leading-none -translate-x-1/2 -translate-y-1/2 whitespace-nowrap">
+                {g.flag}
               </span>
-              {/* Invisible tap hit-area centered on the geo point */}
-              <button
-                type="button"
-                aria-label={`${m.city ?? "Barber"}${m.country ? ", " + m.country : ""}`}
-                onClick={() => focusMarker(m)}
-                onTouchStart={() => focusMarker(m)}
-                className="absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full bg-transparent border-0 cursor-pointer"
-                style={{ pointerEvents: "auto" }}
-              />
             </div>
-          );
-        })}
+          ))}
+
+          {liveMarkers.map((m, i) => {
+            const isFocused = focusedId === m.id;
+            return (
+              <div
+                key={m.id}
+                ref={(el) => (flagRefs.current[i] = el)}
+                className="absolute top-0 left-0 w-0 h-0 will-change-transform"
+                style={{ transition: "opacity 0.25s linear", pointerEvents: "none" }}
+              >
+                {m.flag && (
+                  <span
+                    className={`absolute block text-[18px] leading-none -translate-x-1/2 -translate-y-1/2 whitespace-nowrap drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] ${
+                      isFocused ? "ring-2 ring-orange-400/80 rounded-full px-0.5" : ""
+                    }`}
+                  >
+                    {m.flag}
+                  </span>
+                )}
+                <span
+                  className="absolute left-1/2 -translate-x-1/2 pointer-events-none pole-glow"
+                  style={{ top: m.flag ? 8 : -7 }}
+                >
+                  <BarberPole size={14} />
+                </span>
+                <button
+                  type="button"
+                  aria-label={`${m.city ?? "Barber"}${m.country ? ", " + m.country : ""}`}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    focusMarker(m);
+                  }}
+                  className="absolute -translate-x-1/2 -translate-y-1/2 w-10 h-10 md:w-7 md:h-7 rounded-full bg-transparent border-0 cursor-pointer"
+                  style={{ pointerEvents: "auto" }}
+                />
+              </div>
+            );
+          })}
+        </div>
       </div>
-      {/* Pole pulse keyframes (component-scoped) */}
+
       <style>{`
         @keyframes pole-pulse {
           0%, 100% { filter: drop-shadow(0 0 2px rgba(255,140,40,0.55)) drop-shadow(0 0 4px rgba(255,140,40,0.3)); }
@@ -449,11 +571,43 @@ export function GlobePulse({
         }
         .pole-glow { animation: pole-pulse 1.8s ease-in-out infinite; }
       `}</style>
+
       {chip && (
-        <div className="pointer-events-none absolute left-1/2 bottom-3 -translate-x-1/2 rounded-full bg-black/70 backdrop-blur px-3 py-1 text-[11px] font-semibold text-white border border-orange-400/40 shadow-[0_0_12px_rgba(255,115,30,0.45)]">
-          {[chip.city, chip.country].filter(Boolean).join(", ") || "Live"}
+        <div
+          className="absolute left-1/2 -translate-x-1/2 bottom-3 z-20 w-[min(92%,320px)] rounded-2xl border border-orange-400/40 bg-black/85 backdrop-blur-md p-3 shadow-[0_8px_28px_rgba(255,115,30,0.35)] animate-in fade-in slide-in-from-bottom-2"
+          style={{ pointerEvents: "auto" }}
+        >
+          <div className="flex items-center gap-2 mb-1">
+            {chip.flag && <span className="text-xl leading-none">{chip.flag}</span>}
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-bold text-white truncate">
+                {chip.city ?? "Live barber"}
+                {chip.country ? <span className="text-white/60 font-medium">, {chip.country}</span> : null}
+              </div>
+              <div className="text-[10px] uppercase tracking-wider text-orange-400/90 font-semibold">
+                Live barbers nearby
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <button
+              type="button"
+              onClick={() => navigate("/barbers")}
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-white/10 hover:bg-white/15 active:bg-white/20 text-white text-xs font-semibold py-2 px-2 border border-white/15 transition"
+            >
+              <MapPin className="w-3.5 h-3.5" /> Find Near You
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate("/book-barber-near-me")}
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-orange-500 hover:bg-orange-400 active:bg-orange-600 text-black text-xs font-bold py-2 px-2 transition shadow-[0_0_12px_rgba(255,140,40,0.55)]"
+            >
+              <Calendar className="w-3.5 h-3.5" /> Book Now
+            </button>
+          </div>
         </div>
       )}
+
       {!ready && (
         <div className="absolute inset-0 flex items-center justify-center text-[10px] text-white/40">
           loading globe…
