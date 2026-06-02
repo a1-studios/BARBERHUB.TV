@@ -23,13 +23,12 @@ export const SwipeableStep = ({
   canAdvance = true,
   className = '',
 }: SwipeableStepProps) => {
-  const handleDragEnd = (_e: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    if (info.offset.x < -80 && canAdvance && onSwipeNext) {
-      onSwipeNext();
-    } else if (info.offset.x > 80 && onSwipeBack) {
-      onSwipeBack();
-    }
-  };
+  // Swipe/drag gestures intentionally disabled — they were causing visible
+  // stutter on the role-selection step on mobile. Users navigate via the
+  // explicit Back / Continue buttons rendered inside each step.
+  void onSwipeNext;
+  void onSwipeBack;
+  void canAdvance;
 
   return (
     <motion.div
@@ -41,12 +40,9 @@ export const SwipeableStep = ({
         opacity: { duration: 0.25 },
         scale: { duration: 0.45, times: [0, 0.55, 1], ease: 'easeOut' },
       }}
-      drag="x"
-      dragConstraints={{ left: 0, right: 0 }}
-      dragElastic={0.2}
-      onDragEnd={handleDragEnd}
-      className={`relative touch-pan-y ${className}`}
+      className={`relative ${className}`}
     >
+
       {/* 180ms whoosh radial flash on enter */}
       <motion.div
         aria-hidden
