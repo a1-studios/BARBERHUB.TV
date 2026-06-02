@@ -21,7 +21,7 @@ export const InlineOtpBox = () => {
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [focused, setFocused] = useState(false);
 
-  const placeholders = useMemo(() => ['Email', 'Phone', 'Email or phone'], []);
+  const placeholders = useMemo(() => ['Sign in', 'Phone', 'Email'], []);
 
   useEffect(() => {
     if (focused || identity.length > 0) return;
