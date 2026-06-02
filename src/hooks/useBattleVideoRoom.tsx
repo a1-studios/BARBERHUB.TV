@@ -76,10 +76,18 @@ export const useBattleVideoRoom = ({
   const startTimeRef = useRef<Date | null>(null);
   const connectingRef = useRef(false);
   const expectedOpponentRef = useRef<string | null | undefined>(expectedOpponentIdentity);
+  const barberPositionRef = useRef<1 | 2 | null | undefined>(barberPosition);
+  const intentionalDisconnectRef = useRef(false);
+  const reconnectAttemptsRef = useRef(0);
+  const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     expectedOpponentRef.current = expectedOpponentIdentity;
   }, [expectedOpponentIdentity]);
+
+  useEffect(() => {
+    barberPositionRef.current = barberPosition;
+  }, [barberPosition]);
 
   /** Match only the opponent barber when an expected identity is provided. */
   const isOpponent = useCallback((identity: string) => {
