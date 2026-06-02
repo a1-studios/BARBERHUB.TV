@@ -1,50 +1,44 @@
-## Globe polish: glow -30%, drop pin, light up pole, true geo anchor
+## Goal
+Make the homepage globe feel like a real interactive map on mobile: pinch-to-zoom, one-finger drag to rotate, and tapping any marker reveals an info card that teases booking + "find a barber near you".
 
-Scope: `src/components/ui/cobe-globe-pulse.tsx` + `src/hooks/useLiveBarberMarkers.tsx`.
+## Changes — `src/components/ui/cobe-globe-pulse.tsx`
 
-### 1. Reduce globe edge glow by ~30%
-Cobe's edge glow is driven by `glowColor` and `diffuse` in the `createGlobe` config.
-- `glowColor: [1, 0.45, 0.1]` → `[0.7, 0.32, 0.07]` (30% darker orange ring).
-- `diffuse: 1.1` → `0.8` (softer scatter halo).
-- Leave `markerColor` alone (no built-in markers anyway).
+### 1. Enable drag-to-rotate + pinch-to-zoom
+- Add a `zoomRef` (1.0 default, clamped 0.85–2.2) and a `dragRef` to track pointer state.
+- Attach `onPointerDown / Move / Up`, `onTouchStart / Move / End`, and `onWheel` to the container.
+  - 1 pointer = rotate: update `phiOffsetRef` (Δx) and `thetaOffsetRef` (Δy, clamped ±0.7).
+  - 2 touch points = pinch: track distance ratio → `zoomRef`.
+  - Wheel = desktop zoom.
+- Cancel auto-rotation while user is interacting (set `targetPhiOffsetRef` to null and freeze `speed` via an `isInteractingRef`; resume after 2.5s idle).
+- Apply zoom by scaling the canvas wrapper with `transform: scale(zoom)` (cheaper than re-rendering Cobe) and multiply marker projection `radius * 0.9 * zoom`.
+- Set canvas `touch-action: none` (already there) and container `touch-action: none` so the page doesn't scroll while dragging the globe.
 
-### 2. Eliminate the pin (📍) — barber pole only when no flag
-Right now `useLiveBarberMarkers` falls back to `flag: "📍"` when a DB barber has no `country_code`. That's the pin the user sees on the globe.
-- Change fallback to `flag: undefined`.
-- In `GlobePulse` live-marker render: if `m.flag` is missing, render **only** the barber pole at the geo point (no emoji, no pin).
+### 2. Tap → richer "tease" info card
+Replace the tiny bottom pill `chip` with a proper card anchored bottom-center of the globe:
+- City, country flag + name (big).
+- One-line tease: "Live barbers nearby · tap to discover".
+- Two CTAs:
+  - **Find Barbers Near You** → `navigate('/find-barbers')`
+  - **Book Now** → `navigate('/booking')` (fallback `/find-barbers` if route missing — verify in code).
+- Stays open until user taps outside / another marker / 6s timeout (up from 2.2s).
+- `pointer-events-auto` on the card so buttons are tappable.
+- Use design tokens (`bg-card/90 backdrop-blur border-border text-foreground`, accent = orange via existing classes).
 
-### 3. Make the barber pole "light up"
-Add a subtle animated glow + barbershop-stripe rotation cue:
-- Wrap `<BarberPole/>` in a span with a pulsing orange halo: `before:` ring using a CSS keyframe `pole-pulse` (1.8s, opacity 0.35 → 0.85 → 0.35, scale 0.9 → 1.15 → 0.9).
-- Add a faint orange `box-shadow` that breathes on the same keyframe.
-- Keyframe defined inline in the component via a `<style>` tag (component-scoped, no global CSS change).
+### 3. Mobile tap reliability
+- Increase invisible hit-area from `w-7 h-7` to `w-10 h-10` on mobile (`md:w-7 md:h-7`).
+- Remove `onTouchStart` handler — it double-fires with `onClick` on iOS, causing flicker. Keep only `onClick`; iOS will synthesize click from tap. Add `e.stopPropagation()` so the container's drag listener doesn't swallow it (treat a pointer event as a tap if movement < 6px and duration < 250ms).
 
-### 4. Fix flag/geo anchoring (the real cause of drift)
-Current inner stack is `flex-col items-center` with `-translate-x-1/2 -translate-y-1/2`. That centers the **whole flag+pole column** on (px,py), which puts the flag visibly *above* the geo coord and the pole below.
+### 4. Mobile perf
+- Throttle `projectGroup` to every 3rd frame on mobile (currently every 2nd).
+- Lower `mapSamples` from 6000 → 5000 on mobile.
 
-Fix: anchor the **flag emoji's center** on the geo point, then let the pole hang absolutely beneath without affecting the anchor:
-```tsx
-<div className="absolute top-0 left-0 w-0 h-0 will-change-transform"> {/* projected (px,py) */}
-  <span className="absolute -translate-x-1/2 -translate-y-1/2 block text-[18px] leading-none whitespace-nowrap">
-    {m.flag}
-  </span>
-  <span className="absolute left-1/2 -translate-x-1/2 top-[8px] pointer-events-none">
-    <BarberPole size={14} />  {/* sits just below the flag, doesn't shift the anchor */}
-  </span>
-  <button className="absolute -translate-x-1/2 -translate-y-1/2 w-6 h-6" onClick={…} />  {/* invisible tap hit-area */}
-</div>
-```
-When `m.flag` is missing, skip the emoji and put the pole's TOP at the geo point.
+## Out of scope
+- Changing the globe data source.
+- Adding new routes.
+- Desktop layout (changes are additive — desktop keeps wheel zoom + drag).
 
-Same zero-size + inner -50% pattern for ghost flags is already correct.
-
-### 5. Verify tap → chip + focus highlight
-Read the current `focusMarker`: it sets `chip` (city/country) + animates phi/theta. To make the focused marker visibly stand out, on tap also flash a 1-frame orange ring around the tapped flag via a `focusedId` state. The flag wrapper gets a `ring-2 ring-orange-400/70 rounded-full` style when `m.id === focusedId`, cleared after 2.2s.
-
-Then I'll verify in the browser:
-- Tap a marker → chip appears bottom-center with city + country.
-- Globe rotates to focus that marker.
-- The tapped marker shows a pulsing ring for ~2s.
-
-### Out of scope
-Live-marker data source beyond removing the 📍 fallback, ghost list, palette, mobile throttling, focus animation curve.
+## Verification
+1. Switch preview to mobile viewport (390×844). Pinch with two-finger gesture in browser devtools touch mode → globe scales smoothly.
+2. Drag globe with one finger → rotates; releases → resumes auto-spin after ~2.5s.
+3. Tap a flag marker → info card appears with city + 2 CTAs; tapping "Find Barbers Near You" navigates to `/find-barbers`.
+4. Confirm no horizontal page scroll occurs while interacting.
