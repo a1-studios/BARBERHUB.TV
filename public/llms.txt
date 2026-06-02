@@ -1,0 +1,23 @@
+# BARBER-HUB
+
+> The global streaming platform and FIFA-style tournament for head-to-head barber battles. Fans vote on live competitions, sponsor barbers, and earn Barber Bucks (BB); barbers compete, educate, and withdraw real value.
+
+BARBER-HUB unifies discovery, live competition, and an in-app currency (Barber Bucks) into one ecosystem. Barbers stream battles, run tournaments, list services, and build a reputation tied to nationality. Fans find barbers near them, vote in PK battles, and back their favorite competitors.
+
+## Pages
+
+- [Home](/): Live battles, featured barbers, and what BARBER-HUB is about.
+- [Barbers Directory](/barbers): Discover and book barbers worldwide, filter by location and specialty.
+- [Watch Feed](/watch): Vertical feed of live battles, highlights, and barber clips.
+- [Tournaments](/tournaments): FIFA-style barber tournaments, brackets, and prize pools.
+- [Book a Barber Near Me](/book-barber-near-me): Find and book a local barber in 15 miles.
+- [Vault of Honor](/vault): Champions, season records, and faction history.
+- [Grants](/grants): Mentor-for-Mentor (M4M) charity fund and barber grant programs.
+
+## Legal
+
+- [Terms](/terms): Terms of Service.
+- [Privacy](/privacy): Privacy Policy.
+- [Acceptable Use](/aup): Acceptable Use Policy.
+- [Cookies](/cookies): Cookie Policy.
+- [DMCA](/dmca): Copyright takedown policy.
