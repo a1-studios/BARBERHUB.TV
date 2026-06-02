@@ -30,7 +30,7 @@ const getCountryFlag = (countryCode: string | null): string => {
 
 export const LiveBattleFeed = () => {
   const navigate = useNavigate();
-  const { isBarber } = useUserRole();
+
 
   const { data: liveBattles, refetch } = useQuery({
     queryKey: ['liveBattles'],
