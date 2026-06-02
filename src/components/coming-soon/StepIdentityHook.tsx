@@ -50,7 +50,7 @@ export const StepAuth = ({ initialEmail, role, barberStatus, country, phone, vip
 
   const oauth = async (provider: 'google' | 'apple' | 'facebook') => {
     haptic();
-    persistPending({ role, barberStatus, country, phone, email });
+    persistPending({ role, barberStatus, country, phone, email, vipCode });
     await supabase.auth.signInWithOAuth({
       provider,
       options: {
@@ -70,7 +70,7 @@ export const StepAuth = ({ initialEmail, role, barberStatus, country, phone, vip
     setError(null);
     haptic();
     const lower = parsed.data.email;
-    persistPending({ role, barberStatus, country, phone, email: lower });
+    persistPending({ role, barberStatus, country, phone, email: lower, vipCode });
 
     try {
       // Register lead (idempotent — soft 200 on duplicates)
