@@ -45,14 +45,13 @@ export const VelvetRopeLanding = () => {
         </div>
 
         {/* Feature Highlight Reel — takes available slack */}
-        <div className="flex-1 min-h-0 flex flex-col justify-center px-3 pt-2 md:pt-6 pb-1 overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col px-3 pt-2 md:pt-4 pb-0 overflow-hidden">
           <FeatureHighlightReel />
+          {/* Rotating CTA — directly under the globe/highlight */}
+          <div className="flex-none pt-2 flex flex-col items-center">
+            <RotatingJoinCTA onClick={() => setSpinOpen(true)} />
+          </div>
         </div>
-
-        {/* Rotating CTA */}
-        <section className="flex-none px-3 pt-2 flex flex-col items-center">
-          <RotatingJoinCTA onClick={() => setSpinOpen(true)} />
-        </section>
 
         {/* Inline OTP — orange glow, under CTA */}
         <section className="flex-none px-3 pt-2">
