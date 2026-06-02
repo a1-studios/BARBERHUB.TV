@@ -1,18 +1,24 @@
-## Issues
-1. On mobile, swiping/dragging the 3D globe triggers the reel's swipe-to-next-slide instead of rotating the globe.
-2. Need to maximize vertical real estate so the globe fills available space without crowding header/CTA/OTP/footer.
+## Issue
+The rotating CTA currently sits below the dots/stats. User wants it placed in the empty space directly under the 3D globe and above the `500+ / 1.2k+ / 5k+ / 98%` stats row.
 
 ## Fix
 
 **`src/components/landing/FeatureHighlightReel.tsx`**
-- Skip the `onTouchStart`/`onTouchEnd` swipe handlers when the current slide is the globe (`isGlobe`). The globe owns pointer events for rotation; users navigate away from it by tapping the dots below.
-- Keep swipe enabled for all other slides.
-- Tighten internal padding on globe slide so the globe fills the container (remove the `pb-2` reserved for the stats overlay where possible; let `LiveStatsRow` overlay absolutely at the bottom instead of consuming flex space).
+- Remove the `LiveStatsRow` from inside the globe slide's `render`. The globe slide should render only the globe (full-bleed).
+- Add an optional `belowSlide` slot (or simply render `children` after the slide container and dots) so the parent can inject the CTA + stats stack beneath the reel.
+- New flex column order inside the reel wrapper:
+  1. Slide area (`flex-1` — globe gets all available vertical room)
+  2. Dots
+  3. `children` (CTA, then stats — provided by parent)
 
 **`src/components/landing/VelvetRopeLanding.tsx`**
-- Reduce the `pt-8` above the reel to `pt-3` (mobile) / `md:pt-6` so the globe gets more vertical room; current top gap is excessive on small screens.
-- Tighten section gaps (`pt-2` → `pt-1.5`) around CTA/OTP/footer on mobile only so the reel container grows.
+- Pass the CTA and `LiveStatsRow` as children of `<FeatureHighlightReel>` so they render in this order directly under the globe:
+  - `RotatingJoinCTA` (centered, small top margin)
+  - `LiveStatsRow` (existing component)
+- Remove the separate `RotatingJoinCTA` block currently below the reel.
 
-**Result:** Globe is freely draggable on mobile (no accidental slide change), and the highlight reel area is taller, giving the globe a larger square render.
-
-No business logic changes — UI/presentation only.
+## Result
+- Globe stays full-bleed and gets more height.
+- CTA sits in the previously empty zone immediately under the globe.
+- Stats row sits just under the CTA, above the OTP input.
+- No business-logic changes — layout only.
