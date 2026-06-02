@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Helmet } from "react-helmet";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import LandingHero from "@/components/LandingHero";
@@ -241,7 +242,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden">
+      <Helmet>
+        <link rel="canonical" href="https://barberhub.tv/" />
+      </Helmet>
       <Header />
+      
       
       {/* Spacer for fixed header */}
       <div className="h-24 sm:h-28" />

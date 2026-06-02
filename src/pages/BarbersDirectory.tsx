@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Helmet } from 'react-helmet';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -226,7 +227,20 @@ export default function BarbersDirectory() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Find a Barber Near You — Barbers Directory | BARBER-HUB</title>
+        <meta
+          name="description"
+          content="Discover top barbers in your city. Browse the global BARBER-HUB directory, filter by specialty and tier, and book your next cut in seconds."
+        />
+        <link rel="canonical" href="https://barberhub.tv/barbers" />
+        <meta property="og:title" content="Find a Barber Near You — Barbers Directory | BARBER-HUB" />
+        <meta property="og:description" content="Discover top barbers in your city. Browse, filter by specialty and tier, and book in seconds." />
+        <meta property="og:url" content="https://barberhub.tv/barbers" />
+        <meta property="og:type" content="website" />
+      </Helmet>
       <Header />
+
 
       <div className="container mx-auto px-4 py-6 pt-[calc(env(safe-area-inset-top)+72px)]">
         <BackButton className="mb-4" />

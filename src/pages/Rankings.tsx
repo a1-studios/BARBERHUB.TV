@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Helmet } from 'react-helmet';
 import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Header';
 import { BottomNavBar } from '@/components/BottomNavBar';
@@ -72,6 +73,18 @@ export default function Rankings() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Helmet>
+        <title>Barber Rankings — Global Leaderboard | BARBER-HUB</title>
+        <meta
+          name="description"
+          content="Live global leaderboard of top barbers ranked by battle wins, ratings, and tournament results. Filter by category and country on BARBER-HUB."
+        />
+        <link rel="canonical" href="https://barberhub.tv/rankings" />
+        <meta property="og:title" content="Barber Rankings — Global Leaderboard | BARBER-HUB" />
+        <meta property="og:description" content="Live global leaderboard of top barbers ranked by battle wins, ratings, and tournament results." />
+        <meta property="og:url" content="https://barberhub.tv/rankings" />
+        <meta property="og:type" content="website" />
+      </Helmet>
       <Header />
       <div className="h-24 sm:h-28" />
 
