@@ -166,6 +166,11 @@ export const useBattleVideoRoom = ({
 
   const connect = useCallback(async () => {
     if (connectingRef.current) return;
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    intentionalDisconnectRef.current = false;
     connectingRef.current = true;
 
     try {
