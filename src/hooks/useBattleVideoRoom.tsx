@@ -15,6 +15,12 @@ export type BattleRoomStatus = 'idle' | 'connecting' | 'connected' | 'disconnect
 
 interface UseBattleVideoRoomOptions {
   battleId: string;
+  /**
+   * Opponent's LiveKit identity (the other barber's barber_profile.id).
+   * When provided, viewer joins/leaves are ignored — only the opponent's
+   * presence drives `opponentIdentity`, `remoteVideoTrack`, and toasts.
+   */
+  opponentIdentity?: string | null;
   onOpponentJoin?: (participant: RemoteParticipant) => void;
   onOpponentLeave?: () => void;
   onDisconnect?: (error?: Error) => void;
