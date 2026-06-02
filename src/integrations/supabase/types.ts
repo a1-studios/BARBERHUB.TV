@@ -328,6 +328,9 @@ export type Database = {
           duration_minutes: number
           escrow_amount_bb: number
           id: string
+          intake_current_url: string | null
+          intake_note: string | null
+          intake_reference_url: string | null
           is_deposit_only: boolean
           notes: string | null
           platform_fee_bb: number
@@ -351,6 +354,9 @@ export type Database = {
           duration_minutes?: number
           escrow_amount_bb?: number
           id?: string
+          intake_current_url?: string | null
+          intake_note?: string | null
+          intake_reference_url?: string | null
           is_deposit_only?: boolean
           notes?: string | null
           platform_fee_bb?: number
@@ -374,6 +380,9 @@ export type Database = {
           duration_minutes?: number
           escrow_amount_bb?: number
           id?: string
+          intake_current_url?: string | null
+          intake_note?: string | null
+          intake_reference_url?: string | null
           is_deposit_only?: boolean
           notes?: string | null
           platform_fee_bb?: number
@@ -1842,6 +1851,145 @@ export type Database = {
           platform_fees_collected_cents?: number
           total_pool_cents?: number
           tournament_year?: number
+        }
+        Relationships: []
+      }
+      chair_availability: {
+        Row: {
+          available_from: string
+          available_to: string
+          created_at: string
+          id: string
+          listing_id: string
+        }
+        Insert: {
+          available_from: string
+          available_to: string
+          created_at?: string
+          id?: string
+          listing_id: string
+        }
+        Update: {
+          available_from?: string
+          available_to?: string
+          created_at?: string
+          id?: string
+          listing_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chair_availability_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "chair_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chair_bookings: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          listing_id: string
+          owner_user_id: string
+          platform_fee_bb: number
+          renter_user_id: string
+          start_date: string
+          status: string
+          total_bb: number
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          listing_id: string
+          owner_user_id: string
+          platform_fee_bb?: number
+          renter_user_id: string
+          start_date: string
+          status?: string
+          total_bb: number
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          listing_id?: string
+          owner_user_id?: string
+          platform_fee_bb?: number
+          renter_user_id?: string
+          start_date?: string
+          status?: string
+          total_bb?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chair_bookings_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "chair_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chair_listings: {
+        Row: {
+          address: string | null
+          amenities: string[]
+          chair_name: string
+          city: string | null
+          country_code: string | null
+          created_at: string
+          daily_rate_bb: number
+          description: string | null
+          id: string
+          is_active: boolean
+          latitude: number | null
+          longitude: number | null
+          owner_user_id: string
+          photo_urls: string[]
+          shop_name: string | null
+          updated_at: string
+          weekly_rate_bb: number | null
+        }
+        Insert: {
+          address?: string | null
+          amenities?: string[]
+          chair_name: string
+          city?: string | null
+          country_code?: string | null
+          created_at?: string
+          daily_rate_bb: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          owner_user_id: string
+          photo_urls?: string[]
+          shop_name?: string | null
+          updated_at?: string
+          weekly_rate_bb?: number | null
+        }
+        Update: {
+          address?: string | null
+          amenities?: string[]
+          chair_name?: string
+          city?: string | null
+          country_code?: string | null
+          created_at?: string
+          daily_rate_bb?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          owner_user_id?: string
+          photo_urls?: string[]
+          shop_name?: string | null
+          updated_at?: string
+          weekly_rate_bb?: number | null
         }
         Relationships: []
       }
@@ -5234,6 +5382,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      book_chair: {
+        Args: { p_end_date: string; p_listing_id: string; p_start_date: string }
+        Returns: Json
+      }
       build_universal_feed: {
         Args: { p_limit?: number; p_offset?: number }
         Returns: {
@@ -5367,6 +5519,31 @@ export type Database = {
           name: string
           specialty: string
           user_id: string
+        }[]
+      }
+      find_chairs_nearby: {
+        Args: {
+          p_amenities?: string[]
+          p_end_date?: string
+          p_lat: number
+          p_lng: number
+          p_radius_miles?: number
+          p_start_date?: string
+        }
+        Returns: {
+          address: string
+          amenities: string[]
+          chair_name: string
+          daily_rate_bb: number
+          description: string
+          distance_miles: number
+          id: string
+          latitude: number
+          longitude: number
+          owner_user_id: string
+          photo_urls: string[]
+          shop_name: string
+          weekly_rate_bb: number
         }[]
       }
       generate_elimination_bracket: {
@@ -5541,6 +5718,19 @@ export type Database = {
         }[]
       }
       get_subscription_tier: { Args: { user_uuid: string }; Returns: string }
+      get_unified_calendar_events: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          counterparty_id: string
+          ends_at: string
+          event_id: string
+          event_type: string
+          metadata: Json
+          starts_at: string
+          status: string
+          title: string
+        }[]
+      }
       has_active_subscription: { Args: { user_uuid: string }; Returns: boolean }
       has_role: {
         Args: {
