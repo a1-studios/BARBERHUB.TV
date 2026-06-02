@@ -59,10 +59,6 @@ export const VelvetRopeLanding = () => {
           <InlineOtpBox />
         </section>
 
-        {/* Stats */}
-        <section className="flex-none px-3 pt-2 pb-1">
-          <LiveStatsRow />
-        </section>
 
         <footer className="flex-none px-3 pb-2 text-center space-y-1">
           <nav className="flex items-center justify-center gap-3 text-[10px] text-white/45">
