@@ -136,6 +136,33 @@ export const StepRole = ({ email, initialRole, initialCountry, initialPhone, ini
                   );
                 })}
               </div>
+
+              {/* VIP Invite Code — required for barbers */}
+              <div className="space-y-1 pt-1">
+                <div className="relative">
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-400/70 pointer-events-none z-10" />
+                  <input
+                    type="text"
+                    inputMode="text"
+                    placeholder="VIP Invite Code (required)"
+                    value={vipCode}
+                    onChange={(e) => setVipCode(e.target.value.toUpperCase())}
+                    maxLength={32}
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    className="w-full h-11 pl-9 pr-10 rounded-[12px] bg-black/40 text-white text-sm font-bold tracking-widest uppercase focus:outline-none focus:ring-2 focus:ring-orange-500/60"
+                    style={{ border: `1px solid ${vipState === 'invalid' ? 'rgba(239,68,68,0.6)' : vipState === 'valid' ? 'rgba(34,197,94,0.6)' : 'rgba(255,95,31,0.4)'}` }}
+                  />
+                  {vipState === 'checking' && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 animate-spin" />}
+                  {vipState === 'valid' && <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-400" />}
+                  {vipState === 'invalid' && <AlertCircle className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-400" />}
+                </div>
+                <p className="text-[10px] text-white/50 px-1">
+                  {vipState === 'invalid'
+                    ? <span className="text-red-400">Invalid or exhausted code.</span>
+                    : "Barber spots are invite-only during beta. No code? Switch to Fan to enter free."}
+                </p>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
