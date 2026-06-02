@@ -366,13 +366,13 @@ export function GlobePulse({
     targetThetaOffsetRef.current = desiredTheta - 0.2;
     focusStartRef.current = performance.now();
 
-    setChip({ city: m.city, country: m.country });
+    setChip(m);
     setFocusedId(m.id);
     if (chipTimerRef.current) window.clearTimeout(chipTimerRef.current);
     chipTimerRef.current = window.setTimeout(() => {
       setChip(null);
       setFocusedId(null);
-    }, 2200);
+    }, 6000);
   }
 
   return (
