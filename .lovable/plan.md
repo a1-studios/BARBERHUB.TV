@@ -1,29 +1,39 @@
-
-## Marker + flag geo-anchoring + ghost tuning
+## Fix globe markers — geo anchoring + barber pole icon
 
 Scope: `src/components/ui/cobe-globe-pulse.tsx` only.
 
-### 1. Swap razor → clippers icon
-- Replace the `Razor` inline SVG with a `Clippers` SVG: rectangular body + comb-teeth detail at the head, ~12px, orange fill (`hsl(28 100% 55%)`), 1px hotter-orange outline, soft orange drop-shadow for the rim-light feel.
-- Crisper geometry (no rotated rectangles overlapping); reads as a clipper silhouette at 12px.
+### Problem analysis
+1. **"Marker not working"** — Two reasons:
+   - Cobe's built-in `markers` array still draws a hot orange dot at each live point. That dot doesn't move with our overlay math, so the user sees a stranded glow that looks broken next to the flag.
+   - The overlay `<div>` is `absolute top-0 left-0` and gets `translate3d(px, py, 0) translate(-50%, -50%)`. That centers the **div bounding box**, but the inner flag emoji is taller than wide due to the clipper hanging beneath it via `top-full`. So the flag's visual center sits *above* the geo point. → flag drifts north.
+2. **"Still looks like a clipper"** — the `Clippers` SVG renders as a generic rectangle blob at 12px. User wants it gone; replace with a tiny **barber pole** icon hanging under each live flag, and remove Cobe's bright marker entirely.
 
-### 2. Anchor flag center on the exact geo coordinate
-- Current overlay markup is `flex-col`: flag on top, razor below — so the projected (px,py) lands between them, offsetting the flag north.
-- New stack: the projected point translates `(-50%, -50%)` over the **flag emoji** specifically. Clippers sit absolutely positioned just below the flag, not part of the centering box.
-- Net effect: flag emoji's geometric center sits exactly on the country's lat/lon; the clipper hangs ~10px south as a decorative tag.
+### Changes
 
-### 3. Tune ghost markers (target ~70 capitals, fuller globe)
-- Expand `GHOST_FLAGS` list from ~40 to ~70 capitals spread across all continents (add more from Africa, Asia, Eastern Europe, Oceania, Caribbean, Central Asia). Keep the user's required set (CG, CO, CU, CW, CY, DK, DJ, DM, DO, EC, EG, GQ, SV).
-- Slight visual dial-back so 70 doesn't crowd the live markers:
-  - Font size 12px (down from 14px)
-  - Max opacity 0.45 (down from 0.55)
-  - Scale `0.5 + z*0.22`
-  - No drop-shadow on ghost flags (lighter weight)
-- Ghosts also anchor flag center on coord (same fix as #2).
+**1. Kill the Cobe built-in marker layer**
+- Pass `markers: []` to `createGlobe(...)`. Our overlay flags + barber poles are the only visible points.
+- Keep `markerColor` / `glowColor` (used for the globe's rim glow).
 
-### 4. Perf hygiene
-- Memoize the mapped `ghostLocations` array (currently re-created every RAF frame) using `useMemo` so the loop reuses one array.
-- Everything else (auto-rotate, tap-to-focus, IntersectionObserver pause, mobile throttling, palette) stays as-is.
+**2. True geo-anchored flag (fix drift)**
+- Wrap each live marker overlay in a zero-size positioning anchor:
+  ```tsx
+  <div className="absolute top-0 left-0 w-0 h-0">  {/* projected point */}
+    <div className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
+      <span className="text-[18px] leading-none">{flag}</span>
+      <BarberPole />        {/* hangs 2px below flag */}
+    </div>
+  </div>
+  ```
+- `projectGroup` writes `translate3d(px, py, 0) scale(...)` onto the **outer** zero-size anchor only. The inner translate(-50%, -50%) keeps the flag emoji's geometric center exactly on (px, py); the pole stacks below as a tag and does NOT shift the anchor.
+- Same fix for ghost flags (zero-size wrapper, inner `-translate-x-1/2 -translate-y-1/2`).
+
+**3. Replace `Clippers` with `BarberPole`**
+- New inline SVG: vertical capsule, red/white/blue diagonal stripes, gold caps top + bottom, ~14px tall × 5px wide, soft orange drop-shadow glow.
+- Sits directly under the flag (`mt-[2px]`).
+
+**4. Cleanup**
+- Remove the now-unused `Clippers` component.
+- No changes to ghosts list, rotation, focus-on-tap, or palette.
 
 ### Out of scope
-- Live-marker data source, palette, drag/pinch, edge functions, DB.
+- Live data source, palette/colors elsewhere, mobile throttling, focus animation.
