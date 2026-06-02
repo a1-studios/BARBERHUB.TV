@@ -355,6 +355,106 @@ export function GlobePulse({
     };
   }, [liveMarkers, liveLocs, ghostLocs, speed]);
 
+  // Drag-to-rotate + pinch-to-zoom + wheel-zoom
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    let lastX = 0;
+    let lastY = 0;
+    let dragging = false;
+    let pinchStartDist = 0;
+    let pinchStartZoom = 1;
+
+    const markInteract = () => {
+      isInteractingRef.current = true;
+      lastInteractAtRef.current = performance.now();
+      targetPhiOffsetRef.current = null;
+      targetThetaOffsetRef.current = null;
+    };
+    const endInteract = () => {
+      isInteractingRef.current = false;
+      lastInteractAtRef.current = performance.now();
+    };
+
+    const onPointerDown = (e: PointerEvent) => {
+      if ((e.target as HTMLElement)?.tagName === "BUTTON") return;
+      dragging = true;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      markInteract();
+      el.setPointerCapture?.(e.pointerId);
+    };
+    const onPointerMove = (e: PointerEvent) => {
+      if (!dragging) return;
+      const dx = e.clientX - lastX;
+      const dy = e.clientY - lastY;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      const w = el.clientWidth || 1;
+      phiOffsetRef.current -= (dx / w) * Math.PI * 1.2;
+      const next = thetaOffsetRef.current + (dy / w) * Math.PI * 1.2;
+      thetaOffsetRef.current = Math.max(-0.7, Math.min(0.7, next));
+      lastInteractAtRef.current = performance.now();
+    };
+    const onPointerUp = () => {
+      dragging = false;
+      endInteract();
+    };
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const [a, b] = [e.touches[0], e.touches[1]];
+        pinchStartDist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        pinchStartZoom = zoomRef.current;
+        dragging = false;
+        markInteract();
+      }
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && pinchStartDist > 0) {
+        e.preventDefault();
+        const [a, b] = [e.touches[0], e.touches[1]];
+        const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        const next = Math.max(0.85, Math.min(2.4, pinchStartZoom * (d / pinchStartDist)));
+        zoomRef.current = next;
+        setZoom(next);
+        lastInteractAtRef.current = performance.now();
+      }
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) pinchStartDist = 0;
+      if (e.touches.length === 0) endInteract();
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const next = Math.max(0.85, Math.min(2.4, zoomRef.current * (1 - e.deltaY * 0.0015)));
+      zoomRef.current = next;
+      setZoom(next);
+      markInteract();
+      window.setTimeout(endInteract, 150);
+    };
+
+    el.addEventListener("pointerdown", onPointerDown);
+    el.addEventListener("pointermove", onPointerMove);
+    el.addEventListener("pointerup", onPointerUp);
+    el.addEventListener("pointercancel", onPointerUp);
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd);
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      el.removeEventListener("pointerdown", onPointerDown);
+      el.removeEventListener("pointermove", onPointerMove);
+      el.removeEventListener("pointerup", onPointerUp);
+      el.removeEventListener("pointercancel", onPointerUp);
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("wheel", onWheel);
+    };
+  }, []);
+
   function focusMarker(m: PulseMarker) {
     const latRad = (m.location[0] * Math.PI) / 180;
     const lonRad = (m.location[1] * Math.PI) / 180;
