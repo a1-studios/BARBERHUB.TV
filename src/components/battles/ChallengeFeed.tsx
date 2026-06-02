@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { invokeAuthedFunction } from '@/lib/invokeAuthed';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -79,15 +80,12 @@ const QuickChallengePresets = ({ isSilverPlus }: { isSilverPlus: boolean }) => {
     }
     setLoadingPreset(index);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) { toast.error('Please sign in first'); return; }
-
       const effectiveStake = stakesEnabled ? preset.stake : 0;
-      const { data, error } = await supabase.functions.invoke('create-challenge-stake', {
-        body: { title: preset.title, stake_amount: effectiveStake, duration_minutes: 15 },
+      const { data, error } = await invokeAuthedFunction('create-challenge-stake', {
+        title: preset.title, stake_amount: effectiveStake, duration_minutes: 15,
       });
 
-      if (error) throw error;
+      if (error) { if (error.message !== 'Not signed in' && error.message !== 'Session expired') throw error; return; }
       if (data?.error) throw new Error(data.error);
 
       toast.success(
@@ -170,16 +168,14 @@ const CustomChallengeForm = ({ isSilverPlus }: { isSilverPlus: boolean }) => {
 
     setIsSubmitting(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-challenge-stake', {
-        body: {
-          title,
-          stake_amount: effectiveStake,
-          challenge_message: message || null,
-          duration_minutes: 15,
-        },
+      const { data, error } = await invokeAuthedFunction('create-challenge-stake', {
+        title,
+        stake_amount: effectiveStake,
+        challenge_message: message || null,
+        duration_minutes: 15,
       });
 
-      if (error) throw error;
+      if (error) { if (error.message !== 'Not signed in' && error.message !== 'Session expired') throw error; setIsSubmitting(false); return; }
       if (data?.error) throw new Error(data.error);
 
       toast.success(

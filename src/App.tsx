@@ -43,6 +43,7 @@ import { ProfileCompletionGate } from "./components/auth/ProfileCompletionGate";
 import { CookieConsentBanner } from "./components/legal/CookieConsentBanner";
 import IOSInstallPrompt from "./components/pwa/IOSInstallPrompt";
 import { IncomingChallengeTakeover } from "./components/battles/IncomingChallengeTakeover";
+import { QuickActionsMenu } from "./components/QuickActionsMenu";
 import { initPixelGate } from "./lib/metaPixelGate";
 
 // Lazy-loaded heavy / rarely-visited routes
@@ -91,6 +92,9 @@ const AppContent = () => {
       <CookieConsentBanner />
       <IOSInstallPrompt />
       <IncomingChallengeTakeover />
+      <div className="hidden md:block">
+        <QuickActionsMenu />
+      </div>
       <Suspense fallback={<div className="min-h-screen bg-background" />}>
       <Routes>
             <Route path="/" element={IS_COMING_SOON ? <ComingSoon /> : <Index />} />

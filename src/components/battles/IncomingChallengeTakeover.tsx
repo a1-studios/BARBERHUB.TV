@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Swords, Coins, Clock, Loader2, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { invokeAuthedFunction } from '@/lib/invokeAuthed';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -107,10 +108,10 @@ export const IncomingChallengeTakeover = () => {
     if (!current) return;
     setBusy('accept');
     try {
-      const { data, error } = await supabase.functions.invoke('match-challenge-stake', {
-        body: { challenge_id: current.id },
+      const { data, error } = await invokeAuthedFunction('match-challenge-stake', {
+        challenge_id: current.id,
       });
-      if (error) throw error;
+      if (error) { if (error.message !== 'Not signed in' && error.message !== 'Session expired') throw error; setBusy(null); return; }
       if (data?.error) throw new Error(data.error);
       toast.success('Challenge accepted! Entering the arena…');
       const battleId = data?.battle_id;
