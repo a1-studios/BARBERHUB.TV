@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import m4mIcon from '@/assets/m4m-handshake-heart.png';
+import m4mIcon from '@/assets/m4m-handshake-heart.webp';
 import { M4MVerificationModal } from './M4MVerificationModal';
 import { M4MCertificationModal } from './M4MCertificationModal';
 import { M4MQRCodeModal } from './M4MQRCodeModal';
