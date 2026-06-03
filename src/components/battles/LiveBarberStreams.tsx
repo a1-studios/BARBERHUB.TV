@@ -3,15 +3,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, Swords, DollarSign, Users, Radio, Heart, UserPlus, UserCheck } from 'lucide-react';
+import { ExternalLink, Swords, DollarSign, Users, Radio, Heart, UserPlus, UserCheck, Scissors } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { AcceptChallengeModal } from './AcceptChallengeModal';
 import { DonationModal } from '@/components/DonationModal';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { isFreshLiveBroadcast } from '@/lib/liveBroadcast';
+import { SignatureHeader } from '@/components/shared/SignatureHeader';
 
 interface LiveStream {
   id: string;
@@ -266,29 +267,53 @@ export const LiveBarberStreams = () => {
     refetchInterval: 5000,
   });
 
-  const hasContent =
-    (liveStreams && liveStreams.length > 0) ||
-    (soloBroadcasts && soloBroadcasts.length > 0);
+  // Dedupe battle streams by id (defensive against duplicate rows from joins/realtime).
+  const uniqueLiveStreams = useMemo(() => {
+    const map = new Map<string, LiveStream>();
+    (liveStreams || []).forEach((s) => {
+      if (!map.has(s.id)) map.set(s.id, s);
+    });
+    return Array.from(map.values());
+  }, [liveStreams]);
 
-  if (isLoading || !hasContent) return null;
+  // Dedupe solo broadcasts by id as well (data layer already dedupes by barber).
+  const uniqueSoloBroadcasts = useMemo(() => {
+    const map = new Map<string, SoloBroadcast>();
+    (soloBroadcasts || []).forEach((b) => {
+      if (!map.has(b.id)) map.set(b.id, b);
+    });
+    return Array.from(map.values());
+  }, [soloBroadcasts]);
+
+  const totalCount = uniqueLiveStreams.length + uniqueSoloBroadcasts.length;
+
+  if (isLoading) return null;
+
+  if (totalCount === 0) {
+    return (
+      <section className="py-6 px-3 sm:px-6">
+        <div className="container mx-auto max-w-7xl">
+          <SignatureHeader title="Lives" subtitle="LIVE NOW" />
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <Scissors className="w-10 h-10 mb-3 text-muted-foreground/60" />
+            <p className="text-sm text-muted-foreground">
+              No live battles right now. Check back soon.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-6 px-3 sm:px-6">
       <div className="container mx-auto max-w-7xl">
-        <div className="mb-4">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse" />
-            <h2 className="text-xl font-bold text-foreground">Lives</h2>
-            <Badge variant="destructive" className="text-xs px-2 py-0.5">
-              {(liveStreams?.length || 0) + (soloBroadcasts?.length || 0)}
-            </Badge>
-          </div>
-          <p className="text-xs text-muted-foreground">Watch live battles and broadcasts</p>
-        </div>
+        <SignatureHeader title="Lives" subtitle="LIVE NOW" />
+
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {/* Solo Broadcasts */}
-          {soloBroadcasts?.map((broadcast) => (
+          {uniqueSoloBroadcasts.map((broadcast) => (
             <Card key={broadcast.id} className="overflow-hidden hover:shadow-lg transition-all relative group">
               <div className="relative aspect-video bg-muted flex items-center justify-center">
                 <div className="text-center text-muted-foreground">
@@ -323,7 +348,7 @@ export const LiveBarberStreams = () => {
           ))}
 
           {/* Battle Streams */}
-          {liveStreams?.map((stream) => {
+          {uniqueLiveStreams.map((stream) => {
             const isOwnStream = user?.id === stream.barber1_id;
             const canAccept = isBarber && !isOwnStream && stream.status === 'waiting_for_opponent';
             const isWaiting = stream.status === 'waiting_for_opponent';
