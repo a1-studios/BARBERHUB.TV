@@ -541,6 +541,53 @@ export const ChallengeFeed = () => {
         </div>
       )}
 
+      {/* Completed / Expired Challenges */}
+      {completedChallenges.length > 0 && (
+        <div className="pt-6">
+          <div className="flex items-center gap-3 pb-3 border-b border-border/60">
+            <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              Completed
+            </span>
+            <span className="h-px flex-1 bg-border/60" />
+            <Badge variant="outline" className="text-[10px]">{completedChallenges.length}</Badge>
+          </div>
+
+          <div className="mt-3 space-y-2">
+            {visibleCompleted.map((c) => (
+              <div
+                key={c.id}
+                className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-card/30 border border-border/40"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-foreground truncate">{c.title}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {c.challenger_username} · {c.status}
+                  </p>
+                </div>
+                {(c.stake_amount ?? 0) > 0 && (
+                  <div className="flex items-center gap-1 text-xs font-bold text-yellow-500">
+                    <Coins className="w-3 h-3" />
+                    {c.stake_amount} BB
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {completedChallenges.length > 5 && (
+            <button
+              type="button"
+              onClick={() => setShowAllCompleted((v) => !v)}
+              className="mt-3 w-full text-center text-xs font-semibold text-primary hover:underline"
+            >
+              {showAllCompleted ? 'Show less' : `View all (${completedChallenges.length})`}
+            </button>
+          )}
+        </div>
+      )}
+
+
+
       {selectedChallenge && (
         <AcceptChallengeModal challenge={selectedChallenge} isOpen={!!selectedChallenge} onClose={() => setSelectedChallenge(null)} />
       )}
