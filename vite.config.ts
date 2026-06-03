@@ -55,4 +55,23 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     include: ['mapbox-gl'],
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('/three/') || id.includes('@react-three/fiber') || id.includes('@react-three/drei')) return 'vendor-three';
+          if (id.includes('livekit-client') || id.includes('@livekit/components-react')) return 'vendor-livekit';
+          if (id.includes('maplibre-gl')) return 'vendor-maps';
+          if (id.includes('framer-motion')) return 'vendor-motion';
+          if (id.includes('recharts') || id.includes('/d3-')) return 'vendor-charts';
+          if (id.includes('@supabase/')) return 'vendor-supabase';
+          if (id.includes('@tanstack/')) return 'vendor-query';
+          if (id.includes('@radix-ui/')) return 'vendor-radix';
+          if (id.includes('lucide-react')) return 'vendor-icons';
+          if (id.includes('@cloudflare/stream-react')) return 'vendor-cf-stream';
+        }
+      }
+    }
+  }
 }));
