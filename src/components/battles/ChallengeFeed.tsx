@@ -365,6 +365,24 @@ export const ChallengeFeed = () => {
     refetchInterval: 5000,
   });
 
+  const [showAllCompleted, setShowAllCompleted] = useState(false);
+  const { data: completedChallenges = [] } = useQuery({
+    queryKey: ['completed-challenges'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('open_challenges')
+        .select('*')
+        .in('status', ['completed', 'expired', 'declined', 'matched'])
+        .order('created_at', { ascending: false })
+        .limit(25);
+      if (error) throw error;
+      return (data || []) as Challenge[];
+    },
+    refetchInterval: 30000,
+  });
+  const visibleCompleted = showAllCompleted ? completedChallenges : completedChallenges.slice(0, 5);
+
+
   useEffect(() => {
     const channel = supabase
       .channel('open-challenges-changes')
