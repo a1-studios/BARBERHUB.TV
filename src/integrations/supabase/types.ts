@@ -14,6 +14,170 @@ export type Database = {
   }
   public: {
     Tables: {
+      academy_courses: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          difficulty: string
+          educator_id: string
+          id: string
+          is_featured: boolean | null
+          is_published: boolean | null
+          price_bb: number | null
+          sort_order: number | null
+          thumbnail_url: string | null
+          tier_required: string | null
+          title: string
+          total_lessons: number | null
+          total_xp: number | null
+          updated_at: string | null
+          xp_required: number | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          difficulty?: string
+          educator_id: string
+          id?: string
+          is_featured?: boolean | null
+          is_published?: boolean | null
+          price_bb?: number | null
+          sort_order?: number | null
+          thumbnail_url?: string | null
+          tier_required?: string | null
+          title: string
+          total_lessons?: number | null
+          total_xp?: number | null
+          updated_at?: string | null
+          xp_required?: number | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          difficulty?: string
+          educator_id?: string
+          id?: string
+          is_featured?: boolean | null
+          is_published?: boolean | null
+          price_bb?: number | null
+          sort_order?: number | null
+          thumbnail_url?: string | null
+          tier_required?: string | null
+          title?: string
+          total_lessons?: number | null
+          total_xp?: number | null
+          updated_at?: string | null
+          xp_required?: number | null
+        }
+        Relationships: []
+      }
+      academy_lessons: {
+        Row: {
+          cloudflare_stream_uid: string | null
+          course_id: string
+          created_at: string | null
+          description: string | null
+          duration_seconds: number | null
+          id: string
+          is_free_preview: boolean | null
+          r2_video_key: string | null
+          sort_order: number
+          thumbnail_url: string | null
+          title: string
+          xp_reward: number | null
+        }
+        Insert: {
+          cloudflare_stream_uid?: string | null
+          course_id: string
+          created_at?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          id?: string
+          is_free_preview?: boolean | null
+          r2_video_key?: string | null
+          sort_order?: number
+          thumbnail_url?: string | null
+          title: string
+          xp_reward?: number | null
+        }
+        Update: {
+          cloudflare_stream_uid?: string | null
+          course_id?: string
+          created_at?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          id?: string
+          is_free_preview?: boolean | null
+          r2_video_key?: string | null
+          sort_order?: number
+          thumbnail_url?: string | null
+          title?: string
+          xp_reward?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academy_lessons_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "academy_courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      academy_progress: {
+        Row: {
+          completed: boolean | null
+          completed_at: string | null
+          course_id: string
+          id: string
+          last_watched_at: string | null
+          lesson_id: string
+          progress_pct: number | null
+          user_id: string
+          xp_earned: number | null
+        }
+        Insert: {
+          completed?: boolean | null
+          completed_at?: string | null
+          course_id: string
+          id?: string
+          last_watched_at?: string | null
+          lesson_id: string
+          progress_pct?: number | null
+          user_id: string
+          xp_earned?: number | null
+        }
+        Update: {
+          completed?: boolean | null
+          completed_at?: string | null
+          course_id?: string
+          id?: string
+          last_watched_at?: string | null
+          lesson_id?: string
+          progress_pct?: number | null
+          user_id?: string
+          xp_earned?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "academy_progress_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "academy_courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "academy_progress_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "academy_lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       academy_unlocks: {
         Row: {
           bb_paid: number
@@ -638,10 +802,12 @@ export type Database = {
           country_code: string | null
           created_at: string
           default_no_show_fee_bb: number
+          educator_verified_at: string | null
           facebook_handle: string | null
           featured_video_id: string | null
           id: string
           instagram_handle: string | null
+          is_educator: boolean | null
           is_live: boolean | null
           last_battle_reset: string
           last_live_check: string | null
@@ -655,6 +821,7 @@ export type Database = {
           m4m_paid: boolean
           name: string
           nickname: string | null
+          payout_minimum_bb: number | null
           portfolio_url: string | null
           rating: number | null
           require_deposit: boolean
@@ -663,13 +830,19 @@ export type Database = {
           shop_postal_code: string | null
           shop_state: string | null
           specialty: string | null
+          stripe_connect_id: string | null
+          stripe_payout_enabled: boolean | null
           subscription_expires_at: string | null
           tier_level: number
+          total_earnings_bb: number | null
           total_stream_minutes: number | null
           total_streams: number | null
+          total_withdrawn_bb: number | null
           twitter_handle: string | null
           updated_at: string
           user_id: string
+          xp_level: number | null
+          xp_total: number | null
           years_experience: number | null
           youtube_channel_id: string | null
           youtube_handle: string | null
@@ -685,10 +858,12 @@ export type Database = {
           country_code?: string | null
           created_at?: string
           default_no_show_fee_bb?: number
+          educator_verified_at?: string | null
           facebook_handle?: string | null
           featured_video_id?: string | null
           id?: string
           instagram_handle?: string | null
+          is_educator?: boolean | null
           is_live?: boolean | null
           last_battle_reset?: string
           last_live_check?: string | null
@@ -702,6 +877,7 @@ export type Database = {
           m4m_paid?: boolean
           name: string
           nickname?: string | null
+          payout_minimum_bb?: number | null
           portfolio_url?: string | null
           rating?: number | null
           require_deposit?: boolean
@@ -710,13 +886,19 @@ export type Database = {
           shop_postal_code?: string | null
           shop_state?: string | null
           specialty?: string | null
+          stripe_connect_id?: string | null
+          stripe_payout_enabled?: boolean | null
           subscription_expires_at?: string | null
           tier_level?: number
+          total_earnings_bb?: number | null
           total_stream_minutes?: number | null
           total_streams?: number | null
+          total_withdrawn_bb?: number | null
           twitter_handle?: string | null
           updated_at?: string
           user_id: string
+          xp_level?: number | null
+          xp_total?: number | null
           years_experience?: number | null
           youtube_channel_id?: string | null
           youtube_handle?: string | null
@@ -732,10 +914,12 @@ export type Database = {
           country_code?: string | null
           created_at?: string
           default_no_show_fee_bb?: number
+          educator_verified_at?: string | null
           facebook_handle?: string | null
           featured_video_id?: string | null
           id?: string
           instagram_handle?: string | null
+          is_educator?: boolean | null
           is_live?: boolean | null
           last_battle_reset?: string
           last_live_check?: string | null
@@ -749,6 +933,7 @@ export type Database = {
           m4m_paid?: boolean
           name?: string
           nickname?: string | null
+          payout_minimum_bb?: number | null
           portfolio_url?: string | null
           rating?: number | null
           require_deposit?: boolean
@@ -757,13 +942,19 @@ export type Database = {
           shop_postal_code?: string | null
           shop_state?: string | null
           specialty?: string | null
+          stripe_connect_id?: string | null
+          stripe_payout_enabled?: boolean | null
           subscription_expires_at?: string | null
           tier_level?: number
+          total_earnings_bb?: number | null
           total_stream_minutes?: number | null
           total_streams?: number | null
+          total_withdrawn_bb?: number | null
           twitter_handle?: string | null
           updated_at?: string
           user_id?: string
+          xp_level?: number | null
+          xp_total?: number | null
           years_experience?: number | null
           youtube_channel_id?: string | null
           youtube_handle?: string | null
@@ -3628,6 +3819,51 @@ export type Database = {
           stripe_session_id?: string | null
           updated_at?: string
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      payout_requests: {
+        Row: {
+          amount_bb: number
+          amount_usd: number
+          created_at: string | null
+          exchange_rate: number | null
+          failure_reason: string | null
+          id: string
+          processed_at: string | null
+          requested_at: string | null
+          status: string
+          stripe_account_id: string | null
+          stripe_transfer_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount_bb: number
+          amount_usd: number
+          created_at?: string | null
+          exchange_rate?: number | null
+          failure_reason?: string | null
+          id?: string
+          processed_at?: string | null
+          requested_at?: string | null
+          status?: string
+          stripe_account_id?: string | null
+          stripe_transfer_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount_bb?: number
+          amount_usd?: number
+          created_at?: string | null
+          exchange_rate?: number | null
+          failure_reason?: string | null
+          id?: string
+          processed_at?: string | null
+          requested_at?: string | null
+          status?: string
+          stripe_account_id?: string | null
+          stripe_transfer_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }
