@@ -38,7 +38,7 @@ export const DynamicHeaderTitle = () => {
             className="inline-block whitespace-nowrap text-xl sm:text-2xl font-bold tracking-tight"
           >
             <span className="text-white">{active.first}</span>
-            <span className="text-primary">{active.second ? ` ${active.second}` : ''}</span>
+            <span className="text-primary">{active.second ? `-${active.second}` : ''}</span>
           </motion.span>
         </AnimatePresence>
       </div>
