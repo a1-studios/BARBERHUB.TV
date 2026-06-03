@@ -100,18 +100,7 @@ const LiveHub = () => {
 
   return (
     <main className="min-h-screen bg-background pb-24">
-      <header className="sticky top-0 z-10 backdrop-blur-xl bg-background/70 border-b border-border/40 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className="relative inline-flex w-2.5 h-2.5">
-            <span className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-75" />
-            <span className="relative inline-flex w-2.5 h-2.5 rounded-full bg-red-500" />
-          </span>
-          <h1 className="text-xl font-extrabold tracking-tight">Live & Challenges</h1>
-        </div>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Streams and battles happening right now.
-        </p>
-      </header>
+
 
       {nothingLive && (
         <div className="px-6 py-24 text-center text-muted-foreground">
