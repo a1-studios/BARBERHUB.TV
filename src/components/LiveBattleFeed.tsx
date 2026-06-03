@@ -13,6 +13,7 @@ import { motion } from 'framer-motion';
 import { AnimatedCounter } from '@/components/battles/AnimatedCounter';
 import { BattleCard } from '@/components/battles/BattleCard';
 import { BattleWindowTimer } from '@/components/BattleWindowTimer';
+import { SignatureHeader } from '@/components/shared/SignatureHeader';
 
 const getCountryFlag = (countryCode: string | null): string => {
   if (!countryCode) return '🌍';
