@@ -17,7 +17,8 @@ import {
   Trophy,
   Camera,
   Calendar,
-  Armchair
+  Armchair,
+  GraduationCap
 } from 'lucide-react';
 import { FEATURES } from '@/config/features';
 import { cn } from '@/lib/utils';
@@ -72,6 +73,13 @@ export function QuickActionsMenu() {
       icon: <Swords className="w-5 h-5" />,
       path: '/watch',
       requiresAuth: true
+    },
+    {
+      id: 'academy',
+      label: 'Academy',
+      icon: <GraduationCap className="w-5 h-5 text-[#1DC4A0]" />,
+      path: '/academy',
+      requiresAuth: false
     },
     {
       id: 'profile',
