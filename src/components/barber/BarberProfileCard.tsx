@@ -181,11 +181,11 @@ export const BarberProfileCard = ({
     );
   }
 
+  const liveState = useBarberLiveState(userId);
+
   if (!barberProfile) return null;
 
   const displayName = barberProfile.display_name || barberProfile.barber_name;
-
-  const liveState = useBarberLiveState(userId);
 
   return (
     <>
