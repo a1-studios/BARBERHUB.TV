@@ -18,7 +18,7 @@ import { CourseDetailDrawer } from '@/components/academy/CourseDetailDrawer';
 import Header from '@/components/Header';
 import { BottomNavBar } from '@/components/BottomNavBar';
 import { toast } from 'sonner';
-import { Crown, Scissors, Camera, ArrowRight, GraduationCap, Sparkles } from 'lucide-react';
+import { Crown, Scissors, Camera, ArrowRight, GraduationCap, Sparkles, Armchair, CalendarDays } from 'lucide-react';
 
 export default function CreatorHub() {
   const { user, loading } = useAuth();
@@ -198,6 +198,44 @@ export default function CreatorHub() {
             </div>
           </div>
         </div>
+
+        {/* Hub Tools */}
+        <div className="px-4 pb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-primary">
+              Hub Tools
+            </span>
+            <div className="flex-1 h-px bg-border/40" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => navigate('/chair-swap')}
+              className="group rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-4 text-left hover:border-primary/50 hover:shadow-[0_0_25px_rgba(255,107,26,0.2)] active:scale-[0.98] transition-all"
+            >
+              <div className="rounded-xl bg-primary/15 border border-primary/30 p-2 w-fit mb-2">
+                <Armchair className="h-5 w-5 text-primary" />
+              </div>
+              <h3 className="text-sm font-black text-foreground tracking-tight">Chair Swap</h3>
+              <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
+                Rent or host a chair · BB
+              </p>
+            </button>
+            <button
+              onClick={() => navigate('/hub/calendar')}
+              className="group rounded-2xl border border-border/30 bg-gradient-to-br from-card/60 to-background p-4 text-left hover:border-primary/40 active:scale-[0.98] transition-all"
+            >
+              <div className="rounded-xl bg-primary/10 border border-primary/20 p-2 w-fit mb-2">
+                <CalendarDays className="h-5 w-5 text-primary" />
+              </div>
+              <h3 className="text-sm font-black text-foreground tracking-tight">Calendar</h3>
+              <p className="text-[10px] text-muted-foreground leading-snug mt-0.5">
+                Bookings & battles schedule
+              </p>
+            </button>
+          </div>
+        </div>
+
+
 
         {/* Your Content placeholder */}
         <div className="px-4 pb-6">
