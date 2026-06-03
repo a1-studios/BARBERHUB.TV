@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Plus, User, Zap, Scissors, Crown, Bell, AlertCircle } from 'lucide-react';
+import { Plus, User, Zap, Scissors, Crown, Bell, AlertCircle, GraduationCap } from 'lucide-react';
 import { useProfileIncomplete } from '@/hooks/useProfileIncomplete';
 import { requireProfileComplete } from '@/components/auth/ProfileCompletionGate';
 import { QuickSocialSignIn } from '@/components/auth/QuickSocialSignIn';
@@ -86,6 +86,13 @@ const Header = () => {
       path: '/portal',
       requiresAuth: true,
       barberOnly: true
+    },
+    {
+      id: 'academy',
+      label: 'Academy',
+      icon: <GraduationCap className="w-5 h-5 text-[#1DC4A0]" />,
+      path: '/academy',
+      requiresAuth: false
     },
     {
       id: 'creator-hub',

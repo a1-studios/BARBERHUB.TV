@@ -70,6 +70,9 @@ const Cookies = lazy(() => import("./pages/legal/Cookies"));
 const DMCA = lazy(() => import("./pages/legal/DMCA"));
 const ChairSwapPage = lazy(() => import("./features/chair-swap/ChairSwapPage"));
 const HubCalendarPage = lazy(() => import("./features/hub-calendar/HubCalendarPage"));
+const AcademyHome = lazy(() => import("./features/academy/pages/AcademyHome"));
+const AcademyCourseDetail = lazy(() => import("./features/academy/pages/CourseDetail"));
+const AcademyLessonPlayer = lazy(() => import("./features/academy/pages/LessonPlayer"));
 
 
 const queryClient = new QueryClient();
@@ -305,6 +308,9 @@ const AppContent = () => {
                 </AuthGuard>
               }
             />
+            <Route path="/academy" element={<AcademyHome />} />
+            <Route path="/academy/:courseId" element={<AcademyCourseDetail />} />
+            <Route path="/academy/:courseId/lesson/:lessonId" element={<AuthGuard><AcademyLessonPlayer /></AuthGuard>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
       </Suspense>
