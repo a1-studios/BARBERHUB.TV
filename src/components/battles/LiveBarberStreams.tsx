@@ -348,7 +348,7 @@ export const LiveBarberStreams = () => {
           ))}
 
           {/* Battle Streams */}
-          {liveStreams?.map((stream) => {
+          {uniqueLiveStreams.map((stream) => {
             const isOwnStream = user?.id === stream.barber1_id;
             const canAccept = isBarber && !isOwnStream && stream.status === 'waiting_for_opponent';
             const isWaiting = stream.status === 'waiting_for_opponent';
