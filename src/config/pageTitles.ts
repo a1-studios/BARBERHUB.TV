@@ -30,6 +30,7 @@ const STATIC: Record<string, PageTitle> = {
   '/cookies': { first: 'COOKIE', second: 'POLICY', icon: FileText },
   '/dmca': { first: 'DMCA', second: 'NOTICE', icon: FileText },
   '/coming-soon': { first: 'COMING', second: 'SOON', icon: Sparkles },
+  '/live': { first: 'LIVE', second: 'CHALLENGES', icon: Radio },
 };
 
 const DEFAULT: PageTitle = { first: 'BARBER', second: 'HUB', icon: Home };
