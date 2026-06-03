@@ -3,15 +3,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, Swords, DollarSign, Users, Radio, Heart, UserPlus, UserCheck } from 'lucide-react';
+import { ExternalLink, Swords, DollarSign, Users, Radio, Heart, UserPlus, UserCheck, Scissors } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { AcceptChallengeModal } from './AcceptChallengeModal';
 import { DonationModal } from '@/components/DonationModal';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { isFreshLiveBroadcast } from '@/lib/liveBroadcast';
+import { SignatureHeader } from '@/components/shared/SignatureHeader';
 
 interface LiveStream {
   id: string;
