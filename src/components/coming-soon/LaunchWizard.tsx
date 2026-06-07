@@ -69,8 +69,6 @@ export const LaunchWizard = ({ onClose }: LaunchWizardProps) => {
     country: pending.country ?? getCountryFromUrl() ?? null,
     phone: pending.phone ?? '',
     vipCode: pending.vipCode ?? '',
-    ticketCode: null,
-    tierColor: 'white',
     isAuthed: false,
   });
 
