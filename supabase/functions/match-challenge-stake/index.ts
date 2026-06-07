@@ -84,6 +84,22 @@ serve(async (req) => {
       throw new Error('You cannot accept your own challenge');
     }
 
+    // Only barbers can accept challenges — fans have no barber_profiles row
+    // and would end up with barber2_id=null, producing Access Denied downstream.
+    const { data: barberRoleRows } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'barber');
+    if (!barberRoleRows || barberRoleRows.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Only barbers can accept challenges.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      );
+    }
+
+
+
     // Enforce direct (targeted) challenges — only the named barber can accept.
     if (challenge.target_barber_id && challenge.target_barber_id !== user.id) {
       return new Response(
@@ -181,10 +197,86 @@ serve(async (req) => {
         .eq('id', existingPool.id);
     }
 
-    // Update challenge - mark as completed (battle live; expire from feed instantly).
-    // NOTE: status check constraint only allows 'waiting_for_opponent' | 'completed' | 'expired'.
-    // We use 'completed' + expires_at=now() so feed filters drop the row immediately,
-    // and the cleanup cron hard-deletes it shortly after.
+    // Helper to roll back the stake escrow if anything below fails.
+    const rollbackStake = async () => {
+      if (isFreeChallenge) return;
+      await supabase
+        .from('profiles')
+        .update({ barber_bucks: currentBalance })
+        .eq('user_id', user.id);
+    };
+
+    if (!challenge.battle_id) {
+      await rollbackStake();
+      return new Response(
+        JSON.stringify({ error: 'Challenge has no associated battle.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    // Resolve (or create) the acceptor's barber_profiles.id BEFORE touching
+    // battles or open_challenges. battles.barber2_id FKs barber_profiles.id;
+    // writing the auth uid (or null) here breaks ContenderTheater entirely.
+    let { data: acceptorBarberProfile, error: acceptorLookupError } = await supabase
+      .from('barber_profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (acceptorLookupError) {
+      console.error('Acceptor barber_profiles lookup error:', acceptorLookupError);
+      await rollbackStake();
+      return new Response(
+        JSON.stringify({ error: 'Could not prepare your barber profile.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    if (!acceptorBarberProfile?.id) {
+      const { data: created, error: createErr } = await supabase
+        .from('barber_profiles')
+        .insert({ user_id: user.id, name: profile.display_name || profile.username || 'Barber' })
+        .select('id')
+        .single();
+      if (createErr || !created?.id) {
+        console.error('Acceptor barber_profiles create error:', createErr);
+        await rollbackStake();
+        return new Response(
+          JSON.stringify({ error: 'Could not prepare your barber profile.' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+      acceptorBarberProfile = created;
+    }
+
+    const acceptorBarberProfileId = acceptorBarberProfile.id;
+
+    // Wire the battle FIRST. If this write fails or returns no row, we never
+    // mark the challenge completed — the acceptor can retry instead of being
+    // navigated into a broken contender room.
+    const { data: updatedBattle, error: battleUpdateError } = await supabase
+      .from('battles')
+      .update({
+        barber2_id: acceptorBarberProfileId,
+        status: 'live',
+        prize_amount: totalPot,
+      })
+      .eq('id', challenge.battle_id)
+      .select('id, barber1_id, barber2_id, status')
+      .maybeSingle();
+
+    if (battleUpdateError || !updatedBattle || updatedBattle.barber2_id !== acceptorBarberProfileId) {
+      console.error('Battle wire-up failed:', battleUpdateError, updatedBattle);
+      await rollbackStake();
+      return new Response(
+        JSON.stringify({ error: 'Failed to seat you in the battle. Please try again.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
+      );
+    }
+
+    // Now mark the challenge accepted. If this fails the battle is already
+    // seated correctly, so the worst case is the row staying open — the cron
+    // cleanup + status check will sort it out.
     const nowIso = new Date().toISOString();
     const { error: updateError } = await supabase
       .from('open_challenges')
@@ -201,45 +293,9 @@ serve(async (req) => {
       .eq('id', challenge_id);
 
     if (updateError) {
-      console.error('Failed to update open_challenges row:', updateError);
-      // Rollback stake if we deducted one
-      if (!isFreeChallenge) {
-        await supabase
-          .from('profiles')
-          .update({ barber_bucks: currentBalance })
-          .eq('user_id', user.id);
-      }
-      throw new Error(`Failed to accept challenge: ${updateError.message}`);
+      console.error('Failed to update open_challenges row (battle already seated):', updateError);
     }
 
-    // Wire the battle: set barber2 to acceptor + flip to live so both clients
-    // routed through ContenderTheater can join the same room.
-    if (challenge.battle_id) {
-      let { data: acceptorBarberProfile } = await supabase
-        .from('barber_profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      // Guarantee a barber_profiles row so ContenderTheater can position the acceptor.
-      if (!acceptorBarberProfile?.id) {
-        const { data: created } = await supabase
-          .from('barber_profiles')
-          .insert({ user_id: user.id, name: profile.display_name || profile.username || 'Barber' })
-          .select('id')
-          .single();
-        acceptorBarberProfile = created ?? null;
-      }
-
-      await supabase
-        .from('battles')
-        .update({
-          barber2_id: acceptorBarberProfile?.id ?? null,
-          status: 'live',
-          prize_amount: totalPot,
-        })
-        .eq('id', challenge.battle_id);
-    }
 
     // Soft-dismiss any prior challenge notifications for both users so the bell clears.
     // We match notifications whose data->>challenge_id == this challenge for both parties.
