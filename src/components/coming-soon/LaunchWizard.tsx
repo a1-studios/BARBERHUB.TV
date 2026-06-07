@@ -177,29 +177,10 @@ export const LaunchWizard = ({ onClose }: LaunchWizardProps) => {
 
               {step === 3 && (
                 <StepBucksReward
+              {step === 3 && (
+                <StepBucksReward
                   key="step-bucks"
-                  onContinue={goNext}
-                />
-              )}
-
-              {step === 4 && (
-                <StepRaffleSpin
-                  key="step-spin"
-                  email={state.email}
-                  onResult={({ ticket_code, tier_color }) => {
-                    update({ ticketCode: ticket_code, tierColor: tier_color });
-                    goNext();
-                  }}
-                  onBack={goBack}
-                />
-              )}
-
-              {step === 5 && state.ticketCode && (
-                <StepTicketReveal
-                  key="step-reveal"
-                  ticketCode={state.ticketCode}
-                  tierColor={state.tierColor}
-                  onClose={handleClose}
+                  onContinue={handleClose}
                 />
               )}
             </AnimatePresence>
