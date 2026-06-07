@@ -50,7 +50,7 @@ const LandingHero = (_props: LandingHeroProps) => {
       {/* Main column */}
       <div className="flex-1 flex flex-col items-center justify-center w-full max-w-sm mx-auto gap-4 py-4 min-h-0">
         {/* Neon gradient-bordered auth box — 1:1 ratio */}
-        <div className="w-full relative aspect-square">
+        <div className="w-full relative">
           {/* Outer glow */}
           <div
             aria-hidden
@@ -62,13 +62,13 @@ const LandingHero = (_props: LandingHeroProps) => {
           />
           {/* Gradient border wrapper */}
           <div
-            className="relative h-full w-full rounded-[20px] p-[1.5px]"
+            className="relative w-full rounded-[20px] p-[1.5px]"
             style={{
               background:
                 "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.3) 40%, hsl(var(--cyan) / 0.3) 60%, hsl(var(--cyan)) 100%)",
             }}
           >
-            <div className="h-full w-full rounded-[19px] bg-background/85 backdrop-blur-xl p-5 flex flex-col justify-center gap-4">
+            <div className="w-full rounded-[19px] bg-background/85 backdrop-blur-xl p-5 flex flex-col justify-center gap-4">
               <label className="block">
                 <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-foreground/70">
                   Email or Phone
@@ -124,8 +124,8 @@ const LandingHero = (_props: LandingHeroProps) => {
 
         {/* Title UNDER the box */}
         <h1 className="text-center text-2xl sm:text-3xl font-black uppercase tracking-tight leading-[1.05]">
-          <span className="text-primary">WHERE</span>{" "}
-          <span className="text-foreground">BARBER</span>
+          <span className="text-foreground">WHERE</span>{" "}
+          <span className="text-primary">BARBER</span>
           <br />
           <span className="text-primary">BECOME</span>{" "}
           <span className="text-foreground">LEGENDS</span>
