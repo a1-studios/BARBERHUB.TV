@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Sparkles, ArrowRight, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 import { AuthModalV2 } from "@/components/auth/AuthModalV2";
 import barberPole from "@/assets/barber-pole.png";
 
@@ -9,21 +9,27 @@ interface LandingHeroProps {
   onOpenArenaGate?: () => void;
 }
 
-const LandingHero = ({ onStartSignup, onOpenArenaGate }: LandingHeroProps) => {
+const LandingHero = (_props: LandingHeroProps) => {
   const [searchParams] = useSearchParams();
-  const [showSignIn, setShowSignIn] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [mode, setMode] = useState<"signup" | "signin">("signup");
 
   useEffect(() => {
-    if (searchParams.get("tab") === "signup") {
-      (onStartSignup ?? onOpenArenaGate)?.();
+    const tab = searchParams.get("tab");
+    if (tab === "signup" || tab === "signin") {
+      setMode(tab);
+      setAuthOpen(true);
     }
-  }, [searchParams, onStartSignup, onOpenArenaGate]);
+  }, [searchParams]);
 
-  const startSignup = () => (onStartSignup ?? onOpenArenaGate)?.();
+  const open = (m: "signup" | "signin") => {
+    setMode(m);
+    setAuthOpen(true);
+  };
 
   return (
     <section className="relative min-h-[100svh] w-full flex flex-col px-3 pt-2 pb-10 overflow-hidden bg-background">
-      {/* Signature Header — barber pole · BARBER-HUB · (spacer) */}
+      {/* Signature Header */}
       <header className="relative bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-2 border-primary/40 rounded-xl overflow-hidden mx-auto w-full max-w-md">
         <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl z-0">
           <div className="absolute w-32 h-32 bg-cyan-500/20 rounded-full blur-2xl animate-pulse" />
@@ -39,8 +45,7 @@ const LandingHero = ({ onStartSignup, onOpenArenaGate }: LandingHeroProps) => {
       </header>
 
       <div className="relative flex-1 flex items-center justify-center w-full max-w-md mx-auto pt-6">
-        <div className="flex flex-col items-center gap-8 text-center">
-          {/* Tagline */}
+        <div className="flex flex-col items-center gap-8 text-center w-full">
           <div className="space-y-3">
             <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight tracking-tight text-foreground">
               where{" "}
@@ -54,17 +59,15 @@ const LandingHero = ({ onStartSignup, onOpenArenaGate }: LandingHeroProps) => {
             </p>
           </div>
 
-          {/* Auth card */}
+          {/* Simple auth card */}
           <div className="w-full space-y-3">
-            {/* Primary CTA */}
             <button
               type="button"
-              onClick={startSignup}
+              onClick={() => open("signup")}
               className="w-full h-14 rounded-[14px] font-bold text-base text-black flex items-center justify-center gap-2 transition-all active:scale-95 bg-gradient-to-r from-primary to-orange-400 shadow-[0_8px_24px_rgba(255,95,31,0.35)]"
             >
-              <Sparkles className="w-5 h-5" />
-              Join & Get 15 Barber Bucks
-              <ArrowRight className="w-5 h-5" />
+              <Mail className="w-5 h-5" />
+              Sign up — Get your code
             </button>
 
             <div className="flex items-center gap-3 my-1">
@@ -75,22 +78,19 @@ const LandingHero = ({ onStartSignup, onOpenArenaGate }: LandingHeroProps) => {
               <div className="flex-1 h-px bg-white/10" />
             </div>
 
-            {/* Sign in — email OTP only */}
             <button
               type="button"
-              onClick={() => setShowSignIn(true)}
+              onClick={() => open("signin")}
               className="w-full h-12 rounded-[12px] font-semibold text-sm text-white/90 flex items-center justify-center gap-2 transition-all active:scale-95"
               style={{
                 background: "rgba(255,255,255,0.06)",
                 border: "1px solid rgba(255,255,255,0.14)",
               }}
             >
-              <Mail className="w-4 h-4" />
-              Sign in with Email
+              Sign in
             </button>
           </div>
 
-          {/* Stats row */}
           <div className="grid grid-cols-3 w-full gap-2 pt-4 border-t border-white/10">
             <Stat value="50K+" label="Barbers" />
             <Stat value="180+" label="Countries" />
@@ -100,9 +100,9 @@ const LandingHero = ({ onStartSignup, onOpenArenaGate }: LandingHeroProps) => {
       </div>
 
       <AuthModalV2
-        open={showSignIn}
-        onClose={() => setShowSignIn(false)}
-        mode="signin"
+        open={authOpen}
+        onClose={() => setAuthOpen(false)}
+        mode={mode}
       />
     </section>
   );

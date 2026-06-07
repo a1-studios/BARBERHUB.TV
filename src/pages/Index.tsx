@@ -261,15 +261,11 @@ const Index = () => {
     );
   }
 
-  // Guests → new mobile-first LandingHero with email OTP sign-in.
+  // Guests → simple email/phone OTP landing.
   if (!user) {
-    return (
-      <>
-        <LandingHero onStartSignup={() => setShowSpinWheel(true)} />
-        {showSpinWheel && <LaunchWizard onClose={handleSpinClose} />}
-      </>
-    );
+    return <LandingHero />;
   }
+
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden">

@@ -4177,6 +4177,7 @@ export type Database = {
           is_banned: boolean
           is_creator: boolean | null
           is_verified_by_competition: boolean | null
+          phone_number: string | null
           profile_id: string | null
           referral_code: string | null
           referred_by: string | null
@@ -4206,6 +4207,7 @@ export type Database = {
           is_banned?: boolean
           is_creator?: boolean | null
           is_verified_by_competition?: boolean | null
+          phone_number?: string | null
           profile_id?: string | null
           referral_code?: string | null
           referred_by?: string | null
@@ -4235,6 +4237,7 @@ export type Database = {
           is_banned?: boolean
           is_creator?: boolean | null
           is_verified_by_competition?: boolean | null
+          phone_number?: string | null
           profile_id?: string | null
           referral_code?: string | null
           referred_by?: string | null
