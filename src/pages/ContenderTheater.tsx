@@ -96,27 +96,42 @@ export default function ContenderTheater() {
 
   // Fetch barber profiles — load whichever barber IDs exist (challenger arrives
   // before opponent accepts, so barber2_id may be null in Quick Play mode).
-  const { data: barberProfiles } = useQuery({
+  const { data: barberProfiles, isLoading: barberProfilesLoading, isFetched: barberProfilesFetched } = useQuery({
     queryKey: ['battle-barbers', battle?.barber1_id, battle?.barber2_id],
     queryFn: async () => {
       const ids = [battle?.barber1_id, battle?.barber2_id].filter(Boolean) as string[];
-      if (ids.length === 0) return null;
+      if (ids.length === 0) return [];
       const { data, error } = await supabase
         .from('barber_profiles')
         .select('*, profiles:user_id(display_name)')
         .in('id', ids);
       if (error) throw error;
-      return data;
+      return data ?? [];
     },
     enabled: !!battle && (!!battle.barber1_id || !!battle.barber2_id),
   });
 
+  // Also resolve the current user's OWN barber_profiles row directly — this
+  // is the acceptor's lifeline against any timing gap between the battle row
+  // realtime update and the joined query above.
+  const { data: myBarberProfile, isLoading: myBarberLoading } = useQuery({
+    queryKey: ['my-barber-profile', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from('barber_profiles')
+        .select('id, country_code')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id,
+  });
+
   // Determine which barber position the current user is.
-  // Fallback: organizer of the battle is always treated as barber1 (the challenger),
-  // even before their barber_profiles row is loaded — this keeps them in the room
-  // while waiting for an opponent in Quick Play.
   useEffect(() => {
-    if (!user) return;
+    if (!user || !battle) return;
     const barber1 = barberProfiles?.find(b => b.id === battle?.barber1_id);
     const barber2 = barberProfiles?.find(b => b.id === battle?.barber2_id);
 
@@ -125,17 +140,38 @@ export default function ContenderTheater() {
       setBarberId(barber1.id);
       setLocalCountry(barber1.country_code || undefined);
       setRemoteCountry(barber2?.country_code || undefined);
-    } else if (barber2?.user_id === user.id) {
+      return;
+    }
+    if (barber2?.user_id === user.id) {
       setBarberPosition(2);
       setBarberId(barber2.id);
       setLocalCountry(barber2.country_code || undefined);
       setRemoteCountry(barber1?.country_code || undefined);
-    } else if (battle?.organizer_id === user.id) {
-      // Challenger waiting for an opponent — let them stage in the room.
+      return;
+    }
+    // Acceptor fallback: my own barber_profile matches barber2_id on the battle,
+    // but the joined query hasn't returned yet.
+    if (myBarberProfile?.id && battle.barber2_id === myBarberProfile.id) {
+      setBarberPosition(2);
+      setBarberId(myBarberProfile.id);
+      setLocalCountry(myBarberProfile.country_code || undefined);
+      setRemoteCountry(barber1?.country_code || undefined);
+      return;
+    }
+    if (myBarberProfile?.id && battle.barber1_id === myBarberProfile.id) {
+      setBarberPosition(1);
+      setBarberId(myBarberProfile.id);
+      setLocalCountry(myBarberProfile.country_code || undefined);
+      setRemoteCountry(barber2?.country_code || undefined);
+      return;
+    }
+    // Challenger waiting for an opponent — let them stage in the room.
+    if (battle?.organizer_id === user.id) {
       setBarberPosition(1);
       setBarberId(battle?.barber1_id || '');
     }
-  }, [barberProfiles, user, battle]);
+  }, [barberProfiles, user, battle, myBarberProfile]);
+
 
   // Get barber info
   const currentBarber = barberProfiles?.find(b => 
