@@ -367,7 +367,7 @@ export const ProfileCompletionGate = () => {
             }}
           >
             {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : (
-              <><Coins className="w-4 h-4" /> Claim +15 BB</>
+              <>Continue <span aria-hidden>→</span></>
             )}
           </button>
 
@@ -376,6 +376,9 @@ export const ProfileCompletionGate = () => {
               Watch first, decide later
             </button>
           )}
+          </>
+          )}
+
         </motion.div>
       </motion.div>
     </AnimatePresence>
