@@ -4,12 +4,9 @@ import { X } from 'lucide-react';
 import { StepRole } from './StepRole';
 import { StepAuth } from './StepIdentityHook';
 import { StepBucksReward } from './StepBucksReward';
-import { StepRaffleSpin } from './StepRaffleSpin';
-import { StepTicketReveal } from './StepTicketReveal';
 import { SegmentedProgress } from './SegmentedProgress';
 import { captureAttribution, getCountryFromUrl, getEmailFromUrl } from '@/lib/urlParams';
 import { supabase } from '@/integrations/supabase/client';
-import type { TierColor } from '@/components/ui/scroll-morph-hero';
 
 export type LaunchRole = 'barber' | 'fan';
 export type BarberStatus = 'licensed' | 'unlicensed' | 'student' | 'beginner' | 'aspiring';
