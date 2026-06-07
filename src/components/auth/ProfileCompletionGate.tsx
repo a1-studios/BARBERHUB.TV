@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Scissors, Heart, Sparkles, Globe, Phone, KeyRound, Coins } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { COUNTRIES } from '@/components/CountrySelector';
+import { IntakeWalkthrough } from '@/components/onboarding/IntakeWalkthrough';
 
 import { useQueryClient } from '@tanstack/react-query';
 type Role = 'barber' | 'fan';
 type BarberStatus = 'licensed' | 'unlicensed' | 'student' | 'beginner' | 'aspiring';
+type Phase = 'collect' | 'intake';
 
 const STATUSES: { id: BarberStatus; label: string }[] = [
   { id: 'licensed', label: 'Licensed Pro' },
@@ -18,24 +20,25 @@ const STATUSES: { id: BarberStatus; label: string }[] = [
   { id: 'aspiring', label: 'Aspiring' },
 ];
 
+const phaseKey = (uid: string) => `gate_phase:${uid}`;
+
 /**
  * Profile completion + role gateway.
  *
- * Shown to authed users whose profile is incomplete. Lets them watch/scroll,
- * but blocks meaningful interactions until they pick a role + country.
+ * Two phases:
+ *   1. `collect` — role, country, phone, (barber status + VIP) selection
+ *   2. `intake`  — HowItWorks-style walkthrough, +15 BB claim on the final step
  *
- * Picking **Fan**: normal onboarding.
- * Picking **Barber**: requires a Sovereign-generated VIP invite code, which
- * upgrades the user from fan -> barber on submit.
- *
- * On success we credit a +15 BB welcome bonus (server-side, via
- * `claim_welcome_bonus` RPC) and refresh the wallet.
+ * Listens to `onAuthStateChange` so the gate reliably opens after email
+ * confirmation, magic-link sign-in, or OAuth callback — situations where the
+ * `user` from context isn't yet hydrated on first mount.
  */
 export const ProfileCompletionGate = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [needs, setNeeds] = useState(false);
   const [open, setOpen] = useState(false);
+  const [phase, setPhase] = useState<Phase>('collect');
   const [role, setRole] = useState<Role | null>(null);
   const [status, setStatus] = useState<BarberStatus | null>(null);
   const [country, setCountry] = useState<string | null>(null);
@@ -44,27 +47,80 @@ export const ProfileCompletionGate = () => {
   const [vipMode, setVipMode] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const checkedForUid = useRef<string | null>(null);
 
+  // Profile-status check, runs whenever we resolve a userId (from context OR auth events)
+  const refreshStatus = async (uid: string, opts?: { forceOpen?: boolean }) => {
+    const [{ data: profile }, { data: vipOn }] = await Promise.all([
+      supabase.from('profiles').select('user_type, country_code').eq('user_id', uid).maybeSingle(),
+      supabase.rpc('is_global_vip_mode'),
+    ]);
+    const incomplete = !profile?.user_type || !profile?.country_code;
+    setNeeds(incomplete);
+    setVipMode(Boolean(vipOn));
+
+    // Resume mid-flow: collected role/country but never finished intake -> bonus
+    const savedPhase = localStorage.getItem(phaseKey(uid));
+    if (!incomplete && savedPhase === 'intake' && (profile?.user_type === 'barber' || profile?.user_type === 'fan')) {
+      setRole(profile.user_type as Role);
+      setCountry(profile.country_code ?? null);
+      setPhase('intake');
+      setOpen(true);
+      return;
+    }
+
+    if (incomplete && opts?.forceOpen) setOpen(true);
+  };
+
+  // Listen to auth events so we catch post-confirm / OAuth sign-ins
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      const uid = session?.user?.id;
+      if (!uid) {
+        setNeeds(false);
+        setOpen(false);
+        checkedForUid.current = null;
+        return;
+      }
+      if (event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'TOKEN_REFRESHED') {
+        // Force-open for fresh sign-ins / email confirmations
+        const forceOpen = event === 'SIGNED_IN';
+        refreshStatus(uid, { forceOpen });
+      }
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  // Initial check + manual trigger
   useEffect(() => {
     if (!user) { setNeeds(false); return; }
-    let mounted = true;
-    (async () => {
-      const [{ data: profile }, { data: vipOn }] = await Promise.all([
-        supabase.from('profiles').select('user_type, country_code').eq('user_id', user.id).maybeSingle(),
-        supabase.rpc('is_global_vip_mode'),
-      ]);
-      if (!mounted) return;
-      const incomplete = !profile?.user_type || !profile?.country_code;
-      setNeeds(incomplete);
-      setVipMode(Boolean(vipOn));
-    })();
+    if (checkedForUid.current === user.id) return;
+    checkedForUid.current = user.id;
+    refreshStatus(user.id);
+
     const handler = () => setOpen(true);
     window.addEventListener('require-profile-complete', handler);
-    return () => { mounted = false; window.removeEventListener('require-profile-complete', handler); };
+    return () => { window.removeEventListener('require-profile-complete', handler); };
   }, [user]);
 
+  // Confirmation handoff: ?confirmed=1 or hash with access_token/type=signup
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const hash = window.location.hash;
+    const confirmed =
+      url.searchParams.get('confirmed') === '1' ||
+      hash.includes('access_token=') ||
+      hash.includes('type=signup') ||
+      hash.includes('type=recovery');
+    if (confirmed) {
+      setOpen(true);
+      url.searchParams.delete('confirmed');
+      window.history.replaceState({}, '', url.pathname + url.search);
+    }
+  }, []);
+
   // Auto-open shortly after sign-in so users see the prompt
-  useEffect(() => { if (needs) { const t = setTimeout(() => setOpen(true), 800); return () => clearTimeout(t); } }, [needs]);
+  useEffect(() => { if (needs) { const t = setTimeout(() => setOpen(true), 600); return () => clearTimeout(t); } }, [needs]);
 
   // Re-open when navigating to gated routes if still incomplete
   const location = useLocation();
@@ -82,6 +138,14 @@ export const ProfileCompletionGate = () => {
   const ready = !!country && (barberReady || fanReady);
   const canDismiss = role !== 'barber'; // barbers must satisfy VIP gate, no escape hatch
 
+  const invalidateAll = () => {
+    qc.invalidateQueries({ queryKey: ['profile-incomplete'] });
+    qc.invalidateQueries({ queryKey: ['profile'] });
+    qc.invalidateQueries({ queryKey: ['userRoles'] });
+    qc.invalidateQueries({ queryKey: ['header-profile'] });
+    qc.invalidateQueries({ queryKey: ['barber_bucks'] });
+    qc.invalidateQueries({ queryKey: ['barber_bucks_transactions'] });
+  };
 
   const submit = async () => {
     if (!ready || !role) return;
@@ -108,21 +172,32 @@ export const ProfileCompletionGate = () => {
         throw new Error(msg);
       }
 
-      // Claim the +15 BB welcome bonus (idempotent server-side)
-      await supabase.rpc('claim_welcome_bonus');
-
+      // Profile saved — refresh role/profile caches now, hold the BB bonus
+      // until the user finishes the intake walkthrough.
+      invalidateAll();
+      if (user?.id) localStorage.setItem(phaseKey(user.id), 'intake');
       setNeeds(false);
-      setOpen(false);
-      qc.invalidateQueries({ queryKey: ['profile-incomplete'] });
-      qc.invalidateQueries({ queryKey: ['profile'] });
-      qc.invalidateQueries({ queryKey: ['userRoles'] });
-      qc.invalidateQueries({ queryKey: ['header-profile'] });
-      qc.invalidateQueries({ queryKey: ['barber_bucks'] });
-      qc.invalidateQueries({ queryKey: ['barber_bucks_transactions'] });
+      setSubmitting(false);
+      setPhase('intake');
     } catch (e: any) {
       setError(e?.message ?? 'Something went wrong. Try again.');
       setSubmitting(false);
     }
+  };
+
+  const finishIntake = () => {
+    if (user?.id) localStorage.removeItem(phaseKey(user.id));
+    invalidateAll();
+    setOpen(false);
+    setPhase('collect');
+  };
+
+  const skipIntake = () => {
+    // Fan-only escape: don't claim the bonus, but mark we're past collect so we
+    // don't trap them on next load.
+    if (user?.id) localStorage.removeItem(phaseKey(user.id));
+    setOpen(false);
+    setPhase('collect');
   };
 
   return (
