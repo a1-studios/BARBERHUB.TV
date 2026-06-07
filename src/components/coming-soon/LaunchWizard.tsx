@@ -177,8 +177,6 @@ export const LaunchWizard = ({ onClose }: LaunchWizardProps) => {
 
               {step === 3 && (
                 <StepBucksReward
-              {step === 3 && (
-                <StepBucksReward
                   key="step-bucks"
                   onContinue={handleClose}
                 />
