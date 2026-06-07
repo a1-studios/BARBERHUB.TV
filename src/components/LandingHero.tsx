@@ -85,43 +85,44 @@ const LandingHero = (_props: LandingHeroProps) => {
                 <span className="h-px flex-1 bg-gradient-to-l from-transparent to-cyan/40" />
               </div>
 
-              {/* Middle: form */}
-              <div className="flex flex-col gap-3">
-                <label className="block">
-                  <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-foreground/70">
-                    Email or Phone
-                  </span>
-                  <div
-                    className="mt-1.5 rounded-full p-[1px]"
-                    style={{
-                      background:
-                        "linear-gradient(90deg, hsl(var(--primary) / 0.7), hsl(var(--cyan) / 0.7))",
-                    }}
-                  >
-                    <input
-                      type="text"
-                      value={identity}
-                      onChange={(e) => setIdentity(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && open("signup")}
-                      placeholder="you@example.com  or  +1 555…"
-                      className="w-full h-10 rounded-full bg-background/80 px-4 text-sm text-foreground placeholder:text-foreground/30 outline-none"
-                      inputMode="email"
-                      autoComplete="email"
-                    />
-                  </div>
-                </label>
+              {/* Feature pills row */}
+              <div className="flex items-center justify-around px-1">
+                <FeaturePill icon={<Trophy className="h-3 w-3 text-primary" />} label="Battle" />
+                <FeaturePill icon={<Sparkles className="h-3 w-3 text-cyan" />} label="Vote" />
+                <FeaturePill icon={<Crown className="h-3 w-3 text-primary" />} label="Earn" />
+              </div>
 
-                <button
-                  type="button"
-                  onClick={() => open("signup")}
-                  className="group relative w-full h-11 rounded-full bg-primary text-primary-foreground font-bold text-base tracking-wide uppercase transition-all duration-300 active:scale-[0.98] border border-primary hover:text-cyan hover:bg-primary/90"
-                  style={{
-                    boxShadow:
-                      "0 0 0 1px hsl(var(--primary) / 0.5), 0 0 18px hsl(var(--primary) / 0.45)",
-                  }}
-                >
-                  Sign Up
-                </button>
+              {/* Sign Up button (moved up) */}
+              <button
+                type="button"
+                onClick={() => open("signup")}
+                className="group relative w-full h-11 rounded-full bg-primary text-primary-foreground font-bold text-base tracking-wide uppercase transition-all duration-300 active:scale-[0.98] border border-primary hover:text-cyan hover:bg-primary/90"
+                style={{
+                  boxShadow:
+                    "0 0 0 1px hsl(var(--primary) / 0.5), 0 0 18px hsl(var(--primary) / 0.45)",
+                }}
+              >
+                Sign Up
+              </button>
+
+              {/* Email/Phone input (no external label, moved down) */}
+              <div
+                className="rounded-full p-[1px]"
+                style={{
+                  background:
+                    "linear-gradient(90deg, hsl(var(--primary) / 0.7), hsl(var(--cyan) / 0.7))",
+                }}
+              >
+                <input
+                  type="text"
+                  value={identity}
+                  onChange={(e) => setIdentity(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && open("signup")}
+                  placeholder="Email or phone"
+                  className="w-full h-10 rounded-full bg-background/80 px-4 text-sm text-foreground placeholder:text-foreground/40 outline-none text-center"
+                  inputMode="email"
+                  autoComplete="email"
+                />
               </div>
 
               {/* Bottom: log in link */}
