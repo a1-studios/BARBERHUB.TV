@@ -101,8 +101,10 @@ const LiveHub = () => {
   const nothingLive = liveBarbers.length === 0 && battles.length === 0;
 
   return (
+    <>
     <main className="min-h-screen bg-background pb-24">
       <Header />
+
 
 
 
