@@ -22,8 +22,23 @@ const LandingHero = ({ onStartSignup, onOpenArenaGate }: LandingHeroProps) => {
   const startSignup = () => (onStartSignup ?? onOpenArenaGate)?.();
 
   return (
-    <section className="relative min-h-[100svh] w-full flex items-center justify-center px-5 py-10 overflow-hidden bg-background">
-      <div className="relative w-full max-w-md mx-auto">
+    <section className="relative min-h-[100svh] w-full flex flex-col px-3 pt-2 pb-10 overflow-hidden bg-background">
+      {/* Signature Header — barber pole · BARBER-HUB · (spacer) */}
+      <header className="relative bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-2 border-primary/40 rounded-xl overflow-hidden mx-auto w-full max-w-md">
+        <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl z-0">
+          <div className="absolute w-32 h-32 bg-cyan-500/20 rounded-full blur-2xl animate-pulse" />
+        </div>
+        <div className="relative z-10 px-4 flex items-center justify-between h-12 md:h-14">
+          <img src={barberPole} alt="BARBER-HUB Logo" className="h-9 w-9 md:h-10 md:w-10" />
+          <span className="text-lg md:text-xl font-black tracking-[0.18em] uppercase">
+            <span className="text-white">BARBER</span>
+            <span className="text-primary">-HUB</span>
+          </span>
+          <div className="w-9" />
+        </div>
+      </header>
+
+      <div className="relative flex-1 flex items-center justify-center w-full max-w-md mx-auto pt-6">
         <div className="flex flex-col items-center gap-8 text-center">
           {/* Tagline */}
           <div className="space-y-3">
