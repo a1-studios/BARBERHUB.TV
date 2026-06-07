@@ -1,50 +1,25 @@
-## Goal
+## Simple OTP Auth + Post-Signup Profile Completion
 
-Stop the silent "Unauthorized" failures on the challenge edge functions, and make the floating Quick Actions menu visible on iPad and desktop (it currently exists only as a component and is never mounted anywhere).
+### What changes for the user
+- The landing page becomes a clean, minimal sign-up/sign-in screen. One field: email or phone. We send a 6-digit code. No "Spin to Win", no multi-step wizard.
+- Everyone starts as a Fan automatically.
+- After signing in, a small popup asks them to pick their role (Fan or Barber) and country. If they choose Barber, a phone number becomes required to activate the barber profile.
+- Everything is saved to the existing Supabase `profiles` table (and `barber_profiles` when applicable).
 
----
+### Files I will edit
+1. **`src/components/LandingHero.tsx`** — Remove the "Join & Get 15 BB" button that opens the spin wizard. Replace with a single primary CTA that opens the existing email/phone OTP modal (`AuthModalV2`). Keep the signature header, tagline, and stats.
+2. **`src/pages/Index.tsx`** — For guests, render just `<LandingHero />`. Remove the `showSpinWheel` state, the `check-gate-eligibility` effect, `handleSpinClose`, and the `<LaunchWizard>` render. Authed-user behavior unchanged.
+3. **`src/components/auth/ProfileCompletionGate.tsx`** — Make the phone field required when role is Barber. Update the placeholder and disable submit until it's filled. Fan path stays as-is.
 
-## 1. Fix challenge edge function auth (no more silent 2xx-from-client / 400-from-edge)
+### Database
+- `profiles` already stores `user_type` and `country_code`, and the `handle_new_user` trigger already defaults new users to `fan`. No schema changes needed unless `profiles.phone_number` is missing — if so, I'll add it with a tiny migration:
+  ```sql
+  ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone_number text;
+  ```
+- The existing `finalize-oauth-claim` edge function already writes role / country / phone and upgrades barbers — reused unchanged.
 
-**Root cause:** `supabase.functions.invoke('create-challenge-stake' | 'match-challenge-stake')` only attaches the user's JWT when `auth.getSession()` returns a valid, non-expired session. On stale tabs / signed-out users, the SDK sends only the anon key, the edge function calls `supabase.auth.getUser(token)` with the anon key, that fails, and the edge throws `Unauthorized` → caller sees a generic error. Logs confirm this: repeated `Error: Unauthorized at index.ts:27` and `index.ts:26`.
+### Out of scope
+- `LaunchWizard`, spin wheel, gate eligibility function — left in the repo, just no longer invoked from the landing page. Can be deleted in a follow-up if you want.
+- `AuthModalV2` already does email + phone OTP correctly — no edits.
 
-**Client-side hardening** — in every caller (`ChallengeModal.tsx`, `ChallengeFeed.tsx` QuickPresets + CustomForm, `IncomingChallengeTakeover.tsx`, `AcceptChallengeModal.tsx`):
-- Before `functions.invoke`, call `await supabase.auth.getSession()`. If no session: toast "Please sign in to issue/accept challenges" and abort.
-- Explicitly pass `headers: { Authorization: \`Bearer ${session.access_token}\` }` on the `invoke` call so the token is never silently dropped.
-
-**Edge function hardening** — in `create-challenge-stake/index.ts` and `match-challenge-stake/index.ts`:
-- Return a structured `401` with `{ error: 'Sign in required' }` instead of throwing (which currently returns `400`), so the client toast is accurate.
-- Log the raw `userError?.message` so future failures show *why* the JWT was rejected (expired vs malformed vs anon-key).
-
-No DB schema changes. No behavior changes for happy-path stake/match flows.
-
----
-
-## 2. Mount QuickActionsMenu on iPad + desktop
-
-`src/components/QuickActionsMenu.tsx` exists fully built (FAB at top-left, expanding action list) but is never imported. `BottomNavBar` is `lg:hidden` so >=1024px viewports have no quick nav.
-
-- Add `<QuickActionsMenu />` to `src/App.tsx` (inside the auth/router shell, alongside the existing global mounts) so it renders on every route.
-- Wrap it in `hidden md:block` so it appears on iPad (>=768px) and desktop, while the existing mobile `BottomNavBar` continues to own <768px.
-- No change to `FloatingActionButton`'s `fixed top-6 left-8 z-50` positioning — confirmed it doesn't collide with the existing `Header`.
-
----
-
-## Files touched
-
-```text
-src/App.tsx                                       (mount QuickActionsMenu, md+ only)
-src/components/QuickActionsMenu.tsx               (wrap root with hidden md:block)
-src/components/battles/ChallengeModal.tsx         (session guard + explicit Bearer)
-src/components/battles/ChallengeFeed.tsx          (session guard + explicit Bearer x2)
-src/components/battles/IncomingChallengeTakeover.tsx (session guard + explicit Bearer)
-src/components/battles/AcceptChallengeModal.tsx   (session guard + explicit Bearer)
-supabase/functions/create-challenge-stake/index.ts  (401 + better log on auth fail)
-supabase/functions/match-challenge-stake/index.ts   (401 + better log on auth fail)
-```
-
-## Out of scope
-
-- Refactoring the broader challenge/battle realtime flow (already addressed last loop).
-- Any DB migrations.
-- Changing the mobile BottomNavBar.
+Approve and I'll ship it.
