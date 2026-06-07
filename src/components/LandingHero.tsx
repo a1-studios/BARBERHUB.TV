@@ -179,4 +179,11 @@ const Stat = ({ value, label }: { value: string; label: string }) => (
   </div>
 );
 
+const FeaturePill = ({ icon, label }: { icon: React.ReactNode; label: string }) => (
+  <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-foreground/5 border border-foreground/10">
+    {icon}
+    <span className="text-[9px] font-semibold uppercase tracking-wider text-foreground/70">{label}</span>
+  </div>
+);
+
 export default LandingHero;
