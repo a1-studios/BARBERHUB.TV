@@ -165,6 +165,9 @@ export const BarberProfileCard = ({
     }
   };
 
+  // Hooks must run on every render — call BEFORE any early return.
+  const liveState = useBarberLiveState(userId);
+
   if (isLoading) {
     return (
       <Card className="animate-pulse">
@@ -180,8 +183,6 @@ export const BarberProfileCard = ({
       </Card>
     );
   }
-
-  const liveState = useBarberLiveState(userId);
 
   if (!barberProfile) return null;
 
