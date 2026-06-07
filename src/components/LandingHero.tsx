@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Sparkles, ArrowRight, Mail } from "lucide-react";
 import { AuthModalV2 } from "@/components/auth/AuthModalV2";
+import barberPole from "@/assets/barber-pole.png";
 
 interface LandingHeroProps {
   onStartSignup?: () => void;
