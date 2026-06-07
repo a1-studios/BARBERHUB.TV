@@ -216,15 +216,27 @@ export const ProfileCompletionGate = () => {
           }}
         >
           <div className="text-center space-y-1">
-            <div className="text-3xl">🎁</div>
+            <div className="text-3xl">{phase === 'intake' ? '🚀' : '🎁'}</div>
             <h2 className="text-xl font-black uppercase tracking-tight bg-gradient-to-r from-amber-300 via-orange-500 to-orange-600 bg-clip-text text-transparent">
-              Finish your profile
+              {phase === 'intake' ? 'Quick tour' : 'Finish your profile'}
             </h2>
             <p className="text-xs text-white/65 flex items-center justify-center gap-1.5">
               <Coins className="w-3.5 h-3.5 text-amber-300" />
-              Claim <span className="text-amber-300 font-bold">+15 BB</span> the moment you're set up.
+              {phase === 'intake'
+                ? <>Finish the tour to claim <span className="text-amber-300 font-bold">+15 BB</span>.</>
+                : <>Finish setup, then claim <span className="text-amber-300 font-bold">+15 BB</span>.</>}
             </p>
           </div>
+
+          {phase === 'intake' && role ? (
+            <IntakeWalkthrough
+              role={role}
+              onComplete={finishIntake}
+              onDismiss={canDismiss ? skipIntake : undefined}
+            />
+          ) : (
+          <>
+
 
           <div className="grid grid-cols-2 gap-2">
             {(['fan', 'barber'] as Role[]).map((r) => {
