@@ -37,8 +37,6 @@ interface State {
   country: string | null;
   phone: string;
   vipCode: string;
-  ticketCode: string | null;
-  tierColor: TierColor;
   isAuthed: boolean;
 }
 
