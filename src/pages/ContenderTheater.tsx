@@ -403,6 +403,7 @@ export default function ContenderTheater() {
           localReady={localReady}
           opponentReady={opponentReady}
           isOpponentPresent={isOpponentPresent}
+          localFacingMode={facingMode}
           className="w-full h-full"
         />
       </div>

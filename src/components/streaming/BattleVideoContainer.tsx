@@ -127,9 +127,9 @@ export const BattleVideoContainer = ({
           {/* Local Video - LARGE (70%) */}
           <div id="local-video-container" className="relative w-[70%] border-r border-white/10">
             {previewStream ? (
-              <StreamPreview stream={previewStream} className="w-full h-full" />
+              <StreamPreview stream={previewStream} className="w-full h-full" mirror={mirrorLocal} />
             ) : localTrack ? (
-              <VideoAttach track={localTrack} className="w-full h-full" muted />
+              <VideoAttach track={localTrack} className="w-full h-full" muted mirror={mirrorLocal} />
             ) : (
               <div className="w-full h-full bg-muted flex items-center justify-center">
                 <div className="text-center">
@@ -224,7 +224,7 @@ export const BattleVideoContainer = ({
           {/* Local Video - LARGE (70%) */}
           <div id="local-video-container" className="relative w-[70%] border-r border-white/10">
             {localTrack ? (
-              <VideoAttach track={localTrack} className="w-full h-full" muted />
+              <VideoAttach track={localTrack} className="w-full h-full" muted mirror={mirrorLocal} />
             ) : (
               <div className="w-full h-full bg-muted flex items-center justify-center">
                 {isConnecting ? (
@@ -314,7 +314,7 @@ export const BattleVideoContainer = ({
 
         <div className="absolute bottom-4 right-4 w-32 h-24 md:w-48 md:h-36 rounded-lg overflow-hidden border-2 border-primary shadow-lg">
           {localTrack ? (
-            <VideoAttach track={localTrack} className="w-full h-full" muted />
+            <VideoAttach track={localTrack} className="w-full h-full" muted mirror={mirrorLocal} />
           ) : (
             <div className="w-full h-full bg-muted flex items-center justify-center">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -336,7 +336,7 @@ export const BattleVideoContainer = ({
       <div className="flex flex-col md:flex-row h-full">
         <div id="local-video-container" className="relative w-full h-1/2 md:w-1/2 md:h-full border-b md:border-b-0 md:border-r border-white/10">
           {localTrack ? (
-            <VideoAttach track={localTrack} className="w-full h-full" muted />
+            <VideoAttach track={localTrack} className="w-full h-full" muted mirror={mirrorLocal} />
           ) : (
             <div className="w-full h-full bg-muted flex items-center justify-center">
               {isConnecting ? (
