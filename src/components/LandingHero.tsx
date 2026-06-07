@@ -30,7 +30,7 @@ const LandingHero = (_props: LandingHeroProps) => {
 
   return (
     <section
-      className="relative h-[100svh] w-full flex flex-col px-4 pt-2 overflow-hidden bg-background"
+      className="fixed inset-0 h-[100svh] w-full flex flex-col px-4 pt-2 overflow-hidden overscroll-none touch-none bg-background"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       {/* Signature Header (unchanged) */}
