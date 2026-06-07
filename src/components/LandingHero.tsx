@@ -92,20 +92,7 @@ const LandingHero = (_props: LandingHeroProps) => {
                 <FeaturePill icon={<Crown className="h-3 w-3 text-primary" />} label="Earn" />
               </div>
 
-              {/* Sign Up button (moved up) */}
-              <button
-                type="button"
-                onClick={() => open("signup")}
-                className="group relative w-full h-11 rounded-full bg-primary text-primary-foreground font-bold text-base tracking-wide uppercase transition-all duration-300 active:scale-[0.98] border border-primary hover:text-cyan hover:bg-primary/90"
-                style={{
-                  boxShadow:
-                    "0 0 0 1px hsl(var(--primary) / 0.5), 0 0 18px hsl(var(--primary) / 0.45)",
-                }}
-              >
-                Sign Up
-              </button>
-
-              {/* Email/Phone input (no external label, moved down) */}
+              {/* Email input */}
               <div
                 className="rounded-full p-[1px]"
                 style={{
@@ -114,27 +101,34 @@ const LandingHero = (_props: LandingHeroProps) => {
                 }}
               >
                 <input
-                  type="text"
+                  type="email"
                   value={identity}
                   onChange={(e) => setIdentity(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && open("signup")}
-                  placeholder="Email or phone"
+                  onKeyDown={(e) => e.key === "Enter" && identity.trim() && open("signin")}
+                  placeholder="Enter your email"
                   className="w-full h-10 rounded-full bg-background/80 px-4 text-sm text-foreground placeholder:text-foreground/40 outline-none text-center"
                   inputMode="email"
                   autoComplete="email"
                 />
               </div>
 
-              {/* Bottom: log in link */}
-              <p className="text-center text-xs text-foreground/60">
-                Already have an account?{" "}
-                <button
-                  type="button"
-                  onClick={() => open("signin")}
-                  className="text-cyan font-semibold hover:underline"
-                >
-                  Log In
-                </button>
+              {/* Sign In button — sends OTP */}
+              <button
+                type="button"
+                onClick={() => identity.trim() && open("signin")}
+                disabled={!identity.trim()}
+                className="group relative w-full h-11 rounded-full bg-primary text-primary-foreground font-bold text-base tracking-wide uppercase transition-all duration-300 active:scale-[0.98] border border-primary hover:text-cyan hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  boxShadow:
+                    "0 0 0 1px hsl(var(--primary) / 0.5), 0 0 18px hsl(var(--primary) / 0.45)",
+                }}
+              >
+                Sign In
+              </button>
+
+              {/* Helper text */}
+              <p className="text-center text-[10px] text-foreground/50 leading-tight">
+                We'll send a one-time code to your email
               </p>
             </div>
           </div>
