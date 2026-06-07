@@ -1,35 +1,40 @@
-## Goal
-Unblock `battles` UPDATEs so `match-challenge-stake` can seat `barber2_id` and the accepter lands in the contender room.
+# Camera Flip + Mirror Fix (Contender Theater)
 
-## Root cause
-Edge function logs show every accept failing with Postgres error `42P10`:
-> cannot update table "battles" — Column list used by the publication does not cover the replica identity.
+## Problem
+1. Local self-preview is rendered **un-mirrored** — front-camera footage looks "wrong" because users expect a mirror-like selfie view.
+2. The **flip camera** button (`SwitchCamera`) already exists in `ContenderControlBar`, but it's gated to `isPreviewPhase` only and is not obvious. Barbers can't toggle between front (selfie) and back (environment) cameras during Standby.
+3. Must not regress the working **Barber A → Barber B challenge/seating flow** (recent fix that resolves `barber_profiles.id` and seats `barber2_id` before marking the challenge completed, plus the realtime publication fix on `battles`).
 
-`public.battles` has `REPLICA IDENTITY FULL` but is added to publication `supabase_realtime` with an explicit column list. With FULL identity, Postgres requires the publication to cover **all** columns. New columns added to `battles` over time aren't in that column list, so every UPDATE (including `barber2_id`/`status`) is rejected at the storage layer — before RLS even runs. The service-role client in the edge function can't bypass this; it's not an auth issue.
+## Changes
 
-## RLS audit (no changes needed)
-- `battles` SELECT — `auth.uid() IS NOT NULL` ✅ accepter can read seated battle
-- `open_challenges` SELECT — allows `auth.uid() = accepted_by_id` ✅
-- `barber_profiles` SELECT — all authenticated users ✅
-- Mutations on `battles` go through edge function with service role, which is correct.
+### 1. `src/hooks/useLocalCameraPreview.tsx`
+- Already tracks `facingMode` ('user' | 'environment') and exposes `switchCamera`. No logic change needed — just confirm `facingMode` is exported (it is) so the UI can mirror conditionally.
 
-No RLS change required for the accept flow.
+### 2. `src/components/contender/ContenderVideoPreview.tsx`
+- Accept a new optional prop `facingMode: 'user' | 'environment'` (default `'user'`).
+- On the **local** `<video>` element only (the `isYourCamera` branch), apply `className` `scale-x-[-1]` when `facingMode === 'user'`, and remove it when `'environment'`. The opponent stream is never mirrored.
+- This gives the natural "mirror" selfie experience and shows the back camera in its true orientation.
 
-## Plan
-1. **Migration**: re-add `public.battles` to `supabase_realtime` without a column list so the publication automatically covers every column, satisfying `REPLICA IDENTITY FULL`.
-   ```sql
-   ALTER PUBLICATION supabase_realtime DROP TABLE public.battles;
-   ALTER PUBLICATION supabase_realtime ADD TABLE public.battles;
-   ```
-   This preserves realtime on `battles` (used by Contender Theater / tug-of-war) and clears the 42P10 block.
+### 3. `src/components/contender/ContenderControlBar.tsx`
+- Accept new prop `facingMode` (used for an aria-label/tooltip e.g. "Switch to back camera" / "Switch to front camera").
+- Loosen the flip gate from `isPreviewPhase && onSwitchCamera` to **`(isPreviewPhase || isStandbyPhase) && onSwitchCamera`**. Flip remains disabled once the battle is `live` to avoid disturbing the LiveKit publication mid-fight.
+- Keep the button styling consistent (white/20 ghost, w-12 h-12 mobile).
 
-2. **Verify**: after migration, re-run an accept from the preview (logged-in barber) and confirm:
-   - `match-challenge-stake` returns 200
-   - `battles.barber2_id` = acceptor's `barber_profiles.id`
-   - `battles.status = 'live'`
-   - Contender Theater loads without Access Denied
+### 4. `src/pages/ContenderTheater.tsx`
+- Pass `facingMode` from `useLocalCameraPreview` down into both `ContenderVideoPreview` (for mirror) and `ContenderControlBar` (for tooltip + correct gating).
+- **No changes** to:
+  - `barberPosition` resolution / acceptor fallback (`my-barber-profile` query)
+  - Access Denied gate logic
+  - `battle-contender` realtime subscription
+  - `match-challenge-stake` edge function or any seating logic.
 
-3. **No code changes** to `match-challenge-stake/index.ts` or `ContenderTheater.tsx` — the hardening from previous turns is correct; it was just hitting a storage-layer error masked as "battle wire-up failed".
+## Out of scope (do NOT touch)
+- `supabase/functions/match-challenge-stake/index.ts`
+- `supabase/functions/complete-open-challenge/index.ts`
+- RLS policies / `battles` publication migration
+- LiveKit token / publication wiring in `useBattleVideoRoom`
 
-## Files
-- New migration only. No app code changes.
+## Verification
+1. Open `/battle/:id/contender` as Barber A → preview shows mirrored selfie (text on shirt reversed, but feels natural). Toggle flip → back camera shows un-mirrored real-world view.
+2. Have Barber B accept the challenge → Barber A's screen seats B as opponent (existing fix unchanged), no "Access Denied".
+3. Flip remains available in Standby; hidden/disabled in Live.
