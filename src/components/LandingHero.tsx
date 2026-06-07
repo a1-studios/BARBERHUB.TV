@@ -51,7 +51,7 @@ const LandingHero = (_props: LandingHeroProps) => {
       {/* Main column */}
       <div className="flex-1 flex flex-col items-center justify-center w-full max-w-sm mx-auto gap-4 py-4 min-h-0">
         {/* Neon gradient-bordered auth box — 4:5 portrait ratio */}
-        <div className="w-[88%] max-w-[320px] relative" style={{ aspectRatio: "4 / 5" }}>
+        <div className="w-[88%] max-w-[360px] relative" style={{ aspectRatio: "4 / 5" }}>
           {/* Outer glow */}
           <div
             aria-hidden
@@ -69,19 +69,19 @@ const LandingHero = (_props: LandingHeroProps) => {
                 "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.3) 40%, hsl(var(--cyan) / 0.3) 60%, hsl(var(--cyan)) 100%)",
             }}
           >
-            <div className="relative h-full w-full rounded-[19px] bg-background/85 backdrop-blur-xl px-[min(4.5vw,1.25rem)] py-[min(5vw,1.25rem)] flex flex-col justify-between overflow-hidden">
+            <div className="relative h-full w-full rounded-[19px] bg-background/85 backdrop-blur-xl px-5 py-5 flex flex-col justify-between overflow-hidden">
               {/* Decorative corner icons */}
-              <Scissors aria-hidden className="absolute top-2 left-2 h-[min(3.5vw,14px)] w-[min(3.5vw,14px)] text-primary/40" />
-              <Crown aria-hidden className="absolute top-2 right-2 h-[min(3.5vw,14px)] w-[min(3.5vw,14px)] text-cyan/40" />
-              <Trophy aria-hidden className="absolute bottom-2 left-2 h-[min(3.5vw,14px)] w-[min(3.5vw,14px)] text-cyan/40" />
-              <Sparkles aria-hidden className="absolute bottom-2 right-2 h-[min(3.5vw,14px)] w-[min(3.5vw,14px)] text-primary/40" />
+              <Scissors aria-hidden className="absolute top-2 left-2 h-3.5 w-3.5 text-primary/40" />
+              <Crown aria-hidden className="absolute top-2 right-2 h-3.5 w-3.5 text-cyan/40" />
+              <Trophy aria-hidden className="absolute bottom-2 left-2 h-3.5 w-3.5 text-cyan/40" />
+              <Sparkles aria-hidden className="absolute bottom-2 right-2 h-3.5 w-3.5 text-primary/40" />
 
               {/* Top: icon row */}
-              <div className="flex items-center justify-center gap-[min(2vw,0.75rem)] pt-1">
+              <div className="flex items-center justify-center gap-3 pt-1">
                 <span className="h-px flex-1 bg-gradient-to-r from-transparent to-primary/40" />
-                <img src={barberPole} alt="" className="h-[min(6vw,26px)] w-[min(6vw,26px)] opacity-90" />
-                <Scissors className="h-[min(4.5vw,18px)] w-[min(4.5vw,18px)] text-primary" />
-                <Crown className="h-[min(4.5vw,18px)] w-[min(4.5vw,18px)] text-cyan" />
+                <img src={barberPole} alt="" className="h-6 w-6 opacity-90" />
+                <Scissors className="h-[18px] w-[18px] text-primary" />
+                <Crown className="h-[18px] w-[18px] text-cyan" />
                 <span className="h-px flex-1 bg-gradient-to-l from-transparent to-cyan/40" />
               </div>
 
