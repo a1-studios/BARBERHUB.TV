@@ -1,39 +1,35 @@
 ## Goal
-Fix the remaining case where a barber receives a challenge notification, taps Accept, and still lands on Access Denied in the contender room.
+Unblock `battles` UPDATEs so `match-challenge-stake` can seat `barber2_id` and the accepter lands in the contender room.
 
-## What I found
-- The app is currently using `match-challenge-stake`, not `complete-open-challenge`, for the accept action.
-- Recent accepted challenge rows are being marked `completed`, but their linked `battles` rows are still left with `barber2_id = null` and `status = 'upcoming'`.
-- In `match-challenge-stake`, the battle update result is not checked. If that write fails or no row is updated, the function still returns success and the UI navigates into the contender route.
-- `ContenderTheater` renders Access Denied as soon as `barberPosition` is still null, without waiting for the participant profile lookup to fully settle, so the acceptor has no protection against timing/race issues.
+## Root cause
+Edge function logs show every accept failing with Postgres error `42P10`:
+> cannot update table "battles" — Column list used by the publication does not cover the replica identity.
+
+`public.battles` has `REPLICA IDENTITY FULL` but is added to publication `supabase_realtime` with an explicit column list. With FULL identity, Postgres requires the publication to cover **all** columns. New columns added to `battles` over time aren't in that column list, so every UPDATE (including `barber2_id`/`status`) is rejected at the storage layer — before RLS even runs. The service-role client in the edge function can't bypass this; it's not an auth issue.
+
+## RLS audit (no changes needed)
+- `battles` SELECT — `auth.uid() IS NOT NULL` ✅ accepter can read seated battle
+- `open_challenges` SELECT — allows `auth.uid() = accepted_by_id` ✅
+- `barber_profiles` SELECT — all authenticated users ✅
+- Mutations on `battles` go through edge function with service role, which is correct.
+
+No RLS change required for the accept flow.
 
 ## Plan
-1. Harden the accept edge function
-- Update `supabase/functions/match-challenge-stake/index.ts` so it treats the `battles.update(...)` as mandatory, not best-effort.
-- Validate that the acceptor has a valid `barber_profiles.id` before updating the battle.
-- Check the `battles` update response and fail the function if `barber2_id`, `status`, or the row update does not succeed.
-- Return a clear error instead of navigating the barber into a broken battle.
+1. **Migration**: re-add `public.battles` to `supabase_realtime` without a column list so the publication automatically covers every column, satisfying `REPLICA IDENTITY FULL`.
+   ```sql
+   ALTER PUBLICATION supabase_realtime DROP TABLE public.battles;
+   ALTER PUBLICATION supabase_realtime ADD TABLE public.battles;
+   ```
+   This preserves realtime on `battles` (used by Contender Theater / tug-of-war) and clears the 42P10 block.
 
-2. Align access rules on accept
-- Add the same barber-role enforcement to `match-challenge-stake` that already exists in `complete-open-challenge`.
-- Prevent non-barber acceptors from entering a flow that cannot seat them into `battles.barber2_id` correctly.
+2. **Verify**: after migration, re-run an accept from the preview (logged-in barber) and confirm:
+   - `match-challenge-stake` returns 200
+   - `battles.barber2_id` = acceptor's `barber_profiles.id`
+   - `battles.status = 'live'`
+   - Contender Theater loads without Access Denied
 
-3. Make the contender gate race-safe
-- Update `src/pages/ContenderTheater.tsx` so it does not show Access Denied while the battle row and barber profile rows are still resolving.
-- Add a proper loading/holding state for the acceptor path.
-- Add a narrow acceptor fallback only after data has settled, so a valid participant is not denied because of query timing.
+3. **No code changes** to `match-challenge-stake/index.ts` or `ContenderTheater.tsx` — the hardening from previous turns is correct; it was just hitting a storage-layer error masked as "battle wire-up failed".
 
-4. Verify the full flow
-- Re-test the accept path from notification/takeover and modal accept into `/battle/:id/contender`.
-- Confirm the battle row is updated with the acceptor’s `barber_profiles.id` and that the acceptor is recognized as `barber2`.
-- Confirm the contender room no longer shows Access Denied for a valid acceptor.
-
-## Technical details
-- Files to update:
-  - `supabase/functions/match-challenge-stake/index.ts`
-  - `src/pages/ContenderTheater.tsx`
-- Likely validation points after the fix:
-  - `open_challenges.accepted_by_id` is set
-  - `battles.barber2_id` matches the acceptor’s `barber_profiles.id`
-  - `battles.status` is advanced as expected before navigation
-- Note: I could not complete a live browser end-to-end click test from the preview because the preview session is currently logged out; once implemented, I’ll validate with the logged-in flow.
+## Files
+- New migration only. No app code changes.
