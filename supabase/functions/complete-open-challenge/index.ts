@@ -82,13 +82,49 @@ serve(async (req) => {
       );
     }
 
-    console.log('Updating existing battle:', challenge.battle_id);
+    // Resolve (or create) accepter's barber_profiles.id — battles.barber2_id
+    // is a foreign key to barber_profiles.id, NOT auth.users.id. Writing the
+    // auth uid here caused ContenderTheater to show "Access Denied" because
+    // the participant lookup never matched.
+    let { data: accepterBarberProfile, error: accepterProfileLookupError } = await supabase
+      .from('barber_profiles')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (accepterProfileLookupError) {
+      console.error('Accepter barber profile lookup error:', accepterProfileLookupError);
+      return new Response(
+        JSON.stringify({ error: 'Could not prepare your barber profile' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    if (!accepterBarberProfile?.id) {
+      const { data: created, error: createErr } = await supabase
+        .from('barber_profiles')
+        .insert({ user_id: user.id, name: accepterUsername })
+        .select('id')
+        .single();
+      if (createErr || !created) {
+        console.error('Accepter barber profile create error:', createErr);
+        return new Response(
+          JSON.stringify({ error: 'Could not prepare your barber profile' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        );
+      }
+      accepterBarberProfile = created;
+    }
+
+    const accepterBarberProfileId = accepterBarberProfile.id;
+
+    console.log('Updating existing battle:', challenge.battle_id, 'with barber2_id:', accepterBarberProfileId);
 
     // Update existing battle with barber2 details and set battle_type to challenge
     const { data: battle, error: battleError } = await supabase
       .from('battles')
       .update({
-        barber2_id: user.id,
+        barber2_id: accepterBarberProfileId,
         barber_2_video_url: accepter_stream_url,
         barber2_youtube_video_id: accepter_youtube_video_id,
         status: 'voting',
