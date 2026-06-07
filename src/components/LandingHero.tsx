@@ -48,18 +48,9 @@ const LandingHero = (_props: LandingHeroProps) => {
       </header>
 
       {/* Main column */}
-      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-md mx-auto gap-5 py-4 min-h-0">
-        {/* Title */}
-        <h1 className="text-center text-3xl sm:text-4xl font-black uppercase tracking-tight leading-[1.05]">
-          <span className="text-primary">WHERE</span>{" "}
-          <span className="text-foreground">BARBER</span>
-          <br />
-          <span className="text-primary">BECOME</span>{" "}
-          <span className="text-foreground">LEGENDS</span>
-        </h1>
-
-        {/* Neon gradient-bordered auth box */}
-        <div className="w-full relative">
+      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-sm mx-auto gap-4 py-4 min-h-0">
+        {/* Neon gradient-bordered auth box — 1:1 ratio */}
+        <div className="w-full relative aspect-square">
           {/* Outer glow */}
           <div
             aria-hidden
@@ -71,13 +62,13 @@ const LandingHero = (_props: LandingHeroProps) => {
           />
           {/* Gradient border wrapper */}
           <div
-            className="relative rounded-[20px] p-[1.5px]"
+            className="relative h-full w-full rounded-[20px] p-[1.5px]"
             style={{
               background:
                 "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.3) 40%, hsl(var(--cyan) / 0.3) 60%, hsl(var(--cyan)) 100%)",
             }}
           >
-            <div className="rounded-[19px] bg-background/85 backdrop-blur-xl p-4 space-y-3">
+            <div className="h-full w-full rounded-[19px] bg-background/85 backdrop-blur-xl p-5 flex flex-col justify-center gap-4">
               <label className="block">
                 <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-foreground/70">
                   Email or Phone
@@ -103,7 +94,7 @@ const LandingHero = (_props: LandingHeroProps) => {
                 </div>
               </label>
 
-              {/* Sign Up button — orange edge, white text, flips to cyan on hover */}
+              {/* Sign Up button */}
               <button
                 type="button"
                 onClick={() => open("signup")}
@@ -117,7 +108,7 @@ const LandingHero = (_props: LandingHeroProps) => {
               </button>
 
               {/* Log In link */}
-              <p className="text-center text-xs text-foreground/60 pt-1">
+              <p className="text-center text-xs text-foreground/60">
                 Already have an account?{" "}
                 <button
                   type="button"
@@ -131,7 +122,16 @@ const LandingHero = (_props: LandingHeroProps) => {
           </div>
         </div>
 
-        {/* Slogan UNDER the box */}
+        {/* Title UNDER the box */}
+        <h1 className="text-center text-2xl sm:text-3xl font-black uppercase tracking-tight leading-[1.05]">
+          <span className="text-primary">WHERE</span>{" "}
+          <span className="text-foreground">BARBER</span>
+          <br />
+          <span className="text-primary">BECOME</span>{" "}
+          <span className="text-foreground">LEGENDS</span>
+        </h1>
+
+        {/* Slogan under the title */}
         <p className="text-center text-xs text-muted-foreground px-6 max-w-xs">
           Battle. Vote. Earn. The world's first barber competition platform.
         </p>
