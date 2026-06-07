@@ -50,8 +50,8 @@ const LandingHero = (_props: LandingHeroProps) => {
 
       {/* Main column */}
       <div className="flex-1 flex flex-col items-center justify-center w-full max-w-sm mx-auto gap-4 py-4 min-h-0">
-        {/* Neon gradient-bordered auth box — 1:1 ratio */}
-        <div className="w-full relative">
+        {/* Neon gradient-bordered auth box — 4:5 portrait ratio */}
+        <div className="w-[88%] max-w-[320px] relative" style={{ aspectRatio: "4 / 5" }}>
           {/* Outer glow */}
           <div
             aria-hidden
@@ -63,52 +63,68 @@ const LandingHero = (_props: LandingHeroProps) => {
           />
           {/* Gradient border wrapper */}
           <div
-            className="relative w-full rounded-[20px] p-[1.5px]"
+            className="relative h-full w-full rounded-[20px] p-[1.5px]"
             style={{
               background:
                 "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.3) 40%, hsl(var(--cyan) / 0.3) 60%, hsl(var(--cyan)) 100%)",
             }}
           >
-            <div className="w-full rounded-[19px] bg-background/85 backdrop-blur-xl p-5 flex flex-col justify-center gap-4">
-              <label className="block">
-                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-foreground/70">
-                  Email or Phone
-                </span>
-                {/* Input pill */}
-                <div
-                  className="mt-1.5 rounded-full p-[1px]"
+            <div className="relative h-full w-full rounded-[19px] bg-background/85 backdrop-blur-xl px-5 py-5 flex flex-col justify-between overflow-hidden">
+              {/* Decorative corner icons */}
+              <Scissors aria-hidden className="absolute top-2 left-2 h-4 w-4 text-primary/40" />
+              <Crown aria-hidden className="absolute top-2 right-2 h-4 w-4 text-cyan/40" />
+              <Trophy aria-hidden className="absolute bottom-2 left-2 h-4 w-4 text-cyan/40" />
+              <Sparkles aria-hidden className="absolute bottom-2 right-2 h-4 w-4 text-primary/40" />
+
+              {/* Top: icon row */}
+              <div className="flex items-center justify-center gap-3 pt-1">
+                <span className="h-px flex-1 bg-gradient-to-r from-transparent to-primary/40" />
+                <img src={barberPole} alt="" className="h-7 w-7 opacity-90" />
+                <Scissors className="h-5 w-5 text-primary" />
+                <Crown className="h-5 w-5 text-cyan" />
+                <span className="h-px flex-1 bg-gradient-to-l from-transparent to-cyan/40" />
+              </div>
+
+              {/* Middle: form */}
+              <div className="flex flex-col gap-3">
+                <label className="block">
+                  <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-foreground/70">
+                    Email or Phone
+                  </span>
+                  <div
+                    className="mt-1.5 rounded-full p-[1px]"
+                    style={{
+                      background:
+                        "linear-gradient(90deg, hsl(var(--primary) / 0.7), hsl(var(--cyan) / 0.7))",
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={identity}
+                      onChange={(e) => setIdentity(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && open("signup")}
+                      placeholder="you@example.com  or  +1 555…"
+                      className="w-full h-10 rounded-full bg-background/80 px-4 text-sm text-foreground placeholder:text-foreground/30 outline-none"
+                      inputMode="email"
+                      autoComplete="email"
+                    />
+                  </div>
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => open("signup")}
+                  className="group relative w-full h-11 rounded-full bg-primary text-primary-foreground font-bold text-base tracking-wide uppercase transition-all duration-300 active:scale-[0.98] border border-primary hover:text-cyan hover:bg-primary/90"
                   style={{
-                    background:
-                      "linear-gradient(90deg, hsl(var(--primary) / 0.7), hsl(var(--cyan) / 0.7))",
+                    boxShadow:
+                      "0 0 0 1px hsl(var(--primary) / 0.5), 0 0 18px hsl(var(--primary) / 0.45)",
                   }}
                 >
-                  <input
-                    type="text"
-                    value={identity}
-                    onChange={(e) => setIdentity(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && open("signup")}
-                    placeholder="you@example.com  or  +1 555…"
-                    className="w-full h-11 rounded-full bg-background/80 px-4 text-sm text-foreground placeholder:text-foreground/30 outline-none"
-                    inputMode="email"
-                    autoComplete="email"
-                  />
-                </div>
-              </label>
+                  Sign Up
+                </button>
+              </div>
 
-              {/* Sign Up button */}
-              <button
-                type="button"
-                onClick={() => open("signup")}
-                className="group relative w-full h-12 rounded-full bg-primary text-primary-foreground font-bold text-base tracking-wide uppercase transition-all duration-300 active:scale-[0.98] border border-primary hover:text-cyan hover:bg-primary/90"
-                style={{
-                  boxShadow:
-                    "0 0 0 1px hsl(var(--primary) / 0.5), 0 0 18px hsl(var(--primary) / 0.45)",
-                }}
-              >
-                Sign Up
-              </button>
-
-              {/* Log In link */}
+              {/* Bottom: log in link */}
               <p className="text-center text-xs text-foreground/60">
                 Already have an account?{" "}
                 <button
@@ -121,6 +137,7 @@ const LandingHero = (_props: LandingHeroProps) => {
               </p>
             </div>
           </div>
+        </div>
         </div>
 
         {/* Title UNDER the box */}
