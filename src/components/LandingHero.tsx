@@ -138,7 +138,6 @@ const LandingHero = (_props: LandingHeroProps) => {
             </div>
           </div>
         </div>
-        </div>
 
         {/* Title UNDER the box */}
         <h1 className="text-center text-2xl sm:text-3xl font-black uppercase tracking-tight leading-[1.05]">
