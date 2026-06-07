@@ -84,6 +84,22 @@ serve(async (req) => {
       throw new Error('You cannot accept your own challenge');
     }
 
+    // Only barbers can accept challenges — fans have no barber_profiles row
+    // and would end up with barber2_id=null, producing Access Denied downstream.
+    const { data: barberRoleRows } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'barber');
+    if (!barberRoleRows || barberRoleRows.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Only barbers can accept challenges.' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+      );
+    }
+
+
+
     // Enforce direct (targeted) challenges — only the named barber can accept.
     if (challenge.target_barber_id && challenge.target_barber_id !== user.id) {
       return new Response(
