@@ -54,6 +54,7 @@ export default function ContenderTheater() {
     toggleVideo: togglePreviewVideo,
     toggleAudio: togglePreviewAudio,
     switchCamera,
+    facingMode,
     startPreview,
     stopPreview,
     isPreviewActive,
