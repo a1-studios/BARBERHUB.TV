@@ -5899,6 +5899,16 @@ export type Database = {
           username: string
         }[]
       }
+      get_my_barber_financials: {
+        Args: never
+        Returns: {
+          payout_minimum_bb: number
+          stripe_connect_id: string
+          stripe_payout_enabled: boolean
+          total_earnings_bb: number
+          total_withdrawn_bb: number
+        }[]
+      }
       get_nationality_match_priority: {
         Args: { p_country1: string; p_country2: string }
         Returns: number
