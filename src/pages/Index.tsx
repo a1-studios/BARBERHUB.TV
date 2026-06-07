@@ -261,10 +261,15 @@ const Index = () => {
     );
   }
 
-  // 🔒 Velvet Rope — invite-only landing for unauthenticated visitors.
-  // Legacy public homepage (LandingHero, LaunchWizard, Spin CTA, etc.) is
-  // preserved verbatim below as a fallback. To revert, delete the next line.
-  if (!user) return <VelvetRopeLanding />;
+  // Guests → new mobile-first LandingHero with email OTP sign-in.
+  if (!user) {
+    return (
+      <>
+        <LandingHero onStartSignup={() => setShowSpinWheel(true)} />
+        {showSpinWheel && <LaunchWizard onClose={handleSpinClose} />}
+      </>
+    );
+  }
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-hidden">
