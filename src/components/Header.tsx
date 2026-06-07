@@ -366,12 +366,8 @@ const Header = () => {
       <LiveActivityPill />
     </header>
 
-    {/* Tiny social sign-in strip — outside the header box, just below it */}
-    <div className="fixed left-0 right-0 z-40 pointer-events-none top-[88px] sm:top-[104px]">
-      <div className="pointer-events-auto">
-        <QuickSocialSignIn />
-      </div>
-    </div>
+    {/* Social sign-in strip disabled — using email OTP only */}
+
     </>
   );
 };
