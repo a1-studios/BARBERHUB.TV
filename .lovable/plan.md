@@ -1,91 +1,65 @@
-# Landing Page Mobile Redesign — v2
+## Goal
 
-Redesign `src/components/LandingHero.tsx` only. Single 100svh viewport, zero scroll, native iOS feel. Match the reference image's neon dual-tone outlined boxes (orange→cyan gradient borders).
+When a new user confirms their email (or signs in for the first time), they should be:
+1. Forced into the role/country picker (today's `ProfileCompletionGate`) so it actually opens.
+2. Walked through the existing `HowItWorks` intake flow.
+3. Credited the **+15 BB welcome bonus only after they finish the intake**, with a celebration.
 
-## Layout (top → bottom, fits 390×694 with no scroll)
+Fans keep the "Watch first, decide later" soft dismiss; barbers stay hard-blocked by VIP.
 
-```text
-┌─────────────────────────────┐
-│  Signature Header (as-is)   │  unchanged
-│                             │
-│   WHERE BARBER              │  WHERE=orange, BARBER=white
-│   BECOME LEGENDS            │  BECOME=orange, LEGENDS=white
-│                             │
-│  ╔═══════════════════════╗  │  Neon gradient-bordered box
-│  ║ EMAIL OR PHONE        ║  │  (orange left → cyan right)
-│  ║ ┌───────────────────┐ ║  │  inner pill input
-│  ║ └───────────────────┘ ║  │
-│  ║                       ║  │
-│  ║ ┌───────────────────┐ ║  │  SIGN UP button
-│  ║ │     SIGN UP       │ ║  │  (orange-filled, white text)
-│  ║ └───────────────────┘ ║  │
-│  ║ Already a member?     ║  │  Log In link (cyan)
-│  ╚═══════════════════════╝  │
-│                             │
-│  Battle. Vote. Earn.        │  Slogan (UNDER the box)
-│  The world's first…         │
-│                             │
-│   50K+ • 180+ • $1M+        │  Stats (bottom)
-└─────────────────────────────┘
-```
+## Why the gate isn't opening today
 
-## Signature Header
-Keep current `<header>` block in LandingHero exactly as-is (barber pole + BARBER-HUB wordmark + cyan glow). No changes.
+`ProfileCompletionGate` checks `user` once on mount and on `user` change. After email confirmation the redirect lands on `/` before Supabase finishes hydrating the session, so `user` is briefly `null` and the profile query never runs — the modal never schedules its 800 ms auto-open. There is also no listener for `onAuthStateChange`, so a sign-in that happens after mount (magic link, OAuth callback, fresh confirmation) isn't picked up.
 
-## Title
-Replace current "where Barbers become legends" with two tight lines:
-- Line 1: `<span class="text-primary">WHERE</span> <span class="text-foreground">BARBER</span>`
-- Line 2: `<span class="text-primary">BECOME</span> <span class="text-foreground">LEGENDS</span>`
-- Uppercase, bold, tight tracking, ~text-4xl
+## Changes
 
-## Neon Gradient-Bordered Box (the reference)
+### 1. Make the gate reliably open after confirmation
+- In `src/components/auth/ProfileCompletionGate.tsx`:
+  - Replace the one-shot `useEffect([user])` with a small `useAuthReady` pattern: subscribe to `supabase.auth.onAuthStateChange` and re-run the `profiles` + `is_global_vip_mode` check on `SIGNED_IN`, `TOKEN_REFRESHED`, and `USER_UPDATED` events.
+  - Detect the email-confirmation handoff: if the URL has `?confirmed=1`, `#access_token=…`, or `type=signup` in the hash, force `setOpen(true)` after auth resolves and strip the param.
+  - Guard against StrictMode double-fire with a `mountedRef`.
 
-The reference shows a rounded box with a **bicolor neon outline**: orange glow on the left edge, cyan glow on the right edge, blending across the top/bottom. Recreate with a CSS gradient border:
+### 2. Add a two-step gate → intake flow
+- Introduce a local `phase` state in `ProfileCompletionGate`: `'collect' | 'intake' | 'done'`.
+- After the user submits role + country (and barber status + VIP if applicable):
+  - Call `finalize-oauth-claim` exactly as today.
+  - **Do not** call `claim_welcome_bonus` yet.
+  - Switch `phase` to `'intake'`.
+- Render a new `IntakeWalkthrough` overlay (see step 3) inside the same full-screen container so the user can't fall back to the app between steps.
 
-```tsx
-<div className="relative rounded-2xl p-[2px] bg-gradient-to-r from-primary via-primary/40 to-cyan">
-  <div className="rounded-2xl bg-background/80 backdrop-blur-xl p-5 space-y-4">
-    {/* inner content */}
-  </div>
-</div>
-```
+### 3. New `IntakeWalkthrough` component
+- Path: `src/components/onboarding/IntakeWalkthrough.tsx`.
+- Wraps the existing `HowItWorks` cards but adds:
+  - A small step counter / progress bar (`1 / N`).
+  - A `Next` / `Back` pager that advances through the role-specific cards (`barberFlow` for barbers, `fanFlow` for fans — pulled by lifting the arrays out of `HowItWorks.tsx` into a shared `onboardingSteps.ts`, or by re-exporting them).
+  - A final "Claim +15 BB" CTA on the last slide.
+- On final CTA:
+  - `await supabase.rpc('claim_welcome_bonus')` (already idempotent server-side).
+  - Mark `phase = 'done'`, invalidate the same React Query keys the current gate already invalidates (`profile-incomplete`, `profile`, `userRoles`, `header-profile`, `barber_bucks`, `barber_bucks_transactions`).
+  - Show a 1.5 s celebration burst (reuse `useCelebrationEffect` if present, otherwise a simple confetti motion div) then close.
 
-Add outer glow: `shadow-[0_0_24px_-4px_hsl(var(--primary)/0.5),0_0_24px_-4px_hsl(var(--cyan)/0.5)]`.
+### 4. Re-entry protection
+- Persist `phase` keyed by `user.id` in `localStorage` (e.g. `gate_phase:<uid>`) so a refresh mid-intake drops them back into the same step instead of skipping the bonus.
+- If `useProfileIncomplete` reports complete but `gate_phase` says `intake`, resume the walkthrough. If the bonus has already been credited (RPC returns `already_claimed`), just close silently.
 
-### Inside the box
-1. **Label** — small uppercase `EMAIL OR PHONE` (white/70, tracking-widest, text-[10px])
-2. **Input pill** — same gradient border treatment but thinner (`p-[1px]`), inner `bg-white/[0.03] rounded-full px-4 h-11 text-sm`. Single field, smart-detects email vs phone (AuthModalV2 already does this — we just open it with the typed value via `prefillIdentity`).
-3. **Sign Up button** — `h-12 rounded-full bg-primary text-white font-bold` with neon outline shadow. On hover/active: shadow intensifies (`shadow-[0_0_24px_hsl(var(--primary))]`), text flips to `text-cyan`.
-4. **Sign in link** — centered small text: "Already have an account? <span class="text-cyan">Log In</span>"
+### 5. Existing copy tweak
+- Update the gate header subtext to read "Finish setup, then claim **+15 BB**" so users know the reward is end-of-flow, not on first click.
+- Change the submit button label from "Claim +15 BB" to "Continue →" while in the `collect` phase; keep "Claim +15 BB" only on the intake's final step.
 
-## Slogan (moved BELOW the box)
+### 6. Dismissibility
+- Keep `canDismiss` (fans only) on the `collect` phase exactly as today.
+- During `intake` phase: fans can dismiss with "Finish later" (no bonus credited, gate will reappear on next gated route via existing `useProfileIncomplete` + the `gate_phase` flag).
+- Barbers stay hard-blocked throughout both phases.
 
-```tsx
-<p className="text-center text-xs text-muted-foreground px-6">
-  Battle. Vote. Earn. The world's first barber competition platform.
-</p>
-```
+## Files touched
 
-## Stats row stays at bottom, compact (text-xs), border-top removed for cleaner look.
+- `src/components/auth/ProfileCompletionGate.tsx` — auth-ready listener, two-phase state, render `IntakeWalkthrough`, move bonus claim to end.
+- `src/components/onboarding/IntakeWalkthrough.tsx` — new, role-aware step pager + final claim CTA.
+- `src/components/onboarding/HowItWorks.tsx` — extract `barberFlow` / `fanFlow` arrays into a shared module (or export them) so the walkthrough reuses the same content.
+- No DB migration. `claim_welcome_bonus` and `finalize-oauth-claim` are already in place.
 
-## Behavior
+## Out of scope
 
-- Clicking "Sign Up" or pressing Enter in the input → `setMode('signup')` and `setAuthOpen(true)`, passing the input value as `prefillIdentity` to `AuthModalV2` (AuthModalV2 already supports this prop).
-- Clicking "Log In" → `setMode('signin')` and open modal.
-- All OTP flow stays in `AuthModalV2` — no logic changes there.
-
-## Files Touched
-
-| # | File | Change |
-|---|------|--------|
-| 1 | `src/components/LandingHero.tsx` | Layout rewrite: new title, gradient-bordered box, slogan-under-box, neon buttons |
-
-No other files. No new components, no new deps, no logic changes elsewhere.
-
-## Technical Notes
-
-- All colors via semantic tokens: `hsl(var(--primary))` for orange, `hsl(var(--cyan))` for cyan, `hsl(var(--foreground))` for white, `hsl(var(--background))` for deep black
-- `min-h-[100svh]` + `overflow-hidden` on root; use `flex-col` with `gap` not absolute positioning
-- `pb-[env(safe-area-inset-bottom)]` on root for iOS notch
-- Gradient border technique: outer wrapper with `bg-gradient-to-r` + padding, inner wrapper with `bg-background`
-- All buttons get `transition-all duration-300` for smooth neon ramp on hover/active
+- Changing the visual design of the existing gate beyond the copy tweaks above.
+- Touching the Path-to-Victory 7-step ceremony — user explicitly picked HowItWorks.
+- Any changes to barber VIP / invite-code logic.
