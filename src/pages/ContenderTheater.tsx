@@ -309,7 +309,11 @@ export default function ContenderTheater() {
   const handleToggleVideo = phase === 'live' ? toggleVideo : togglePreviewVideo;
   const handleToggleAudio = phase === 'live' ? toggleAudio : togglePreviewAudio;
 
-  if (battleLoading) {
+  // Wait for all participant data to settle before deciding access.
+  const participantQueriesPending =
+    battleLoading || barberProfilesLoading || myBarberLoading || !barberProfilesFetched;
+
+  if (battleLoading || (!barberPosition && participantQueriesPending)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Skeleton className="w-full max-w-6xl aspect-video" />
@@ -330,6 +334,7 @@ export default function ContenderTheater() {
       </div>
     );
   }
+
 
   // Show error if camera permission denied
   if (previewError) {
