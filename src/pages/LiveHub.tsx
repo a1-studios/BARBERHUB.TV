@@ -228,6 +228,8 @@ const LiveHub = () => {
         </section>
       )}
     </main>
+    <BottomNavBar />
+    </>
   );
 };
 
