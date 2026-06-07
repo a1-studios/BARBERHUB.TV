@@ -54,6 +54,7 @@ export default function ContenderTheater() {
     toggleVideo: togglePreviewVideo,
     toggleAudio: togglePreviewAudio,
     switchCamera,
+    facingMode,
     startPreview,
     stopPreview,
     isPreviewActive,
@@ -403,6 +404,7 @@ export default function ContenderTheater() {
           localReady={localReady}
           opponentReady={opponentReady}
           isOpponentPresent={isOpponentPresent}
+          localFacingMode={facingMode}
           className="w-full h-full"
         />
       </div>

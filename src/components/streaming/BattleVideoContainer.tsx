@@ -8,10 +8,11 @@ interface VideoAttachProps {
   track: AttachableTrack | null;
   className?: string;
   muted?: boolean;
+  mirror?: boolean;
 }
 
 // Component to attach a video track to a DOM element
-const VideoAttach = memo(({ track, className, muted = false }: VideoAttachProps) => {
+const VideoAttach = memo(({ track, className, muted = false, mirror = false }: VideoAttachProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -21,6 +22,7 @@ const VideoAttach = memo(({ track, className, muted = false }: VideoAttachProps)
     element.style.width = '100%';
     element.style.height = '100%';
     element.style.objectFit = 'cover';
+    element.style.transform = mirror ? 'scaleX(-1)' : '';
     if (muted) {
       element.muted = true;
     }
@@ -30,7 +32,7 @@ const VideoAttach = memo(({ track, className, muted = false }: VideoAttachProps)
     return () => {
       track.detach().forEach(el => el.remove());
     };
-  }, [track, muted]);
+  }, [track, muted, mirror]);
 
   return <div ref={containerRef} className={className} />;
 });
@@ -42,9 +44,10 @@ interface StreamPreviewProps {
   stream: MediaStream | null;
   className?: string;
   muted?: boolean;
+  mirror?: boolean;
 }
 
-const StreamPreview = memo(({ stream, className, muted = true }: StreamPreviewProps) => {
+const StreamPreview = memo(({ stream, className, muted = true, mirror = false }: StreamPreviewProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -64,7 +67,7 @@ const StreamPreview = memo(({ stream, className, muted = true }: StreamPreviewPr
       autoPlay
       playsInline
       muted={muted}
-      className={cn("w-full h-full object-cover", className)}
+      className={cn("w-full h-full object-cover", mirror && "scale-x-[-1]", className)}
     />
   );
 });
@@ -90,6 +93,8 @@ interface BattleVideoContainerProps {
   localReady?: boolean;
   opponentReady?: boolean;
   isOpponentPresent?: boolean;
+  /** Camera the local user is using — mirrors local preview only for 'user' (front-facing) */
+  localFacingMode?: 'user' | 'environment';
 }
 
 export const BattleVideoContainer = ({
@@ -110,7 +115,9 @@ export const BattleVideoContainer = ({
   localReady = false,
   opponentReady = false,
   isOpponentPresent = false,
+  localFacingMode = 'user',
 }: BattleVideoContainerProps) => {
+  const mirrorLocal = localFacingMode === 'user';
   
   // Standby layout - preview phase with ready status badges
   if (layout === 'standby') {
@@ -120,9 +127,9 @@ export const BattleVideoContainer = ({
           {/* Local Video - LARGE (70%) */}
           <div id="local-video-container" className="relative w-[70%] border-r border-white/10">
             {previewStream ? (
-              <StreamPreview stream={previewStream} className="w-full h-full" />
+              <StreamPreview stream={previewStream} className="w-full h-full" mirror={mirrorLocal} />
             ) : localTrack ? (
-              <VideoAttach track={localTrack} className="w-full h-full" muted />
+              <VideoAttach track={localTrack} className="w-full h-full" muted mirror={mirrorLocal} />
             ) : (
               <div className="w-full h-full bg-muted flex items-center justify-center">
                 <div className="text-center">
@@ -217,7 +224,7 @@ export const BattleVideoContainer = ({
           {/* Local Video - LARGE (70%) */}
           <div id="local-video-container" className="relative w-[70%] border-r border-white/10">
             {localTrack ? (
-              <VideoAttach track={localTrack} className="w-full h-full" muted />
+              <VideoAttach track={localTrack} className="w-full h-full" muted mirror={mirrorLocal} />
             ) : (
               <div className="w-full h-full bg-muted flex items-center justify-center">
                 {isConnecting ? (
@@ -307,7 +314,7 @@ export const BattleVideoContainer = ({
 
         <div className="absolute bottom-4 right-4 w-32 h-24 md:w-48 md:h-36 rounded-lg overflow-hidden border-2 border-primary shadow-lg">
           {localTrack ? (
-            <VideoAttach track={localTrack} className="w-full h-full" muted />
+            <VideoAttach track={localTrack} className="w-full h-full" muted mirror={mirrorLocal} />
           ) : (
             <div className="w-full h-full bg-muted flex items-center justify-center">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -329,7 +336,7 @@ export const BattleVideoContainer = ({
       <div className="flex flex-col md:flex-row h-full">
         <div id="local-video-container" className="relative w-full h-1/2 md:w-1/2 md:h-full border-b md:border-b-0 md:border-r border-white/10">
           {localTrack ? (
-            <VideoAttach track={localTrack} className="w-full h-full" muted />
+            <VideoAttach track={localTrack} className="w-full h-full" muted mirror={mirrorLocal} />
           ) : (
             <div className="w-full h-full bg-muted flex items-center justify-center">
               {isConnecting ? (
