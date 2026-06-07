@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Mail } from "lucide-react";
 import { AuthModalV2 } from "@/components/auth/AuthModalV2";
 import barberPole from "@/assets/barber-pole.png";
 
@@ -13,6 +12,7 @@ const LandingHero = (_props: LandingHeroProps) => {
   const [searchParams] = useSearchParams();
   const [authOpen, setAuthOpen] = useState(false);
   const [mode, setMode] = useState<"signup" | "signin">("signup");
+  const [identity, setIdentity] = useState("");
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -28,81 +28,127 @@ const LandingHero = (_props: LandingHeroProps) => {
   };
 
   return (
-    <section className="relative min-h-[100svh] w-full flex flex-col px-3 pt-2 pb-10 overflow-hidden bg-background">
-      {/* Signature Header */}
-      <header className="relative bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-2 border-primary/40 rounded-xl overflow-hidden mx-auto w-full max-w-md">
+    <section
+      className="relative h-[100svh] w-full flex flex-col px-4 pt-2 overflow-hidden bg-background"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      {/* Signature Header (unchanged) */}
+      <header className="relative bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-2 border-primary/40 rounded-xl overflow-hidden mx-auto w-full max-w-md shrink-0">
         <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl z-0">
-          <div className="absolute w-32 h-32 bg-cyan-500/20 rounded-full blur-2xl animate-pulse" />
+          <div className="absolute w-32 h-32 bg-cyan/20 rounded-full blur-2xl animate-pulse" />
         </div>
         <div className="relative z-10 px-4 flex items-center justify-between h-12 md:h-14">
           <img src={barberPole} alt="BARBER-HUB Logo" className="h-9 w-9 md:h-10 md:w-10" />
           <span className="text-lg md:text-xl font-black tracking-[0.18em] uppercase">
-            <span className="text-white">BARBER</span>
+            <span className="text-foreground">BARBER</span>
             <span className="text-primary">-HUB</span>
           </span>
           <div className="w-9" />
         </div>
       </header>
 
-      <div className="relative flex-1 flex items-center justify-center w-full max-w-md mx-auto pt-6">
-        <div className="flex flex-col items-center gap-8 text-center w-full">
-          <div className="space-y-3">
-            <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight tracking-tight text-foreground">
-              where{" "}
-              <span className="bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent">
-                Barbers
-              </span>{" "}
-              become legends
-            </h1>
-            <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-              Battle. Vote. Earn. The world's first barber competition platform.
-            </p>
-          </div>
+      {/* Main column */}
+      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-md mx-auto gap-5 py-4 min-h-0">
+        {/* Title */}
+        <h1 className="text-center text-3xl sm:text-4xl font-black uppercase tracking-tight leading-[1.05]">
+          <span className="text-primary">WHERE</span>{" "}
+          <span className="text-foreground">BARBER</span>
+          <br />
+          <span className="text-primary">BECOME</span>{" "}
+          <span className="text-foreground">LEGENDS</span>
+        </h1>
 
-          {/* Simple auth card */}
-          <div className="w-full space-y-3">
-            <button
-              type="button"
-              onClick={() => open("signup")}
-              className="w-full h-14 rounded-[14px] font-bold text-base text-black flex items-center justify-center gap-2 transition-all active:scale-95 bg-gradient-to-r from-primary to-orange-400 shadow-[0_8px_24px_rgba(255,95,31,0.35)]"
-            >
-              <Mail className="w-5 h-5" />
-              Sign up — Get your code
-            </button>
+        {/* Neon gradient-bordered auth box */}
+        <div className="w-full relative">
+          {/* Outer glow */}
+          <div
+            aria-hidden
+            className="absolute -inset-2 rounded-[22px] opacity-60 blur-xl pointer-events-none"
+            style={{
+              background:
+                "linear-gradient(90deg, hsl(var(--primary) / 0.45), transparent 45%, transparent 55%, hsl(var(--cyan) / 0.45))",
+            }}
+          />
+          {/* Gradient border wrapper */}
+          <div
+            className="relative rounded-[20px] p-[1.5px]"
+            style={{
+              background:
+                "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.3) 40%, hsl(var(--cyan) / 0.3) 60%, hsl(var(--cyan)) 100%)",
+            }}
+          >
+            <div className="rounded-[19px] bg-background/85 backdrop-blur-xl p-4 space-y-3">
+              <label className="block">
+                <span className="text-[10px] font-bold tracking-[0.2em] uppercase text-foreground/70">
+                  Email or Phone
+                </span>
+                {/* Input pill */}
+                <div
+                  className="mt-1.5 rounded-full p-[1px]"
+                  style={{
+                    background:
+                      "linear-gradient(90deg, hsl(var(--primary) / 0.7), hsl(var(--cyan) / 0.7))",
+                  }}
+                >
+                  <input
+                    type="text"
+                    value={identity}
+                    onChange={(e) => setIdentity(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && open("signup")}
+                    placeholder="you@example.com  or  +1 555…"
+                    className="w-full h-11 rounded-full bg-background/80 px-4 text-sm text-foreground placeholder:text-foreground/30 outline-none"
+                    inputMode="email"
+                    autoComplete="email"
+                  />
+                </div>
+              </label>
 
-            <div className="flex items-center gap-3 my-1">
-              <div className="flex-1 h-px bg-white/10" />
-              <span className="text-[10px] uppercase tracking-widest text-white/40">
-                already a member?
-              </span>
-              <div className="flex-1 h-px bg-white/10" />
+              {/* Sign Up button — orange edge, white text, flips to cyan on hover */}
+              <button
+                type="button"
+                onClick={() => open("signup")}
+                className="group relative w-full h-12 rounded-full bg-primary text-primary-foreground font-bold text-base tracking-wide uppercase transition-all duration-300 active:scale-[0.98] border border-primary hover:text-cyan hover:bg-primary/90"
+                style={{
+                  boxShadow:
+                    "0 0 0 1px hsl(var(--primary) / 0.5), 0 0 18px hsl(var(--primary) / 0.45)",
+                }}
+              >
+                Sign Up
+              </button>
+
+              {/* Log In link */}
+              <p className="text-center text-xs text-foreground/60 pt-1">
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => open("signin")}
+                  className="text-cyan font-semibold hover:underline"
+                >
+                  Log In
+                </button>
+              </p>
             </div>
-
-            <button
-              type="button"
-              onClick={() => open("signin")}
-              className="w-full h-12 rounded-[12px] font-semibold text-sm text-white/90 flex items-center justify-center gap-2 transition-all active:scale-95"
-              style={{
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(255,255,255,0.14)",
-              }}
-            >
-              Sign in
-            </button>
-          </div>
-
-          <div className="grid grid-cols-3 w-full gap-2 pt-4 border-t border-white/10">
-            <Stat value="50K+" label="Barbers" />
-            <Stat value="180+" label="Countries" />
-            <Stat value="$1M+" label="Awarded" />
           </div>
         </div>
+
+        {/* Slogan UNDER the box */}
+        <p className="text-center text-xs text-muted-foreground px-6 max-w-xs">
+          Battle. Vote. Earn. The world's first barber competition platform.
+        </p>
+      </div>
+
+      {/* Stats bottom */}
+      <div className="shrink-0 grid grid-cols-3 w-full max-w-md mx-auto gap-2 pb-3">
+        <Stat value="50K+" label="Barbers" />
+        <Stat value="180+" label="Countries" />
+        <Stat value="$1M+" label="Awarded" />
       </div>
 
       <AuthModalV2
         open={authOpen}
         onClose={() => setAuthOpen(false)}
         mode={mode}
+        prefillIdentity={identity}
       />
     </section>
   );
@@ -110,8 +156,8 @@ const LandingHero = (_props: LandingHeroProps) => {
 
 const Stat = ({ value, label }: { value: string; label: string }) => (
   <div className="flex flex-col items-center">
-    <span className="text-lg font-extrabold text-foreground">{value}</span>
-    <span className="text-[10px] uppercase tracking-widest text-white/50">{label}</span>
+    <span className="text-base font-extrabold text-foreground">{value}</span>
+    <span className="text-[9px] uppercase tracking-widest text-foreground/50">{label}</span>
   </div>
 );
 
