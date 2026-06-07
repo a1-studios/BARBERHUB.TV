@@ -4,12 +4,9 @@ import { X } from 'lucide-react';
 import { StepRole } from './StepRole';
 import { StepAuth } from './StepIdentityHook';
 import { StepBucksReward } from './StepBucksReward';
-import { StepRaffleSpin } from './StepRaffleSpin';
-import { StepTicketReveal } from './StepTicketReveal';
 import { SegmentedProgress } from './SegmentedProgress';
 import { captureAttribution, getCountryFromUrl, getEmailFromUrl } from '@/lib/urlParams';
 import { supabase } from '@/integrations/supabase/client';
-import type { TierColor } from '@/components/ui/scroll-morph-hero';
 
 export type LaunchRole = 'barber' | 'fan';
 export type BarberStatus = 'licensed' | 'unlicensed' | 'student' | 'beginner' | 'aspiring';
@@ -18,7 +15,7 @@ interface LaunchWizardProps {
   onClose: () => void;
 }
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 3;
 
 const DirectionContext = createContext<1 | -1>(1);
 export const useStepDirection = () => useContext(DirectionContext);
@@ -40,8 +37,6 @@ interface State {
   country: string | null;
   phone: string;
   vipCode: string;
-  ticketCode: string | null;
-  tierColor: TierColor;
   isAuthed: boolean;
 }
 
@@ -74,8 +69,6 @@ export const LaunchWizard = ({ onClose }: LaunchWizardProps) => {
     country: pending.country ?? getCountryFromUrl() ?? null,
     phone: pending.phone ?? '',
     vipCode: pending.vipCode ?? '',
-    ticketCode: null,
-    tierColor: 'white',
     isAuthed: false,
   });
 
@@ -185,28 +178,7 @@ export const LaunchWizard = ({ onClose }: LaunchWizardProps) => {
               {step === 3 && (
                 <StepBucksReward
                   key="step-bucks"
-                  onContinue={goNext}
-                />
-              )}
-
-              {step === 4 && (
-                <StepRaffleSpin
-                  key="step-spin"
-                  email={state.email}
-                  onResult={({ ticket_code, tier_color }) => {
-                    update({ ticketCode: ticket_code, tierColor: tier_color });
-                    goNext();
-                  }}
-                  onBack={goBack}
-                />
-              )}
-
-              {step === 5 && state.ticketCode && (
-                <StepTicketReveal
-                  key="step-reveal"
-                  ticketCode={state.ticketCode}
-                  tierColor={state.tierColor}
-                  onClose={handleClose}
+                  onContinue={handleClose}
                 />
               )}
             </AnimatePresence>

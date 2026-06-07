@@ -8,6 +8,8 @@ import { LiveAvatar } from '@/components/barber/LiveAvatar';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Radio, Swords, Users } from 'lucide-react';
+import Header from '@/components/Header';
+import { BottomNavBar } from '@/components/BottomNavBar';
 
 interface BattleRow {
   id: string;
@@ -99,7 +101,11 @@ const LiveHub = () => {
   const nothingLive = liveBarbers.length === 0 && battles.length === 0;
 
   return (
+    <>
     <main className="min-h-screen bg-background pb-24">
+      <Header />
+
+
 
 
       {nothingLive && (
@@ -224,6 +230,8 @@ const LiveHub = () => {
         </section>
       )}
     </main>
+    <BottomNavBar />
+    </>
   );
 };
 
