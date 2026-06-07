@@ -76,10 +76,12 @@ export const ProfileCompletionGate = () => {
 
   if (!user || !open) return null;
 
-  const barberReady = role === 'barber' && !!status && (!vipMode || vipCode.trim().length > 0);
+  const barberReady =
+    role === 'barber' && !!status && phone.trim().length >= 5 && (!vipMode || vipCode.trim().length > 0);
   const fanReady = role === 'fan';
   const ready = !!country && (barberReady || fanReady);
   const canDismiss = role !== 'barber'; // barbers must satisfy VIP gate, no escape hatch
+
 
   const submit = async () => {
     if (!ready || !role) return;
@@ -254,14 +256,15 @@ export const ProfileCompletionGate = () => {
               <input
                 type="tel"
                 inputMode="tel"
-                placeholder="Phone (optional)"
+                placeholder={role === 'barber' ? 'Phone (required for barbers)' : 'Phone (optional)'}
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 maxLength={40}
                 className="w-full h-11 pl-9 pr-3 rounded-[12px] bg-black/40 text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-orange-500/60"
-                style={{ border: '1px solid hsla(20,100%,56%,0.25)' }}
+                style={{ border: `1px solid ${role === 'barber' ? 'hsla(20,100%,56%,0.5)' : 'hsla(20,100%,56%,0.25)'}` }}
               />
             </div>
+
           </div>
 
           {error && <p className="text-xs text-red-400 text-center">{error}</p>}

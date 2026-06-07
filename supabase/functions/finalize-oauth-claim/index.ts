@@ -86,12 +86,16 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 1. Update country_code + sub_category on profiles up front
+    // 1. Update country_code + sub_category + phone on profiles up front
     const profileUpdate: Record<string, unknown> = { country_code };
+    if (phone_number && phone_number.trim()) {
+      profileUpdate.phone_number = phone_number.trim();
+    }
     if (role === 'barber' && barber_status) {
       profileUpdate.sub_category = STATUS_TO_SUB_CATEGORY[barber_status] ?? barber_status;
     }
     await admin.from('profiles').update(profileUpdate).eq('user_id', user.id);
+
 
     // 2. Enforce binary role — skip the sync RPC if user is already in this role
     const { data: currentProfile } = await admin
