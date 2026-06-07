@@ -15,7 +15,7 @@ interface LaunchWizardProps {
   onClose: () => void;
 }
 
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 3;
 
 const DirectionContext = createContext<1 | -1>(1);
 export const useStepDirection = () => useContext(DirectionContext);
