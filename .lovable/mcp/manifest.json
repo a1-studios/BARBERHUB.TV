@@ -1,0 +1,199 @@
+{
+  "version": 1,
+  "sdk_version": "0.24.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://msuepyfssovvkjzpfjzu.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "barberhub-mcp",
+      "version": "0.1.0",
+      "title": "BARBER-HUB"
+    },
+    "tools": [
+      {
+        "name": "get_my_profile",
+        "title": "Get my BARBER-HUB profile",
+        "description": "Return the signed-in user's BARBER-HUB profile: username, display name, country, roles (fan/barber), Barber Bucks balance, and barber profile details when they are a barber.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_barbers",
+        "title": "Search barbers",
+        "description": "Search the BARBER-HUB barber directory by name, nickname, specialty, city or country. Returns public barber profile details including rating, experience, location and live status.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "maxLength": 120,
+              "description": "Free-text match against barber name, nickname or specialty."
+            },
+            "country_code": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2,
+              "description": "ISO-2 country code filter, e.g. US."
+            },
+            "live_only": {
+              "type": "boolean",
+              "description": "Only return barbers currently live streaming."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_battles",
+        "title": "List battles",
+        "description": "List BARBER-HUB battles with their status, category, prize pool and schedule. Use status to narrow to live, upcoming, voting or completed battles.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "maxLength": 30,
+              "description": "Filter by battle status, e.g. live, upcoming, voting, completed."
+            },
+            "category": {
+              "type": "string",
+              "maxLength": 60,
+              "description": "Filter by battle category."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_open_challenges",
+        "title": "List open challenges",
+        "description": "List BARBER-HUB open challenges — barber-vs-barber callouts with Barber Bucks stakes, pot totals and acceptance status.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "maxLength": 30,
+              "description": "Filter by challenge status, e.g. open, accepted, completed."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 10
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_my_notifications",
+        "title": "List my notifications",
+        "description": "List the signed-in user's BARBER-HUB notifications, newest first. Optionally return only unread ones.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "unread_only": {
+              "type": "boolean",
+              "description": "Only return unread notifications."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "mark_notifications_read",
+        "title": "Mark notifications read",
+        "description": "Mark one or more of the signed-in user's BARBER-HUB notifications as read.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "notification_ids": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "minItems": 1,
+              "maxItems": 50,
+              "description": "IDs of notifications to mark as read."
+            }
+          },
+          "required": [
+            "notification_ids"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

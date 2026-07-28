@@ -29,6 +29,8 @@ import PaymentCanceled from "./pages/PaymentCanceled";
 import Grants from "./pages/Grants";
 import CreatorHub from "./pages/CreatorHub";
 import NotFound from "./pages/NotFound";
+import OAuthConsent from "./pages/OAuthConsent";
+
 import WatchFeed from "./pages/WatchFeed";
 import LiveHub from "./pages/LiveHub";
 import BarberPublicProfile from "./pages/BarberPublicProfile";
@@ -275,6 +277,8 @@ const AppContent = () => {
             />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/aup" element={<AUP />} />
