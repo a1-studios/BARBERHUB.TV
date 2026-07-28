@@ -29,6 +29,8 @@ import PaymentCanceled from "./pages/PaymentCanceled";
 import Grants from "./pages/Grants";
 import CreatorHub from "./pages/CreatorHub";
 import NotFound from "./pages/NotFound";
+import OAuthConsent from "./pages/OAuthConsent";
+
 import WatchFeed from "./pages/WatchFeed";
 import LiveHub from "./pages/LiveHub";
 import BarberPublicProfile from "./pages/BarberPublicProfile";
