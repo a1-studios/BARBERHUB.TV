@@ -5602,6 +5602,17 @@ export type Database = {
       }
     }
     Functions: {
+      adjust_barber_bucks: {
+        Args: {
+          p_amount: number
+          p_description?: string
+          p_reference_id?: string
+          p_stripe_payment_id?: string
+          p_transaction_type: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       assign_social_auth_role: {
         Args: { p_role: string; p_user_id: string }
         Returns: undefined
