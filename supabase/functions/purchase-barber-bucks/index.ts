@@ -77,37 +77,32 @@ serve(async (req) => {
           // Calculate total BB with bonus
           const totalBB = bbPackage.bb + bbPackage.bonus;
 
-          // Get current balance
-          const { data: currentBalance } = await supabase
-            .rpc("get_barber_bucks_balance", { user_uuid: userId });
+          // Atomic credit, idempotent on the Stripe payment intent so webhook
+          // retries can never credit the same payment twice.
+          const { data: adjust, error: adjustError } = await supabase.rpc("adjust_barber_bucks", {
+            p_user_id: userId,
+            p_amount: totalBB,
+            p_transaction_type: "purchase",
+            p_description: `Purchased ${bbPackage.display}${tierName ? ` (${tierName} discount)` : ""}`,
+            p_stripe_payment_id: session.payment_intent as string,
+          });
 
-          const newBalance = (currentBalance || 0) + totalBB;
-
-          // Record transaction
-          const { error: txError } = await supabase
-            .from("barber_bucks_transactions")
-            .insert({
-              user_id: userId,
-              amount: totalBB,
-              transaction_type: "purchase",
-              description: `Purchased ${bbPackage.display}${tierName ? ` (${tierName} discount)` : ""}`,
-              stripe_payment_id: session.payment_intent as string,
-              balance_after: newBalance,
-            });
-
-          if (txError) {
-            console.error("Error recording transaction:", txError);
+          if (adjustError || !adjust?.ok) {
+            console.error("Error crediting Barber Bucks:", adjustError ?? adjust);
             return new Response(JSON.stringify({ error: "Transaction failed" }), {
               status: 500,
               headers: corsHeaders,
             });
           }
 
-          // Update profile balance
-          await supabase
-            .from("profiles")
-            .update({ barber_bucks: newBalance })
-            .eq("user_id", userId);
+          if (adjust.duplicate) {
+            console.log(`Duplicate Stripe webhook for ${session.payment_intent}, skipping credit`);
+            return new Response(JSON.stringify({ received: true, duplicate: true }), {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+
+          const newBalance = adjust.balance as number;
 
           // Create notification
           await supabase.from("notifications").insert({
@@ -119,6 +114,7 @@ serve(async (req) => {
           });
 
           console.log(`BB purchase completed for user ${userId}: ${totalBB} BB`);
+
         }
       }
 
