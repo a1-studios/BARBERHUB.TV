@@ -34,8 +34,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const pendingRole = localStorage.getItem('pending_social_role');
           if (pendingRole && (pendingRole === 'barber' || pendingRole === 'fan')) {
             localStorage.removeItem('pending_social_role');
-            // Use setTimeout to avoid blocking the auth state change
-            setTimeout(async () => {
+            // Fire-and-forget without blocking the auth state change
+            void (async () => {
               const { error } = await supabase.rpc('assign_social_auth_role', {
                 p_user_id: session.user.id,
                 p_role: pendingRole,
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               if (error) {
                 console.error('Role assignment error:', error);
               }
-            }, 0);
+            })();
           }
         }
       }
