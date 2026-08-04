@@ -46,36 +46,25 @@ Deno.serve(async (req) => {
 
     const { user_id, amount, reason, notes }: AwardRequest = await req.json();
 
-    // Get current balance
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('barber_bucks')
-      .eq('user_id', user_id)
-      .single();
+    // Atomic balance adjustment (row-locked, records the transaction)
+    const { data: adjust, error: adjustError } = await supabase.rpc('adjust_barber_bucks', {
+      p_user_id: user_id,
+      p_amount: amount,
+      p_transaction_type: 'admin_adjustment',
+      p_description: `${reason}${notes ? `: ${notes}` : ''}`,
+    });
 
-    const currentBalance = profile?.barber_bucks || 0;
-    const newBalance = currentBalance + amount;
+    if (adjustError) throw adjustError;
+    if (!adjust?.ok) {
+      return new Response(
+        JSON.stringify(adjust ?? { error: 'balance_adjustment_failed' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    // Update user's balance
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ barber_bucks: newBalance })
-      .eq('user_id', user_id);
+    const newBalance = adjust.balance as number;
+    const currentBalance = adjust.previous_balance as number;
 
-    if (updateError) throw updateError;
-
-    // Create transaction record
-    const { error: transactionError } = await supabase
-      .from('barber_bucks_transactions')
-      .insert({
-        user_id,
-        amount,
-        balance_after: newBalance,
-        transaction_type: 'admin_adjustment',
-        description: `${reason}${notes ? `: ${notes}` : ''}`
-      });
-
-    if (transactionError) throw transactionError;
 
     // Create notification for user
     await supabase.from('notifications').insert({
