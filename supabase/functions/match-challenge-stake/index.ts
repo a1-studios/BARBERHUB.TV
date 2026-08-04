@@ -1,8 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// 🔴 DEV BYPASS — set to false before going live
-const DEV_BYPASS = true;
+// Subscription paywall bypass — must stay false in production.
+const DEV_BYPASS = false;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -145,34 +145,32 @@ serve(async (req) => {
     const currentBalance = profile.barber_bucks || 0;
     let newBalance = currentBalance;
 
-    // Balance check + escrow only when there's an actual stake to match
+    // Balance check + escrow only when there's an actual stake to match.
+    // Atomic: the RPC locks the profile row, so two concurrent accepts cannot
+    // both spend the same Barber Bucks.
     if (!isFreeChallenge) {
-      if (currentBalance < stakeToMatch) {
-        throw new Error(`Insufficient Barber Bucks. You need ${stakeToMatch} BB to match this challenge but have ${currentBalance} BB.`);
-      }
+      const { data: escrow, error: escrowError } = await supabase.rpc('adjust_barber_bucks', {
+        p_user_id: user.id,
+        p_amount: -stakeToMatch,
+        p_transaction_type: 'challenge_stake_escrow',
+        p_description: `Matched challenge stake: "${challenge.title}"`,
+        p_reference_id: challenge_id,
+      });
 
-      newBalance = currentBalance - stakeToMatch;
-      const { error: deductError } = await supabase
-        .from('profiles')
-        .update({ barber_bucks: newBalance })
-        .eq('user_id', user.id);
-
-      if (deductError) {
+      if (escrowError) {
         throw new Error('Failed to deduct stake');
       }
 
-      // Record escrow transaction
-      await supabase
-        .from('barber_bucks_transactions')
-        .insert({
-          user_id: user.id,
-          amount: -stakeToMatch,
-          balance_after: newBalance,
-          transaction_type: 'challenge_stake_escrow',
-          description: `Matched challenge stake: "${challenge.title}"`,
-          reference_id: challenge_id
-        });
+      if (!escrow?.ok) {
+        if (escrow?.error === 'insufficient_funds') {
+          throw new Error(`Insufficient Barber Bucks. You need ${stakeToMatch} BB to match this challenge but have ${escrow.balance} BB.`);
+        }
+        throw new Error('Failed to deduct stake');
+      }
+
+      newBalance = escrow.balance as number;
     }
+
 
     // Pot total = challenger stake + acceptor stake + any donations already received
     const totalPot = (challenge.pot_total || 0) + stakeToMatch;
@@ -197,13 +195,16 @@ serve(async (req) => {
         .eq('id', existingPool.id);
     }
 
-    // Helper to roll back the stake escrow if anything below fails.
+    // Compensating refund if anything below fails (atomic, never an absolute overwrite).
     const rollbackStake = async () => {
       if (isFreeChallenge) return;
-      await supabase
-        .from('profiles')
-        .update({ barber_bucks: currentBalance })
-        .eq('user_id', user.id);
+      await supabase.rpc('adjust_barber_bucks', {
+        p_user_id: user.id,
+        p_amount: stakeToMatch,
+        p_transaction_type: 'challenge_stake_refund',
+        p_description: `Refund: could not seat challenge "${challenge.title}"`,
+        p_reference_id: challenge_id,
+      });
     };
 
     if (!challenge.battle_id) {

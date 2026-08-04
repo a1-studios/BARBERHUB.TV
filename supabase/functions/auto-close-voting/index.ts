@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isAuthorizedCron } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,6 +11,15 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // Machine-invoked only: requires the shared CRON_SECRET.
+  if (!(await isAuthorizedCron(req))) {
+    return new Response(JSON.stringify({ error: 'Unauthorized', code: 'unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
 
   try {
     console.log('[AUTO-CLOSE-VOTING] Function started');
@@ -127,31 +137,18 @@ serve(async (req) => {
               const platformFee = Math.floor(potTotal * 0.02);
               const winnerPayout = potTotal - m4mFee - platformFee;
 
-              // Get winner balance
-              const { data: winnerProfile } = await supabaseClient
-                .from('profiles')
-                .select('barber_bucks')
-                .eq('user_id', winnerId)
-                .single();
+              // Atomic payout (row-locked, records the transaction)
+              const { data: payout } = await supabaseClient.rpc('adjust_barber_bucks', {
+                p_user_id: winnerId,
+                p_amount: winnerPayout,
+                p_transaction_type: 'challenge_win',
+                p_description: `Won "${battle.title}" - Pot: ${potTotal} BB`,
+                p_reference_id: battle.id,
+              });
 
-              if (winnerProfile) {
-                const newBalance = (winnerProfile.barber_bucks || 0) + winnerPayout;
+              if (payout?.ok) {
+                const newBalance = payout.balance as number;
 
-                await supabaseClient
-                  .from('profiles')
-                  .update({ barber_bucks: newBalance })
-                  .eq('user_id', winnerId);
-
-                await supabaseClient
-                  .from('barber_bucks_transactions')
-                  .insert({
-                    user_id: winnerId,
-                    amount: winnerPayout,
-                    balance_after: newBalance,
-                    transaction_type: 'challenge_win',
-                    description: `Won "${battle.title}" - Pot: ${potTotal} BB`,
-                    reference_id: battle.id
-                  });
 
                 // M4M fund deposit
                 if (m4mFee > 0) {

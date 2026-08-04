@@ -8,6 +8,7 @@
 // anon key, the function uses the service role internally.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.56.0";
+import { isAuthorizedCron } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,6 +34,15 @@ Deno.serve(async (req) => {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+
+  // Machine-invoked only: requires the shared CRON_SECRET.
+  if (!(await isAuthorizedCron(req))) {
+    return new Response(JSON.stringify({ error: 'Unauthorized', code: 'unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
 
   const admin = createClient(supabaseUrl, serviceKey);
   const summary: Record<string, { polled: number; flipped: number; reingested: number; errors: number }> = {};

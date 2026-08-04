@@ -92,55 +92,29 @@ serve(async (req) => {
 
     console.log(`[subscribe-with-bb] Tier: ${tier.tier_name}, BB cost: ${bbCost}, Balance: ${currentBalance}`);
 
-    // Check sufficient funds
-    if (currentBalance < bbCost) {
-      return new Response(
-        JSON.stringify({
-          error: "insufficient_funds",
-          required: bbCost,
-          balance: currentBalance,
-          shortfall: bbCost - currentBalance,
-        }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 400,
-        }
-      );
-    }
+    // Atomic deduction (row-locked, records the transaction)
+    const { data: adjust, error: adjustError } = await supabase.rpc("adjust_barber_bucks", {
+      p_user_id: user.id,
+      p_amount: -bbCost,
+      p_transaction_type: "subscription",
+      p_description: `${tier.display_name} subscription (1 month)`,
+      p_reference_id: tier.id,
+    });
 
-    // Deduct BB from profile
-    const newBalance = currentBalance - bbCost;
-    const { error: deductError } = await supabase
-      .from("profiles")
-      .update({ barber_bucks: newBalance })
-      .eq("user_id", user.id);
-
-    if (deductError) {
-      console.error("[subscribe-with-bb] Failed to deduct BB:", deductError);
+    if (adjustError) {
+      console.error("[subscribe-with-bb] Failed to deduct BB:", adjustError);
       throw new Error("Failed to deduct Barber Bucks");
     }
 
-    // Record transaction
-    const { error: txError } = await supabase
-      .from("barber_bucks_transactions")
-      .insert({
-        user_id: user.id,
-        amount: -bbCost,
-        balance_after: newBalance,
-        transaction_type: "subscription",
-        description: `${tier.display_name} subscription (1 month)`,
-        reference_id: tier.id,
+    if (!adjust?.ok) {
+      return new Response(JSON.stringify(adjust ?? { error: "insufficient_funds" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
       });
-
-    if (txError) {
-      console.error("[subscribe-with-bb] Failed to record transaction:", txError);
-      // Rollback the deduction
-      await supabase
-        .from("profiles")
-        .update({ barber_bucks: currentBalance })
-        .eq("user_id", user.id);
-      throw new Error("Failed to record transaction");
     }
+
+    const newBalance = adjust.balance as number;
+
 
     const now = new Date();
     const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days
@@ -169,8 +143,14 @@ serve(async (req) => {
 
       if (updateError) {
         console.error("[subscribe-with-bb] Failed to update subscription:", updateError);
-        // Rollback
-        await supabase.from("profiles").update({ barber_bucks: currentBalance }).eq("user_id", user.id);
+        // Compensating refund (atomic, never an absolute overwrite)
+        await supabase.rpc("adjust_barber_bucks", {
+          p_user_id: user.id,
+          p_amount: bbCost,
+          p_transaction_type: "subscription_refund",
+          p_description: `Refund: ${tier.display_name} subscription failed`,
+          p_reference_id: tier.id,
+        });
         throw new Error("Failed to update subscription");
       }
     } else {
@@ -188,8 +168,14 @@ serve(async (req) => {
 
       if (insertError) {
         console.error("[subscribe-with-bb] Failed to create subscription:", insertError);
-        // Rollback
-        await supabase.from("profiles").update({ barber_bucks: currentBalance }).eq("user_id", user.id);
+        // Compensating refund (atomic, never an absolute overwrite)
+        await supabase.rpc("adjust_barber_bucks", {
+          p_user_id: user.id,
+          p_amount: bbCost,
+          p_transaction_type: "subscription_refund",
+          p_description: `Refund: ${tier.display_name} subscription failed`,
+          p_reference_id: tier.id,
+        });
         throw new Error("Failed to create subscription");
       }
     }
