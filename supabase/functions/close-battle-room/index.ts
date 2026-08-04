@@ -21,7 +21,7 @@ serve(async (req) => {
   }
 
   // Machine-invoked only: requires the shared CRON_SECRET.
-  if (!isAuthorizedCron(req)) {
+  if (!(await isAuthorizedCron(req))) {
     return new Response(JSON.stringify({ error: 'Unauthorized', code: 'unauthorized' }), {
       status: 401,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
