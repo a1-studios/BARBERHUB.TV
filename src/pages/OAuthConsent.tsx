@@ -4,6 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, ShieldCheck } from "lucide-react";
+import { AUTH_REDIRECT_BASE } from "@/lib/authRedirects";
+
+/**
+ * Social sign-in must return the user to THIS exact consent URL, otherwise the
+ * provider round-trip drops them on `/` and the agent connection silently fails.
+ */
+function consentReturnUrl(): string {
+  const path = window.location.pathname + window.location.search;
+  return `${AUTH_REDIRECT_BASE}${path}`;
+}
 
 type OAuthNamespace = {
   getAuthorizationDetails: (id: string) => Promise<{ data: any; error: any }>;
@@ -150,7 +160,30 @@ export default function OAuthConsent() {
             <Button type="submit" className="w-full" disabled={busy}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign in"}
             </Button>
+            <div className="pt-1 text-center text-[11px] uppercase tracking-widest text-muted-foreground">
+              or continue with
+            </div>
+            <div className="flex gap-2">
+              {(["google", "apple", "facebook"] as const).map((provider) => (
+                <Button
+                  key={provider}
+                  type="button"
+                  variant="outline"
+                  className="flex-1 capitalize"
+                  disabled={busy}
+                  onClick={() =>
+                    void supabase.auth.signInWithOAuth({
+                      provider,
+                      options: { redirectTo: consentReturnUrl() },
+                    })
+                  }
+                >
+                  {provider}
+                </Button>
+              ))}
+            </div>
           </form>
+
         )}
 
         {!error && !needsAuth && !details && (
