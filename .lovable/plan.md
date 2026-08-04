@@ -75,10 +75,19 @@ Three separate listeners react to the same sign-in event (`useAuth`, `ProfileCom
 11. Replace the 600ms timer in `ProfileCompletionGate` with state driven by the actual data load.
 12. Make one component the single owner of the auth hash.
 
-**Phase 4 — Structure**
+**Phase 4 — Delete dead code and timer-based logic**
 13. Add `supabase/functions/_shared/` with `cors.ts`, `auth.ts`, `response.ts`; migrate functions to them and standardize error shape.
-14. Delete `AuthDialog` and its dead import; share one OTP component.
-15. Split the four oversized pages into presentational components + hooks.
+14. Delete `AuthDialog.tsx` and its dead import in `CreatorHub`; collapse the two OTP implementations into one shared component.
+15. Remove every magic-number timer that drives logic rather than animation — the 600ms `setTimeout` in `ProfileCompletionGate`, the fire-and-forget `setTimeout` role assignment in `useAuth` — and replace them with state driven by the actual data load. Sweep the codebase for remaining `setTimeout`/`setInterval` used for sequencing and remove or replace each one.
+16. Retire whichever of `close-voting` / `auto-close-voting` and `check-battle-submissions` / `close-battle-room` is the duplicate, and delete unreferenced edge functions.
+17. Split the four oversized pages (`BarberPublicProfile`, `CameraStudio`, `WatchFeed`, `Profile`) into presentational components + hooks.
+
+**Phase 5 — Native iOS app (Capacitor)**
+18. Install `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios`, `@capacitor/android` and initialize `capacitor.config.ts` with appId `app.lovable.64d76cf785b647159c81e3a2358707e1`, appName `barberhub-tv`, and the sandbox hot-reload server URL.
+19. Reconcile the PWA service worker with the native shell so the installed app doesn't serve stale HTML inside the WebView.
+20. Verify the camera/mic permissions the battle streaming uses map to iOS `Info.plist` usage descriptions (`NSCameraUsageDescription`, `NSMicrophoneUsageDescription`), and confirm LiveKit works in the iOS WKWebView.
+21. Confirm the auth redirect URLs (`capacitor://localhost`) are in the Supabase allow-list so OAuth completes inside the app.
+22. Hand off the local steps you run yourself in Claude Code / terminal: export to GitHub, `npm install`, `npx cap add ios`, `npm run build`, `npx cap sync`, `npx cap run ios` (requires a Mac with Xcode).
 
 ## Technical notes
 
@@ -86,8 +95,10 @@ Three separate listeners react to the same sign-in event (`useAuth`, `ProfileCom
 - The cron secret should be verified before any other work in each function, returning 401 early.
 - Scheduled jobs go in `cron.job` via a migration, calling the functions with the cron secret header.
 - Guard fix is a one-line change in each of the two guard files; no logic redesign.
-- Phases 1 and 2 are independent of 3 and 4 and can ship first.
+- Capacitor only wraps the existing web build — no rewrite, no separate codebase. Lovable can add and configure it, but building the actual `.ipa` has to happen on your Mac in Xcode.
+- Phases 1 and 2 are independent of 3-5 and ship first.
 
-## Scope check
+## Order of work
 
-This plan is large. If you'd rather not do all of it at once, Phase 1 + Phase 2 are the ones that affect real money and a broken core loop; Phases 3 and 4 are quality and maintenance.
+Phase 1 → 2 → 3 → 4 → 5. Phase 5 goes last on purpose: wrapping the app for iOS while battles never close and guards misfire on refresh would just ship those bugs into a native shell.
+
