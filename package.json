@@ -14,6 +14,9 @@
     "backfill:cf-stream": "bunx tsx scripts/backfill-cloudflare-stream.ts"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/ios": "^8.5.0",
     "@cloudflare/stream-react": "^1.9.3",
     "@hookform/resolvers": "^3.10.0",
     "@livekit/components-react": "^2.9.20",
@@ -84,6 +87,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.0",
     "@eslint/js": "^9.32.0",
     "@tailwindcss/typography": "^0.5.16",
     "@types/geojson": "^7946.0.16",
