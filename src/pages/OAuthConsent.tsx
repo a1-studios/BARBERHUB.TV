@@ -160,7 +160,30 @@ export default function OAuthConsent() {
             <Button type="submit" className="w-full" disabled={busy}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign in"}
             </Button>
+            <div className="pt-1 text-center text-[11px] uppercase tracking-widest text-muted-foreground">
+              or continue with
+            </div>
+            <div className="flex gap-2">
+              {(["google", "apple", "facebook"] as const).map((provider) => (
+                <Button
+                  key={provider}
+                  type="button"
+                  variant="outline"
+                  className="flex-1 capitalize"
+                  disabled={busy}
+                  onClick={() =>
+                    void supabase.auth.signInWithOAuth({
+                      provider,
+                      options: { redirectTo: consentReturnUrl() },
+                    })
+                  }
+                >
+                  {provider}
+                </Button>
+              ))}
+            </div>
           </form>
+
         )}
 
         {!error && !needsAuth && !details && (
