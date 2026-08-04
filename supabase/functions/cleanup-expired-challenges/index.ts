@@ -81,39 +81,22 @@ serve(async (req) => {
         const stakeAmount = challenge.stake_amount || 0;
 
         if (stakeAmount > 0) {
-          // Get current balance
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('barber_bucks')
-            .eq('user_id', challenge.challenger_id)
-            .single();
+          // Atomic refund (row-locked, records the transaction)
+          const { data: refund, error: refundError } = await supabase.rpc('adjust_barber_bucks', {
+            p_user_id: challenge.challenger_id,
+            p_amount: stakeAmount,
+            p_transaction_type: 'challenge_stake_refund',
+            p_description: `Challenge expired, stake refunded: "${challenge.title}"`,
+            p_reference_id: challenge.id,
+          });
 
-          const currentBalance = profile?.barber_bucks || 0;
-          const newBalance = currentBalance + stakeAmount;
-
-          // Refund stake
-          const { error: refundError } = await supabase
-            .from('profiles')
-            .update({ barber_bucks: newBalance })
-            .eq('user_id', challenge.challenger_id);
-
-          if (refundError) {
-            console.error(`Refund error for ${challenge.id}:`, refundError);
+          if (refundError || !refund?.ok) {
+            console.error(`Refund error for ${challenge.id}:`, refundError || refund);
             errors.push(`Refund failed for ${challenge.id}`);
             continue;
           }
-
-          // Record refund transaction
-          await supabase
-            .from('barber_bucks_transactions')
-            .insert({
-              user_id: challenge.challenger_id,
-              amount: stakeAmount,
-              balance_after: newBalance,
-              transaction_type: 'challenge_stake_refund',
-              description: `Challenge expired, stake refunded: "${challenge.title}"`,
-            });
         }
+
 
         // Mark challenge as expired
         const { error: updateError } = await supabase
