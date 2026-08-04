@@ -1,40 +1,30 @@
-# Camera Flip + Mirror Fix (Contender Theater)
+# Connect Claude Code to the BARBER-HUB MCP server
 
-## Problem
-1. Local self-preview is rendered **un-mirrored** — front-camera footage looks "wrong" because users expect a mirror-like selfie view.
-2. The **flip camera** button (`SwitchCamera`) already exists in `ContenderControlBar`, but it's gated to `isPreviewPhase` only and is not obvious. Barbers can't toggle between front (selfie) and back (environment) cameras during Standby.
-3. Must not regress the working **Barber A → Barber B challenge/seating flow** (recent fix that resolves `barber_profiles.id` and seats `barber2_id` before marking the challenge completed, plus the realtime publication fix on `battles`).
+The MCP server already exists and is deployed with 6 tools (profile, barber search, battles, open challenges, notifications read/mark-read), protected by Supabase OAuth. The remaining work is making the connection actually complete from Claude Code.
 
-## Changes
+## What blocks it today
 
-### 1. `src/hooks/useLocalCameraPreview.tsx`
-- Already tracks `facingMode` ('user' | 'environment') and exposes `switchCamera`. No logic change needed — just confirm `facingMode` is exported (it is) so the UI can mirror conditionally.
+The Supabase OAuth 2.1 authorization server (and dynamic client registration) still needs to be active for this project. Until it is, Claude Code can discover the server but sign-in fails.
 
-### 2. `src/components/contender/ContenderVideoPreview.tsx`
-- Accept a new optional prop `facingMode: 'user' | 'environment'` (default `'user'`).
-- On the **local** `<video>` element only (the `isYourCamera` branch), apply `className` `scale-x-[-1]` when `facingMode === 'user'`, and remove it when `'environment'`. The opponent stream is never mirrored.
-- This gives the natural "mirror" selfie experience and shows the back camera in its true orientation.
+## Steps
 
-### 3. `src/components/contender/ContenderControlBar.tsx`
-- Accept new prop `facingMode` (used for an aria-label/tooltip e.g. "Switch to back camera" / "Switch to front camera").
-- Loosen the flip gate from `isPreviewPhase && onSwitchCamera` to **`(isPreviewPhase || isStandbyPhase) && onSwitchCamera`**. Flip remains disabled once the battle is `live` to avoid disturbing the LiveKit publication mid-fight.
-- Keep the button styling consistent (white/20 ghost, w-12 h-12 mobile).
+1. Activate the Supabase OAuth 2.1 authorization server with dynamic client registration, so Claude Code can self-register as a client.
+2. Verify the consent route at `/.lovable/oauth/consent` survives a logged-out visit: the sign-in redirect (password, signup email, and social OAuth) must return the user to the full consent URL, not to `/`. Fix any path that drops the redirect.
+3. Re-deploy the `mcp` edge function and re-run the manifest extraction so the live endpoint matches the current tool list.
+4. Smoke test the endpoint: confirm the protected-resource metadata and tool list respond at the published URL.
+5. Add a short `docs/mcp-claude-code.md` with the connect command and troubleshooting notes.
 
-### 4. `src/pages/ContenderTheater.tsx`
-- Pass `facingMode` from `useLocalCameraPreview` down into both `ContenderVideoPreview` (for mirror) and `ContenderControlBar` (for tooltip + correct gating).
-- **No changes** to:
-  - `barberPosition` resolution / acceptor fallback (`my-barber-profile` query)
-  - Access Denied gate logic
-  - `battle-contender` realtime subscription
-  - `match-challenge-stake` edge function or any seating logic.
+## Connect command (for you, after step 1)
 
-## Out of scope (do NOT touch)
-- `supabase/functions/match-challenge-stake/index.ts`
-- `supabase/functions/complete-open-challenge/index.ts`
-- RLS policies / `battles` publication migration
-- LiveKit token / publication wiring in `useBattleVideoRoom`
+```
+claude mcp add --transport http barberhub https://msuepyfssovvkjzpfjzu.supabase.co/functions/v1/mcp
+```
 
-## Verification
-1. Open `/battle/:id/contender` as Barber A → preview shows mirrored selfie (text on shirt reversed, but feels natural). Toggle flip → back camera shows un-mirrored real-world view.
-2. Have Barber B accept the challenge → Barber A's screen seats B as opponent (existing fix unchanged), no "Access Denied".
-3. Flip remains available in Standby; hidden/disabled in Live.
+Then run `/mcp` inside Claude Code and pick `barberhub` to authenticate. A browser window opens, you sign in to BARBER-HUB, approve on the consent screen, and the tools become available. The same URL works for Claude Desktop (Settings, Connectors, Add custom connector) and for ChatGPT/Cursor.
+
+## Technical notes
+
+- Endpoint: `https://msuepyfssovvkjzpfjzu.supabase.co/functions/v1/mcp`
+- Auth: OAuth 2.1, issuer `https://msuepyfssovvkjzpfjzu.supabase.co/auth/v1`, audience `authenticated`
+- Every tool runs as the signed-in user with RLS applied; no service-role access is added.
+- No new tools are added in this pass. If you want Claude Code to also create challenges, submit videos, or move Barber Bucks, say so and I will scope write tools separately (they need the same server-side BB safeguards as the app).
