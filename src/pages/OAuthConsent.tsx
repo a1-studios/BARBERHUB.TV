@@ -4,6 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, ShieldCheck } from "lucide-react";
+import { AUTH_REDIRECT_BASE } from "@/lib/authRedirects";
+
+/**
+ * Social sign-in must return the user to THIS exact consent URL, otherwise the
+ * provider round-trip drops them on `/` and the agent connection silently fails.
+ */
+function consentReturnUrl(): string {
+  const path = window.location.pathname + window.location.search;
+  return `${AUTH_REDIRECT_BASE}${path}`;
+}
 
 type OAuthNamespace = {
   getAuthorizationDetails: (id: string) => Promise<{ data: any; error: any }>;
