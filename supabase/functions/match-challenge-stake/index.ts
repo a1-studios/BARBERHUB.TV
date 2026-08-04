@@ -1,8 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// 🔴 DEV BYPASS — set to false before going live
-const DEV_BYPASS = true;
+// Subscription paywall bypass — must stay false in production.
+const DEV_BYPASS = false;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
