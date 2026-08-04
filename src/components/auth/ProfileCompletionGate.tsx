@@ -119,8 +119,9 @@ export const ProfileCompletionGate = () => {
     }
   }, []);
 
-  // Auto-open shortly after sign-in so users see the prompt
-  useEffect(() => { if (needs) { const t = setTimeout(() => setOpen(true), 600); return () => clearTimeout(t); } }, [needs]);
+  // Open as soon as we know the profile is incomplete (no arbitrary delay)
+  useEffect(() => { if (needs) setOpen(true); }, [needs]);
+
 
   // Re-open when navigating to gated routes if still incomplete
   const location = useLocation();

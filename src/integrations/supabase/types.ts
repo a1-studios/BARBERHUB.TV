@@ -5706,6 +5706,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      cron_invoke: { Args: { fn: string }; Returns: number }
       deduct_queue_entry_fee: {
         Args: { p_amount_bb?: number; p_category: string; p_user_id: string }
         Returns: Json
