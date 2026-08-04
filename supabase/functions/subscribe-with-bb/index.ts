@@ -143,8 +143,14 @@ serve(async (req) => {
 
       if (updateError) {
         console.error("[subscribe-with-bb] Failed to update subscription:", updateError);
-        // Rollback
-        await supabase.from("profiles").update({ barber_bucks: currentBalance }).eq("user_id", user.id);
+        // Compensating refund (atomic, never an absolute overwrite)
+        await supabase.rpc("adjust_barber_bucks", {
+          p_user_id: user.id,
+          p_amount: bbCost,
+          p_transaction_type: "subscription_refund",
+          p_description: `Refund: ${tier.display_name} subscription failed`,
+          p_reference_id: tier.id,
+        });
         throw new Error("Failed to update subscription");
       }
     } else {
