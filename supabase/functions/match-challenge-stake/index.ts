@@ -195,13 +195,16 @@ serve(async (req) => {
         .eq('id', existingPool.id);
     }
 
-    // Helper to roll back the stake escrow if anything below fails.
+    // Compensating refund if anything below fails (atomic, never an absolute overwrite).
     const rollbackStake = async () => {
       if (isFreeChallenge) return;
-      await supabase
-        .from('profiles')
-        .update({ barber_bucks: currentBalance })
-        .eq('user_id', user.id);
+      await supabase.rpc('adjust_barber_bucks', {
+        p_user_id: user.id,
+        p_amount: stakeToMatch,
+        p_transaction_type: 'challenge_stake_refund',
+        p_description: `Refund: could not seat challenge "${challenge.title}"`,
+        p_reference_id: challenge_id,
+      });
     };
 
     if (!challenge.battle_id) {
