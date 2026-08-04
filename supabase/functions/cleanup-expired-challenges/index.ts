@@ -52,7 +52,20 @@ serve(async (req) => {
       console.log(`Hard-deleted ${ids.length} matched Quick Play challenges`);
     }
 
+    // ─── 1b) Sweep abandoned battle rooms (nobody ever finished the stream) ───
+    const staleCutoff = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    const { data: staleBattles } = await supabase
+      .from('battles')
+      .update({ status: 'cancelled', forfeit_reason: 'abandoned_no_activity' })
+      .in('status', ['live', 'streaming', 'upcoming'])
+      .lt('updated_at', staleCutoff)
+      .select('id');
+    if (staleBattles?.length) {
+      console.log(`Cancelled ${staleBattles.length} abandoned battles`);
+    }
+
     // ─── 2) Find all expired challenges still waiting (refund path) ───
+
     const { data: expired, error: fetchError } = await supabase
       .from('open_challenges')
       .select('id, challenger_id, stake_amount, title')
