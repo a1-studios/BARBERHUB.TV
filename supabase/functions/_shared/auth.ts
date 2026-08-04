@@ -42,15 +42,34 @@ export async function hasRole(userId: string, role: string): Promise<boolean> {
 
 /**
  * Guard for scheduled / machine-invoked functions.
- * The caller must present the shared CRON_SECRET. If the secret is not
- * configured the guard fails closed.
+ * Accepts either the CRON_SECRET project secret or the `cron_secret` stored in
+ * Supabase Vault (used by the pg_cron jobs, which never hold a literal value).
+ * Fails closed when neither is configured.
  */
-export function isAuthorizedCron(req: Request): boolean {
-  const expected = Deno.env.get("CRON_SECRET");
-  if (!expected) return false;
+let cachedVaultSecret: string | null | undefined;
+
+async function vaultCronSecret(): Promise<string | null> {
+  if (cachedVaultSecret !== undefined) return cachedVaultSecret;
+  try {
+    const { data } = await serviceClient().rpc("get_cron_secret");
+    cachedVaultSecret = (data as string) || null;
+  } catch {
+    cachedVaultSecret = null;
+  }
+  return cachedVaultSecret;
+}
+
+export async function isAuthorizedCron(req: Request): Promise<boolean> {
   const provided =
     req.headers.get("x-cron-secret") ??
     req.headers.get("authorization")?.replace("Bearer ", "") ??
     "";
-  return provided === expected;
+  if (!provided) return false;
+
+  const envSecret = Deno.env.get("CRON_SECRET");
+  if (envSecret && provided === envSecret) return true;
+
+  const vaultSecret = await vaultCronSecret();
+  return !!vaultSecret && provided === vaultSecret;
 }
+
