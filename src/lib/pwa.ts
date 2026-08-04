@@ -18,11 +18,19 @@ function isPreviewHost(): boolean {
   return h.includes("id-preview--") || h.includes("lovableproject.com");
 }
 
+/** True inside the Capacitor native shell (iOS/Android WebView). */
+function isNativeShell(): boolean {
+  const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+  if (cap?.isNativePlatform?.()) return true;
+  const proto = window.location.protocol;
+  return proto === "capacitor:" || proto === "ionic:";
+}
+
 export async function registerPWA(): Promise<void> {
   if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
 
-  if (isInIframe() || isPreviewHost()) {
-    // Clean up any previously-registered SW in preview to avoid stale caches.
+  if (isInIframe() || isPreviewHost() || isNativeShell()) {
+    // Clean up any previously-registered SW in preview/native to avoid stale HTML.
     const regs = await navigator.serviceWorker.getRegistrations();
     await Promise.all(regs.map((r) => r.unregister()));
     return;
