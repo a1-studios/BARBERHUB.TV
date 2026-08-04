@@ -5832,6 +5832,7 @@ export type Database = {
           total_donated_cents: number
         }[]
       }
+      get_cron_secret: { Args: never; Returns: string }
       get_fee_structure: { Args: never; Returns: Json }
       get_landing_teasers: { Args: never; Returns: Json }
       get_m4m_fund_summary: {
